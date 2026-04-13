@@ -8,5 +8,5 @@ commands.allow = [
     "delete_model",
     "abort_chat",
     "check_ollama_health",
-    "validate_model"
+    "validate_model",
 ]

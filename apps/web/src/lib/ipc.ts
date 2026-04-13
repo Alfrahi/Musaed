@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ApiResponse, OllamaModel, ChatMessage, ChatSettings } from '@musaed/contracts';
+import { ApiResponse, OllamaModel, ChatMessage, ChatSettings, OllamaHealthIpc } from '@musaed/contracts';
 import toast from 'react-hot-toast';
 
 export interface CommandMap {
@@ -11,6 +11,7 @@ export interface CommandMap {
   'abort_chat': { args: { requestId: string }, return: void };
   'delete_model': { args: { baseUrl: string, name: string }, return: boolean };
   'pull_model': { args: { baseUrl: string, name: string }, return: void };
+  'check_ollama_health': { args: { baseUrl: string }, return: OllamaHealthIpc };
   'append_to_log': { args: { entry: string }, return: void };
   'clear_logs': { args: {}, return: void };
 }
@@ -35,11 +36,14 @@ export const isValidOllamaUrl = (url: string): boolean => {
 export async function invoke<K extends keyof CommandMap>(
   command: K,
   args: CommandMap[K]['args'] = {} as any,
-  schema?: z.ZodType<CommandMap[K]['return']>
+  schema?: z.ZodType<CommandMap[K]['return']>,
+  options?: { quiet?: boolean }
 ): Promise<CommandMap[K]['return'] | null> {
 
   if (args && 'baseUrl' in args && typeof args.baseUrl === 'string' && !isValidOllamaUrl(args.baseUrl)) {
-    toast.error(`Security Block: ${args.baseUrl} is not a valid local address.`);
+    if (!options?.quiet) {
+      toast.error(`Security Block: ${args.baseUrl} is not a valid local address.`);
+    }
     return null;
   }
 
@@ -48,6 +52,11 @@ export async function invoke<K extends keyof CommandMap>(
   try {
     const { invoke: tauriInvoke } = await import('@tauri-apps/api/core');
     const response = await tauriInvoke<ApiResponse<any>>(command, args as any);
+
+    if (options?.quiet && response && schema && response.data != null && response.success === false) {
+      const parsedQuiet = schema.safeParse(response.data);
+      if (parsedQuiet.success) return parsedQuiet.data;
+    }
 
     if (response?.success) {
       if (!schema) return (response.data ?? true) as any;
@@ -61,7 +70,9 @@ export async function invoke<K extends keyof CommandMap>(
 
     if (response?.error) {
       console.error(`[IPC] ${command} Error:`, response.error.message);
-      toast.error(response.error.message);
+      if (!options?.quiet) {
+        toast.error(response.error.message);
+      }
     }
     return null;
   } catch (err) {

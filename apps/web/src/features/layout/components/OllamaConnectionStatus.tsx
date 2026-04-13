@@ -4,7 +4,7 @@ import { useOllamaConnection } from '@/hooks/useOllamaConnection';
 import { ConnectionState } from '@/lib/connection-manager';
 import { useTranslation } from '@/lib/i18n';
 import { useSettingsStore } from '@/store';
-import { AlertCircle, CheckCircle2, Loader2, WiFiOff } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, WifiOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function OllamaConnectionStatus() {
@@ -41,7 +41,7 @@ export default function OllamaConnectionStatus() {
         {connectionState === ConnectionState.DISCONNECTED && (
             <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
-            <WiFiOff size={14} />
+            <WifiOff size={14} />
             <span className="hidden sm:inline">{t('chat.offline')}</span>
             </div>
             <button

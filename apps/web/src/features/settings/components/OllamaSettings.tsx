@@ -1,16 +1,40 @@
 "use client";
 
+import { useEffect, useRef } from 'react';
 import { Globe, Terminal } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { DEFAULT_SETTINGS } from '@musaed/contracts';
 import { useSettingsStore } from '@/store';
 import { useSettingsActions } from '../hooks/useSettingsActions';
 import { useModelActions } from '@/features/library';
 import { useTranslation } from '@/lib/i18n';
+import { isValidOllamaUrl } from '@/lib/ipc';
 
 const OllamaSettings = () => {
   const { globalSettings } = useSettingsStore();
   const { updateGlobalSettings } = useSettingsActions();
   const { fetchModels } = useModelActions();
   const { t } = useTranslation(globalSettings.language);
+
+  const lastValidOllamaUrlRef = useRef(
+    isValidOllamaUrl(globalSettings.ollamaUrl) ? globalSettings.ollamaUrl : DEFAULT_SETTINGS.ollamaUrl
+  );
+
+  useEffect(() => {
+    if (isValidOllamaUrl(globalSettings.ollamaUrl)) {
+      lastValidOllamaUrlRef.current = globalSettings.ollamaUrl;
+    }
+  }, [globalSettings.ollamaUrl]);
+
+  const handleOllamaUrlBlur = () => {
+    if (!isValidOllamaUrl(globalSettings.ollamaUrl)) {
+      toast.error(t('settings.invalidOllamaUrl'));
+      updateGlobalSettings({ ollamaUrl: lastValidOllamaUrlRef.current });
+      return;
+    }
+    lastValidOllamaUrlRef.current = globalSettings.ollamaUrl;
+    void fetchModels();
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -23,7 +47,7 @@ const OllamaSettings = () => {
           type="text" 
           value={globalSettings.ollamaUrl} 
           onChange={(e) => updateGlobalSettings({ ollamaUrl: e.target.value })}
-          onBlur={() => fetchModels()}
+          onBlur={handleOllamaUrlBlur}
           className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl ps-3 pe-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
         />
       </div>

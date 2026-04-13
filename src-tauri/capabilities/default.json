@@ -14,8 +14,7 @@
     "core:window:allow-get-all-windows",
     "dialog:allow-open",
     "dialog:allow-save",
-    "dialog:allow-confirm",
-    "dialog:allow-ask",
+    "dialog:allow-message",
     {
       "identifier": "fs:allow-write-text-file",
       "allow": [
@@ -44,9 +43,8 @@
     "store:allow-set",
     "store:allow-get",
     "store:allow-save",
+    "updater:default",
     "allow-ollama-commands",
-    "allow-history-commands",
-    "allow-logging-commands",
-    "allow-file-extraction"
+    "allow-logging-commands"
   ]
 }

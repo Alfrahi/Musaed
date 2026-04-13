@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { RefreshCw, AlertTriangle } from 'lucide-react';
+import { RefreshCw, AlertTriangle, WifiOff, HelpCircle } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import { useSettingsStore } from '@/store';
 import { logger } from '@/lib/logger';
@@ -49,7 +49,7 @@ class ErrorBoundary extends Component<Props, State> {
     switch (errorType) {
       case 'network':
         return {
-          icon: WiFiOff,
+          icon: WifiOff,
           title: t('error.networkError'),
           description: t('error.checkConnection'),
           actions: [

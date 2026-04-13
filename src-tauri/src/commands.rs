@@ -1,4 +1,5 @@
 use tauri::{AppHandle, Emitter, Runtime};
+use crate::ollama_url::parse_ollama_base_url;
 use crate::payloads::{ApiResponse, BackendError, ChatMessage, ChatOptions, OllamaModel, OllamaToken, PullProgress, OllamaHealth, ModelValidation};
 use serde_json::json;
 use std::sync::Arc;
@@ -12,6 +13,21 @@ use tokio_util::sync::CancellationToken;
 // Global state management
 static ABORT_HANDLES: Lazy<DashMap<String, Arc<CancellationToken>>> = Lazy::new(DashMap::new);
 static REQUEST_CACHE: Lazy<DashMap<String, bool>> = Lazy::new(DashMap::new);
+
+fn invalid_ollama_base<T>(msg: impl Into<String>) -> ApiResponse<T> {
+    ApiResponse {
+        success: false,
+        data: None,
+        error: Some(BackendError::new("INVALID_URL", msg.into())),
+    }
+}
+
+fn ollama_endpoint(base_url: &str, path: &str) -> Result<String, String> {
+    let base = parse_ollama_base_url(base_url)?;
+    base.join(path)
+        .map(|u| u.to_string())
+        .map_err(|e| e.to_string())
+}
 
 // HTTP Client with connection pooling
 fn get_http_client() -> reqwest::Client {
@@ -87,8 +103,12 @@ pub async fn get_ollama_models(base_url: String) -> ApiResponse<Vec<OllamaModel>
     log::info!("Fetching Ollama models from: {}", base_url);
     let start = std::time::Instant::now();
 
+    let url = match ollama_endpoint(&base_url, "api/tags") {
+        Ok(u) => u,
+        Err(msg) => return invalid_ollama_base(msg),
+    };
+
     let client = get_http_client();
-    let url = format!("{}/api/tags", base_url.trim_end_matches('/'));
 
     match retry_with_backoff(
         || {
@@ -164,6 +184,11 @@ pub async fn chat_with_ollama<R: Runtime>(
     log::info!("Starting chat request: request_id={}, model={}", request_id, model);
     let start = std::time::Instant::now();
 
+    let url = match ollama_endpoint(&base_url, "api/chat") {
+        Ok(u) => u,
+        Err(msg) => return invalid_ollama_base(msg),
+    };
+
     // Duplicate request detection
     if REQUEST_CACHE.contains_key(&request_id) {
         log::warn!("Duplicate request detected: {}", request_id);
@@ -183,7 +208,6 @@ pub async fn chat_with_ollama<R: Runtime>(
     ABORT_HANDLES.insert(request_id.clone(), cancel_token.clone());
 
     let client = get_http_client();
-    let url = format!("{}/api/chat", base_url.trim_end_matches('/'));
 
     let payload = json!({
         "model": model,
@@ -330,8 +354,12 @@ pub async fn abort_chat(request_id: String) -> ApiResponse<()> {
 pub async fn validate_model(base_url: String, model_name: String) -> ApiResponse<ModelValidation> {
     log::info!("Validating model: {}", model_name);
 
+    let url = match ollama_endpoint(&base_url, "api/show") {
+        Ok(u) => u,
+        Err(msg) => return invalid_ollama_base(msg),
+    };
+
     let client = get_http_client();
-    let url = format!("{}/api/show", base_url.trim_end_matches('/'));
 
     match client
     .post(&url)
@@ -409,8 +437,12 @@ pub async fn pull_model<R: Runtime>(
 ) -> ApiResponse<()> {
     log::info!("Starting model pull: {}", name);
 
+    let url = match ollama_endpoint(&base_url, "api/pull") {
+        Ok(u) => u,
+        Err(msg) => return invalid_ollama_base(msg),
+    };
+
     let client = get_http_client();
-    let url = format!("{}/api/pull", base_url.trim_end_matches('/'));
     let app_clone = app.clone();
     let name_clone = name.clone();
 
@@ -494,8 +526,12 @@ pub async fn pull_model<R: Runtime>(
 pub async fn delete_model(base_url: String, name: String) -> ApiResponse<bool> {
     log::info!("Deleting model: {}", name);
 
+    let url = match ollama_endpoint(&base_url, "api/delete") {
+        Ok(u) => u,
+        Err(msg) => return invalid_ollama_base(msg),
+    };
+
     let client = get_http_client();
-    let url = format!("{}/api/delete", base_url.trim_end_matches('/'));
 
     match client
     .delete(&url)
@@ -542,8 +578,12 @@ pub async fn check_ollama_health(base_url: String) -> ApiResponse<OllamaHealth> 
     log::info!("Checking Ollama health: {}", base_url);
     let start = std::time::Instant::now();
 
+    let url = match ollama_endpoint(&base_url, "api/tags") {
+        Ok(u) => u,
+        Err(msg) => return invalid_ollama_base(msg),
+    };
+
     let client = get_http_client();
-    let url = format!("{}/api/tags", base_url.trim_end_matches('/'));
 
     match tokio::time::timeout(Duration::from_secs(10), client.get(&url).send()).await {
         Ok(Ok(_)) => {

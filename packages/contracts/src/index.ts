@@ -118,6 +118,15 @@ export const PullProgressSchema = z.object({
 
 export type PullProgress = z.infer<typeof PullProgressSchema>;
 
+/** Payload from `check_ollama_health` (serde camelCase). */
+export const OllamaHealthIpcSchema = z.object({
+  isRunning: z.boolean(),
+  version: z.string().nullish(),
+  responseTimeMs: z.coerce.number(),
+});
+
+export type OllamaHealthIpc = z.infer<typeof OllamaHealthIpcSchema>;
+
 export const MessageSchema = z.object({
   id: z.string(),
   role: z.enum(['user', 'assistant', 'system']),

@@ -8,6 +8,8 @@ import {
     getConnectionManager
 } from '@/lib/connection-manager';
 import { useSettingsStore, useUIStore } from '@/store';
+import { checkIsTauri, invoke } from '@/lib/ipc';
+import { OllamaHealthIpcSchema } from '@musaed/contracts';
 
 export function useOllamaConnection() {
     const { globalSettings } = useSettingsStore();
@@ -16,23 +18,38 @@ export function useOllamaConnection() {
     const [health, setHealth] = useState<OllamaHealth | null>(null);
     const [manager, setManager] = useState<OllamaConnectionManager | null>(null);
 
-    // Initialize connection manager
     useEffect(() => {
+        const healthCheck = checkIsTauri()
+            ? async (baseUrl: string): Promise<OllamaHealth | null> => {
+                const data = await invoke(
+                    'check_ollama_health',
+                    { baseUrl },
+                    OllamaHealthIpcSchema,
+                    { quiet: true }
+                );
+                if (!data) return null;
+                return {
+                    is_running: data.isRunning,
+                    version: data.version ?? undefined,
+                    responseTimeMs: data.responseTimeMs,
+                };
+            }
+            : undefined;
+
         const connectionManager = getConnectionManager({
             baseUrl: globalSettings.ollamaUrl,
             healthCheckIntervalMs: 30000,
+            healthCheck,
         });
 
         setManager(connectionManager);
 
-        // Subscribe to connection state changes
         const unsubscribe = connectionManager.subscribe((state, healthData) => {
             setConnectionState(state);
-            setHealth(healthData || null);
+            setHealth(healthData ?? null);
             setOllamaConnected(state === ConnectionState.CONNECTED);
         });
 
-        // Start health checks
         connectionManager.startHealthChecks();
 
         return () => {

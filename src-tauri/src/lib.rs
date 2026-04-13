@@ -1,4 +1,5 @@
 pub mod commands;
+pub mod ollama_url;
 pub mod payloads;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -16,12 +17,19 @@ pub fn run() {
 
     log::info!("Starting Musaed application");
 
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default()
     .plugin(tauri_plugin_shell::init())
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
     .plugin(tauri_plugin_opener::init())
-    .plugin(tauri_plugin_store::Builder::default().build())
+    .plugin(tauri_plugin_store::Builder::default().build());
+
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    }
+
+    builder
     .invoke_handler(tauri::generate_handler![
         commands::get_ollama_models,
         commands::chat_with_ollama,

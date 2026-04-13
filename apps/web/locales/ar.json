@@ -82,6 +82,7 @@
       "system": "النظام"
     },
     "ollamaUrl": "رابط خادم Ollama",
+    "invalidOllamaUrl": "يُسمح فقط بـ localhost أو *.local أو عناوين شبكة خاصة (10.x، 172.16–31.x، 192.168.x).",
     "systemPrompt": "توجيه النظام",
     "temperature": "درجة الحرارة",
     "topP": "Top P",
