@@ -44,6 +44,13 @@ const InputArea = () => {
 
   const isStreaming = currentConversationId ? !!activeStreams[currentConversationId] : false;
 
+  const openFilePicker = (input: HTMLInputElement | null) => {
+    if (!input) return;
+    // Allow re-selecting the same path: unchanged value skips `change` in browsers/WebViews.
+    input.value = '';
+    input.click();
+  };
+
   const onSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!input.trim() && images.length === 0 && files.length === 0) return;
@@ -80,7 +87,7 @@ const InputArea = () => {
             />
             <button
               type="button"
-              onClick={() => imageInputRef.current?.click()}
+              onClick={() => openFilePicker(imageInputRef.current)}
               className="p-2.5 text-zinc-400 hover:text-primary hover:bg-primary/5 rounded-2xl transition-all"
               aria-label={t('a11y.attachImage')}
             >
@@ -96,7 +103,7 @@ const InputArea = () => {
             />
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => openFilePicker(fileInputRef.current)}
               className="p-2.5 text-zinc-400 hover:text-primary hover:bg-primary/5 rounded-2xl transition-all"
               aria-label={t('common.files')}
             >
