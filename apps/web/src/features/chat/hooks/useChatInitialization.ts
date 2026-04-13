@@ -16,33 +16,34 @@ export function useChatInitialization() {
 
   const initializeApp = useCallback(async () => {
     if (useUIStore.getState().isInitialized) return;
-    
+
     try {
       const currentSettings = useSettingsStore.getState().globalSettings;
       if (!currentSettings.hasDetectedLanguage) {
         const sysLang = getSystemLanguage();
-        updateGlobalSettings({ 
-          language: sysLang, 
-          hasDetectedLanguage: true 
+        updateGlobalSettings({
+          language: sysLang,
+          hasDetectedLanguage: true
         });
       }
 
       try {
+        // Simple timeout-based model fetch WITHOUT RETRIES
         const fetchPromise = fetchModels();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Model fetch timed out')), 5000)
+        const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Model fetch timed out')), 5000)
         );
-        
+
         await Promise.race([fetchPromise, timeoutPromise]);
       } catch (fetchErr) {
         logger.warn('Initial model fetch failed or timed out', { error: fetchErr });
       }
-      
+
       const { conversationIds } = useConversationStore.getState();
       if (conversationIds.length === 0) {
         createNewConversation();
       }
-      
+
       setInitialized(true);
       setError(null);
     } catch (err) {

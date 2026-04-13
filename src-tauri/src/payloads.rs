@@ -14,6 +14,35 @@ pub struct BackendError {
     pub code: String,
     pub message: String,
     pub request_id: Option<String>,
+    pub context: Option<String>,
+    pub is_retryable: bool,
+}
+
+impl BackendError {
+    pub fn new(code: impl Into<String>, message: impl Into<String>) -> Self {
+        Self {
+            code: code.into(),
+            message: message.into(),
+            request_id: None,
+            context: None,
+            is_retryable: false,
+        }
+    }
+
+    pub fn with_request_id(mut self, request_id: String) -> Self {
+        self.request_id = Some(request_id);
+        self
+    }
+
+    pub fn with_context(mut self, context: String) -> Self {
+        self.context = Some(context);
+        self
+    }
+
+    pub fn retryable(mut self) -> Self {
+        self.is_retryable = true;
+        self
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -80,4 +109,20 @@ pub struct OllamaModelDetails {
     pub family: Option<String>,
     pub parameter_size: Option<String>,
     pub quantization_level: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct OllamaHealth {
+    pub is_running: bool,
+    pub version: Option<String>,
+    pub response_time_ms: u128,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelValidation {
+    pub is_valid: bool,
+    pub model_name: String,
+    pub details: Option<OllamaModelDetails>,
 }

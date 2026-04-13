@@ -6,5 +6,7 @@ commands.allow = [
     "chat_with_ollama",
     "pull_model",
     "delete_model",
-    "abort_chat"
+    "abort_chat",
+    "check_ollama_health",
+    "validate_model"
 ]
