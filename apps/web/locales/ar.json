@@ -70,7 +70,8 @@
     "footerNote": "يعمل محلياً على جهازك",
     "fileContextLabel": "سياق من الملفات المرفوعة:",
     "fileLabel": "الملف: {name}",
-    "contentLabel": "المحتوى:"
+    "contentLabel": "المحتوى:",
+    "imageOnlyApiPrompt": "صف الصورة أو الصور المرفقة."
   },
   "settings": {
     "title": "الإعدادات",

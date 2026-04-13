@@ -48,8 +48,8 @@ export function useAttachmentManager() {
       const r = new FileReader();
       r.onloadend = () => {
         const result = r.result as string;
-        if (result && result.includes(',')) {
-          setImages(p => [...p, result.split(',')[1]]);
+        if (result?.startsWith('data:')) {
+          setImages(p => [...p, result]);
         }
       };
       r.readAsDataURL(f);

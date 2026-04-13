@@ -10,6 +10,13 @@ import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
 import { useConversationActions } from './useConversationActions';
 import { FileAttachment } from './useAttachmentManager';
+import { toOllamaBase64Image } from '../imageAttachment';
+
+/** Ollama / some vision stacks ignore images when `content` is empty; keep UI text empty but send a prompt to the API. */
+function ollamaUserTextContent(content: string, hasImages: boolean, t: (key: string) => string): string {
+  if (hasImages && !content.trim()) return t('chat.imageOnlyApiPrompt');
+  return content;
+}
 
 export function useChatActions() {
   const { currentConversationId, conversations, addMessage, updateLastMessage } = useConversationStore();
@@ -86,10 +93,17 @@ export function useChatActions() {
           { role: 'system', content: systemPrompt },
           ...currentConv.messages.map(m => ({
             role: m.role,
-            content: m.content,
-            images: m.images
+            content:
+              m.role === 'user'
+                ? ollamaUserTextContent(m.content ?? '', !!(m.images && m.images.length > 0), t)
+                : m.content,
+            images: m.images?.map(toOllamaBase64Image)
           })),
-          { role: 'user', content: fullPrompt, images: images.length > 0 ? images : undefined }
+          {
+            role: 'user',
+            content: ollamaUserTextContent(fullPrompt, images.length > 0, t),
+            images: images.length > 0 ? images.map(toOllamaBase64Image) : undefined
+          }
         ],
         requestId,
         options: {

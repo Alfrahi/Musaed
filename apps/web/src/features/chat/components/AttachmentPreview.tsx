@@ -4,6 +4,7 @@ import { X, FileText } from 'lucide-react';
 import { useTranslation } from '../../../lib/i18n';
 import { useSettingsStore } from '../../../store';
 import { FileAttachment } from '../hooks/useAttachmentManager';
+import { attachmentImageSrc } from '../imageAttachment';
 
 interface AttachmentPreviewProps {
   images: string[];
@@ -22,7 +23,7 @@ const AttachmentPreview = ({ images, files, onRemoveImage, onRemoveFile }: Attac
     <div className="flex flex-wrap gap-2 mbe-2 p-2 bg-zinc-100 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800">
       {images.map((img, idx) => (
         <div key={`img-${idx}`} className="relative w-16 h-16 rounded-lg overflow-hidden border border-zinc-300 dark:border-zinc-700 shadow-sm">
-          <img src={`data:image/png;base64,${img}`} alt={t('common.preview')} className="w-full h-full object-cover" />
+          <img src={attachmentImageSrc(img)} alt={t('common.preview')} className="w-full h-full object-cover" />
           <button
             onClick={() => onRemoveImage(idx)}
             className="absolute inset-bs-0.5 inset-ie-0.5 p-0.5 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"

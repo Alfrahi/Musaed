@@ -70,7 +70,8 @@
     "footerNote": "Running locally on your device",
     "fileContextLabel": "Context from uploaded files:",
     "fileLabel": "File: {name}",
-    "contentLabel": "Content:"
+    "contentLabel": "Content:",
+    "imageOnlyApiPrompt": "Describe the attached image(s)."
   },
   "settings": {
     "title": "Settings",

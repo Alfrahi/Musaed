@@ -8,6 +8,7 @@ import { cn } from '../../../lib/utils';
 import MessageContent from './MessageContent';
 import { useSettingsStore } from '../../../store';
 import { useTranslation } from '../../../lib/i18n';
+import { attachmentImageSrc } from '../imageAttachment';
 
 interface MessageBubbleProps {
   message: Message;
@@ -84,7 +85,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
         whileHover={{ scale: 1.02 }}
         className="relative max-w-[320px] rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-md"
         >
-        <img src={`data:image/png;base64,${img}`} alt={t('chat.userUploaded')} className="w-full h-auto" />
+        <img src={attachmentImageSrc(img)} alt={t('chat.userUploaded')} className="w-full h-auto" />
         </motion.div>
       ))}
       </div>
