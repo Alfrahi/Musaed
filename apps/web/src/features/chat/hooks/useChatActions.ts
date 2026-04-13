@@ -1,5 +1,4 @@
 "use client";
-
 import { useCallback } from 'react';
 import { z } from 'zod';
 import { useConversationStore, useModelStore, useSettingsStore, useUIStore } from '../../../store';
@@ -32,8 +31,8 @@ export function useChatActions() {
   const buildPromptWithContext = (input: string, files: FileAttachment[]) => {
     if (files.length === 0) return input;
 
-    const fileContext = files.map(f => 
-      `${t('chat.fileLabel', { name: f.name })}\n${t('chat.contentLabel')}\n${f.content}`
+    const fileContext = files.map(f =>
+    `${t('chat.fileLabel', { name: f.name })}\n${t('chat.contentLabel')}\n${f.content}`
     ).join('\n\n---\n\n');
 
     return `${input}\n\n${t('chat.fileContextLabel')}\n${fileContext}`;
@@ -64,20 +63,20 @@ export function useChatActions() {
 
     const userMsg: Message = {
       id: crypto.randomUUID(),
-      role: 'user',
-      content: trimmedInput,
-      images: images.length > 0 ? images : undefined,
-      timestamp: Date.now(),
-      requestId,
+                                  role: 'user',
+                                  content: trimmedInput,
+                                  images: images.length > 0 ? images : undefined,
+                                  timestamp: Date.now(),
+                                  requestId,
     };
 
     const assistantMsg: Message = {
       id: crypto.randomUUID(),
-      role: 'assistant',
-      content: '',
-      timestamp: Date.now(),
-      model: selectedModel,
-      requestId,
+                                  role: 'assistant',
+                                  content: '',
+                                  timestamp: Date.now(),
+                                  model: selectedModel,
+                                  requestId,
     };
 
     addMessage(currentConversationId, userMsg);
@@ -86,6 +85,8 @@ export function useChatActions() {
     try {
       const { ollamaUrl, systemPrompt, ...params } = globalSettings;
 
+      // IMPORTANT: Do NOT pass a schema here.
+      // Your ipc.ts wrapper will return apiResponse.data (boolean) when no schema is provided.
       const success = await invoke('chat_with_ollama', {
         baseUrl: ollamaUrl,
         model: selectedModel,
@@ -94,15 +95,15 @@ export function useChatActions() {
           ...currentConv.messages.map(m => ({
             role: m.role,
             content:
-              m.role === 'user'
-                ? ollamaUserTextContent(m.content ?? '', !!(m.images && m.images.length > 0), t)
-                : m.content,
-            images: m.images?.map(toOllamaBase64Image)
+            m.role === 'user'
+          ? ollamaUserTextContent(m.content ?? '', !!(m.images && m.images.length > 0), t)
+          : m.content,
+          images: m.images?.map(toOllamaBase64Image)
           })),
           {
             role: 'user',
             content: ollamaUserTextContent(fullPrompt, images.length > 0, t),
-            images: images.length > 0 ? images.map(toOllamaBase64Image) : undefined
+                                   images: images.length > 0 ? images.map(toOllamaBase64Image) : undefined
           }
         ],
         requestId,
@@ -114,16 +115,21 @@ export function useChatActions() {
           top_p: params.top_p,
           stop: params.stop
         }
-      }, z.boolean());
+      });
 
-      if (success === null) throw new Error(t('chat.connectionFailed'));
+      if (success !== true) {
+        throw new Error(t('chat.connectionFailed'));
+      }
+
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+
       if (!msg.toLowerCase().includes('aborted')) {
         logger.error('Chat error', { error: msg, requestId });
         updateLastMessage(currentConversationId, { content: `\n\n[Error: ${msg}]`, done: true }, false);
         stopStreaming(currentConversationId);
         setError(msg);
+        toast.error(msg);
       }
     }
   }, [

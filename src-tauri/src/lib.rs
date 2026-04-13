@@ -1,20 +1,10 @@
 pub mod commands;
+pub mod logger;
 pub mod ollama_url;
 pub mod payloads;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Initialize logging
-    #[cfg(not(debug_assertions))]
-    env_logger::init();
-
-    #[cfg(debug_assertions)]
-    {
-        env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .init();
-    }
-
     log::info!("Starting Musaed application");
 
     let mut builder = tauri::Builder::default()
@@ -27,6 +17,23 @@ pub fn run() {
     {
         builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
     }
+
+    builder = builder.setup(|app| {
+        // Fixed: pass app.handle() instead of app
+        if let Err(e) = logger::init_file_logger(app.handle()) {
+            eprintln!("⚠️ Failed to initialize file logger: {}", e);
+        }
+
+        #[cfg(debug_assertions)]
+        {
+            let mut builder = env_logger::Builder::new();
+            builder.filter_level(log::LevelFilter::Debug);
+            let _ = builder.try_init();
+            log::debug!("Debug console logging enabled");
+        }
+
+        Ok(())
+    });
 
     builder
     .invoke_handler(tauri::generate_handler![
