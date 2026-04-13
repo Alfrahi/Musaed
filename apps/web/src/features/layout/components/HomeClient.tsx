@@ -28,49 +28,72 @@ const ConnectionStatus = ({ isConnected, isChecking, onRetry }: ConnectionStatus
   const { globalSettings } = useSettingsStore();
   const { t } = useTranslation(globalSettings.language);
 
-  if (isConnected && !isChecking) {
-    return (
-      <div className="flex items-center gap-2">
-      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+  return (
+    <motion.div
+    className="flex items-center gap-2"
+    initial={false}
+    animate={{ opacity: 1 }}
+    transition={{ duration: 0.2 }}
+    >
+    <AnimatePresence mode="wait">
+    {isConnected && !isChecking && (
+      <motion.div
+      key="connected"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="flex items-center gap-2"
+      >
+      <div className="w-2 h-2 rounded-full bg-green-500" />
       <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
       {t('chat.localNode')}
       </span>
-      </div>
-    );
-  }
+      </motion.div>
+    )}
 
-  if (isChecking) {
-    return (
-      <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
+    {isChecking && (
+      <motion.div
+      key="checking"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400"
+      >
       <Loader2 size={14} className="animate-spin" />
       <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest hidden sm:inline">
       {t('chat.connecting')}
       </span>
-      </div>
-    );
-  }
+      </motion.div>
+    )}
 
-  return (
-    <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    className="flex items-center gap-2"
-    >
-    <div className="flex items-center gap-2">
-    <WifiOff size={14} className="text-red-500" />
-    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest hidden sm:inline">
-    {t('chat.offline')}
-    </span>
-    </div>
-    <button
-    onClick={onRetry}
-    className="flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-blue-700 transition-colors"
-    title="Retry connection"
-    >
-    <RotateCcw size={12} />
-    <span className="hidden sm:inline">{t('common.retry')}</span>
-    </button>
+    {!isConnected && !isChecking && (
+      <motion.div
+      key="offline"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="flex items-center gap-2"
+      >
+      <div className="flex items-center gap-2">
+      <WifiOff size={14} className="text-red-500" />
+      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest hidden sm:inline">
+      {t('chat.offline')}
+      </span>
+      </div>
+      <button
+      onClick={onRetry}
+      className="flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-blue-700 transition-colors"
+      title="Retry connection"
+      >
+      <RotateCcw size={12} />
+      <span className="hidden sm:inline">{t('common.retry')}</span>
+      </button>
+      </motion.div>
+    )}
+    </AnimatePresence>
     </motion.div>
   );
 };
@@ -206,14 +229,12 @@ export default function HomeClient() {
 
     {/* Connection Status with Interactive Elements */}
     <div className="pointer-events-auto">
-    <AnimatePresence mode="wait">
     <ConnectionStatus
-    key={`connection-${isOllamaConnected}-${isChecking}`}
+    key="connection-status"
     isConnected={isOllamaConnected}
     isChecking={isChecking}
     onRetry={handleRetry}
     />
-    </AnimatePresence>
     </div>
     </div>
 
