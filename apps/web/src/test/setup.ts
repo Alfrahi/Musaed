@@ -1,14 +1,8 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
-// Mock Tauri global internals for checkIsTauri()
-Object.defineProperty(window, '__TAURI_INTERNALS__', {
-  value: {
-    invoke: vi.fn(),
-    plugins: {},
-  },
-  writable: true,
-});
+// Do not set __TAURI_INTERNALS__ here — persisted stores should use localStorage in Vitest.
+// Tests that need a Tauri host (e.g. ipc.test.ts) define the global in that file only.
 
 // Mocking window.crypto for UUID generation in tests
 Object.defineProperty(window, 'crypto', {

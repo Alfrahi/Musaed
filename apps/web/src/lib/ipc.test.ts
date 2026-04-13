@@ -1,9 +1,24 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 import { invoke, checkIsTauri } from './ipc';
 import { mockIPC } from '@tauri-apps/api/mocks';
 import { BackendErrorCode } from '@musaed/contracts';
 
 describe('IPC Bridge', () => {
+  beforeAll(() => {
+    Object.defineProperty(window, '__TAURI_INTERNALS__', {
+      value: {
+        invoke: vi.fn(),
+        plugins: {},
+      },
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  afterAll(() => {
+    delete (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
