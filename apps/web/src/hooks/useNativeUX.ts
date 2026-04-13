@@ -2,6 +2,11 @@
 
 import { useEffect } from 'react';
 
+function isInsideDragChromeTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest("[data-tauri-drag-region]"));
+}
+
 export function useNativeUX() {
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
@@ -11,11 +16,15 @@ export function useNativeUX() {
     };
 
     const handleDragOver = (e: DragEvent) => {
-      e.preventDefault();
+      if (isInsideDragChromeTarget(e.target)) {
+        e.preventDefault();
+      }
     };
 
     const handleDrop = (e: DragEvent) => {
-      e.preventDefault();
+      if (isInsideDragChromeTarget(e.target)) {
+        e.preventDefault();
+      }
     };
 
     window.addEventListener('contextmenu', handleContextMenu);

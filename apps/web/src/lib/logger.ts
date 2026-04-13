@@ -49,7 +49,13 @@ export const logger = {
           await logStore.save();
         }
         await invoke('append_to_log', { entry: logString });
-      } catch (err) {}
+      } catch (err) {
+        if (!isProd) {
+          console.error('[logger] Tauri log persistence failed', err);
+        } else {
+          console.error('[logger] persistence failed');
+        }
+      }
     }
   },
   

@@ -1,6 +1,6 @@
 use tauri::{AppHandle, Emitter, Runtime};
 use crate::ollama_url::parse_ollama_base_url;
-use crate::payloads::{ApiResponse, BackendError, ChatMessage, ChatOptions, OllamaModel, OllamaToken, PullProgress, OllamaHealth, ModelValidation};
+use crate::payloads::{ApiResponse, BackendError, ChatMessage, ChatOptions, OllamaModel, OllamaToken, PullProgress, PullStreamError, OllamaHealth, ModelValidation};
 use serde_json::json;
 use std::sync::Arc;
 use std::time::Duration;
@@ -287,6 +287,17 @@ pub async fn chat_with_ollama<R: Runtime>(
 
             match serde_json::from_str::<serde_json::Value>(&line) {
                 Ok(mut token_data) => {
+                    if let Some(err) = token_data.get("error") {
+                        let msg = err
+                            .as_str()
+                            .map(str::to_owned)
+                            .unwrap_or_else(|| err.to_string());
+                        let err_payload = BackendError::new("OLLAMA_ERROR", msg)
+                            .with_request_id(request_id_clone.clone());
+                        let _ = app_clone.emit("ollama-error", &err_payload);
+                        break;
+                    }
+
                     if let Some(obj) = token_data.as_object_mut() {
                         obj.insert("requestId".to_string(), json!(request_id_clone));
                     }
@@ -456,6 +467,26 @@ pub async fn pull_model<R: Runtime>(
         .await
         {
             Ok(response) => {
+                if !response.status().is_success() {
+                    let status = response.status().as_u16();
+                    let body = response.text().await.unwrap_or_default();
+                    log::error!(
+                        "Pull request failed for model {}: HTTP {} — {}",
+                        name_clone,
+                        status,
+                        body
+                    );
+                    let _ = app_clone.emit(
+                        "pull-error",
+                        &PullStreamError {
+                            name: name_clone.clone(),
+                            error: format!("HTTP {}: {}", status, body.chars().take(500).collect::<String>()),
+                            duration: pull_start.elapsed().as_secs(),
+                        },
+                    );
+                    return;
+                }
+
                 log::info!("Pull request accepted for model: {}", name_clone);
 
                 let stream = response.bytes_stream();
@@ -472,6 +503,23 @@ pub async fn pull_model<R: Runtime>(
 
                 while let Some(Ok(line)) = lines.next().await {
                     if let Ok(mut progress_val) = serde_json::from_str::<serde_json::Value>(&line) {
+                        if let Some(err) = progress_val.get("error") {
+                            let msg = err
+                                .as_str()
+                                .map(str::to_owned)
+                                .unwrap_or_else(|| err.to_string());
+                            log::error!("Pull stream error for {}: {}", name_clone, msg);
+                            let _ = app_clone.emit(
+                                "pull-error",
+                                &PullStreamError {
+                                    name: name_clone.clone(),
+                                    error: msg,
+                                    duration: pull_start.elapsed().as_secs(),
+                                },
+                            );
+                            return;
+                        }
+
                         if let Some(obj) = progress_val.as_object_mut() {
                             obj.insert("name".to_string(), json!(name_clone));
                         }
@@ -505,11 +553,11 @@ pub async fn pull_model<R: Runtime>(
                 log::error!("Pull request failed for model {}: {}", name_clone, e);
                 let _ = app_clone.emit(
                     "pull-error",
-                    json!({
-                        "name": name_clone,
-                        "error": e.to_string(),
-                          "duration": pull_start.elapsed().as_secs()
-                    }),
+                    &PullStreamError {
+                        name: name_clone.clone(),
+                        error: e.to_string(),
+                        duration: pull_start.elapsed().as_secs(),
+                    },
                 );
             }
         }

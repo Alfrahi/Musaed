@@ -36,7 +36,9 @@
     {
       "identifier": "opener:allow-open-url",
       "allow": [
-        { "url": "https://*" }
+        { "url": "https://*" },
+        { "url": "http://*" },
+        { "url": "mailto:*" }
       ]
     },
     "store:allow-load",

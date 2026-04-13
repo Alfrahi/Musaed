@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "tauri dev",
     "build": "tauri build",
-    "prod:build": "pnpm validate && pnpm --filter web prod:build && tauri build",
+    "prod:build": "pnpm validate && pnpm --filter web i18n:check && pnpm --filter web prod:build && tauri build",
     "test": "pnpm --filter web test",
     "lint": "pnpm --filter \"*\" lint",
     "type-check": "pnpm --filter \"*\" type-check",

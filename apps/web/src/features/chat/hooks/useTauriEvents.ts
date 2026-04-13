@@ -8,12 +8,14 @@ import {
   sanitizeError,
   BackendErrorSchema,
   PullProgressSchema,
+  PullErrorSchema,
   OllamaModelSchema,
   OllamaTokenSchema,
   Message,
   OllamaToken,
   BackendError,
-  PullProgress
+  PullProgress,
+  PullError
 } from '@musaed/contracts';
 import toast from 'react-hot-toast';
 import { logger } from '../../../lib/logger';
@@ -75,19 +77,26 @@ export function useTauriEvents() {
 
           await register('pull-progress', PullProgressSchema, async (payload: PullProgress) => {
             const modelKey = payload.name || 'current';
-          const progress = (payload.total && payload.completed != null)
-          ? Math.round((payload.completed / payload.total) * 100)
-          : undefined;
+            const progress = (payload.total && payload.completed != null)
+              ? Math.round((payload.completed / payload.total) * 100)
+              : undefined;
 
-          updatePullStatus(modelKey, { status: payload.status, progress });
+            updatePullStatus(modelKey, { status: payload.status, progress });
 
-          if (payload.status === 'success') {
-            const data = await invoke('get_ollama_models', {
-              baseUrl: useSettingsStore.getState().globalSettings.ollamaUrl
-            }, z.array(OllamaModelSchema));
-            if (data) setModels(data);
-            setTimeout(() => isMounted && updatePullStatus(modelKey, null), 3000);
-          }
+            if (payload.status === 'success') {
+              const data = await invoke('get_ollama_models', {
+                baseUrl: useSettingsStore.getState().globalSettings.ollamaUrl
+              }, z.array(OllamaModelSchema));
+              if (data) setModels(data);
+              setTimeout(() => isMounted && updatePullStatus(modelKey, null), 3000);
+            }
+          });
+
+          await register('pull-error', PullErrorSchema, (payload: PullError) => {
+            const modelKey = payload.name || 'current';
+            updatePullStatus(modelKey, { status: 'error' });
+            toast.error(payload.error || 'Model pull failed');
+            setTimeout(() => isMounted && updatePullStatus(modelKey, null), 8000);
           });
 
       } catch (err) {

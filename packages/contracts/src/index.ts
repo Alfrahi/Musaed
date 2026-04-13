@@ -118,6 +118,30 @@ export const PullProgressSchema = z.object({
 
 export type PullProgress = z.infer<typeof PullProgressSchema>;
 
+/** Emitted as `pull-error` from the desktop host when a model pull fails. */
+export const PullErrorSchema = z.object({
+  name: z.string(),
+  error: z.string(),
+  duration: z.coerce.number().optional(),
+});
+
+export type PullError = z.infer<typeof PullErrorSchema>;
+
+/** Assistant "thinking" wrapper tags — keep in sync across UI and export. */
+export const REDACTED_THINKING_TAG_START = '<think>';
+export const REDACTED_THINKING_TAG_END = '</think>';
+
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Removes `<think>…</think>` blocks (e.g. for export). */
+export function stripRedactedThinkingBlocks(content: string): string {
+  const re = new RegExp(
+    `${escapeRegExp(REDACTED_THINKING_TAG_START)}[\\s\\S]*?${escapeRegExp(REDACTED_THINKING_TAG_END)}`,
+    'gi'
+  );
+  return content.replace(re, '').trim();
+}
+
 /** Payload from `check_ollama_health` (serde camelCase). */
 export const OllamaHealthIpcSchema = z.object({
   isRunning: z.boolean(),

@@ -1,4 +1,4 @@
-import { isValidOllamaUrl } from './ipc';
+import { isValidOllamaUrl, checkIsTauri } from './ipc';
 
 export enum ConnectionState {
   DISCONNECTED = "disconnected",
@@ -43,6 +43,12 @@ export class OllamaConnectionManager {
 
   async checkHealth(): Promise<OllamaHealth | null> {
     if (!isValidOllamaUrl(this.baseUrl)) {
+      this.setState(ConnectionState.ERROR);
+      return null;
+    }
+
+    // Tauri WebView CSP does not allow arbitrary LAN `fetch` to Ollama; health must use IPC.
+    if (checkIsTauri() && !this.healthCheck) {
       this.setState(ConnectionState.ERROR);
       return null;
     }

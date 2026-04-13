@@ -1,6 +1,6 @@
 "use client";
 
-import { Conversation } from '@musaed/contracts';
+import { Conversation, stripRedactedThinkingBlocks } from '@musaed/contracts';
 import { dialog, fs, checkIsTauri } from './ipc';
 
 interface ExportContext {
@@ -33,7 +33,7 @@ export const exportToMarkdown = async (conversation: Conversation, context: Expo
   conversation.messages.forEach((msg) => {
     const role = msg.role === 'user' ? t('export.user') : t('export.assistant');
     
-    const cleanContent = msg.content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    const cleanContent = stripRedactedThinkingBlocks(msg.content);
     
     if (cleanContent) {
       markdown += `### ${role}\n\n${cleanContent}\n\n`;

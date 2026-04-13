@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from 'react';
-import { Message } from '@musaed/contracts';
+import { Message, REDACTED_THINKING_TAG_END, REDACTED_THINKING_TAG_START } from '@musaed/contracts';
 import ThinkingBlock from './ThinkingBlock';
 import MarkdownRenderer from './MarkdownRenderer';
 
@@ -17,22 +17,19 @@ const MessageContent = ({ message, isUser }: { message: Message; isUser: boolean
     const content = message.content || '';
     if (isUser) return { thinking: '', main: content, isFinished: true, shouldCollapse: false };
 
-    const TAG_START = '<think>';
-    const TAG_END = '</think>';
-    
-    const thinkStart = content.indexOf(TAG_START);
+    const thinkStart = content.indexOf(REDACTED_THINKING_TAG_START);
     if (thinkStart === -1) return { thinking: '', main: content, isFinished: true, shouldCollapse: false };
 
-    const thinkEnd = content.indexOf(TAG_END);
+    const thinkEnd = content.indexOf(REDACTED_THINKING_TAG_END);
     const isFinished = thinkEnd !== -1;
     
     const thinking = content.substring(
-      thinkStart + TAG_START.length, 
+      thinkStart + REDACTED_THINKING_TAG_START.length, 
       isFinished ? thinkEnd : content.length
     ).trim();
 
     const before = content.substring(0, thinkStart).trim();
-    const after = isFinished ? content.substring(thinkEnd + TAG_END.length).trim() : '';
+    const after = isFinished ? content.substring(thinkEnd + REDACTED_THINKING_TAG_END.length).trim() : '';
     
     // Join content outside thinking block, ensuring proper spacing
     const main = [before, after].filter(Boolean).join('\n\n');

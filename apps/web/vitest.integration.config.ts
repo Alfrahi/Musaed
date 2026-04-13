@@ -2,24 +2,18 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+/** Runs slower or environment-specific tests when you add `*.integration.test.ts` files. */
 export default defineConfig({
   plugins: [react()],
   test: {
-    include: [
-      'src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
-      '../../packages/contracts/src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
-    ],
+    include: ['**/*.integration.{test,spec}.{ts,tsx}'],
+    passWithNoTests: true,
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@musaed/contracts': path.resolve(__dirname, '../../packages/contracts/src'),
-    },
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      exclude: ['node_modules/', 'src/test/setup.ts'],
     },
   },
 });

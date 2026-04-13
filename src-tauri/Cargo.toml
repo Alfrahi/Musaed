@@ -14,7 +14,6 @@ tauri-build = { version = "2.0", features = [] }
 
 [dependencies]
 tauri = { version = "2.0", features = [] }
-tauri-plugin-shell = "2.0"
 tauri-plugin-dialog = "2.7"
 tauri-plugin-fs = "2.0"
 tauri-plugin-opener = "2.0"
@@ -34,8 +33,6 @@ reqwest = { version = "0.12", features = ["json", "stream"] }
 tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.7", features = ["codec", "io"] }
 
-# SSE Streaming for Ollama
-eventsource-stream = "0.2"
 futures = "0.3"
 
 # Concurrency

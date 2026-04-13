@@ -93,6 +93,15 @@ pub struct PullProgress {
     pub percentage: Option<f32>,
 }
 
+/// Payload for `pull-error` events (matches `PullErrorSchema` in `@musaed/contracts`).
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PullStreamError {
+    pub name: String,
+    pub error: String,
+    pub duration: u64,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct OllamaModel {

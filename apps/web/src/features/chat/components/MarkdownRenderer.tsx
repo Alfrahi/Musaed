@@ -11,12 +11,34 @@ interface MarkdownRendererProps {
   content: string;
 }
 
+const ALLOWED_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
+
+function resolveAllowedHref(href: string | undefined | null): string | null {
+  if (!href || href.trim() === '') return null;
+  try {
+    const base =
+      typeof window !== 'undefined' && window.location?.href
+        ? window.location.href
+        : 'https://invalid.invalid/';
+    const u = new URL(href, base);
+    if (ALLOWED_LINK_PROTOCOLS.has(u.protocol)) {
+      return u.toString();
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
   const handleLinkClick = async (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    if (href.startsWith('http')) {
+    const safe = resolveAllowedHref(href);
+    if (!safe) {
       e.preventDefault();
-      await opener.openUrl(href);
+      return;
     }
+    e.preventDefault();
+    await opener.openUrl(safe);
   };
 
   return (
@@ -34,17 +56,27 @@ const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
             {children}
           </blockquote>
         ),
-        a: ({ href, children }) => (
-          <a 
-            href={href} 
-            onClick={(e) => handleLinkClick(e, href || '')}
-            className="text-blue-500 hover:underline cursor-pointer font-medium transition-colors"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {children}
-          </a>
-        ),
+        a: ({ href, children }) => {
+          const safe = resolveAllowedHref(href);
+          if (!safe) {
+            return (
+              <span className="text-zinc-500 cursor-not-allowed font-medium" title="Unsupported link">
+                {children}
+              </span>
+            );
+          }
+          return (
+            <a 
+              href={safe} 
+              onClick={(e) => handleLinkClick(e, href || '')}
+              className="text-blue-500 hover:underline cursor-pointer font-medium transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {children}
+            </a>
+          );
+        },
         code({ className, children, ...props }) {
           const match = /language-(\w+)/.exec(className || '');
           return match ? (
