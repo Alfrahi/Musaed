@@ -1,0 +1,48 @@
+"use client";
+
+import { createWithEqualityFn } from 'zustand/traditional';
+import { shallow } from 'zustand/shallow';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { OllamaModel } from '@musaed/contracts';
+import { createTauriStorage } from '../../lib/tauri-storage';
+
+interface PullStatus {
+  status: string;
+  progress?: number;
+}
+
+interface ModelState {
+  models: OllamaModel[];
+  selectedModel: string;
+  pullStatus: Record<string, PullStatus>; // modelName -> status
+  setModels: (models: OllamaModel[]) => void;
+  setSelectedModel: (selectedModel: string) => void;
+  updatePullStatus: (name: string, status: PullStatus | null) => void;
+}
+
+export const useModelStore = createWithEqualityFn<ModelState>()(
+  persist(
+    (set) => ({
+      models: [],
+      selectedModel: '',
+      pullStatus: {},
+      setModels: (models) => set({ models }),
+      setSelectedModel: (selectedModel) => set({ selectedModel }),
+      updatePullStatus: (name, status) => set((state) => {
+        const next = { ...state.pullStatus };
+        if (status === null) {
+          delete next[name];
+        } else {
+          next[name] = status;
+        }
+        return { pullStatus: next };
+      }),
+    }),
+    {
+      name: 'musaed-model-storage',
+      storage: createJSONStorage(() => createTauriStorage('model-state.json')),
+      partialize: (state) => ({ selectedModel: state.selectedModel }),
+    }
+  ),
+  shallow
+);

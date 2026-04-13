@@ -1,0 +1,10 @@
+[[permission]]
+identifier = "allow-ollama-commands"
+description = "Enables interaction with the local Ollama node."
+commands.allow = [
+    "get_ollama_models",
+    "chat_with_ollama",
+    "pull_model",
+    "delete_model",
+    "abort_chat"
+]

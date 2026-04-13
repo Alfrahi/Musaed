@@ -1,0 +1,8 @@
+export { default as ChatWindow } from './components/ChatWindow';
+export { default as MessageBubble } from './components/MessageBubble';
+export { default as InputArea } from './components/InputArea';
+export { useChatActions } from './hooks/useChatActions';
+export { useConversationActions } from './hooks/useConversationActions';
+export { useAttachmentManager } from './hooks/useAttachmentManager';
+export { useTauriEvents } from './hooks/useTauriEvents';
+export { useChatInitialization } from './hooks/useChatInitialization';

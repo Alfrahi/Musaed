@@ -1,0 +1,24 @@
+[[permission]]
+identifier = "allow-history-commands"
+description = "Enables commands for loading and saving chat history."
+commands.allow = [
+    "load_history",
+    "save_history"
+]
+
+[[permission]]
+identifier = "allow-logging-commands"
+description = "Enables commands for system logging and diagnostics."
+commands.allow = [
+    "append_to_log",
+    "get_logs",
+    "clear_logs"
+]
+
+[[permission]]
+identifier = "allow-file-extraction"
+description = "Enables commands for selecting and extracting local files."
+commands.allow = [
+    "select_and_extract_files",
+    "select_and_extract_folder"
+]

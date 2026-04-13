@@ -1,0 +1,72 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Musaed",
+  "version": "0.1.0",
+  "identifier": "com.musaed.desktop",
+  "build": {
+    "beforeDevCommand": "pnpm --filter web dev",
+    "devUrl": "http://localhost:3000",
+    "beforeBuildCommand": "pnpm --filter web prod:build",
+    "frontendDist": "../apps/web/out"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Musaed",
+        "width": 1000,
+        "height": 700,
+        "resizable": true,
+        "fullscreen": false,
+        "label": "main",
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'none'; img-src 'self' data: https:; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:11434 http://127.0.0.1:11434 https://github.com/alfrahi/musaed; font-src 'self' data:;"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": ["https://github.com/alfrahi/musaed/releases/latest/download/latest.json"],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ0RTQxMTVBRDFGREVCMzEKUldReDYvM1JXaEhrUk91WHZBeDZCc01NT1NDV0lKM3c4UDErR3hjTFFtOHVFNXRhQkdRakdnc1cK",
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "copyright": "Copyright © 2026 Musaed Contributors",
+    "category": "Utilities",
+    "shortDescription": "Native local AI interface for Ollama",
+    "longDescription": "Musaed is a high-performance, privacy-centric desktop interface for Ollama, supporting local RAG and RTL languages.",
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "10.13"
+    },
+    "windows": {
+      "digestAlgorithm": "sha256",
+      "wix": {
+        "language": ["en-US", "ar-YE"]
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": []
+      },
+      "rpm": {
+        "depends": []
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "musaed",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "prod:build": "pnpm validate && pnpm --filter web prod:build && tauri build",
+    "test": "pnpm --filter web test",
+    "lint": "pnpm --filter \"*\" lint",
+    "type-check": "pnpm --filter \"*\" type-check",
+    "validate": "pnpm lint && pnpm type-check && pnpm --filter web i18n:check"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.10.1",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "focus-trap-react": "^12.0.0",
+    "framer-motion": "^12.38.0",
+    "zod": "^4.3.6"
+  }
+}

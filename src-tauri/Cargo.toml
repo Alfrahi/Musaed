@@ -1,0 +1,48 @@
+[package]
+name = "musaed"
+version = "0.1.0"
+description = "Native local AI interface for Ollama"
+authors = ["Musaed Contributors"]
+edition = "2021"
+
+[lib]
+name = "musaed_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0", features = [] }
+tauri-plugin-shell = "2.0"
+tauri-plugin-dialog = "2.0"
+tauri-plugin-fs = "2.0"
+tauri-plugin-opener = "2.0"
+tauri-plugin-store = "2.0"
+
+# Core
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# HTTP + Streaming
+reqwest = { version = "0.12", features = ["json", "stream"] }
+
+# Async
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["codec", "io"] }
+
+# SSE Streaming for Ollama (this fixes the original errors)
+eventsource-stream = "0.2"
+futures = "0.3"
+
+# Concurrency
+dashmap = "6"
+once_cell = "1.19"
+
+# Utils
+uuid = { version = "1.0", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Desktop only
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2.0"

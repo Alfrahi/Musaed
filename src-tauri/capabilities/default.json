@@ -1,0 +1,52 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Enables only required permissions for Musaed operations with strict filesystem scoping.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:window:allow-hide",
+    "core:window:allow-set-focus",
+    "core:window:allow-show",
+    "core:window:allow-get-all-windows",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "dialog:allow-confirm",
+    "dialog:allow-ask",
+    {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [
+        { "path": "$APP_DATA/**/*" },
+        { "path": "$DOCUMENT/Musaed/**/*" },
+        { "path": "$DESKTOP/Musaed/**/*" },
+        { "path": "$DOWNLOAD/Musaed/**/*" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-read-text-file",
+      "allow": [
+        { "path": "$APP_DATA/**/*" },
+        { "path": "$DOCUMENT/Musaed/**/*" },
+        { "path": "$DESKTOP/Musaed/**/*" },
+        { "path": "$DOWNLOAD/Musaed/**/*" }
+      ]
+    },
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://*" }
+      ]
+    },
+    "store:allow-load",
+    "store:allow-set",
+    "store:allow-get",
+    "store:allow-save",
+    "allow-ollama-commands",
+    "allow-history-commands",
+    "allow-logging-commands",
+    "allow-file-extraction"
+  ]
+}
