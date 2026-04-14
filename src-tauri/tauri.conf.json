@@ -56,10 +56,7 @@
       "minimumSystemVersion": "10.13"
     },
     "windows": {
-      "digestAlgorithm": "sha256",
-      "wix": {
-        "language": ["en-US", "ar-YE"]
-      }
+      "digestAlgorithm": "sha256"
     },
     "linux": {
       "deb": {
