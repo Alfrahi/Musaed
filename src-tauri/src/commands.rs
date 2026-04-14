@@ -20,9 +20,9 @@ use tokio::time;
 const MAX_TOTAL_IMAGE_SIZE_BYTES: usize = 10 * 1024 * 1024;
 const PULL_PROGRESS_THROTTLE_MS: u64 = 400;
 const MAX_CONCURRENT_CHATS: usize = 8;
-const STREAM_IDLE_TIMEOUT_SECS: u64 = 60;
-const STREAM_ABSOLUTE_TIMEOUT_SECS: u64 = 300;
-const INITIAL_REQUEST_TIMEOUT_SECS: u64 = 30;
+const STREAM_IDLE_TIMEOUT_SECS: u64 = 300;
+const STREAM_ABSOLUTE_TIMEOUT_SECS: u64 = 900;
+const INITIAL_REQUEST_TIMEOUT_SECS: u64 = 300;
 
 // Global state
 static ABORT_HANDLES: Lazy<DashMap<String, Arc<CancellationToken>>> = Lazy::new(DashMap::new);
