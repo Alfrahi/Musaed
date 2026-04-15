@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ApiResponse, OllamaModel, ChatMessage, ChatSettings, OllamaHealthIpc } from '@musaed/contracts';
+import { ApiResponse, OllamaModel, ChatMessage, ChatSettings, OllamaHealthIpc, OllamaModelSchema, OllamaHealthIpcSchema, PullProgress, PullProgressSchema } from '@musaed/contracts';
 import toast from 'react-hot-toast';
 
 export interface CommandMap {
@@ -15,6 +15,18 @@ export interface CommandMap {
   'append_to_log': { args: { entry: string }, return: void };
   'clear_logs': { args: {}, return: void };
 }
+
+// Map command return types to their Zod schemas for runtime validation
+const CommandReturnSchemas: { [K in keyof CommandMap]: z.ZodType<CommandMap[K]['return']> | undefined } = {
+  'get_ollama_models': z.array(OllamaModelSchema),
+  'chat_with_ollama': z.boolean(),
+  'abort_chat': z.null().or(z.void()),
+  'delete_model': z.boolean(),
+  'pull_model': z.null().or(z.void()),
+  'check_ollama_health': OllamaHealthIpcSchema,
+  'append_to_log': z.null().or(z.void()),
+  'clear_logs': z.null().or(z.void()),
+};
 
 export const checkIsTauri = () => typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
 
@@ -36,7 +48,6 @@ export const isValidOllamaUrl = (url: string): boolean => {
 export async function invoke<K extends keyof CommandMap>(
   command: K,
   args: CommandMap[K]['args'] = {} as any,
-  schema?: z.ZodType<CommandMap[K]['return']>,
   options?: { quiet?: boolean }
 ): Promise<CommandMap[K]['return'] | null> {
 
@@ -53,13 +64,15 @@ export async function invoke<K extends keyof CommandMap>(
     const { invoke: tauriInvoke } = await import('@tauri-apps/api/core');
     const response = await tauriInvoke<ApiResponse<any>>(command, args as any);
 
+    const schema = CommandReturnSchemas[command];
+
     if (options?.quiet && response && schema && response.data != null && response.success === false) {
       const parsedQuiet = schema.safeParse(response.data);
       if (parsedQuiet.success) return parsedQuiet.data;
     }
 
     if (response?.success) {
-      if (!schema) return (response.data ?? true) as any;
+      if (!schema) return (response.data ?? true) as any; // Allow void commands to return true if no schema
       const result = schema.safeParse(response.data);
       if (!result.success) {
         console.error(`[IPC] ${command} Schema Mismatch:`, result.error);
@@ -92,7 +105,11 @@ export async function listen<T>(
   return await tauriListen<any>(event, (e) => {
     if (schema) {
       const result = schema.safeParse(e.payload);
-      if (result.success) handler(result.data);
+      if (result.success) {
+        handler(result.data);
+      } else {
+        console.error(`[IPC] Event ${event} Schema Mismatch:`, result.error);
+      }
     } else {
       handler(e.payload);
     }
@@ -123,3 +140,5 @@ export const fs = {
   writeTextFile: async (path: string, content: string) =>
   checkIsTauri() && (await import('@tauri-apps/plugin-fs')).writeTextFile(path, content),
 };
+
+
