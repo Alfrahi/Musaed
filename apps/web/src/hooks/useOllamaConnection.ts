@@ -24,7 +24,6 @@ export function useOllamaConnection() {
                 const data = await invoke(
                     'check_ollama_health',
                     { baseUrl },
-                    OllamaHealthIpcSchema,
                     { quiet: true }
                 );
                 if (!data) return null;

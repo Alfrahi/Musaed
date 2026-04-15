@@ -20,7 +20,7 @@ export function useModelActions() {
     if (isManual) toast.loading(t('library.refreshing'), { id: 'fetch-models' });
     
     try {
-      const data = await invoke('get_ollama_models', { baseUrl }, z.array(OllamaModelSchema));
+      const data = await invoke('get_ollama_models', { baseUrl });
       
       if (data !== null) {
         setOllamaConnected(true);
@@ -46,7 +46,7 @@ export function useModelActions() {
 
   const deleteModel = useCallback(async (name: string) => {
     const { ollamaUrl } = useSettingsStore.getState().globalSettings;
-    const success = await invoke('delete_model', { baseUrl: ollamaUrl, name }, z.boolean());
+    const success = await invoke('delete_model', { baseUrl: ollamaUrl, name });
 
     if (success) {
       await fetchModels();

@@ -1,5 +1,13 @@
 import { z } from 'zod';
-import { ApiResponse, OllamaModel, ChatMessage, ChatSettings, OllamaHealthIpc, OllamaModelSchema, OllamaHealthIpcSchema, PullProgress, PullProgressSchema } from '@musaed/contracts';
+import {
+  ApiResponse,
+  OllamaModel,
+  ChatMessage,
+  ChatSettings,
+  OllamaHealthIpc,
+  OllamaModelSchema,
+  OllamaHealthIpcSchema
+} from '@musaed/contracts';
 import toast from 'react-hot-toast';
 
 export interface CommandMap {
@@ -20,12 +28,12 @@ export interface CommandMap {
 const CommandReturnSchemas: { [K in keyof CommandMap]: z.ZodType<CommandMap[K]['return']> | undefined } = {
   'get_ollama_models': z.array(OllamaModelSchema),
   'chat_with_ollama': z.boolean(),
-  'abort_chat': z.null().or(z.void()),
+  'abort_chat': z.void(),           // ← Fixed
   'delete_model': z.boolean(),
-  'pull_model': z.null().or(z.void()),
+  'pull_model': z.void(),           // ← Fixed
   'check_ollama_health': OllamaHealthIpcSchema,
-  'append_to_log': z.null().or(z.void()),
-  'clear_logs': z.null().or(z.void()),
+  'append_to_log': z.void(),
+  'clear_logs': z.void(),
 };
 
 export const checkIsTauri = () => typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
@@ -66,13 +74,8 @@ export async function invoke<K extends keyof CommandMap>(
 
     const schema = CommandReturnSchemas[command];
 
-    if (options?.quiet && response && schema && response.data != null && response.success === false) {
-      const parsedQuiet = schema.safeParse(response.data);
-      if (parsedQuiet.success) return parsedQuiet.data;
-    }
-
     if (response?.success) {
-      if (!schema) return (response.data ?? true) as any; // Allow void commands to return true if no schema
+      if (!schema) return (response.data ?? true) as any;
       const result = schema.safeParse(response.data);
       if (!result.success) {
         console.error(`[IPC] ${command} Schema Mismatch:`, result.error);
@@ -140,5 +143,3 @@ export const fs = {
   writeTextFile: async (path: string, content: string) =>
   checkIsTauri() && (await import('@tauri-apps/plugin-fs')).writeTextFile(path, content),
 };
-
-

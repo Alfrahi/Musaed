@@ -86,7 +86,8 @@ export function useTauriEvents() {
             if (payload.status === 'success') {
               const data = await invoke('get_ollama_models', {
                 baseUrl: useSettingsStore.getState().globalSettings.ollamaUrl
-              }, z.array(OllamaModelSchema));
+              });
+
               if (data) setModels(data);
               setTimeout(() => isMounted && updatePullStatus(modelKey, null), 3000);
             }
