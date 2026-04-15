@@ -42,7 +42,11 @@ const InputArea = () => {
     setInput('');
   }, [currentConversationId, clearAttachments]);
 
-  const isStreaming = currentConversationId ? !!activeStreams[currentConversationId] : false;
+  // Hide the input area if no chat is selected
+  if (!currentConversationId) {
+    return null;
+  }
+  const isStreaming = !!activeStreams[currentConversationId];
 
   const openFilePicker = (input: HTMLInputElement | null) => {
     if (!input) return;
@@ -126,7 +130,7 @@ const InputArea = () => {
             {isStreaming ? (
               <button
                 type="button"
-                onClick={() => abortStreaming(currentConversationId!)}
+                onClick={() => abortStreaming(currentConversationId)}
                 className="w-10 h-10 flex items-center justify-center bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-2xl shadow-lg hover:opacity-90 active:scale-95 transition-all"
                 aria-label={t('a11y.stopResponse')}
               >
