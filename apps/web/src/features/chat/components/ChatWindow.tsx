@@ -111,7 +111,7 @@ const ChatWindow = () => {
       {showScrollButton && currentConversation.messages.length > 0 && (
         <button
           onClick={scrollToBottom}
-          className="absolute inset-be-28 start-1/2 -translate-x-1/2 rtl:translate-x-1/2 p-2 bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-300 rounded-full shadow-lg border border-zinc-200 dark:border-zinc-700 hover:text-blue-500 transition-all z-20"
+          className="absolute inset-be-28 inset-is-1/2 -translate-is-1/2 p-2 bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-300 rounded-full shadow-lg border border-zinc-200 dark:border-zinc-700 hover:text-blue-500 transition-all z-20"
           aria-label={t('common.done')}
         >
           <ArrowDown size={20} />
