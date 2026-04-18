@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useMemo, useCallback } from 'react';
-import { Plus, RefreshCw, AlertCircle } from 'lucide-react';
+import { RefreshCw, AlertCircle } from 'lucide-react';
 import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
 import { useModelStore, useSettingsStore, useUIStore } from '../../../store';
-import { useTranslation } from '../../../lib/i18n';
+import { useTranslation, TranslationKey } from '../../../lib/i18n';
 import ModelCard from './ModelCard';
 import LibrarySearchHeader from './LibrarySearchHeader';
 import { useModelPulling } from '../hooks/useModelPulling';
@@ -19,16 +19,16 @@ interface ModelLibraryProps {
 }
 
 const FEATURED_MODELS_LIST = [
-  { name: 'deepseek-r1:1.5b', descriptionKey: 'models.deepseekR1_15b', size: 1.1 },
-  { name: 'deepseek-r1:7b', descriptionKey: 'models.deepseekR1_7b', size: 4.7 },
-  { name: 'llama3.2', descriptionKey: 'models.llama32', size: 2.0 },
-  { name: 'llama3.1', descriptionKey: 'models.llama31', size: 4.7 },
-  { name: 'mistral', descriptionKey: 'models.mistral', size: 4.1 },
-  { name: 'phi3', descriptionKey: 'models.phi3', size: 2.3 },
-  { name: 'gemma2', descriptionKey: 'models.gemma2', size: 5.4 },
-  { name: 'llava', descriptionKey: 'models.llava', size: 4.5 },
-  { name: 'codellama', descriptionKey: 'models.codellama', size: 3.8 },
-  { name: 'qwen2.5', descriptionKey: 'models.qwen25', size: 4.4 },
+  { name: 'deepseek-r1:1.5b', descriptionKey: 'models.deepseekR1_15b' as const, size: 1.1 },
+  { name: 'deepseek-r1:7b', descriptionKey: 'models.deepseekR1_7b' as const, size: 4.7 },
+  { name: 'llama3.2', descriptionKey: 'models.llama32' as const, size: 2.0 },
+  { name: 'llama3.1', descriptionKey: 'models.llama31' as const, size: 4.7 },
+  { name: 'mistral', descriptionKey: 'models.mistral' as const, size: 4.1 },
+  { name: 'phi3', descriptionKey: 'models.phi3' as const, size: 2.3 },
+  { name: 'gemma2', descriptionKey: 'models.gemma2' as const, size: 5.4 },
+  { name: 'llava', descriptionKey: 'models.llava' as const, size: 4.5 },
+  { name: 'codellama', descriptionKey: 'models.codellama' as const, size: 3.8 },
+  { name: 'qwen2.5', descriptionKey: 'models.qwen25' as const, size: 4.4 },
 ];
 
 const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
@@ -43,7 +43,7 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
   const { handlePull, translateOllamaStatus } = useModelPulling();
 
   const featuredModels = useMemo(() => 
-    FEATURED_MODELS_LIST.map(m => ({ ...m, description: t(m.descriptionKey as any) })), 
+    FEATURED_MODELS_LIST.map(m => ({ ...m, description: t(m.descriptionKey) })), 
   [t]);
 
   const handleDelete = useCallback(async (name: string) => {
@@ -73,7 +73,7 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
       />
 
       {!isOllamaConnected && (
-        <div className="mx-6 mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-none flex items-center gap-3">
+        <div className="ms-6 me-6 mbs-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-none flex items-center gap-3">
           <AlertCircle size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />
           <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
             {t('chat.connectionFailed')}
@@ -103,9 +103,9 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
             data={filteredInstalled} 
             itemContent={(idx, model) => (
               <div className={cn(
-                "px-6 pb-4", 
-                idx === 0 && "pt-6",
-                idx === filteredInstalled.length - 1 && "pb-12"
+                "ps-6 pe-6 pbe-4", 
+                idx === 0 && "pbs-6",
+                idx === filteredInstalled.length - 1 && "pbe-12"
               )}>
                 <ModelCard 
                   name={model.name} size={model.size} details={model.details} isDownloaded={true}
@@ -117,9 +117,9 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
         )}
       </div>
 
-      <div className="px-6 py-4 bg-zinc-50 dark:bg-zinc-900/80 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+      <div className="ps-6 pe-6 py-4 bg-zinc-50 dark:bg-zinc-900/80 border-bs border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
         <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">{t('logs.logStorageInfo')}</span>
-        <button onClick={onClose} className="px-6 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-none text-sm font-bold active:scale-95 transition-all">
+        <button onClick={onClose} className="ps-6 pe-6 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-none text-sm font-bold active:scale-95 transition-all">
           {t('common.done')}
         </button>
       </div>

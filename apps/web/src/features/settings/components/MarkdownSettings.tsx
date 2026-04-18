@@ -1,16 +1,24 @@
 "use client";
 
-import { FileText, Cpu, Layout } from 'lucide-react';
+import { FileText, Cpu, Layout, LucideIcon } from 'lucide-react';
 import { useSettingsStore } from '../../../store';
 import { useSettingsActions } from '../hooks/useSettingsActions';
-import { useTranslation } from '../../../lib/i18n';
+import { useTranslation, TranslationKey } from '../../../lib/i18n';
+import { ChatSettings } from '@musaed/contracts';
+
+interface MarkdownToggle {
+  id: keyof ChatSettings;
+  label: TranslationKey;
+  icon: LucideIcon;
+  description: TranslationKey;
+}
 
 const MarkdownSettings = () => {
   const { globalSettings } = useSettingsStore();
   const { updateGlobalSettings } = useSettingsActions();
   const { t } = useTranslation(globalSettings.language);
 
-  const toggles = [
+  const toggles: MarkdownToggle[] = [
     { 
       id: 'enableLatex', 
       label: 'settings.markdown.enableLatex', 
@@ -35,7 +43,7 @@ const MarkdownSettings = () => {
       <div className="flex flex-col gap-3">
         {toggles.map((toggle) => {
           const Icon = toggle.icon;
-          const isEnabled = (globalSettings as any)[toggle.id];
+          const isEnabled = globalSettings[toggle.id] as boolean;
           
           return (
             <div 
@@ -46,9 +54,9 @@ const MarkdownSettings = () => {
                 <Icon size={16} className="text-zinc-500" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold dark:text-zinc-200">{t(toggle.label as any)}</p>
+                <p className="text-xs font-bold dark:text-zinc-200">{t(toggle.label)}</p>
                 <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                  {t(toggle.description as any)}
+                  {t(toggle.description)}
                 </p>
               </div>
               <button

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { User, Bot, Copy, Check, Zap, Cpu } from 'lucide-react';
-import { Message } from '@musaed/contracts';
+import { Message, stripRedactedThinkingBlocks } from '@musaed/contracts';
 import { cn } from '../../../lib/utils';
 import MessageContent from './MessageContent';
 import { useSettingsStore } from '../../../store';
@@ -20,7 +20,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
   const { t, formatNumber } = useTranslation(globalSettings.language);
 
   const handleCopy = () => {
-    const cleanContent = message.content.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+    const cleanContent = stripRedactedThinkingBlocks(message.content);
     navigator.clipboard.writeText(cleanContent || message.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -31,10 +31,10 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
 
   return (
     <div className={cn(
-      "w-full border-b border-sidebar-border transition-colors",
+      "w-full border-be border-sidebar-border transition-colors",
       isUser ? "bg-background" : "bg-zinc-50 dark:bg-zinc-900/30"
     )}>
-      <div className="max-w-4xl mx-auto px-6 py-8 flex gap-6">
+      <div className="max-w-4xl ms-auto me-auto ps-6 pe-6 py-8 flex gap-6">
         <div className={cn(
           "w-8 h-8 shrink-0 flex items-center justify-center border",
           isUser ? "bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500" : "bg-primary border-primary text-white"
@@ -66,7 +66,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
           </div>
 
           {!isUser && message.eval_count !== undefined && (
-            <div className="flex items-center gap-4 text-[9px] font-bold uppercase text-zinc-400 pt-4 border-t border-sidebar-border/50">
+            <div className="flex items-center gap-4 text-[9px] font-bold uppercase text-zinc-400 pbs-4 border-bs border-sidebar-border/50">
               <span className="flex items-center gap-1.5"><Cpu size={12} /> {formatNumber(message.eval_count)} {t('chat.tokens')}</span>
               {tps > 0 && <span className="flex items-center gap-1.5 text-primary"><Zap size={12} /> {formatNumber(tps, { maximumFractionDigits: 1 })} T/S</span>}
             </div>

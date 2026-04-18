@@ -131,7 +131,7 @@ export function useChatActions() {
 
       if (!msg.toLowerCase().includes('aborted')) {
         logger.error('Chat error', { error: msg, requestId });
-        updateLastMessage(currentConversationId, { content: `\n\n[Error: ${msg}]`, done: true }, false);
+        updateLastMessage(currentConversationId, { content: `\n\n[${t('chat.errorPrefix')}: ${msg}]`, done: true }, false);
         stopStreaming(currentConversationId);
         setError(msg);
         toast.error(msg);

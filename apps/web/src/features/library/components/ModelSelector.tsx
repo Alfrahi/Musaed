@@ -37,7 +37,7 @@ const ModelSelector = () => {
         <button
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
-            "flex items-center gap-2 px-3 py-2 rounded-none border border-transparent hover:border-sidebar-border hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all text-[13px] font-bold uppercase text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 outline-none focus-visible:ring-1 focus-visible:ring-blue-500",
+            "flex items-center gap-2 ps-3 pe-3 py-2 rounded-none border border-transparent hover:border-sidebar-border hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all text-[13px] font-bold uppercase text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 outline-none focus-visible:ring-1 focus-visible:ring-blue-500",
             isOpen && "border-sidebar-border bg-zinc-100 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100"
           )}
           aria-haspopup="listbox"
@@ -61,10 +61,10 @@ const ModelSelector = () => {
 
       {isOpen && (
         <div 
-          className="absolute bottom-full mb-2 start-0 min-w-[240px] bg-white dark:bg-zinc-900 border border-sidebar-border shadow-pro z-50 py-1 animate-in fade-in slide-in-from-bottom-2 duration-200"
+          className="absolute inset-be-full mbe-2 start-0 min-w-[240px] bg-white dark:bg-zinc-900 border border-sidebar-border shadow-pro z-50 py-1 animate-in fade-in slide-in-from-bottom-2 duration-200"
           role="listbox"
         >
-          <div className="px-4 py-2.5 border-b border-sidebar-border mb-1">
+          <div className="ps-4 pe-4 py-2.5 border-be border-sidebar-border mbe-1">
             <span className="text-[11px] font-black text-zinc-400 uppercase">
               {t('a11y.selectModel')}
             </span>
@@ -77,7 +77,7 @@ const ModelSelector = () => {
                   key={m.name}
                   onClick={() => handleSelect(m.name)}
                   className={cn(
-                    "w-full flex items-center justify-between px-4 py-3 text-start text-sm font-medium transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 outline-none focus:bg-zinc-50 dark:focus:bg-zinc-800/50",
+                    "w-full flex items-center justify-between ps-4 pe-4 py-3 text-start text-sm font-medium transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 outline-none focus:bg-zinc-50 dark:focus:bg-zinc-800/50",
                     selectedModel === m.name ? "text-blue-600 dark:text-blue-400" : "text-zinc-600 dark:text-zinc-400"
                   )}
                   role="option"
@@ -88,7 +88,7 @@ const ModelSelector = () => {
                 </button>
               ))
             ) : (
-              <div className="px-4 py-6 text-center">
+              <div className="ps-4 pe-4 py-6 text-center">
                 <p className="text-xs font-bold text-zinc-400 uppercase italic">
                   {t('library.noModelsFound')}
                 </p>

@@ -13,12 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      dir="ltr"
-      className="h-full antialiased"
-      suppressHydrationWarning
-    >
+    <html suppressHydrationWarning>
       <body className="h-full flex flex-col overflow-hidden bg-background text-foreground font-sans" suppressHydrationWarning>
         <ErrorBoundary>
           <DirectionProvider>

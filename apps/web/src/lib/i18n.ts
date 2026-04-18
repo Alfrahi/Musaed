@@ -18,6 +18,8 @@ const messageFormatters = new Map<string, IntlMessageFormat>();
 /**
  * Detects the system language based on the browser/webview environment.
  * Used primarily during the first-time initialization.
+ * 
+ * @returns {Language} The detected system language ('en' or 'ar').
  */
 export const getSystemLanguage = (): Language => {
   if (typeof window === 'undefined') return 'en';
@@ -26,22 +28,36 @@ export const getSystemLanguage = (): Language => {
 
 /**
  * Returns the layout direction (RTL/LTR) for a given language.
+ * 
+ * @param {Language} lang - The language to check.
+ * @returns {'rtl' | 'ltr'} The direction of the language.
  */
 export const getDirection = (lang: Language): 'rtl' | 'ltr' => {
   return lang === 'ar' ? 'rtl' : 'ltr';
 };
 
+/**
+ * Hook for using translation and formatting utilities.
+ * 
+ * @param {Language} lang - The active application language.
+ * @returns Object containing translation and formatting functions.
+ */
 export const useTranslation = (lang: Language) => {
   const activeLocale = lang === 'ar' ? 'ar-YE' : 'en-US';
 
-  const t = (key: TranslationKey | string, values?: Record<string, any>) => {
+  const t = (key: TranslationKey | string, values?: Record<string, string | number | boolean>) => {
     const keys = key.split('.');
-    const dict = translations[lang] || translations.en;
+    const dict = (translations[lang] || translations.en) as Record<string, unknown>;
+    const defaultDict = translations.en as Record<string, unknown>;
     
-    const value = keys.reduce((acc, k) => (acc && typeof acc === 'object' ? (acc as any)[k] : undefined), dict) 
-      || keys.reduce((acc, k) => (acc && typeof acc === 'object' ? (acc as any)[k] : undefined), translations.en);
+    const resolve = (obj: Record<string, unknown>, k: string[]): string | undefined => {
+      const val = k.reduce((acc: unknown, part) => (acc && typeof acc === 'object' ? (acc as Record<string, unknown>)[part] : undefined), obj);
+      return typeof val === 'string' ? val : undefined;
+    };
+
+    const value = resolve(dict, keys) || resolve(defaultDict, keys);
     
-    if (typeof value !== 'string') return key;
+    if (!value) return key;
 
     if (!values) return value;
 

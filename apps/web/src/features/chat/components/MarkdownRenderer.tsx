@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeKatex from 'rehype-katex';
+import type { PluggableList } from 'unified';
 import 'highlight.js/styles/github-dark.css';
 import 'katex/dist/katex.min.css';
 import CodeBlock from './CodeBlock';
@@ -38,11 +39,11 @@ function resolveAllowedHref(href: string | undefined | null): string | null {
 const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
   const { globalSettings } = useSettingsStore();
   
-  const remarkPlugins = [remarkGfm];
-  if (globalSettings.enableLatex) remarkPlugins.push(remarkMath as any);
+  const remarkPlugins: PluggableList = [remarkGfm];
+  if (globalSettings.enableLatex) remarkPlugins.push(remarkMath);
 
-  const rehypePlugins = [rehypeHighlight];
-  if (globalSettings.enableLatex) rehypePlugins.push(rehypeKatex as any);
+  const rehypePlugins: PluggableList = [rehypeHighlight];
+  if (globalSettings.enableLatex) rehypePlugins.push(rehypeKatex);
 
   const handleLinkClick = async (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     const safe = resolveAllowedHref(href);

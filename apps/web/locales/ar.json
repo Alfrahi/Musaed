@@ -73,7 +73,9 @@
     "contentLabel": "المحتوى:",
     "imageOnlyApiPrompt": "صف الصورة أو الصور المرفقة.",
     "shortcutSend": "إدخال للإرسال",
-    "shortcutMultiLine": "Cmd/Ctrl + إدخال للإرسال"
+    "shortcutMultiLine": "Cmd/Ctrl + إدخال للإرسال",
+    "shortcutStop": "ESC للإيقاف",
+    "errorPrefix": "خطأ"
   },
   "settings": {
     "title": "الإعدادات",

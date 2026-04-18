@@ -9,7 +9,7 @@ interface LogEntry {
   level: LogLevel;
   message: string;
   timestamp: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -22,7 +22,7 @@ export const logger = {
   /**
    * Logs a message with a specific severity level.
    */
-  log: async (level: LogLevel, message: string, context?: Record<string, any>) => {
+  log: async (level: LogLevel, message: string, context?: Record<string, unknown>) => {
     if (isProd && level === 'debug') return;
 
     // Use the contract's sanitization logic to redact paths and URLs
@@ -40,7 +40,7 @@ export const logger = {
       level,
       message: finalMessage,
       timestamp: new Date().toISOString(),
-      context: context ? JSON.parse(JSON.stringify(context)) : undefined, // Shallow clone
+      context: context ? JSON.parse(JSON.stringify(context)) : undefined,
     };
     
     const logString = JSON.stringify(entry);
@@ -65,8 +65,8 @@ export const logger = {
     }
   },
   
-  info: (message: string, context?: Record<string, any>) => { logger.log('info', message, context); },
-  warn: (message: string, context?: Record<string, any>) => { logger.log('warn', message, context); },
-  error: (message: string, context?: Record<string, any>) => { logger.log('error', message, context); },
-  debug: (message: string, context?: Record<string, any>) => { logger.log('debug', message, context); },
+  info: (message: string, context?: Record<string, unknown>) => { logger.log('info', message, context); },
+  warn: (message: string, context?: Record<string, unknown>) => { logger.log('warn', message, context); },
+  error: (message: string, context?: Record<string, unknown>) => { logger.log('error', message, context); },
+  debug: (message: string, context?: Record<string, unknown>) => { logger.log('debug', message, context); },
 };

@@ -1,19 +1,22 @@
 import en from '../locales/en.json';
 import ar from '../locales/ar.json';
 
-function getKeys(obj: any, prefix = ''): string[] {
+type Dictionary = { [key: string]: string | Dictionary | string[] };
+
+function getKeys(obj: Dictionary, prefix = ''): string[] {
   return Object.keys(obj).reduce((res: string[], el) => {
-    if (Array.isArray(obj[el])) {
+    const value = obj[el];
+    if (Array.isArray(value)) {
       return res;
-    } else if (typeof obj[el] === 'object' && obj[el] !== null) {
-      return [...res, ...getKeys(obj[el], prefix + el + '.')];
+    } else if (typeof value === 'object' && value !== null) {
+      return [...res, ...getKeys(value as Dictionary, prefix + el + '.')];
     }
     return [...res, prefix + el];
   }, []);
 }
 
-const enKeys = getKeys(en);
-const arKeys = getKeys(ar);
+const enKeys = getKeys(en as Dictionary);
+const arKeys = getKeys(ar as Dictionary);
 
 const missingInAr = enKeys.filter(k => !arKeys.includes(k));
 const missingInEn = arKeys.filter(k => !enKeys.includes(k));

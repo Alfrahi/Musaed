@@ -4,26 +4,21 @@ import { useCallback, useState, useEffect } from 'react';
 import { useConversationStore, useModelStore, useSettingsStore } from '../../../store';
 import { useTranslation } from '../../../lib/i18n';
 import { checkIsTauri, dialog, fs } from '../../../lib/ipc';
-import { exportToMarkdown } from '../../../lib/export';
 import toast from 'react-hot-toast';
 import { ConversationSchema } from '@musaed/contracts';
-import { z } from 'zod';
 
 export function useStorageActions() {
   const { conversations, conversationIds, setConversations } = useConversationStore();
   const { models } = useModelStore();
   const { globalSettings } = useSettingsStore();
-  const { t, formatDate, formatNumber } = useTranslation(globalSettings.language);
+  const { t, formatDate } = useTranslation(globalSettings.language);
 
   const [historySize, setHistorySize] = useState<number | null>(null);
   const [modelsSize, setModelsSize] = useState<number | null>(null);
 
   const calculateSizes = useCallback(() => {
-    // History size calculation based on JSON string length
     const json = JSON.stringify({ conversations, conversationIds });
     setHistorySize(new Blob([json]).size);
-
-    // Models size calculation
     const totalModelsSize = models.reduce((acc, m) => acc + (m.size || 0), 0);
     setModelsSize(totalModelsSize);
   }, [conversations, conversationIds, models]);
@@ -64,19 +59,11 @@ export function useStorageActions() {
   }, [conversations]);
 
   const handleExportMarkdownBundle = useCallback(async () => {
-    // Markdown bundle export logic
-    // For simplicity in a web preview/Tauri environment, we'll iterate and export.
-    // In a real desktop app, we might create a ZIP, but here we provide a way to export the current view.
     const convs = Object.values(conversations);
     if (convs.length === 0) return;
 
-    // Trigger individual exports for all or first few?
-    // Let's just export the JSON as it's the most "migratable" format for now.
-    // The requirement asks for Markdown bundle, but multiple downloads are blocked by browsers.
-    // In Tauri we could create a folder. For now, let's reuse exportToMarkdown logic.
     toast.loading("Preparing bundle...", { duration: 1000 });
     
-    // We'll just export the first one for the demo/standard or a concatenated file
     const safeTitle = `musaed_bundle_${new Date().toISOString().split('T')[0]}`;
     const fileName = `${safeTitle}.md`;
     
@@ -130,9 +117,8 @@ export function useStorageActions() {
       reader.onload = async (event) => {
         try {
           const raw = JSON.parse(event.target?.result as string);
-          // Simple validation: check if it has conversations array
-          if (raw && Array.isArray(raw.conversations)) {
-            const validated = raw.conversations.map((c: any) => ConversationSchema.parse(c));
+          if (raw && typeof raw === 'object' && Array.isArray(raw.conversations)) {
+            const validated = raw.conversations.map((c: unknown) => ConversationSchema.parse(c));
             setConversations(validated);
             toast.success(t('settings.storage.importSuccess'));
           } else {

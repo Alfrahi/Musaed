@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Check, Copy } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { useTranslation } from '../../../lib/i18n';
@@ -14,11 +14,13 @@ interface CodeBlockProps {
 /**
  * Recursively extracts text content from React nodes for the copy-to-clipboard functionality.
  */
-function extractText(node: any): string {
+function extractText(node: React.ReactNode): string {
   if (!node) return '';
   if (typeof node === 'string' || typeof node === 'number') return String(node);
   if (Array.isArray(node)) return node.map(extractText).join('');
-  if (node.props && node.props.children) return extractText(node.props.children);
+  if (React.isValidElement(node) && node.props && 'children' in node.props) {
+    return extractText(node.props.children as React.ReactNode);
+  }
   return '';
 }
 

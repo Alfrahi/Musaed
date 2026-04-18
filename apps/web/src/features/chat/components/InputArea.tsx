@@ -70,8 +70,8 @@ const InputArea = () => {
   };
 
   return (
-    <div className="shrink-0 border-t border-sidebar-border bg-background p-4">
-      <div className="max-w-4xl mx-auto space-y-3">
+    <div className="shrink-0 border-bs border-sidebar-border bg-background p-4">
+      <div className="max-w-4xl ms-auto me-auto space-y-3">
         <AttachmentPreview 
           images={images} 
           files={files} 
@@ -108,10 +108,10 @@ const InputArea = () => {
               rows={1}
             />
             
-            <div className="flex items-center justify-between px-2 pb-2">
+            <div className="flex items-center justify-between ps-2 pe-2 pbe-2">
               <div className="flex items-center gap-1">
                 <ModelSelector />
-                <div className="w-[1px] h-3 bg-sidebar-border mx-2" />
+                <div className="w-[1px] h-3 bg-sidebar-border ms-2 me-2" />
                 
                 <button 
                   type="button" 
@@ -134,7 +134,7 @@ const InputArea = () => {
               <div className="flex items-center gap-3">
                 <span className="hidden sm:block text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">
                   {isStreaming 
-                    ? "ESC to Stop" 
+                    ? t('chat.shortcutStop')
                     : (globalSettings.enterToSend ? t('chat.shortcutSend') : t('chat.shortcutMultiLine'))
                   }
                 </span>
@@ -143,7 +143,7 @@ const InputArea = () => {
                   <button
                     type="button"
                     onClick={() => abortStreaming(currentConversationId)}
-                    className="h-8 px-4 flex items-center gap-2 bg-foreground text-background text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95"
+                    className="h-8 ps-4 pe-4 flex items-center gap-2 bg-foreground text-background text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95"
                   >
                     <Square size={10} fill="currentColor" />
                     {t('common.done')}
@@ -152,7 +152,7 @@ const InputArea = () => {
                   <button
                     type="submit"
                     disabled={!selectedModel || (!input.trim() && images.length === 0 && files.length === 0)}
-                    className="h-8 px-4 bg-primary text-white text-[11px] font-bold uppercase tracking-wider transition-all disabled:opacity-20 active:scale-95 flex items-center gap-2"
+                    className="h-8 ps-4 pe-4 bg-primary text-white text-[11px] font-bold uppercase tracking-wider transition-all disabled:opacity-20 active:scale-95 flex items-center gap-2"
                   >
                     <Send size={10} className="mirror-rtl" />
                   </button>

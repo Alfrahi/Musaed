@@ -4,6 +4,15 @@ import { useEffect } from 'react';
 import { useConversationActions } from '../features/chat';
 import { useUIStore } from '../store';
 
+/**
+ * Hook to register global keyboard shortcuts for primary application actions.
+ * 
+ * Actions:
+ * - Cmd/Ctrl + N: New Chat
+ * - Cmd/Ctrl + ,: Settings
+ * - Cmd/Ctrl + L: Model Library
+ * - Escape: Close Modals
+ */
 export function useGlobalShortcuts() {
   const { createNewConversation } = useConversationActions();
   const { setSettingsOpen, setLibraryOpen } = useUIStore();

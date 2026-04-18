@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from 'react';
-import { Conversation } from '@musaed/contracts';
+import { Conversation, Language } from '@musaed/contracts';
 import { useTranslation } from '../../../lib/i18n';
 
 export type TimeGroup = 'search' | 'today' | 'yesterday' | 'lastWeek' | 'older';
@@ -13,11 +13,20 @@ export interface SidebarItem {
   id: string;
 }
 
+/**
+ * Hook to group and filter conversations for display in the sidebar.
+ * 
+ * @param {Record<string, Conversation>} conversations - Map of conversation IDs to objects.
+ * @param {string[]} conversationIds - Ordered list of conversation IDs.
+ * @param {string} searchQuery - The user's current search term.
+ * @param {Language} language - The active application language.
+ * @returns {SidebarItem[]} A flattened list of headers and conversation items.
+ */
 export function useSidebarGrouping(
   conversations: Record<string, Conversation>, 
   conversationIds: string[], 
   searchQuery: string,
-  language: any
+  language: Language
 ) {
   const { t } = useTranslation(language);
 

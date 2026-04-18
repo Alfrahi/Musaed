@@ -130,7 +130,7 @@ class ErrorBoundary extends Component<Props, State> {
           <HelpCircle size={12} className="inline me-1" />
           {t('error.details')}
           </summary>
-          <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-900 rounded text-[9px] overflow-auto max-h-24 text-gray-700 dark:text-gray-300">
+          <pre className="mbs-2 p-2 bg-gray-100 dark:bg-gray-900 rounded text-[9px] overflow-auto max-h-24 text-gray-700 dark:text-gray-300">
           {this.state.error.stack}
           </pre>
           </details>
