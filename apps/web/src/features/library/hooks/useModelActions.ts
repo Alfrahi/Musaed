@@ -1,26 +1,30 @@
 "use client";
 
 import { useCallback } from 'react';
-import { z } from 'zod';
-import { OllamaModelSchema } from '@musaed/contracts';
 import { useModelStore, useSettingsStore, useUIStore } from '../../../store';
-import { invoke } from '../../../lib/ipc';
+import { ollamaApi } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
 import { useTranslation } from '../../../lib/i18n';
 
+/**
+ * Hook providing actions for fetching and deleting Ollama models.
+ */
 export function useModelActions() {
   const { setModels, setSelectedModel } = useModelStore();
   const { globalSettings } = useSettingsStore();
   const { setError, setOllamaConnected } = useUIStore();
   const { t } = useTranslation(globalSettings.language);
 
+  /**
+   * Fetches the list of available models from the configured Ollama server.
+   */
   const fetchModels = useCallback(async (isManual = false) => {
     const { ollamaUrl: baseUrl } = useSettingsStore.getState().globalSettings;
     if (isManual) toast.loading(t('library.refreshing'), { id: 'fetch-models' });
     
     try {
-      const data = await invoke('get_ollama_models', { baseUrl });
+      const data = await ollamaApi.getModels(baseUrl);
       
       if (data !== null) {
         setOllamaConnected(true);
@@ -44,9 +48,12 @@ export function useModelActions() {
     }
   }, [setModels, setSelectedModel, setError, setOllamaConnected, t]);
 
+  /**
+   * Deletes a specific model from the Ollama server.
+   */
   const deleteModel = useCallback(async (name: string) => {
     const { ollamaUrl } = useSettingsStore.getState().globalSettings;
-    const success = await invoke('delete_model', { baseUrl: ollamaUrl, name });
+    const success = await ollamaApi.deleteModel(ollamaUrl, name);
 
     if (success) {
       await fetchModels();

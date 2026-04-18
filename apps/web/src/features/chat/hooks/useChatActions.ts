@@ -1,22 +1,26 @@
 "use client";
 import { useCallback } from 'react';
-import { z } from 'zod';
 import { useConversationStore, useModelStore, useSettingsStore, useUIStore } from '../../../store';
 import { Message } from '@musaed/contracts';
 import { useTranslation } from '../../../lib/i18n';
-import { invoke } from '../../../lib/ipc';
+import { chatApi } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
 import { useConversationActions } from './useConversationActions';
 import { FileAttachment } from './useAttachmentManager';
 import { toOllamaBase64Image } from '../imageAttachment';
 
-/** Ollama / some vision stacks ignore images when `content` is empty; keep UI text empty but send a prompt to the API. */
+/**
+ * Generates alternative text content for Ollama when only images are provided.
+ */
 function ollamaUserTextContent(content: string, hasImages: boolean, t: (key: string) => string): string {
   if (hasImages && !content.trim()) return t('chat.imageOnlyApiPrompt');
   return content;
 }
 
+/**
+ * Hook for handling chat message sending and streaming initialization.
+ */
 export function useChatActions() {
   const { currentConversationId, conversations, addMessage, updateLastMessage } = useConversationStore();
   const { selectedModel } = useModelStore();
@@ -32,12 +36,15 @@ export function useChatActions() {
     if (files.length === 0) return input;
 
     const fileContext = files.map(f =>
-    `${t('chat.fileLabel', { name: f.name })}\n${t('chat.contentLabel')}\n${f.content}`
+      `${t('chat.fileLabel', { name: f.name })}\n${t('chat.contentLabel')}\n${f.content}`
     ).join('\n\n---\n\n');
 
     return `${input}\n\n${t('chat.fileContextLabel')}\n${fileContext}`;
   };
 
+  /**
+   * Sends a message to Ollama via the IPC bridge.
+   */
   const sendMessage = useCallback(async (
     input: string,
     images: string[],
@@ -63,20 +70,20 @@ export function useChatActions() {
 
     const userMsg: Message = {
       id: crypto.randomUUID(),
-                                  role: 'user',
-                                  content: trimmedInput,
-                                  images: images.length > 0 ? images : undefined,
-                                  timestamp: Date.now(),
-                                  requestId,
+      role: 'user',
+      content: trimmedInput,
+      images: images.length > 0 ? images : undefined,
+      timestamp: Date.now(),
+      requestId,
     };
 
     const assistantMsg: Message = {
       id: crypto.randomUUID(),
-                                  role: 'assistant',
-                                  content: '',
-                                  timestamp: Date.now(),
-                                  model: selectedModel,
-                                  requestId,
+      role: 'assistant',
+      content: '',
+      timestamp: Date.now(),
+      model: selectedModel,
+      requestId,
     };
 
     addMessage(currentConversationId, userMsg);
@@ -85,9 +92,7 @@ export function useChatActions() {
     try {
       const { ollamaUrl, systemPrompt, ...params } = globalSettings;
 
-      // IMPORTANT: Do NOT pass a schema here.
-      // Your ipc.ts wrapper will return apiResponse.data (boolean) when no schema is provided.
-      const success = await invoke('chat_with_ollama', {
+      const success = await chatApi.chat({
         baseUrl: ollamaUrl,
         model: selectedModel,
         messages: [
@@ -96,14 +101,14 @@ export function useChatActions() {
             role: m.role,
             content:
             m.role === 'user'
-          ? ollamaUserTextContent(m.content ?? '', !!(m.images && m.images.length > 0), t)
-          : m.content,
-          images: m.images?.map(toOllamaBase64Image)
+              ? ollamaUserTextContent(m.content ?? '', !!(m.images && m.images.length > 0), t)
+              : m.content,
+            images: m.images?.map(toOllamaBase64Image)
           })),
           {
             role: 'user',
             content: ollamaUserTextContent(fullPrompt, images.length > 0, t),
-                                   images: images.length > 0 ? images.map(toOllamaBase64Image) : undefined
+            images: images.length > 0 ? images.map(toOllamaBase64Image) : undefined
           }
         ],
         requestId,

@@ -8,8 +8,11 @@ import {
     getConnectionManager
 } from '@/lib/connection-manager';
 import { useSettingsStore, useUIStore } from '@/store';
-import { checkIsTauri, invoke } from '@/lib/ipc';
+import { checkIsTauri, ollamaApi } from '@/lib/ipc';
 
+/**
+ * Hook to manage and monitor the connection state with the local Ollama server.
+ */
 export function useOllamaConnection() {
     const { globalSettings } = useSettingsStore();
     const { setOllamaConnected } = useUIStore();
@@ -20,11 +23,7 @@ export function useOllamaConnection() {
     useEffect(() => {
         const healthCheck = checkIsTauri()
             ? async (baseUrl: string): Promise<OllamaHealth | null> => {
-                const data = await invoke(
-                    'check_ollama_health',
-                    { baseUrl },
-                    { quiet: true }
-                );
+                const data = await ollamaApi.checkHealth(baseUrl);
                 if (!data) return null;
                 return {
                     is_running: data.isRunning,
@@ -56,11 +55,17 @@ export function useOllamaConnection() {
         };
     }, [globalSettings.ollamaUrl, setOllamaConnected]);
 
+    /**
+     * Triggers a manual health check.
+     */
     const manualHealthCheck = useCallback(async () => {
         if (!manager) return null;
         return await manager.checkHealth();
     }, [manager]);
 
+    /**
+     * Forces a reconnection attempt.
+     */
     const reconnect = useCallback(async () => {
         if (!manager) return;
         setConnectionState(ConnectionState.CONNECTING);

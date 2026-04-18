@@ -3,9 +3,12 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from '../../../lib/i18n';
 import { useSettingsStore } from '../../../store';
-import { checkIsTauri, invoke, store, dialog } from '../../../lib/ipc';
+import { checkIsTauri, logApi, store, dialog } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
 
+/**
+ * Hook for managing system logs fetch and deletion actions.
+ */
 export function useLogActions() {
   const [logs, setLogs] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -13,6 +16,9 @@ export function useLogActions() {
   const { t } = useTranslation(language);
   const isTauri = checkIsTauri();
 
+  /**
+   * Fetches the persisted logs from the local store.
+   */
   const fetchLogs = useCallback(async () => {
     if (!isTauri) return;
     setIsLoading(true);
@@ -29,6 +35,9 @@ export function useLogActions() {
     }
   }, [isTauri]);
 
+  /**
+   * Clears both the local log store and the backend log buffer.
+   */
   const clearLogs = useCallback(async () => {
     if (!isTauri) return;
     
@@ -44,7 +53,7 @@ export function useLogActions() {
           await logStore.set('entries', []);
           await logStore.save();
           setLogs([]);
-          await invoke('clear_logs');
+          await logApi.clear();
           logger.info('System logs cleared');
         }
       } catch (err) {

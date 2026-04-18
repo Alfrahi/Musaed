@@ -1,6 +1,6 @@
 "use client";
 
-import { checkIsTauri, store, invoke } from './ipc';
+import { checkIsTauri, store, logApi } from './ipc';
 import { sanitizeError } from '@musaed/contracts';
 
 type LogLevel = 'info' | 'warn' | 'error' | 'debug';
@@ -15,7 +15,13 @@ interface LogEntry {
 const isProd = process.env.NODE_ENV === 'production';
 const MAX_LOG_MESSAGE_LENGTH = 2048;
 
+/**
+ * Application-wide logging utility that persists to disk and backend log buffer.
+ */
 export const logger = {
+  /**
+   * Logs a message with a specific severity level.
+   */
   log: async (level: LogLevel, message: string, context?: Record<string, any>) => {
     if (isProd && level === 'debug') return;
 
@@ -48,7 +54,7 @@ export const logger = {
           await logStore.set('entries', updatedLogs);
           await logStore.save();
         }
-        await invoke('append_to_log', { entry: logString });
+        await logApi.append(logString);
       } catch (err) {
         if (!isProd) {
           console.error('[logger] Tauri log persistence failed', err);

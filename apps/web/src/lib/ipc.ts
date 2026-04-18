@@ -21,13 +21,11 @@ export interface CommandMap {
   'pull_model': { args: { baseUrl: string, name: string }, return: void };
   'check_ollama_health': { args: { baseUrl: string }, return: OllamaHealthIpc };
   'append_to_log': { args: { entry: string }, return: void };
-  'clear_logs': { args: {}, return: void };
+  'clear_logs': { args: Record<string, never>, return: void };
 }
 
-// Helper to handle void returns where Rust returns null
 const voidSchema = z.preprocess((val) => (val === null ? undefined : val), z.void());
 
-// Map command return types to their Zod schemas for runtime validation
 const CommandReturnSchemas: { [K in keyof CommandMap]: z.ZodType<CommandMap[K]['return']> | undefined } = {
   'get_ollama_models': z.array(OllamaModelSchema),
   'chat_with_ollama': z.boolean(),
@@ -39,7 +37,11 @@ const CommandReturnSchemas: { [K in keyof CommandMap]: z.ZodType<CommandMap[K]['
   'clear_logs': voidSchema,
 };
 
-export const checkIsTauri = () => typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
+/**
+ * Checks if the current environment is Tauri.
+ */
+export const checkIsTauri = (): boolean => 
+  typeof window !== 'undefined' && !!(window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
 
 /**
  * Validates that the provided URL is a safe local-only target.
@@ -54,11 +56,11 @@ export const isValidOllamaUrl = (url: string): boolean => {
 };
 
 /**
- * Simple IPC invocation without retry loops
+ * Internal helper to perform IPC calls via Tauri core.
  */
-export async function invoke<K extends keyof CommandMap>(
+async function callInternal<K extends keyof CommandMap>(
   command: K,
-  args: CommandMap[K]['args'] = {} as any,
+  args: CommandMap[K]['args'],
   options?: { quiet?: boolean }
 ): Promise<CommandMap[K]['return'] | null> {
 
@@ -73,48 +75,72 @@ export async function invoke<K extends keyof CommandMap>(
 
   try {
     const { invoke: tauriInvoke } = await import('@tauri-apps/api/core');
-    const response = await tauriInvoke<ApiResponse<any>>(command, args as any);
+    const response = await tauriInvoke<ApiResponse<CommandMap[K]['return']>>(command, args);
 
     const schema = CommandReturnSchemas[command];
 
     if (response?.success) {
-      if (!schema) return (response.data ?? true) as any;
+      if (!schema) return (response.data ?? (true as unknown)) as CommandMap[K]['return'];
       const result = schema.safeParse(response.data);
       if (!result.success) {
-        console.error(`[IPC] ${command} Schema Mismatch:`, result.error);
         return null;
       }
       return result.data;
     }
 
     if (response?.error) {
-      console.error(`[IPC] ${command} Error:`, response.error.message);
       if (!options?.quiet) {
         toast.error(response.error.message);
       }
     }
     return null;
   } catch (err) {
-    console.error(`[IPC] ${command} Exception:`, err);
     return null;
   }
 }
 
+/**
+ * Ollama Engine API
+ */
+export const ollamaApi = {
+  getModels: (baseUrl: string) => callInternal('get_ollama_models', { baseUrl }),
+  deleteModel: (baseUrl: string, name: string) => callInternal('delete_model', { baseUrl, name }),
+  pullModel: (baseUrl: string, name: string) => callInternal('pull_model', { baseUrl, name }),
+  checkHealth: (baseUrl: string) => callInternal('check_ollama_health', { baseUrl }, { quiet: true }),
+};
+
+/**
+ * Chat & Interaction API
+ */
+export const chatApi = {
+  chat: (args: CommandMap['chat_with_ollama']['args']) => callInternal('chat_with_ollama', args),
+  abort: (requestId: string) => callInternal('abort_chat', { requestId }),
+};
+
+/**
+ * Logging & Diagnostics API
+ */
+export const logApi = {
+  append: (entry: string) => callInternal('append_to_log', { entry }),
+  clear: () => callInternal('clear_logs', {}),
+};
+
+/**
+ * Listen for events from the backend.
+ */
 export async function listen<T>(
   event: string,
   handler: (payload: T) => void,
-                                schema?: z.ZodType<T>
+  schema?: z.ZodType<T>
 ): Promise<() => void> {
   if (!checkIsTauri()) return () => {};
 
   const { listen: tauriListen } = await import('@tauri-apps/api/event');
-  return await tauriListen<any>(event, (e) => {
+  return await tauriListen<T>(event, (e) => {
     if (schema) {
       const result = schema.safeParse(e.payload);
       if (result.success) {
         handler(result.data);
-      } else {
-        console.error(`[IPC] Event ${event} Schema Mismatch:`, result.error);
       }
     } else {
       handler(e.payload);
@@ -123,26 +149,35 @@ export async function listen<T>(
 }
 
 /**
- * Plugin API wrappers
+ * Dialog plugin wrappers
  */
 export const dialog = {
-  ask: async (msg: string, opts: any) =>
-  checkIsTauri() ? (await import('@tauri-apps/plugin-dialog')).ask(msg, opts) : window.confirm(msg),
-  save: async (opts: any) =>
-  checkIsTauri() ? (await import('@tauri-apps/plugin-dialog')).save(opts) : null,
+  ask: async (msg: string, opts: { title?: string; kind?: 'info' | 'warning' | 'error' }) =>
+    checkIsTauri() ? (await import('@tauri-apps/plugin-dialog')).ask(msg, opts) : window.confirm(msg),
+  save: async (opts: { filters: { name: string; extensions: string[] }[]; defaultPath?: string }) =>
+    checkIsTauri() ? (await import('@tauri-apps/plugin-dialog')).save(opts) : null,
 };
 
+/**
+ * Opener plugin wrappers
+ */
 export const opener = {
   openUrl: async (url: string) =>
-  checkIsTauri() ? (await import('@tauri-apps/plugin-opener')).openUrl(url) : window.open(url, '_blank'),
+    checkIsTauri() ? (await import('@tauri-apps/plugin-opener')).openUrl(url) : window.open(url, '_blank'),
 };
 
+/**
+ * Store plugin wrappers
+ */
 export const store = {
-  load: async (file: string, opts: any) =>
-  checkIsTauri() ? (await import('@tauri-apps/plugin-store')).load(file, opts) : null,
+  load: async (file: string, opts: { autoSave?: boolean }) =>
+    checkIsTauri() ? (await import('@tauri-apps/plugin-store')).load(file, opts) : null,
 };
 
+/**
+ * Filesystem plugin wrappers
+ */
 export const fs = {
   writeTextFile: async (path: string, content: string) =>
-  checkIsTauri() && (await import('@tauri-apps/plugin-fs')).writeTextFile(path, content),
+    checkIsTauri() && (await import('@tauri-apps/plugin-fs')).writeTextFile(path, content),
 };
