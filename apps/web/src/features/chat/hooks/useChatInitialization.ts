@@ -4,10 +4,9 @@ import { useCallback } from 'react';
 import { useUIStore, useConversationStore, useSettingsStore, useModelStore } from '@/store';
 import { useModelActions } from '@/features/library';
 import { useConversationActions } from './useConversationActions';
-import { useSettingsActions } from '@/features/settings';
+import { useSettingsActions, useStorageCleanup } from '@/features/settings';
 import { logger } from '@/lib/logger';
 import { getSystemLanguage } from '@/lib/i18n';
-import { useStorageCleanup } from '@/features/settings/hooks/useStorageCleanup';
 
 export function useChatInitialization() {
   const { setInitialized, setError } = useUIStore();
