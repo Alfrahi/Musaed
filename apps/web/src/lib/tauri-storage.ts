@@ -20,6 +20,16 @@ interface StorageData {
   [key: string]: unknown;
 }
 
+/**
+ * Minimal interface for a Tauri Store instance used during migrations.
+ */
+interface TauriStoreLike {
+  get: <T>(key: string) => Promise<T | undefined | null>;
+  set: (key: string, val: unknown) => Promise<void>;
+  save: () => Promise<void>;
+  delete: (key: string) => Promise<boolean>;
+}
+
 const migrations: Record<number, (data: StorageData) => StorageData> = {
   1: (data) => data,
   2: (data) => {
@@ -38,10 +48,10 @@ const migrations: Record<number, (data: StorageData) => StorageData> = {
  * Runs sequential migrations on stored data to maintain schema integrity.
  * 
  * @param {string} filename - The store filename.
- * @param {unknown} appStore - The Tauri store instance.
+ * @param {TauriStoreLike} appStore - The Tauri store instance.
  * @param {string} storageKey - The key within the store to migrate.
  */
-async function runMigrations(filename: string, appStore: { get: <T>(key: string) => Promise<T>; set: (key: string, val: unknown) => Promise<void>; save: () => Promise<void> }, storageKey: string): Promise<void> {
+async function runMigrations(filename: string, appStore: TauriStoreLike, storageKey: string): Promise<void> {
   try {
     const rawVersion = await appStore.get<number>(VERSION_KEY);
     const storedVersion = z.number().catch(0).parse(rawVersion);
@@ -85,11 +95,11 @@ export const createTauriStorage = (filename: string): StateStorage => ({
   getItem: async (name: string): Promise<string | null> => {
     if (!checkIsTauri()) return localStorage.getItem(name);
     try {
-      const appStore = await store.load(filename, { autoSave: true });
+      const appStore = await store.load(filename, { autoSave: true }) as TauriStoreLike | null;
       if (!appStore) return null;
-      await runMigrations(filename, appStore as any, name);
+      await runMigrations(filename, appStore, name);
       const value = await appStore.get<string>(name);
-      return value !== undefined ? value : null;
+      return value !== undefined && value !== null ? value : null;
     } catch (err) {
       return null;
     }
@@ -100,7 +110,7 @@ export const createTauriStorage = (filename: string): StateStorage => ({
       return;
     }
     try {
-      const appStore = await store.load(filename, { autoSave: true });
+      const appStore = await store.load(filename, { autoSave: true }) as TauriStoreLike | null;
       if (!appStore) return;
       await appStore.set(name, value);
       await appStore.save();
@@ -113,7 +123,7 @@ export const createTauriStorage = (filename: string): StateStorage => ({
       localStorage.removeItem(name);
       return;
     }
-    const appStore = await store.load(filename, { autoSave: true });
+    const appStore = await store.load(filename, { autoSave: true }) as TauriStoreLike | null;
     if (appStore) {
       await appStore.delete(name);
       await appStore.save();
