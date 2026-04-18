@@ -26,30 +26,19 @@ const ModalLayout = ({
 
   return (
     <FocusTrap focusTrapOptions={{ allowOutsideClick: true }}>
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className={cn(
-          "fixed inset-0 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md",
-          zIndex
-        )}
-        role="dialog"
-        aria-modal="true"
-      >
+      <div className={cn("fixed inset-0 flex items-center justify-center p-6 bg-background/80 backdrop-blur-sm", zIndex)}>
         <motion.div 
-          initial={{ scale: 0.95, opacity: 0, y: 10 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.95, opacity: 0, y: 10 }}
+          initial={{ opacity: 0, scale: 0.99 }}
+          animate={{ opacity: 1, scale: 1 }}
           className={cn(
-            "bg-white dark:bg-zinc-900 w-full rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden flex flex-col",
+            "bg-white dark:bg-zinc-950 w-full border border-sidebar-border shadow-pro overflow-hidden flex flex-col",
             maxWidth,
             className
           )}
         >
           {children}
         </motion.div>
-      </motion.div>
+      </div>
     </FocusTrap>
   );
 };

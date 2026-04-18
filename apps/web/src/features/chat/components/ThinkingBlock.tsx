@@ -31,7 +31,7 @@ const ThinkingBlock = ({ content, isCollapsed: initialCollapsed = false, isStrea
 
   return (
     <div 
-      className="mbs-4 mbe-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/20 overflow-hidden transition-all shadow-sm"
+      className="mbs-4 mbe-4 rounded-none border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/20 overflow-hidden transition-all shadow-sm"
       role="region"
       aria-label={t('a11y.thinkingSection')}
     >

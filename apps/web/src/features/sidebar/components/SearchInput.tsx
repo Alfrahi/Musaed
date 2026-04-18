@@ -21,7 +21,7 @@ const SearchInput = () => {
         placeholder={t('sidebar.searchChats')}
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        className="w-full bg-zinc-200/50 dark:bg-zinc-800/50 border-none rounded-lg py-2 ps-9 pe-3 text-xs outline-none focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+        className="w-full bg-zinc-200/50 dark:bg-zinc-800/50 border-none rounded-none py-2 ps-9 pe-3 text-xs outline-none focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
         aria-label={t('sidebar.searchChats')}
       />
     </div>

@@ -24,16 +24,19 @@ export interface CommandMap {
   'clear_logs': { args: {}, return: void };
 }
 
+// Helper to handle void returns where Rust returns null
+const voidSchema = z.preprocess((val) => (val === null ? undefined : val), z.void());
+
 // Map command return types to their Zod schemas for runtime validation
 const CommandReturnSchemas: { [K in keyof CommandMap]: z.ZodType<CommandMap[K]['return']> | undefined } = {
   'get_ollama_models': z.array(OllamaModelSchema),
   'chat_with_ollama': z.boolean(),
-  'abort_chat': z.void(),           // ← Fixed
+  'abort_chat': voidSchema,
   'delete_model': z.boolean(),
-  'pull_model': z.void(),           // ← Fixed
+  'pull_model': voidSchema,
   'check_ollama_health': OllamaHealthIpcSchema,
-  'append_to_log': z.void(),
-  'clear_logs': z.void(),
+  'append_to_log': voidSchema,
+  'clear_logs': voidSchema,
 };
 
 export const checkIsTauri = () => typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;

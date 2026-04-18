@@ -5,7 +5,6 @@ import { useSettingsStore } from '../../../store';
 import { useSettingsActions } from '../hooks/useSettingsActions';
 import LanguageSettings from './LanguageSettings';
 import ThemeSettings from './ThemeSettings';
-import DensitySettings from './DensitySettings';
 import OllamaSettings from './OllamaSettings';
 import ModelParamsSettings from './ModelParamsSettings';
 import DiagnosticsSettings from './DiagnosticsSettings';
@@ -41,7 +40,7 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
         </div>
         <button 
           onClick={onClose} 
-          className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+          className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-none transition-all focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
           aria-label={t('a11y.closeModal')}
         >
           <X size={20} />
@@ -51,7 +50,6 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
       <div className="p-6 flex flex-col gap-6 max-h-[70vh] overflow-y-auto">
         <LanguageSettings />
         <ThemeSettings />
-        <DensitySettings />
         <div className="h-[1px] bg-zinc-100 dark:bg-zinc-800" aria-hidden="true" />
         <DiagnosticsSettings />
         <div className="h-[1px] bg-zinc-100 dark:bg-zinc-800" aria-hidden="true" />
@@ -61,7 +59,7 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
         <div className="pbs-2">
           <button 
             onClick={handleReset} 
-            className="w-full flex items-center justify-center gap-2 py-2.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-bold uppercase tracking-widest text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+            className="w-full flex items-center justify-center gap-2 py-2.5 border border-zinc-200 dark:border-zinc-800 rounded-none text-xs font-bold uppercase tracking-widest text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
           >
             <RotateCcw size={14} aria-hidden="true" /> {t('settings.resetPreferences')}
           </button>
@@ -71,7 +69,7 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
       <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 border-t border-zinc-100 dark:border-zinc-800 flex justify-end">
         <button 
           onClick={onClose} 
-          className="px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+          className="px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-none text-sm font-medium hover:opacity-90 transition-opacity focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
         >
           {t('common.done')}
         </button>

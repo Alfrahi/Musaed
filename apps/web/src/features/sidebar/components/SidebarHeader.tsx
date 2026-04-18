@@ -15,7 +15,7 @@ const SidebarHeader = () => {
       <div className="flex gap-2">
         <button
           onClick={createNewConversation}
-          className="flex-1 flex items-center justify-center gap-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 py-2.5 ps-4 pe-4 rounded-xl hover:opacity-90 transition-all font-semibold text-sm shadow-sm active:scale-[0.98]"
+          className="flex-1 flex items-center justify-center gap-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 py-2.5 ps-4 pe-4 rounded-none hover:opacity-90 transition-all font-semibold text-sm shadow-sm active:scale-[0.98]"
         >
           <Plus size={18} />
           {t('sidebar.newChat')}

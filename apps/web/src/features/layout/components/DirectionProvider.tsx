@@ -18,9 +18,7 @@ export default function DirectionProvider({ children }: { children: React.ReactN
     document.documentElement.dir = dir;
     document.documentElement.lang = globalSettings.language;
     document.body.dir = dir;
-    
-    document.documentElement.style.setProperty('--ui-density', String(globalSettings.density));
-  }, [globalSettings.language, globalSettings.density, isHydrated]);
+  }, [globalSettings.language, isHydrated]);
 
   // Theme synchronization with manual override support
   useEffect(() => {

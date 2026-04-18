@@ -2,6 +2,9 @@
 
 import { useEffect } from 'react';
 
+/**
+ * Prevents standard web behaviors that break the desktop native illusion.
+ */
 function isInsideDragChromeTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
   return Boolean(target.closest("[data-tauri-drag-region]"));
@@ -10,12 +13,14 @@ function isInsideDragChromeTarget(target: EventTarget | null): boolean {
 export function useNativeUX() {
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
+      // Allow context menu only in development for debugging
       if (process.env.NODE_ENV === 'production') {
         e.preventDefault();
       }
     };
 
     const handleDragOver = (e: DragEvent) => {
+      // Prevent browser-style navigation on dropped files if not explicitly handled
       if (isInsideDragChromeTarget(e.target)) {
         e.preventDefault();
       }

@@ -19,7 +19,6 @@ const Sidebar = () => {
   const { t } = useTranslation(globalSettings.language);
   const { handleClearAll } = useSidebarActions();
   
-  // FIXED: The hook returns the array directly, no destructuring needed
   const virtualItems = useSidebarGrouping(
     conversations, 
     conversationIds, 
@@ -29,26 +28,26 @@ const Sidebar = () => {
 
   if (!isHydrated) {
     return (
-      <div className="w-64 bg-sidebar border-ie border-sidebar-border flex flex-col h-full">
+      <div className="w-60 bg-sidebar flex flex-col h-full border-e border-sidebar-border">
         <SidebarSkeleton />
       </div>
     );
   }
 
   return (
-    <div className="w-64 bg-sidebar border-ie border-sidebar-border flex flex-col h-full select-none">
+    <div className="w-60 bg-sidebar flex flex-col h-full select-none border-e border-sidebar-border">
       <SidebarHeader />
       <SearchInput />
 
-      <div className="flex-1 overflow-hidden ps-2 pe-2">
+      <div className="flex-1 overflow-hidden">
         <Virtuoso
           style={{ height: '100%' }}
           data={virtualItems}
           itemContent={(index, item) => {
             if (item.type === 'header') {
               return (
-                <div className="ps-3 pe-3 pbs-4 pbe-2 flex items-center justify-between bg-sidebar sticky top-0 z-10">
-                  <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.15em]">
+                <div className="px-3 pt-6 pb-2 flex items-center justify-between sticky top-0 bg-sidebar z-10 border-b border-zinc-100 dark:border-zinc-800 mbe-1">
+                  <span className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">
                     {item.group === 'search' ? t('sidebar.searchResults') : 
                      item.group === 'today' ? t('sidebar.recentChats') : 
                      t(`sidebar.${item.group}`)}
@@ -56,30 +55,22 @@ const Sidebar = () => {
                   {item.group === 'today' && !searchQuery && conversationIds.length > 0 && (
                     <button 
                       onClick={handleClearAll} 
-                      className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded text-zinc-400 hover:text-red-500 transition-colors"
+                      className="p-1 text-zinc-400 hover:text-red-500 transition-colors"
                       title={t('sidebar.clearAll')}
                     >
-                      <Eraser size={12} />
+                      <Eraser size={10} />
                     </button>
                   )}
                 </div>
               );
             }
             return (
-              <div className="pbe-1">
+              <div className="ps-0 pe-0">
                 <ConversationItem conversation={item.data!} />
               </div>
             );
           }}
         />
-
-        {virtualItems.length === 0 && (
-          <div className="ps-3 pe-3 pbs-8 pbe-8 text-center">
-            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest leading-relaxed">
-              {t('sidebar.noConversations')}
-            </p>
-          </div>
-        )}
       </div>
 
       <UserSection />
