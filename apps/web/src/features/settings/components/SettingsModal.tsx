@@ -93,7 +93,7 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
             <div className="pbs-4">
               <button 
                 onClick={handleReset} 
-                className="w-full flex items-center justify-center gap-2 py-3 border border-zinc-200 dark:border-zinc-800 rounded-none text-xs font-bold uppercase tracking-widest text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+                className="w-full flex items-center justify-center gap-2 py-3 border border-zinc-200 dark:border-zinc-800 rounded-lg text-[10px] font-bold uppercase tracking-widest text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all focus-visible:ring-2 focus-visible:ring-blue-500 outline-none active:scale-95"
               >
                 <RotateCcw size={14} aria-hidden="true" /> {t('settings.resetPreferences')}
               </button>
@@ -112,7 +112,7 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
         </div>
         <button 
           onClick={onClose} 
-          className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-none transition-all"
+          className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all text-zinc-500"
           aria-label={t('a11y.closeModal')}
         >
           <X size={20} />
@@ -120,7 +120,6 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Navigation Sidebar */}
         <aside className="w-48 border-ie border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/20 shrink-0 overflow-y-auto">
           <nav className="p-2 space-y-1">
             {tabs.map((tab) => {
@@ -131,7 +130,7 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2.5 text-[13px] font-bold uppercase tracking-wider transition-all rounded-none border-s-2",
+                    "w-full flex items-center gap-3 px-3 py-2.5 text-[11px] font-bold uppercase tracking-widest transition-all rounded-lg border-s-2",
                     isActive 
                       ? "bg-white dark:bg-zinc-800 border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm" 
                       : "border-transparent text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
@@ -145,7 +144,6 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
           </nav>
         </aside>
 
-        {/* Content Area */}
         <main className="flex-1 overflow-y-auto p-8 bg-white dark:bg-zinc-950/20">
           {renderContent()}
         </main>
@@ -154,7 +152,7 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
       <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 border-t border-zinc-100 dark:border-zinc-800 flex justify-end shrink-0">
         <button 
           onClick={onClose} 
-          className="px-6 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-none text-sm font-bold active:scale-95 transition-all shadow-sm"
+          className="px-6 h-10 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-lg text-xs font-bold uppercase tracking-widest active:scale-95 transition-all shadow-sm hover:opacity-90"
         >
           {t('common.done')}
         </button>

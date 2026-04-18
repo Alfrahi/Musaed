@@ -73,7 +73,7 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
       />
 
       {!isOllamaConnected && (
-        <div className="ms-6 me-6 mbs-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-none flex items-center gap-3">
+        <div className="ms-6 me-6 mbs-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-3">
           <AlertCircle size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />
           <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
             {t('chat.connectionFailed')}
@@ -124,7 +124,10 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
 
       <div className="ps-6 pe-6 py-4 bg-zinc-50 dark:bg-zinc-900/80 border-bs border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
         <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">{t('logs.logStorageInfo')}</span>
-        <button onClick={onClose} className="ps-6 pe-6 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-none text-sm font-bold active:scale-95 transition-all">
+        <button 
+          onClick={onClose} 
+          className="h-10 ps-6 pe-6 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-lg text-xs font-bold uppercase tracking-widest active:scale-95 transition-all shadow-sm hover:opacity-90"
+        >
           {t('common.done')}
         </button>
       </div>
