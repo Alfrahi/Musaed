@@ -65,6 +65,14 @@
   
   --shadow-native: 0 0 0 1px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1);
   --shadow-pro: 0 8px 30px rgba(0,0,0,0.12);
+
+  /* REMOVE LETTER SPACING */
+  --tracking-tighter: 0;
+  --tracking-tight: 0;
+  --tracking-normal: 0;
+  --tracking-wide: 0;
+  --tracking-wider: 0;
+  --tracking-widest: 0;
 }
 
 html, body {
@@ -75,6 +83,7 @@ html, body {
   background-color: var(--background);
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
+  letter-spacing: 0 !important;
 }
 
 /* Enable selection only where appropriate */

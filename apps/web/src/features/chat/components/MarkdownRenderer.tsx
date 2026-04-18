@@ -2,10 +2,15 @@
 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 import rehypeHighlight from 'rehype-highlight';
+import rehypeKatex from 'rehype-katex';
 import 'highlight.js/styles/github-dark.css';
+import 'katex/dist/katex.min.css';
 import CodeBlock from './CodeBlock';
+import MermaidRenderer from './MermaidRenderer';
 import { opener } from '../../../lib/ipc';
+import { useSettingsStore } from '../../../store';
 
 interface MarkdownRendererProps {
   content: string;
@@ -31,6 +36,14 @@ function resolveAllowedHref(href: string | undefined | null): string | null {
 }
 
 const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
+  const { globalSettings } = useSettingsStore();
+  
+  const remarkPlugins = [remarkGfm];
+  if (globalSettings.enableLatex) remarkPlugins.push(remarkMath as any);
+
+  const rehypePlugins = [rehypeHighlight];
+  if (globalSettings.enableLatex) rehypePlugins.push(rehypeKatex as any);
+
   const handleLinkClick = async (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     const safe = resolveAllowedHref(href);
     if (!safe) {
@@ -43,8 +56,8 @@ const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
 
   return (
     <ReactMarkdown
-    remarkPlugins={[remarkGfm]}
-    rehypePlugins={[rehypeHighlight]}
+    remarkPlugins={remarkPlugins}
+    rehypePlugins={rehypePlugins}
     components={{
       p: ({ children }) => <div className="mbe-4 last:mbe-0 leading-relaxed" dir="auto">{children}</div>,
           pre: ({ children }) => <>{children}</>,
@@ -79,10 +92,15 @@ const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
           },
           code({ className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || '');
+            const lang = match ? match[1] : '';
+
+            if (globalSettings.enableMermaid && lang === 'mermaid') {
+              return <MermaidRenderer content={String(children)} />;
+            }
 
             return match ? (
               <CodeBlock
-              language={match[1]}
+              language={lang}
               value={children}
               />
             ) : (

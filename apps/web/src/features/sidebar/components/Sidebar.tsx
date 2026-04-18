@@ -47,7 +47,7 @@ const Sidebar = () => {
             if (item.type === 'header') {
               return (
                 <div className="px-3 pt-6 pb-2 flex items-center justify-between sticky top-0 bg-sidebar z-10 border-b border-zinc-100 dark:border-zinc-800 mbe-1">
-                  <span className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">
+                  <span className="text-[9px] font-black text-zinc-400 uppercase">
                     {item.group === 'search' ? t('sidebar.searchResults') : 
                      item.group === 'today' ? t('sidebar.recentChats') : 
                      t(`sidebar.${item.group}`)}

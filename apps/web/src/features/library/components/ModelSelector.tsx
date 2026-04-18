@@ -37,7 +37,7 @@ const ModelSelector = () => {
         <button
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
-            "flex items-center gap-2 px-3 py-2 rounded-none border border-transparent hover:border-sidebar-border hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all text-[13px] font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 outline-none focus-visible:ring-1 focus-visible:ring-blue-500",
+            "flex items-center gap-2 px-3 py-2 rounded-none border border-transparent hover:border-sidebar-border hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all text-[13px] font-bold uppercase text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 outline-none focus-visible:ring-1 focus-visible:ring-blue-500",
             isOpen && "border-sidebar-border bg-zinc-100 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100"
           )}
           aria-haspopup="listbox"
@@ -65,7 +65,7 @@ const ModelSelector = () => {
           role="listbox"
         >
           <div className="px-4 py-2.5 border-b border-sidebar-border mb-1">
-            <span className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em]">
+            <span className="text-[11px] font-black text-zinc-400 uppercase">
               {t('a11y.selectModel')}
             </span>
           </div>
@@ -89,7 +89,7 @@ const ModelSelector = () => {
               ))
             ) : (
               <div className="px-4 py-6 text-center">
-                <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest italic">
+                <p className="text-xs font-bold text-zinc-400 uppercase italic">
                   {t('library.noModelsFound')}
                 </p>
               </div>

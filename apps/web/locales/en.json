@@ -71,7 +71,9 @@
     "fileContextLabel": "Context from uploaded files:",
     "fileLabel": "File: {name}",
     "contentLabel": "Content:",
-    "imageOnlyApiPrompt": "Describe the attached image(s)."
+    "imageOnlyApiPrompt": "Describe the attached image(s).",
+    "shortcutSend": "Enter to Send",
+    "shortcutMultiLine": "Cmd/Ctrl + Enter to Send"
   },
   "settings": {
     "title": "Settings",
@@ -93,7 +95,35 @@
     "systemDiagnostics": "System Diagnostics",
     "viewLogs": "View Logs",
     "resetPreferences": "Reset Preferences",
-    "confirmReset": "Are you sure you want to reset all settings to default? This will not delete your chat history."
+    "confirmReset": "Are you sure you want to reset all settings to default? This will not delete your chat history.",
+    "enterToSend": "Enter to Send",
+    "enterToSendDescription": "When enabled, pressing Enter sends the message. Use Shift+Enter for new lines. When disabled, use Cmd/Ctrl+Enter to send.",
+    "markdown": {
+      "title": "Markdown Rendering",
+      "enableLatex": "LaTeX Formulas",
+      "latexDescription": "Render mathematical equations using KaTeX",
+      "enableMermaid": "Mermaid Diagrams",
+      "mermaidDescription": "Render charts and diagrams using Mermaid.js"
+    },
+    "storage": {
+      "title": "Storage Management",
+      "chatHistory": "Chat History",
+      "models": "Local Models",
+      "exportJson": "Export JSON",
+      "exportMarkdown": "Export Markdown Bundle",
+      "importData": "Import Data",
+      "importSuccess": "Data imported successfully",
+      "importError": "Failed to import data. Invalid format.",
+      "confirmImport": "Importing data will overwrite your current chat history. Continue?",
+      "calculating": "Calculating...",
+      "autoDelete": "Auto-delete Old Chats",
+      "retention": {
+        "never": "Never",
+        "30": "After 30 days",
+        "90": "After 90 days",
+        "180": "After 6 months"
+      }
+    }
   },
   "library": {
     "title": "Library",

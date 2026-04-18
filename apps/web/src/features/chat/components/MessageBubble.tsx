@@ -44,7 +44,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
 
         <div className="flex-1 min-w-0 space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+            <span className="text-[10px] font-bold uppercase text-zinc-400">
               {isUser ? t('chat.user') : t('chat.assistant')}
               {!isUser && message.model && <span className="ms-3 text-zinc-500">{message.model}</span>}
             </span>
@@ -66,7 +66,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
           </div>
 
           {!isUser && message.eval_count !== undefined && (
-            <div className="flex items-center gap-4 text-[9px] font-bold uppercase tracking-widest text-zinc-400 pt-4 border-t border-sidebar-border/50">
+            <div className="flex items-center gap-4 text-[9px] font-bold uppercase text-zinc-400 pt-4 border-t border-sidebar-border/50">
               <span className="flex items-center gap-1.5"><Cpu size={12} /> {formatNumber(message.eval_count)} {t('chat.tokens')}</span>
               {tps > 0 && <span className="flex items-center gap-1.5 text-primary"><Zap size={12} /> {formatNumber(tps, { maximumFractionDigits: 1 })} T/S</span>}
             </div>

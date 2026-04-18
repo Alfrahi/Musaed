@@ -8,6 +8,9 @@ import ThemeSettings from './ThemeSettings';
 import OllamaSettings from './OllamaSettings';
 import ModelParamsSettings from './ModelParamsSettings';
 import DiagnosticsSettings from './DiagnosticsSettings';
+import InputSettings from './InputSettings';
+import StorageSettings from './StorageSettings';
+import MarkdownSettings from './MarkdownSettings';
 import { useTranslation } from '../../../lib/i18n';
 import { dialog } from '../../../lib/ipc';
 import { ModalLayout } from '../../layout';
@@ -50,6 +53,12 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
       <div className="p-6 flex flex-col gap-6 max-h-[70vh] overflow-y-auto">
         <LanguageSettings />
         <ThemeSettings />
+        <div className="h-[1px] bg-zinc-100 dark:bg-zinc-800" aria-hidden="true" />
+        <MarkdownSettings />
+        <div className="h-[1px] bg-zinc-100 dark:bg-zinc-800" aria-hidden="true" />
+        <InputSettings />
+        <div className="h-[1px] bg-zinc-100 dark:bg-zinc-800" aria-hidden="true" />
+        <StorageSettings />
         <div className="h-[1px] bg-zinc-100 dark:bg-zinc-800" aria-hidden="true" />
         <DiagnosticsSettings />
         <div className="h-[1px] bg-zinc-100 dark:bg-zinc-800" aria-hidden="true" />

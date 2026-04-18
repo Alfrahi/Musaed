@@ -53,9 +53,19 @@ const InputArea = () => {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      onSend();
+    const isModEnter = (e.metaKey || e.ctrlKey) && e.key === 'Enter';
+    const isPlainEnter = e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey;
+
+    if (globalSettings.enterToSend) {
+      if (isPlainEnter) {
+        e.preventDefault();
+        onSend();
+      }
+    } else {
+      if (isModEnter) {
+        e.preventDefault();
+        onSend();
+      }
     }
   };
 
@@ -123,7 +133,10 @@ const InputArea = () => {
 
               <div className="flex items-center gap-3">
                 <span className="hidden sm:block text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">
-                  {isStreaming ? "ESC to Stop" : "Enter to Send"}
+                  {isStreaming 
+                    ? "ESC to Stop" 
+                    : (globalSettings.enterToSend ? t('chat.shortcutSend') : t('chat.shortcutMultiLine'))
+                  }
                 </span>
 
                 {isStreaming ? (

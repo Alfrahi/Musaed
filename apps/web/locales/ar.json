@@ -71,7 +71,9 @@
     "fileContextLabel": "سياق من الملفات المرفوعة:",
     "fileLabel": "الملف: {name}",
     "contentLabel": "المحتوى:",
-    "imageOnlyApiPrompt": "صف الصورة أو الصور المرفقة."
+    "imageOnlyApiPrompt": "صف الصورة أو الصور المرفقة.",
+    "shortcutSend": "إدخال للإرسال",
+    "shortcutMultiLine": "Cmd/Ctrl + إدخال للإرسال"
   },
   "settings": {
     "title": "الإعدادات",
@@ -93,7 +95,35 @@
     "systemDiagnostics": "تشخيص النظام",
     "viewLogs": "عرض السجلات",
     "resetPreferences": "إعادة تعيين التفضيلات",
-    "confirmReset": "هل أنت متأكد أن تريد إعادة تعيين جميع الإعدادات إلى الافتراضي؟ لن يتم حذف سجل المحادثات."
+    "confirmReset": "هل أنت متأكد أن تريد إعادة تعيين جميع الإعدادات إلى الافتراضي؟ لن يتم حذف سجل المحادثات.",
+    "enterToSend": "الإدخال للإرسال",
+    "enterToSendDescription": "عند التفعيل، يؤدي الضغط على Enter إلى إرسال الرسالة. استخدم Shift+Enter لأسطر جديدة. عند التعطيل، استخدم Cmd/Ctrl+Enter للإرسال.",
+    "markdown": {
+      "title": "عرض Markdown",
+      "enableLatex": "معادلات LaTeX",
+      "latexDescription": "عرض المعادلات الرياضية باستخدام KaTeX",
+      "enableMermaid": "رسوم Mermaid",
+      "mermaidDescription": "عرض الرسوم البيانية والمخططات باستخدام Mermaid.js"
+    },
+    "storage": {
+      "title": "إدارة التخزين",
+      "chatHistory": "سجل المحادثات",
+      "models": "النماذج المحلية",
+      "exportJson": "تصدير JSON",
+      "exportMarkdown": "تصدير حزمة Markdown",
+      "importData": "استيراد البيانات",
+      "importSuccess": "تم استيراد البيانات بنجاح",
+      "importError": "فشل استيراد البيانات. تنسيق غير صالح.",
+      "confirmImport": "سيؤدي استيراد البيانات إلى الكتابة فوق سجل المحادثات الحالي. هل تريد الاستمرار؟",
+      "calculating": "جاري الحساب...",
+      "autoDelete": "حذف المحادثات القديمة تلقائياً",
+      "retention": {
+        "never": "أبداً",
+        "30": "بعد 30 يوماً",
+        "90": "بعد 90 يوماً",
+        "180": "بعد 6 أشهر"
+      }
+    }
   },
   "library": {
     "title": "المكتبة",

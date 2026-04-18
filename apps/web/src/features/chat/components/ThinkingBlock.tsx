@@ -46,7 +46,7 @@ const ThinkingBlock = ({ content, isCollapsed: initialCollapsed = false, isStrea
           ) : (
             <Brain size={14} className="text-zinc-400" aria-hidden="true" />
           )}
-          <span className="text-[10px] font-bold uppercase tracking-widest">
+          <span className="text-[10px] font-bold uppercase">
             {isStreaming ? t('chat.thinking') : t('chat.thoughtProcess')}
           </span>
         </div>

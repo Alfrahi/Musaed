@@ -7,12 +7,14 @@ import { useConversationActions } from './useConversationActions';
 import { useSettingsActions } from '@/features/settings';
 import { logger } from '@/lib/logger';
 import { getSystemLanguage } from '@/lib/i18n';
+import { useStorageCleanup } from '@/features/settings/hooks/useStorageCleanup';
 
 export function useChatInitialization() {
   const { setInitialized, setError } = useUIStore();
   const { updateGlobalSettings } = useSettingsActions();
   const { fetchModels } = useModelActions();
   const { createNewConversation } = useConversationActions();
+  const { runCleanup } = useStorageCleanup();
 
   const initializeApp = useCallback(async () => {
     if (useUIStore.getState().isInitialized) return;
@@ -26,6 +28,9 @@ export function useChatInitialization() {
           hasDetectedLanguage: true
         });
       }
+
+      // Execute storage retention policy cleanup
+      runCleanup();
 
       try {
         // Simple timeout-based model fetch WITHOUT RETRIES
@@ -52,7 +57,7 @@ export function useChatInitialization() {
       setInitialized(true);
       setError('error.initializationFailed');
     }
-  }, [updateGlobalSettings, fetchModels, createNewConversation, setInitialized, setError]);
+  }, [updateGlobalSettings, fetchModels, createNewConversation, setInitialized, setError, runCleanup]);
 
   return { initializeApp };
 }
