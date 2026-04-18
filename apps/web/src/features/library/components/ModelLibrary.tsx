@@ -69,12 +69,24 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
         language={globalSettings.language} activeTab={activeTab} setActiveTab={setActiveTab}
         searchQuery={searchQuery} setSearchQuery={setSearchQuery} isRefreshing={isRefreshing}
         onRefresh={() => fetchModels(true)} onClose={onClose} installedCount={models.length}
+        onPullAny={handlePull}
       />
+
+      {!isOllamaConnected && (
+        <div className="mx-6 mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-none flex items-center gap-3">
+          <AlertCircle size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />
+          <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
+            {t('chat.connectionFailed')}
+          </p>
+        </div>
+      )}
 
       <div className="flex-1 bg-white dark:bg-zinc-950/20 overflow-hidden">
         {activeTab === 'featured' ? (
           <VirtuosoGrid
-            style={{ height: '100%' }} data={filteredFeatured} totalCount={filteredFeatured.length}
+            style={{ height: '100%' }} 
+            data={filteredFeatured} 
+            totalCount={filteredFeatured.length}
             listClassName="grid grid-cols-1 md:grid-cols-2 gap-4 p-6"
             itemContent={(idx, model) => (
               <ModelCard 
@@ -87,11 +99,16 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
           />
         ) : (
           <Virtuoso
-            style={{ height: '100%' }} data={filteredInstalled} className="p-6"
+            style={{ height: '100%' }} 
+            data={filteredInstalled} 
             itemContent={(idx, model) => (
-              <div className="pb-3">
+              <div className={cn(
+                "px-6 pb-4", 
+                idx === 0 && "pt-6",
+                idx === filteredInstalled.length - 1 && "pb-12"
+              )}>
                 <ModelCard 
-                  name={model.name} size={model.size} isDownloaded={true}
+                  name={model.name} size={model.size} details={model.details} isDownloaded={true}
                   onDelete={handleDelete} language={globalSettings.language} variant="installed"
                 />
               </div>
@@ -102,7 +119,7 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
 
       <div className="px-6 py-4 bg-zinc-50 dark:bg-zinc-900/80 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
         <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">{t('logs.logStorageInfo')}</span>
-        <button onClick={onClose} className="px-6 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-xl text-sm font-bold active:scale-95 transition-all">
+        <button onClick={onClose} className="px-6 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-none text-sm font-bold active:scale-95 transition-all">
           {t('common.done')}
         </button>
       </div>

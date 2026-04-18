@@ -77,7 +77,7 @@ const ModelSelector = () => {
                   key={m.name}
                   onClick={() => handleSelect(m.name)}
                   className={cn(
-                    "w-full flex items-center justify-between px-4 py-3 text-left text-sm font-medium transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 outline-none focus:bg-zinc-50 dark:focus:bg-zinc-800/50",
+                    "w-full flex items-center justify-between px-4 py-3 text-start text-sm font-medium transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 outline-none focus:bg-zinc-50 dark:focus:bg-zinc-800/50",
                     selectedModel === m.name ? "text-blue-600 dark:text-blue-400" : "text-zinc-600 dark:text-zinc-400"
                   )}
                   role="option"

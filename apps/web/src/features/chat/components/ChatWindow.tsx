@@ -109,7 +109,7 @@ const ChatWindow = () => {
       />
 
       {showScrollButton && currentConversation.messages.length > 0 && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex justify-center pointer-events-none z-20">
+        <div className="absolute bottom-6 start-1/2 -translate-x-1/2 flex justify-center pointer-events-none z-20">
           <button
             onClick={scrollToBottom}
             className="p-2 bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-300 rounded-none shadow-lg border border-zinc-200 dark:border-zinc-700 hover:text-blue-500 transition-all pointer-events-auto active:scale-95"

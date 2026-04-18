@@ -9,7 +9,6 @@ import {
 } from '@/lib/connection-manager';
 import { useSettingsStore, useUIStore } from '@/store';
 import { checkIsTauri, invoke } from '@/lib/ipc';
-import { OllamaHealthIpcSchema } from '@musaed/contracts';
 
 export function useOllamaConnection() {
     const { globalSettings } = useSettingsStore();

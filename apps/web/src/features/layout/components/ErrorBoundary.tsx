@@ -125,7 +125,7 @@ class ErrorBoundary extends Component<Props, State> {
         </div>
 
         {this.state.errorType === 'general' && this.state.error && (
-          <details className="text-left">
+          <details className="text-start">
           <summary className="cursor-pointer text-[10px] text-gray-500 font-bold uppercase tracking-widest hover:text-gray-700">
           <HelpCircle size={12} className="inline me-1" />
           {t('error.details')}

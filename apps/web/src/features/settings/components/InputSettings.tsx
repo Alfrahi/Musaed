@@ -26,11 +26,12 @@ const InputSettings = () => {
         
         <button
           onClick={() => updateGlobalSettings({ enterToSend: !globalSettings.enterToSend })}
-          className={`shrink-0 w-10 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
+          className={`shrink-0 w-10 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500/20 ltr ${
             globalSettings.enterToSend ? 'bg-blue-600' : 'bg-zinc-300 dark:bg-zinc-600'
           }`}
           role="switch"
           aria-checked={globalSettings.enterToSend}
+          dir="ltr"
         >
           <div
             className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${

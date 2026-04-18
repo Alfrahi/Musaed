@@ -1,7 +1,18 @@
 "use client";
 
-import { X, Sliders, RotateCcw } from 'lucide-react';
-import { useSettingsStore } from '../../../store';
+import { useState, useMemo } from 'react';
+import { 
+  X, 
+  Settings2, 
+  RotateCcw, 
+  Languages, 
+  Cpu, 
+  HardDrive, 
+  Terminal,
+  Type,
+  Layout
+} from 'lucide-react';
+import { useSettingsStore, useUIStore } from '../../../store';
 import { useSettingsActions } from '../hooks/useSettingsActions';
 import LanguageSettings from './LanguageSettings';
 import ThemeSettings from './ThemeSettings';
@@ -14,14 +25,19 @@ import MarkdownSettings from './MarkdownSettings';
 import { useTranslation } from '../../../lib/i18n';
 import { dialog } from '../../../lib/ipc';
 import { ModalLayout } from '../../layout';
+import { cn } from '../../../lib/utils';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+type SettingsTab = 'general' | 'appearance' | 'ai' | 'storage' | 'advanced';
+
 const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
+  const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const { globalSettings } = useSettingsStore();
+  const { isRtl } = useUIStore();
   const { resetGlobalSettings } = useSettingsActions();
   const { t } = useTranslation(globalSettings.language);
 
@@ -34,51 +50,112 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
     if (confirmed) resetGlobalSettings();
   };
 
+  const tabs = useMemo(() => [
+    { id: 'general' as const, label: t('settings.tabs.general' as any), icon: Settings2 },
+    { id: 'appearance' as const, label: t('settings.tabs.appearance' as any), icon: Layout },
+    { id: 'ai' as const, label: t('settings.tabs.ai' as any), icon: Cpu },
+    { id: 'storage' as const, label: t('settings.tabs.storage' as any), icon: HardDrive },
+    { id: 'advanced' as const, label: t('settings.tabs.advanced' as any), icon: Terminal },
+  ], [t]);
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'general':
+        return (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <LanguageSettings />
+            <InputSettings />
+          </div>
+        );
+      case 'appearance':
+        return (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <ThemeSettings />
+            <MarkdownSettings />
+          </div>
+        );
+      case 'ai':
+        return (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <OllamaSettings />
+            <ModelParamsSettings />
+          </div>
+        );
+      case 'storage':
+        return (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <StorageSettings />
+          </div>
+        );
+      case 'advanced':
+        return (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <DiagnosticsSettings />
+            <div className="pbs-4">
+              <button 
+                onClick={handleReset} 
+                className="w-full flex items-center justify-center gap-2 py-3 border border-zinc-200 dark:border-zinc-800 rounded-none text-xs font-bold uppercase tracking-widest text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+              >
+                <RotateCcw size={14} aria-hidden="true" /> {t('settings.resetPreferences')}
+              </button>
+            </div>
+          </div>
+        );
+    }
+  };
+
   return (
-    <ModalLayout isOpen={isOpen} onClose={onClose} maxWidth="max-w-md">
-      <div className="flex items-center justify-between p-4 border-b border-zinc-100 dark:border-zinc-800">
+    <ModalLayout isOpen={isOpen} onClose={onClose} maxWidth="max-w-3xl" className="h-[600px]">
+      <div className="flex items-center justify-between p-4 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
         <div className="flex items-center gap-2 font-semibold">
-          <Sliders size={18} className="text-blue-500" aria-hidden="true" />
-          <span id="settings-title">{t('settings.title')}</span>
+          <Settings2 size={18} className="text-blue-500" aria-hidden="true" />
+          <span>{t('settings.title')}</span>
         </div>
         <button 
           onClick={onClose} 
-          className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-none transition-all focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+          className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-none transition-all"
           aria-label={t('a11y.closeModal')}
         >
           <X size={20} />
         </button>
       </div>
 
-      <div className="p-6 flex flex-col gap-6 max-h-[70vh] overflow-y-auto">
-        <LanguageSettings />
-        <ThemeSettings />
-        <div className="h-[1px] bg-zinc-100 dark:bg-zinc-800" aria-hidden="true" />
-        <MarkdownSettings />
-        <div className="h-[1px] bg-zinc-100 dark:bg-zinc-800" aria-hidden="true" />
-        <InputSettings />
-        <div className="h-[1px] bg-zinc-100 dark:bg-zinc-800" aria-hidden="true" />
-        <StorageSettings />
-        <div className="h-[1px] bg-zinc-100 dark:bg-zinc-800" aria-hidden="true" />
-        <DiagnosticsSettings />
-        <div className="h-[1px] bg-zinc-100 dark:bg-zinc-800" aria-hidden="true" />
-        <OllamaSettings />
-        <ModelParamsSettings />
-        <div className="h-[1px] bg-zinc-100 dark:bg-zinc-800" aria-hidden="true" />
-        <div className="pbs-2">
-          <button 
-            onClick={handleReset} 
-            className="w-full flex items-center justify-center gap-2 py-2.5 border border-zinc-200 dark:border-zinc-800 rounded-none text-xs font-bold uppercase tracking-widest text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
-          >
-            <RotateCcw size={14} aria-hidden="true" /> {t('settings.resetPreferences')}
-          </button>
-        </div>
+      <div className="flex-1 flex overflow-hidden">
+        {/* Navigation Sidebar */}
+        <aside className="w-48 border-ie border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/20 shrink-0 overflow-y-auto">
+          <nav className="p-2 space-y-1">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2.5 text-[13px] font-bold uppercase tracking-wider transition-all rounded-none border-s-2",
+                    isActive 
+                      ? "bg-white dark:bg-zinc-800 border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm" 
+                      : "border-transparent text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
+                  )}
+                >
+                  <Icon size={16} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
+
+        {/* Content Area */}
+        <main className="flex-1 overflow-y-auto p-8 bg-white dark:bg-zinc-950/20">
+          {renderContent()}
+        </main>
       </div>
 
-      <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 border-t border-zinc-100 dark:border-zinc-800 flex justify-end">
+      <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 border-t border-zinc-100 dark:border-zinc-800 flex justify-end shrink-0">
         <button 
           onClick={onClose} 
-          className="px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-none text-sm font-medium hover:opacity-90 transition-opacity focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+          className="px-6 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-none text-sm font-bold active:scale-95 transition-all shadow-sm"
         >
           {t('common.done')}
         </button>

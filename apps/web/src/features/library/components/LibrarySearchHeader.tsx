@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, ExternalLink, RefreshCw, X, HardDrive } from 'lucide-react';
+import { useState } from 'react';
+import { Search, ExternalLink, RefreshCw, X, HardDrive, Plus, Terminal } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { useTranslation } from '../../../lib/i18n';
 import { Language } from '@musaed/contracts';
@@ -16,6 +17,7 @@ interface LibrarySearchHeaderProps {
   onRefresh: () => void;
   onClose: () => void;
   installedCount: number;
+  onPullAny: (name: string) => void;
 }
 
 const LibrarySearchHeader = ({
@@ -27,9 +29,19 @@ const LibrarySearchHeader = ({
   isRefreshing,
   onRefresh,
   onClose,
-  installedCount
+  installedCount,
+  onPullAny
 }: LibrarySearchHeaderProps) => {
   const { t } = useTranslation(language);
+  const [customModel, setCustomModel] = useState('');
+
+  const handleCustomPull = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (customModel.trim()) {
+      onPullAny(customModel.trim());
+      setCustomModel('');
+    }
+  };
 
   return (
     <>
@@ -50,6 +62,7 @@ const LibrarySearchHeader = ({
               "p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all text-zinc-500",
               isRefreshing && "animate-spin text-blue-500"
             )}
+            title={t('library.refreshModels')}
           >
             <RefreshCw size={20} />
           </button>
@@ -60,7 +73,7 @@ const LibrarySearchHeader = ({
       </div>
 
       <div className="ps-6 pe-6 py-4 bg-zinc-50/50 dark:bg-zinc-900/50 border-b border-zinc-100 dark:border-zinc-800 space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex p-1 bg-zinc-200/50 dark:bg-zinc-800/50 rounded-xl w-fit">
             <button 
               onClick={() => setActiveTab('featured')}
@@ -81,7 +94,29 @@ const LibrarySearchHeader = ({
               {t('library.installed', { count: installedCount })}
             </button>
           </div>
-          <div className="hidden sm:flex items-center gap-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+
+          <form onSubmit={handleCustomPull} className="flex-1 min-w-[200px] flex items-center gap-2">
+            <div className="relative flex-1">
+              <Terminal size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+              <input 
+                type="text"
+                placeholder={t('library.pullFromOllama', { name: 'llama3:8b' })}
+                value={customModel}
+                onChange={(e) => setCustomModel(e.target.value)}
+                className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2 ps-9 pe-3 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono"
+              />
+            </div>
+            <button 
+              type="submit"
+              disabled={!customModel.trim()}
+              className="p-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-xl disabled:opacity-50 transition-all active:scale-95"
+              title={t('library.pullModel')}
+            >
+              <Plus size={18} />
+            </button>
+          </form>
+
+          <div className="hidden lg:flex items-center gap-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
             <button 
               onClick={() => opener.openUrl('https://ollama.com/library')} 
               className="flex items-center gap-1 hover:text-blue-500 transition-colors"

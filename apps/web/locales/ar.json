@@ -77,6 +77,13 @@
   },
   "settings": {
     "title": "الإعدادات",
+    "tabs": {
+      "general": "عام",
+      "appearance": "المظهر",
+      "ai": "المحرك",
+      "storage": "التخزين",
+      "advanced": "متقدم"
+    },
     "language": "اللغة",
     "appearance": "المظهر",
     "themes": {

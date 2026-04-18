@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from 'react';
-import { useUIStore, useConversationStore, useSettingsStore } from '@/store';
+import { useUIStore, useConversationStore, useSettingsStore, useModelStore } from '@/store';
 import { useModelActions } from '@/features/library';
 import { useConversationActions } from './useConversationActions';
 import { useSettingsActions } from '@/features/settings';
@@ -33,15 +33,15 @@ export function useChatInitialization() {
       runCleanup();
 
       try {
-        // Simple timeout-based model fetch WITHOUT RETRIES
-        const fetchPromise = fetchModels();
-        const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Model fetch timed out')), 5000)
-        );
-
-        await Promise.race([fetchPromise, timeoutPromise]);
+        // Fetch models and handle smart selection
+        await fetchModels();
+        
+        const modelState = useModelStore.getState();
+        if (!modelState.selectedModel && modelState.models.length > 0) {
+          modelState.setSelectedModel(modelState.models[0].name);
+        }
       } catch (fetchErr) {
-        logger.warn('Initial model fetch failed or timed out', { error: fetchErr });
+        logger.warn('Initial model fetch failed', { error: fetchErr });
       }
 
       const { conversationIds } = useConversationStore.getState();
