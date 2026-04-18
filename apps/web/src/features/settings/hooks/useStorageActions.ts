@@ -106,31 +106,49 @@ export function useStorageActions() {
 
     if (!confirmed) return;
 
+    // Create and configure the file input
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
+    input.style.display = 'none'; // Hide it
 
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        try {
-          const raw = JSON.parse(event.target?.result as string);
-          if (raw && typeof raw === 'object' && Array.isArray(raw.conversations)) {
-            const validated = raw.conversations.map((c: unknown) => ConversationSchema.parse(c));
-            setConversations(validated);
-            toast.success(t('settings.storage.importSuccess'));
-          } else {
-            throw new Error("Invalid format");
-          }
-        } catch (err) {
-          toast.error(t('settings.storage.importError'));
+    // Set up the change handler
+  input.onchange = async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) {
+      // User cancelled the file picker
+      document.body.removeChild(input);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const raw = JSON.parse(event.target?.result as string);
+        if (raw && typeof raw === 'object' && Array.isArray(raw.conversations)) {
+          const validated = raw.conversations.map((c: unknown) => ConversationSchema.parse(c));
+          setConversations(validated);
+          toast.success(t('settings.storage.importSuccess'));
+        } else {
+          throw new Error("Invalid format");
         }
-      };
-      reader.readAsText(file);
+      } catch (err) {
+        toast.error(t('settings.storage.importError'));
+      } finally {
+        // Clean up
+        document.body.removeChild(input);
+      }
     };
-    input.click();
+    reader.onerror = () => {
+      toast.error(t('settings.storage.importError'));
+      document.body.removeChild(input);
+    };
+    reader.readAsText(file);
+  };
+
+  // Add to DOM and trigger click
+  document.body.appendChild(input);
+  input.click();
   }, [setConversations, t]);
 
   return {

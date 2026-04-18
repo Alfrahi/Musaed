@@ -7,8 +7,8 @@ import { useTranslation } from '@/lib/i18n';
 import SearchInput from './SearchInput';
 import ConversationItem from './ConversationItem';
 import SidebarHeader from './SidebarHeader';
-import UserSection from './UserSection';
 import SidebarSkeleton from './SidebarSkeleton';
+import SidebarInfo from './SidebarInfo';
 import { useSidebarActions } from '../hooks/useSidebarActions';
 import { useSidebarGrouping } from '../hooks/useSidebarGrouping';
 
@@ -73,7 +73,7 @@ const Sidebar = () => {
         />
       </div>
 
-      <UserSection />
+      <SidebarInfo />
     </div>
   );
 };

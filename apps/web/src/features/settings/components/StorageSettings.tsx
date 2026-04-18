@@ -77,8 +77,10 @@ const StorageSettings = () => {
             {t('settings.storage.exportJson')}
           </button>
           <button
+            disabled
             onClick={handleImportJson}
-            className="flex-1 flex items-center justify-center gap-2 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-xs font-bold uppercase tracking-widest transition-all"
+            className="flex-1 flex items-center justify-center gap-2 py-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-xs font-bold uppercase tracking-widest transition-all opacity-40 cursor-not-allowed grayscale"
+            title="Coming soon"
           >
             <Upload size={14} />
             {t('settings.storage.importData')}

@@ -11,6 +11,7 @@ interface UIState {
   error: string | null;
   isSettingsOpen: boolean;
   isLibraryOpen: boolean;
+  isInfoOpen: boolean;
   setStreaming: (isStreaming: boolean) => void;
   setInitialized: (isInitialized: boolean) => void;
   setHydrated: (isHydrated: boolean) => void;
@@ -18,6 +19,7 @@ interface UIState {
   setError: (error: string | null) => void;
   setSettingsOpen: (isSettingsOpen: boolean) => void;
   setLibraryOpen: (isLibraryOpen: boolean) => void;
+  setInfoOpen: (isInfoOpen: boolean) => void;
 }
 
 export const useUIStore = createWithEqualityFn<UIState>()(
@@ -29,6 +31,7 @@ export const useUIStore = createWithEqualityFn<UIState>()(
     error: null,
     isSettingsOpen: false,
     isLibraryOpen: false,
+    isInfoOpen: false,
     setStreaming: (isStreaming) => set({ isStreaming }),
     setInitialized: (isInitialized) => set({ isInitialized }),
     setHydrated: (isHydrated) => set({ isHydrated }),
@@ -36,6 +39,7 @@ export const useUIStore = createWithEqualityFn<UIState>()(
     setError: (error) => set({ error }),
     setSettingsOpen: (isSettingsOpen) => set({ isSettingsOpen }),
     setLibraryOpen: (isLibraryOpen) => set({ isLibraryOpen }),
+    setInfoOpen: (isInfoOpen) => set({ isInfoOpen }),
   }),
   shallow
 );

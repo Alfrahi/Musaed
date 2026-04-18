@@ -20,13 +20,6 @@ const SidebarSkeleton = () => {
           </div>
         ))}
       </div>
-      
-      <div className="mbs-auto border-bs border-zinc-200 dark:border-zinc-800 pbs-4">
-        <div className="flex items-center gap-3 ps-2 pe-2">
-          <Skeleton className="w-8 h-8 rounded-full" />
-          <Skeleton className="h-4 w-24 rounded" />
-        </div>
-      </div>
     </div>
   );
 };

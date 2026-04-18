@@ -17,10 +17,11 @@ import OllamaConnectionStatus from './OllamaConnectionStatus';
 
 const SettingsModal = dynamic(() => import('@/features/settings').then(m => m.SettingsModal), { ssr: false });
 const ModelLibrary = dynamic(() => import('@/features/library').then(m => m.ModelLibrary), { ssr: false });
+const InfoModal = dynamic(() => import('@/features/info').then(m => m.InfoModal), { ssr: false });
 
 export default function HomeClient() {
   const { globalSettings } = useSettingsStore();
-  const { isHydrated, isLibraryOpen, isSettingsOpen, setLibraryOpen, setSettingsOpen } = useUIStore();
+  const { isHydrated, isLibraryOpen, isSettingsOpen, isInfoOpen, setLibraryOpen, setSettingsOpen, setInfoOpen } = useUIStore();
   const { initializeApp } = useChatInitialization();
   const [mounted, setMounted] = useState(false);
   const { t, isRtl } = useTranslation(globalSettings.language);
@@ -92,6 +93,7 @@ export default function HomeClient() {
       <AnimatePresence>
         {isSettingsOpen && <SettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />}
         {isLibraryOpen && <ModelLibrary isOpen={isLibraryOpen} onClose={() => setLibraryOpen(false)} />}
+        {isInfoOpen && <InfoModal isOpen={isInfoOpen} onClose={() => setInfoOpen(false)} />}
       </AnimatePresence>
     </main>
   );

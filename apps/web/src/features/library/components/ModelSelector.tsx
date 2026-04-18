@@ -35,6 +35,7 @@ const ModelSelector = () => {
     <div className="relative font-sans" ref={dropdownRef}>
       <div className="flex items-center gap-1.5">
         <button
+          type="button"
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
             "flex items-center gap-2 ps-3 pe-3 py-2 rounded-none border border-transparent hover:border-sidebar-border hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all text-[13px] font-bold uppercase text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 outline-none focus-visible:ring-1 focus-visible:ring-blue-500",
@@ -51,6 +52,7 @@ const ModelSelector = () => {
         </button>
 
         <button 
+          type="button"
           onClick={() => fetchModels(true)}
           className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-none transition-colors text-zinc-400 hover:text-blue-500"
           title={t('library.refreshModels')}
@@ -75,6 +77,7 @@ const ModelSelector = () => {
               models.map((m) => (
                 <button
                   key={m.name}
+                  type="button"
                   onClick={() => handleSelect(m.name)}
                   className={cn(
                     "w-full flex items-center justify-between ps-4 pe-4 py-3 text-start text-sm font-medium transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 outline-none focus:bg-zinc-50 dark:focus:bg-zinc-800/50",
