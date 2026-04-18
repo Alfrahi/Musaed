@@ -108,8 +108,13 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
                 idx === filteredInstalled.length - 1 && "pbe-12"
               )}>
                 <ModelCard 
-                  name={model.name} size={model.size} details={model.details} isDownloaded={true}
-                  onDelete={handleDelete} language={globalSettings.language} variant="installed"
+                  name={model.name} 
+                  size={model.size} 
+                  details={model.details || undefined} 
+                  isDownloaded={true}
+                  onDelete={handleDelete} 
+                  language={globalSettings.language} 
+                  variant="installed"
                 />
               </div>
             )}

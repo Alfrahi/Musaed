@@ -19,36 +19,45 @@ export const BackendErrorSchema = z.object({
   requestId: z.string().nullish(),
 }).transform((data) => ({
   ...data,
-  // Ensure requestId is always available regardless of source casing
   requestId: data.requestId
 }));
 
 export type BackendError = z.infer<typeof BackendErrorSchema>;
 
 /**
- * Sanitizes error objects and redacts sensitive system paths.
+ * Sanitizes errors by redacting sensitive system paths and URLs while ensuring type safety.
  */
-export const sanitizeError = (error: any): BackendError => {
+export const sanitizeError = (error: unknown): BackendError => {
   let message = "An unknown error occurred";
   let code = BackendErrorCode.Unknown;
   let requestId: string | undefined;
 
   if (typeof error === 'string') {
     message = error;
-  } else if (error && typeof error === 'object') {
-    message = error.message || message;
-    code = error.code || code;
-    // Handle both snake_case from Rust and camelCase from TS
-    requestId = error.requestId || error.request_id;
+  } else if (error instanceof Error) {
+    message = error.message;
+  } else if (error !== null && typeof error === 'object') {
+    const errObj = error as Record<string, unknown>;
+    
+    if (typeof errObj.message === 'string') {
+      message = errObj.message;
+    }
+    
+    if (typeof errObj.code === 'string') {
+      code = errObj.code as BackendErrorCode;
+    }
+
+    const rid = errObj.requestId || errObj.request_id;
+    if (typeof rid === 'string') {
+      requestId = rid;
+    }
   }
 
-  // Enhanced path redaction for security (Windows and Unix styles)
   const pathRegex = /([a-zA-Z]:\\(?:[^\\\s]+\\)+|(?:\/[^/\s]+)+\/)/g;
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   
   message = message.replace(pathRegex, '[PATH REDACTED] ');
   
-  // Only redact URLs if they aren't the Ollama localhost
   if (!message.includes('localhost') && !message.includes('127.0.0.1')) {
     message = message.replace(urlRegex, '[URL REDACTED]');
   }
@@ -118,7 +127,6 @@ export const PullProgressSchema = z.object({
 
 export type PullProgress = z.infer<typeof PullProgressSchema>;
 
-/** Emitted as `pull-error` from the desktop host when a model pull fails. */
 export const PullErrorSchema = z.object({
   name: z.string(),
   error: z.string(),
@@ -127,13 +135,11 @@ export const PullErrorSchema = z.object({
 
 export type PullError = z.infer<typeof PullErrorSchema>;
 
-/** Assistant "thinking" wrapper tags — keep in sync across UI and export. */
 export const REDACTED_THINKING_TAG_START = '<think>';
 export const REDACTED_THINKING_TAG_END = '</think>';
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/** Removes `<think>…</think>` blocks (e.g. for export). */
 export function stripRedactedThinkingBlocks(content: string): string {
   const re = new RegExp(
     `${escapeRegExp(REDACTED_THINKING_TAG_START)}[\\s\\S]*?${escapeRegExp(REDACTED_THINKING_TAG_END)}`,
@@ -142,7 +148,6 @@ export function stripRedactedThinkingBlocks(content: string): string {
   return content.replace(re, '').trim();
 }
 
-/** Payload from `check_ollama_health` (serde camelCase). */
 export const OllamaHealthIpcSchema = z.object({
   isRunning: z.boolean(),
   version: z.string().nullish(),
@@ -181,8 +186,12 @@ export const ChatSettingsSchema = z.object({
   ollamaUrl: z.string(),
   language: z.enum(['en', 'ar']),
   theme: z.enum(['light', 'dark', 'system']),
-  density: z.number().min(0.8).max(1.2),
   hasDetectedLanguage: z.boolean(),
+  enterToSend: z.boolean().default(true),
+  chatRetentionDays: z.number().default(0),
+  enableLatex: z.boolean().default(true),
+  enableMermaid: z.boolean().default(true),
+  density: z.number().default(1.0),
 });
 
 export type ChatSettings = z.infer<typeof ChatSettingsSchema>;
@@ -210,6 +219,10 @@ export const DEFAULT_SETTINGS: ChatSettings = {
   ollamaUrl: "http://localhost:11434",
   language: 'en',
   theme: 'system',
-  density: 1.0,
   hasDetectedLanguage: false,
+  enterToSend: true,
+  chatRetentionDays: 0,
+  enableLatex: true,
+  enableMermaid: true,
+  density: 1.0,
 };

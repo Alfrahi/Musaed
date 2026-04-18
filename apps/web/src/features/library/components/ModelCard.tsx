@@ -117,9 +117,21 @@ const ModelCard = ({
                 {name}
               </h3>
               <div className="flex gap-1">
-                {isVision && <Eye size={14} className="text-purple-500" title="Vision Capable" />}
-                {isCode && <Code size={14} className="text-blue-500" title="Coding Specialized" />}
-                {isReasoning && <BrainCircuit size={14} className="text-amber-500" title="Reasoning Model" />}
+                {isVision && (
+                  <span title="Vision Capable">
+                    <Eye size={14} className="text-purple-500" />
+                  </span>
+                )}
+                {isCode && (
+                  <span title="Coding Specialized">
+                    <Code size={14} className="text-blue-500" />
+                  </span>
+                )}
+                {isReasoning && (
+                  <span title="Reasoning Model">
+                    <BrainCircuit size={14} className="text-amber-500" />
+                  </span>
+                )}
               </div>
             </div>
             {description && (

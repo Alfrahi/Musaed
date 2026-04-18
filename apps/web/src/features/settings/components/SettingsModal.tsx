@@ -37,9 +37,8 @@ type SettingsTab = 'general' | 'appearance' | 'ai' | 'storage' | 'advanced';
 const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const { globalSettings } = useSettingsStore();
-  const { isRtl } = useUIStore();
   const { resetGlobalSettings } = useSettingsActions();
-  const { t } = useTranslation(globalSettings.language);
+  const { t, isRtl } = useTranslation(globalSettings.language);
 
   const handleReset = async () => {
     const confirmed = await dialog.ask(t('settings.confirmReset'), { 

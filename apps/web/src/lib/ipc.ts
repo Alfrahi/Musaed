@@ -170,7 +170,7 @@ export const opener = {
  * Store plugin wrappers
  */
 export const store = {
-  load: async (file: string, opts: { autoSave?: boolean }) =>
+  load: async (file: string, opts?: any) =>
     checkIsTauri() ? (await import('@tauri-apps/plugin-store')).load(file, opts) : null,
 };
 
