@@ -1,9 +1,12 @@
 use tauri::Manager;
 
-pub mod commands;
+pub mod files;
 pub mod logger;
+pub mod logging;
+pub mod ollama;
 pub mod ollama_url;
 pub mod payloads;
+pub mod shared;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -52,17 +55,17 @@ pub fn run() {
 
     builder
     .invoke_handler(tauri::generate_handler![
-        commands::get_ollama_models,
-        commands::chat_with_ollama,
-        commands::abort_chat,
-        commands::validate_model,
-        commands::pull_model,
-        commands::delete_model,
-        commands::check_ollama_health,
-        commands::append_to_log,
-        commands::clear_logs,
-        commands::select_and_extract_files,
-        commands::select_and_extract_folder,
+        ollama::get_ollama_models,
+        ollama::chat_with_ollama,
+        ollama::abort_chat,
+        ollama::validate_model,
+        ollama::pull_model,
+        ollama::delete_model,
+        ollama::check_ollama_health,
+        logging::append_to_log,
+        logging::clear_logs,
+        files::select_and_extract_files,
+        files::select_and_extract_folder,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
