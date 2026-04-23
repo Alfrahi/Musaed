@@ -13,7 +13,8 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.10.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "focus-trap-react": "^12.0.0",

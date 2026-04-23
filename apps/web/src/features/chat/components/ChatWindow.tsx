@@ -3,7 +3,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { Bot, ArrowDown, Plus, Sparkles, Shield } from 'lucide-react';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
-import { useConversationStore, useSettingsStore, useUIStore } from '../../../store';
+import { useConversations, useCurrentConversationId, useGlobalSettings, useIsHydrated } from '../../../store/hooks';
 import MessageBubble from './MessageBubble';
 import ChatWindowSkeleton from './ChatWindowSkeleton';
 import { useTranslation } from '../../../lib/i18n';
@@ -11,9 +11,10 @@ import { cn } from '../../../lib/utils';
 import { useConversationActions } from '../hooks/useConversationActions';
 
 const ChatWindow = () => {
-  const { conversations, currentConversationId } = useConversationStore();
-  const { globalSettings } = useSettingsStore();
-  const { isHydrated } = useUIStore();
+  const conversations = useConversations();
+  const currentConversationId = useCurrentConversationId();
+  const globalSettings = useGlobalSettings();
+  const isHydrated = useIsHydrated();
   const { createNewConversation } = useConversationActions();
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const { t } = useTranslation(globalSettings.language);

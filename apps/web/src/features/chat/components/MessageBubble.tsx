@@ -5,7 +5,7 @@ import { User, Bot, Copy, Check, Zap, Cpu } from 'lucide-react';
 import { Message, stripRedactedThinkingBlocks } from '@musaed/contracts';
 import { cn } from '../../../lib/utils';
 import MessageContent from './MessageContent';
-import { useSettingsStore } from '../../../store';
+import { useGlobalSettings, useLanguage } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 import { attachmentImageSrc } from '../imageAttachment';
 
@@ -16,8 +16,9 @@ interface MessageBubbleProps {
 const MessageBubble = ({ message }: MessageBubbleProps) => {
   const [copied, setCopied] = useState(false);
   const isUser = message.role === 'user';
-  const { globalSettings } = useSettingsStore();
-  const { t, formatNumber } = useTranslation(globalSettings.language);
+  const globalSettings = useGlobalSettings();
+  const language = useLanguage();
+  const { t, formatNumber } = useTranslation(language);
 
   const handleCopy = () => {
     const cleanContent = stripRedactedThinkingBlocks(message.content);

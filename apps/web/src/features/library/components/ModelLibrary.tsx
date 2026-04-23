@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useMemo, useCallback } from 'react';
-import { RefreshCw, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
-import { useModelStore, useSettingsStore, useUIStore } from '../../../store';
+import { useModels, usePullStatus, useIsOllamaConnected, useGlobalSettings, useLanguage } from '../../../store/hooks';
 import { useTranslation, TranslationKey } from '../../../lib/i18n';
 import ModelCard from './ModelCard';
 import LibrarySearchHeader from './LibrarySearchHeader';
@@ -32,14 +32,16 @@ const FEATURED_MODELS_LIST = [
 ];
 
 const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
-  const { models, pullStatus } = useModelStore();
-  const { isOllamaConnected } = useUIStore();
-  const { globalSettings } = useSettingsStore();
+  const models = useModels();
+  const pullStatus = usePullStatus();
+  const isOllamaConnected = useIsOllamaConnected();
+  const globalSettings = useGlobalSettings();
+  const language = useLanguage();
   const { fetchModels, deleteModel } = useModelActions();
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'featured' | 'installed'>('featured');
-  const { t } = useTranslation(globalSettings.language);
+  const { t } = useTranslation(language);
   const { handlePull, translateOllamaStatus } = useModelPulling();
 
   const featuredModels = useMemo(() => 
@@ -65,8 +67,8 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
 
   return (
     <ModalLayout isOpen={isOpen} onClose={onClose} maxWidth="max-w-4xl" className="h-[85vh]">
-      <LibrarySearchHeader 
-        language={globalSettings.language} activeTab={activeTab} setActiveTab={setActiveTab}
+      <LibrarySearchHeader
+        language={language} activeTab={activeTab} setActiveTab={setActiveTab}
         searchQuery={searchQuery} setSearchQuery={setSearchQuery} isRefreshing={isRefreshing}
         onRefresh={() => fetchModels(true)} onClose={onClose} installedCount={models.length}
         onPullAny={handlePull}
@@ -93,7 +95,7 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
                 key={model.name} name={model.name} description={model.description}
                 size={model.size * 1024 * 1024 * 1024} isDownloaded={models.some(m => m.name.startsWith(model.name))}
                 pullStatus={pullStatus[model.name] ? { ...pullStatus[model.name], status: translateOllamaStatus(pullStatus[model.name].status) } : undefined}
-                onPull={handlePull} language={globalSettings.language}
+                onPull={handlePull} language={language}
               />
             )}
           />
@@ -112,8 +114,8 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
                   size={model.size} 
                   details={model.details || undefined} 
                   isDownloaded={true}
-                  onDelete={handleDelete} 
-                  language={globalSettings.language} 
+                  onDelete={handleDelete}
+                  language={language}
                   variant="installed"
                 />
               </div>

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useTranslation } from '../../../lib/i18n';
-import { useSettingsStore } from '../../../store';
+import { useLanguage } from '../../../store/hooks';
 import { checkIsTauri, logApi, store, dialog } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
 
@@ -12,7 +12,7 @@ import { logger } from '../../../lib/logger';
 export function useLogActions() {
   const [logs, setLogs] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const language = useSettingsStore(state => state.globalSettings.language);
+  const language = useLanguage();
   const { t } = useTranslation(language);
   const isTauri = checkIsTauri();
 

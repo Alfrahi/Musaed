@@ -1,13 +1,14 @@
 "use client";
 
 import { Search } from 'lucide-react';
-import { useConversationStore, useSettingsStore } from '../../../store';
+import { useSearchQuery, useSetSearchQuery, useLanguage } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 
 const SearchInput = () => {
-  const { searchQuery, setSearchQuery } = useConversationStore();
-  const { globalSettings } = useSettingsStore();
-  const { t } = useTranslation(globalSettings.language);
+  const searchQuery = useSearchQuery();
+  const setSearchQuery = useSetSearchQuery();
+  const language = useLanguage();
+  const { t } = useTranslation(language);
 
   return (
     <div className="relative group ps-4 pe-4 mbe-4" role="search">

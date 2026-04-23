@@ -1,14 +1,14 @@
 "use client";
 
 import { Plus } from 'lucide-react';
-import { useSettingsStore } from '@/store';
+import { useLanguage } from '@/store/hooks';
 import { useTranslation } from '@/lib/i18n';
 import { useConversationActions } from '@/features/chat';
 
 const SidebarHeader = () => {
-  const { globalSettings } = useSettingsStore();
+  const language = useLanguage();
   const { createNewConversation } = useConversationActions();
-  const { t } = useTranslation(globalSettings.language);
+  const { t } = useTranslation(language);
 
   return (
     <div className="p-4 flex flex-col gap-4">

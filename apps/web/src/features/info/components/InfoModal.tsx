@@ -4,7 +4,7 @@ import React from 'react';
 import { Info, Github, Globe, Shield, Cpu, X } from 'lucide-react';
 import { ModalLayout } from '../../layout';
 import { useTranslation } from '../../../lib/i18n';
-import { useSettingsStore } from '../../../store';
+import { useLanguage } from '../../../store/hooks';
 import { opener } from '../../../lib/ipc';
 
 interface InfoModalProps {
@@ -13,8 +13,8 @@ interface InfoModalProps {
 }
 
 const InfoModal = ({ isOpen, onClose }: InfoModalProps) => {
-  const { globalSettings } = useSettingsStore();
-  const { t } = useTranslation(globalSettings.language);
+  const language = useLanguage();
+  const { t } = useTranslation(language);
 
   const appVersion = "0.1.0";
 

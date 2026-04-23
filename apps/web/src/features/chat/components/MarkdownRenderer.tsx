@@ -11,7 +11,7 @@ import 'katex/dist/katex.min.css';
 import CodeBlock from './CodeBlock';
 import MermaidRenderer from './MermaidRenderer';
 import { opener } from '../../../lib/ipc';
-import { useSettingsStore } from '../../../store';
+import { useGlobalSettings } from '../../../store/hooks';
 
 interface MarkdownRendererProps {
   content: string;
@@ -37,7 +37,7 @@ function resolveAllowedHref(href: string | undefined | null): string | null {
 }
 
 const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
-  const { globalSettings } = useSettingsStore();
+  const globalSettings = useGlobalSettings();
   
   const remarkPlugins: PluggableList = [remarkGfm];
   if (globalSettings.enableLatex) remarkPlugins.push(remarkMath);

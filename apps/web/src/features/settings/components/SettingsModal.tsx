@@ -12,7 +12,7 @@ import {
   Type,
   Layout
 } from 'lucide-react';
-import { useSettingsStore, useUIStore } from '../../../store';
+import { useGlobalSettings } from '../../../store/hooks';
 import { useSettingsActions } from '../hooks/useSettingsActions';
 import LanguageSettings from './LanguageSettings';
 import ThemeSettings from './ThemeSettings';
@@ -36,7 +36,7 @@ type SettingsTab = 'general' | 'appearance' | 'ai' | 'storage' | 'advanced';
 
 const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
-  const { globalSettings } = useSettingsStore();
+  const globalSettings = useGlobalSettings();
   const { resetGlobalSettings } = useSettingsActions();
   const { t, isRtl } = useTranslation(globalSettings.language);
 

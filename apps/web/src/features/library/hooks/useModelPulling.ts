@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback } from 'react';
-import { useModelStore, useSettingsStore } from '../../../store';
+import { useModelStore } from '../../../store';
+import { usePullStatus, useUpdatePullStatus, useGlobalSettings, useLanguage } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 import { ollamaApi, checkIsTauri } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
@@ -11,9 +12,11 @@ import toast from 'react-hot-toast';
  * Hook for initiating and tracking model pull requests from Ollama.
  */
 export function useModelPulling() {
-  const { pullStatus, updatePullStatus } = useModelStore();
-  const { globalSettings } = useSettingsStore();
-  const { t } = useTranslation(globalSettings.language);
+  const pullStatus = usePullStatus();
+  const updatePullStatus = useUpdatePullStatus();
+  const globalSettings = useGlobalSettings();
+  const language = useLanguage();
+  const { t } = useTranslation(language);
   
   /**
    * Translates internal Ollama status codes to user-friendly text.

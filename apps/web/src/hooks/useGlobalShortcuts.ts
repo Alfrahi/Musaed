@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useConversationActions } from '../features/chat';
-import { useUIStore } from '../store';
+import { useSetSettingsOpen, useSetLibraryOpen } from '../store/hooks';
 
 /**
  * Hook to register global keyboard shortcuts for primary application actions.
@@ -15,7 +15,8 @@ import { useUIStore } from '../store';
  */
 export function useGlobalShortcuts() {
   const { createNewConversation } = useConversationActions();
-  const { setSettingsOpen, setLibraryOpen } = useUIStore();
+  const setSettingsOpen = useSetSettingsOpen();
+  const setLibraryOpen = useSetLibraryOpen();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

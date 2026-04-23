@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react';
 import { useUIStore, useConversationStore, useSettingsStore, useModelStore } from '@/store';
+import { useSetInitialized, useSetUIError } from '@/store/hooks';
 import { useModelActions } from '@/features/library';
 import { useConversationActions } from './useConversationActions';
 import { useSettingsActions, useStorageCleanup } from '@/features/settings';
@@ -9,7 +10,8 @@ import { logger } from '@/lib/logger';
 import { getSystemLanguage } from '@/lib/i18n';
 
 export function useChatInitialization() {
-  const { setInitialized, setError } = useUIStore();
+  const setInitialized = useSetInitialized();
+  const setError = useSetUIError();
   const { updateGlobalSettings } = useSettingsActions();
   const { fetchModels } = useModelActions();
   const { createNewConversation } = useConversationActions();

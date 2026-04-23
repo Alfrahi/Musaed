@@ -2,7 +2,8 @@
 
 import { useEffect } from 'react';
 import { z } from 'zod';
-import { useConversationStore, useModelStore, useSettingsStore } from '../../../store';
+import { useConversationStore, useSettingsStore } from '../../../store';
+import { useUpdatePullStatus, useSetModels } from '../../../store/hooks';
 import { listen, ollamaApi } from '../../../lib/ipc';
 import {
   sanitizeError,
@@ -23,8 +24,8 @@ import { logger } from '../../../lib/logger';
  * Hook to listen for native Tauri events from the Rust backend.
  */
 export function useTauriEvents() {
-  const updatePullStatus = useModelStore(state => state.updatePullStatus);
-  const setModels = useModelStore(state => state.setModels);
+  const updatePullStatus = useUpdatePullStatus();
+  const setModels = useSetModels();
 
   useEffect(() => {
     let unlisteners: (() => void)[] = [];

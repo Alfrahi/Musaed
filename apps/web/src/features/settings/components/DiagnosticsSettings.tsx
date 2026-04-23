@@ -2,14 +2,15 @@
 
 import { useState } from 'react';
 import { Activity } from 'lucide-react';
-import { useSettingsStore } from '../../../store';
+import { useGlobalSettings, useLanguage } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 import LogViewer from './LogViewer';
 
 const DiagnosticsSettings = () => {
   const [isLogViewerOpen, setIsLogViewerOpen] = useState(false);
-  const { globalSettings } = useSettingsStore();
-  const { t } = useTranslation(globalSettings.language);
+  const globalSettings = useGlobalSettings();
+  const language = useLanguage();
+  const { t } = useTranslation(language);
 
   return (
     <>

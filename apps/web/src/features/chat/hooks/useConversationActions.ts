@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react';
 import { useConversationStore, useModelStore, useSettingsStore } from '../../../store';
+import { useSetConversations, useSetCurrentConversationId, useStopStream } from '../../../store/hooks';
 import { chatApi } from '../../../lib/ipc';
 import { useTranslation } from '../../../lib/i18n';
 
@@ -9,11 +10,9 @@ import { useTranslation } from '../../../lib/i18n';
  * Hook for managing conversation lifecycle actions like creation, deletion, and streaming control.
  */
 export function useConversationActions() {
-  const { 
-    setConversations, 
-    setCurrentConversationId, 
-    stopStream
-  } = useConversationStore();
+  const setConversations = useSetConversations();
+  const setCurrentConversationId = useSetCurrentConversationId();
+  const stopStream = useStopStream();
 
   /**
    * Initializes a new conversation with default settings.

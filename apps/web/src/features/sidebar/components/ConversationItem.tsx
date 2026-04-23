@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from 'react';
-import { MessageSquare, Trash2, Download, Edit2, Check, MoreVertical } from 'lucide-react';
+import { MessageSquare, Trash2, Download, Edit2 } from 'lucide-react';
 import { Conversation } from '@musaed/contracts';
-import { useConversationStore, useSettingsStore } from '../../../store';
+import { useCurrentConversationId, useSetCurrentConversationId, useLanguage } from '../../../store/hooks';
 import { cn } from '../../../lib/utils';
 import { useSidebarActions } from '../hooks/useSidebarActions';
 import { useTranslation } from '../../../lib/i18n';
@@ -13,12 +13,13 @@ interface ConversationItemProps {
 }
 
 const ConversationItem = ({ conversation }: ConversationItemProps) => {
-  const { currentConversationId, setCurrentConversationId } = useConversationStore();
-  const { globalSettings } = useSettingsStore();
+  const currentConversationId = useCurrentConversationId();
+  const setCurrentConversationId = useSetCurrentConversationId();
+  const language = useLanguage();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const { handleDeleteConversation, handleRenameConversation, handleExport } = useSidebarActions();
-  const { t } = useTranslation(globalSettings.language);
+  const { t } = useTranslation(language);
 
   const isActive = currentConversationId === conversation.id;
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from 'react';
-import { useConversationStore, useSettingsStore } from '@/store';
+import { useLanguage } from '@/store/hooks';
 import { useTranslation } from '@/lib/i18n';
 import { dialog } from '@/lib/ipc';
 import { exportToMarkdown } from '@/lib/export';
@@ -10,8 +10,8 @@ import { useConversationActions } from '@/features/chat';
 import { logger } from '@/lib/logger';
 
 export function useSidebarActions() {
-  const { globalSettings } = useSettingsStore();
-  const { t, formatDate, formatNumber } = useTranslation(globalSettings.language);
+  const language = useLanguage();
+  const { t, formatDate, formatNumber } = useTranslation(language);
   const { clearAllConversations, deleteConversation, updateConversationTitle } = useConversationActions();
 
   const handleClearAll = useCallback(async () => {

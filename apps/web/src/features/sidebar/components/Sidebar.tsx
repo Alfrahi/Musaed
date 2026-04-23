@@ -2,7 +2,7 @@
 
 import { Eraser } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
-import { useConversationStore, useSettingsStore, useUIStore } from '@/store';
+import { useConversations, useConversationIds, useSearchQuery, useIsHydrated, useLanguage } from '@/store/hooks';
 import { useTranslation } from '@/lib/i18n';
 import SearchInput from './SearchInput';
 import ConversationItem from './ConversationItem';
@@ -13,17 +13,19 @@ import { useSidebarActions } from '../hooks/useSidebarActions';
 import { useSidebarGrouping } from '../hooks/useSidebarGrouping';
 
 const Sidebar = () => {
-  const { conversations, conversationIds, searchQuery } = useConversationStore();
-  const { globalSettings } = useSettingsStore();
-  const { isHydrated } = useUIStore();
-  const { t } = useTranslation(globalSettings.language);
+  const conversations = useConversations();
+  const conversationIds = useConversationIds();
+  const searchQuery = useSearchQuery();
+  const language = useLanguage();
+  const isHydrated = useIsHydrated();
+  const { t } = useTranslation(language);
   const { handleClearAll } = useSidebarActions();
   
   const virtualItems = useSidebarGrouping(
     conversations, 
     conversationIds, 
     searchQuery, 
-    globalSettings.language
+    language
   );
 
   if (!isHydrated) {

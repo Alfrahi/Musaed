@@ -1,13 +1,14 @@
 "use client";
 
-import { useSettingsStore } from '../../../store';
+import { useGlobalSettings, useLanguage } from '../../../store/hooks';
 import { useSettingsActions } from '../hooks/useSettingsActions';
 import { useTranslation } from '../../../lib/i18n';
 
 const ModelParamsSettings = () => {
-  const { globalSettings } = useSettingsStore();
+  const globalSettings = useGlobalSettings();
+  const language = useLanguage();
   const { updateGlobalSettings } = useSettingsActions();
-  const { t, formatNumber } = useTranslation(globalSettings.language);
+  const { t, formatNumber } = useTranslation(language);
 
   return (
     <div className="flex flex-col gap-5">

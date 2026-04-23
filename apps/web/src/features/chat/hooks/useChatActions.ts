@@ -1,6 +1,6 @@
 "use client";
 import { useCallback } from 'react';
-import { useConversationStore, useModelStore, useSettingsStore, useUIStore } from '../../../store';
+import { useCurrentConversationId, useConversations, useAddMessage, useUpdateLastMessage, useSelectedModel, useGlobalSettings, useSetUIError } from '../../../store/hooks';
 import { Message } from '@musaed/contracts';
 import { useTranslation } from '../../../lib/i18n';
 import { chatApi } from '../../../lib/ipc';
@@ -22,10 +22,13 @@ function ollamaUserTextContent(content: string, hasImages: boolean, t: (key: str
  * Hook for handling chat message sending and streaming initialization.
  */
 export function useChatActions() {
-  const { currentConversationId, conversations, addMessage, updateLastMessage } = useConversationStore();
-  const { selectedModel } = useModelStore();
-  const { globalSettings } = useSettingsStore();
-  const { setError } = useUIStore();
+  const currentConversationId = useCurrentConversationId();
+  const conversations = useConversations();
+  const addMessage = useAddMessage();
+  const updateLastMessage = useUpdateLastMessage();
+  const selectedModel = useSelectedModel();
+  const globalSettings = useGlobalSettings();
+  const setError = useSetUIError();
   const { initiateStreaming, stopStreaming } = useConversationActions();
   const { t } = useTranslation(globalSettings.language);
 

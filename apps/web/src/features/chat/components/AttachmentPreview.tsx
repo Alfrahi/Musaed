@@ -2,7 +2,7 @@
 
 import { X, FileText } from 'lucide-react';
 import { useTranslation } from '../../../lib/i18n';
-import { useSettingsStore } from '../../../store';
+import { useLanguage } from '../../../store/hooks';
 import { FileAttachment } from '../hooks/useAttachmentManager';
 import { attachmentImageSrc } from '../imageAttachment';
 
@@ -14,7 +14,7 @@ interface AttachmentPreviewProps {
 }
 
 const AttachmentPreview = ({ images, files, onRemoveImage, onRemoveFile }: AttachmentPreviewProps) => {
-  const language = useSettingsStore(state => state.globalSettings.language);
+  const language = useLanguage();
   const { t, formatFileSize } = useTranslation(language);
 
   if (images.length === 0 && files.length === 0) return null;

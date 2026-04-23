@@ -4,17 +4,18 @@ import { useEffect, useRef } from 'react';
 import { Globe, Terminal } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { DEFAULT_SETTINGS } from '@musaed/contracts';
-import { useSettingsStore } from '@/store';
+import { useGlobalSettings, useLanguage } from '@/store/hooks';
 import { useSettingsActions } from '../hooks/useSettingsActions';
 import { useModelActions } from '@/features/library';
 import { useTranslation } from '@/lib/i18n';
 import { isValidOllamaUrl } from '@/lib/ipc';
 
 const OllamaSettings = () => {
-  const { globalSettings } = useSettingsStore();
+  const globalSettings = useGlobalSettings();
+  const language = useLanguage();
   const { updateGlobalSettings } = useSettingsActions();
   const { fetchModels } = useModelActions();
-  const { t } = useTranslation(globalSettings.language);
+  const { t } = useTranslation(language);
 
   const lastValidOllamaUrlRef = useRef(
     isValidOllamaUrl(globalSettings.ollamaUrl) ? globalSettings.ollamaUrl : DEFAULT_SETTINGS.ollamaUrl

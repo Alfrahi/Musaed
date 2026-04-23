@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Send, Square, ImageIcon, Paperclip } from 'lucide-react';
-import { useConversationStore, useSettingsStore, useModelStore } from '@/store';
+import { useCurrentConversationId, useActiveStreams, useGlobalSettings, useSelectedModel } from '@/store/hooks';
 import { useTranslation } from '@/lib/i18n';
 import { useAutosizeTextArea } from '@/hooks/useAutosizeTextArea';
 import { ModelSelector } from '@/features/library';
@@ -17,9 +17,10 @@ const InputArea = () => {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const { currentConversationId, activeStreams } = useConversationStore();
-  const { globalSettings } = useSettingsStore();
-  const { selectedModel } = useModelStore();
+  const currentConversationId = useCurrentConversationId();
+  const activeStreams = useActiveStreams();
+  const globalSettings = useGlobalSettings();
+  const selectedModel = useSelectedModel();
   const { sendMessage } = useChatActions();
   const { abortStreaming } = useConversationActions();
   const { t } = useTranslation(globalSettings.language);

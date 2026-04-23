@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Settings2, RefreshCw, ChevronDown, Check } from 'lucide-react';
-import { useModelStore, useUIStore, useSettingsStore } from '../../../store';
+import { useSelectedModel, useModels, useSetSelectedModel, useIsStreaming, useGlobalSettings } from '../../../store/hooks';
 import { cn } from '../../../lib/utils';
 import { useTranslation } from '../../../lib/i18n';
 import { useModelActions } from '../hooks/useModelActions';
@@ -10,9 +10,11 @@ import { useModelActions } from '../hooks/useModelActions';
 const ModelSelector = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { selectedModel, models, setSelectedModel } = useModelStore();
-  const { isStreaming } = useUIStore();
-  const { globalSettings } = useSettingsStore();
+  const selectedModel = useSelectedModel();
+  const models = useModels();
+  const setSelectedModel = useSetSelectedModel();
+  const isStreaming = useIsStreaming();
+  const globalSettings = useGlobalSettings();
   const { fetchModels } = useModelActions();
   const { t } = useTranslation(globalSettings.language);
 

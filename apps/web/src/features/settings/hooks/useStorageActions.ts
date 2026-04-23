@@ -1,16 +1,18 @@
 "use client";
 
 import { useCallback, useState, useEffect } from 'react';
-import { useConversationStore, useModelStore, useSettingsStore } from '../../../store';
+import { useConversations, useConversationIds, useSetConversations, useModels, useGlobalSettings } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 import { checkIsTauri, dialog, fs } from '../../../lib/ipc';
 import toast from 'react-hot-toast';
 import { ConversationSchema } from '@musaed/contracts';
 
 export function useStorageActions() {
-  const { conversations, conversationIds, setConversations } = useConversationStore();
-  const { models } = useModelStore();
-  const { globalSettings } = useSettingsStore();
+  const conversations = useConversations();
+  const conversationIds = useConversationIds();
+  const setConversations = useSetConversations();
+  const models = useModels();
+  const globalSettings = useGlobalSettings();
   const { t, formatDate } = useTranslation(globalSettings.language);
 
   const [historySize, setHistorySize] = useState<number | null>(null);

@@ -1,15 +1,16 @@
 "use client";
 
 import { HardDrive, Download, Upload, FileText, Trash2 } from 'lucide-react';
-import { useSettingsStore } from '../../../store';
+import { useGlobalSettings, useLanguage } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 import { useStorageActions } from '../hooks/useStorageActions';
 import { useSettingsActions } from '../hooks/useSettingsActions';
 
 const StorageSettings = () => {
-  const { globalSettings } = useSettingsStore();
+  const globalSettings = useGlobalSettings();
+  const language = useLanguage();
   const { updateGlobalSettings } = useSettingsActions();
-  const { t, formatFileSize } = useTranslation(globalSettings.language);
+  const { t, formatFileSize } = useTranslation(language);
   const { 
     historySize, 
     modelsSize, 

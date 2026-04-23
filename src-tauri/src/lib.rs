@@ -1,6 +1,5 @@
 use tauri::Manager;
 
-pub mod files;
 pub mod logger;
 pub mod logging;
 pub mod ollama;
@@ -64,8 +63,6 @@ pub fn run() {
         ollama::check_ollama_health,
         logging::append_to_log,
         logging::clear_logs,
-        files::select_and_extract_files,
-        files::select_and_extract_folder,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

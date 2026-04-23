@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { useSettingsStore, useUIStore } from '@/store';
+import { useGlobalSettings, useIsHydrated, useIsLibraryOpen, useIsSettingsOpen, useIsInfoOpen, useSetLibraryOpen, useSetSettingsOpen, useSetInfoOpen } from '@/store/hooks';
 import { Sliders, Library } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/i18n';
@@ -20,8 +20,14 @@ const ModelLibrary = dynamic(() => import('@/features/library').then(m => m.Mode
 const InfoModal = dynamic(() => import('@/features/info').then(m => m.InfoModal), { ssr: false });
 
 export default function HomeClient() {
-  const { globalSettings } = useSettingsStore();
-  const { isHydrated, isLibraryOpen, isSettingsOpen, isInfoOpen, setLibraryOpen, setSettingsOpen, setInfoOpen } = useUIStore();
+  const globalSettings = useGlobalSettings();
+  const isHydrated = useIsHydrated();
+  const isLibraryOpen = useIsLibraryOpen();
+  const isSettingsOpen = useIsSettingsOpen();
+  const isInfoOpen = useIsInfoOpen();
+  const setLibraryOpen = useSetLibraryOpen();
+  const setSettingsOpen = useSetSettingsOpen();
+  const setInfoOpen = useSetInfoOpen();
   const { initializeApp } = useChatInitialization();
   const [mounted, setMounted] = useState(false);
   const { t, isRtl } = useTranslation(globalSettings.language);

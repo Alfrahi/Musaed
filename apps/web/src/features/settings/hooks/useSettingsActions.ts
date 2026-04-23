@@ -3,10 +3,11 @@
 import { useCallback } from 'react';
 import { DEFAULT_SETTINGS, ChatSettings } from '@musaed/contracts';
 import { useSettingsStore } from '../../../store';
+import { useSetGlobalSettings } from '../../../store/hooks';
 import { logger } from '../../../lib/logger';
 
 export function useSettingsActions() {
-  const setGlobalSettings = useSettingsStore(state => state.setGlobalSettings);
+  const setGlobalSettings = useSetGlobalSettings();
 
   const updateGlobalSettings = useCallback((update: Partial<ChatSettings>) => {
     const currentSettings = useSettingsStore.getState().globalSettings;

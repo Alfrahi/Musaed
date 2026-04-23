@@ -2,13 +2,13 @@
 
 import React from 'react';
 import { Info } from 'lucide-react';
-import { useUIStore, useSettingsStore } from '../../../store';
+import { useSetInfoOpen, useLanguage } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 
 const SidebarInfo = () => {
-  const { setInfoOpen } = useUIStore();
-  const { globalSettings } = useSettingsStore();
-  const { t } = useTranslation(globalSettings.language);
+  const setInfoOpen = useSetInfoOpen();
+  const language = useLanguage();
+  const { t } = useTranslation(language);
   const version = "0.1.0";
 
   return (

@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { X, Terminal, RefreshCw, Trash2 } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import { cn } from '../../../lib/utils';
-import { useSettingsStore } from '../../../store';
+import { useLanguage } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 import { useLogActions } from '../hooks/useLogActions';
 import { ModalLayout } from '../../layout';
@@ -15,7 +15,7 @@ interface LogViewerProps {
 }
 
 const LogViewer = ({ isOpen, onClose }: LogViewerProps) => {
-  const language = useSettingsStore(state => state.globalSettings.language);
+  const language = useLanguage();
   const { t, formatDate } = useTranslation(language);
   const { logs, isLoading, fetchLogs, clearLogs } = useLogActions();
 

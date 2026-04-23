@@ -1,15 +1,16 @@
 "use client";
 
 import { Languages } from 'lucide-react';
-import { useSettingsStore } from '../../../store';
+import { useGlobalSettings, useLanguage } from '../../../store/hooks';
 import { useSettingsActions } from '../hooks/useSettingsActions';
 import { useTranslation } from '../../../lib/i18n';
 import { Language } from '@musaed/contracts';
 
 const LanguageSettings = () => {
-  const { globalSettings } = useSettingsStore();
+  const globalSettings = useGlobalSettings();
+  const language = useLanguage();
   const { updateGlobalSettings } = useSettingsActions();
-  const { t } = useTranslation(globalSettings.language);
+  const { t } = useTranslation(language);
 
   const availableLanguages: Language[] = ['en', 'ar'];
 

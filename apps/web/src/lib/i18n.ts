@@ -27,16 +27,6 @@ export const getSystemLanguage = (): Language => {
 };
 
 /**
- * Returns the layout direction (RTL/LTR) for a given language.
- * 
- * @param {Language} lang - The language to check.
- * @returns {'rtl' | 'ltr'} The direction of the language.
- */
-export const getDirection = (lang: Language): 'rtl' | 'ltr' => {
-  return lang === 'ar' ? 'rtl' : 'ltr';
-};
-
-/**
  * Hook for using translation and formatting utilities.
  * 
  * @param {Language} lang - The active application language.

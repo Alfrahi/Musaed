@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect } from 'react';
-import { useSettingsStore, useUIStore } from '../../../store';
+import { useGlobalSettings, useIsHydrated } from '../../../store/hooks';
 import { useNativeUX } from '../../../hooks/useNativeUX';
 
 export default function DirectionProvider({ children }: { children: React.ReactNode }) {
-  const globalSettings = useSettingsStore((state) => state.globalSettings);
-  const isHydrated = useUIStore((state) => state.isHydrated);
+  const globalSettings = useGlobalSettings();
+  const isHydrated = useIsHydrated();
   
   useNativeUX();
 

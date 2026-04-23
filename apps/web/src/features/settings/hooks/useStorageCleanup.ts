@@ -1,15 +1,17 @@
 "use client";
 
 import { useCallback } from 'react';
-import { useConversationStore, useSettingsStore } from '../../../store';
+import { useConversations, useConversationIds, useSetConversations, useChatRetentionDays } from '../../../store/hooks';
 import { logger } from '../../../lib/logger';
 
 export function useStorageCleanup() {
-  const { conversations, conversationIds, setConversations } = useConversationStore();
-  const { globalSettings } = useSettingsStore();
+  const conversations = useConversations();
+  const conversationIds = useConversationIds();
+  const setConversations = useSetConversations();
+  const chatRetentionDays = useChatRetentionDays();
 
   const runCleanup = useCallback(() => {
-    const days = globalSettings.chatRetentionDays;
+    const days = chatRetentionDays;
     if (days <= 0) return;
 
     const now = Date.now();
@@ -23,7 +25,7 @@ export function useStorageCleanup() {
       logger.info('Auto-cleanup executed', { removedCount, retentionDays: days });
       setConversations(validConvs);
     }
-  }, [conversations, conversationIds, setConversations, globalSettings.chatRetentionDays]);
+  }, [conversations, conversationIds, setConversations, chatRetentionDays]);
 
   return { runCleanup };
 }

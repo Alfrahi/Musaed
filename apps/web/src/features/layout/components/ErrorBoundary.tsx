@@ -3,7 +3,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { RefreshCw, AlertTriangle, WifiOff, HelpCircle } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
-import { useSettingsStore } from '@/store';
+import { useGlobalSettings } from '@/store/hooks';
 import { logger } from '@/lib/logger';
 import { opener } from '@/lib/ipc';
 
@@ -162,7 +162,7 @@ class ErrorBoundary extends Component<Props, State> {
 }
 
 const ErrorBoundaryWithTranslation = ({ children }: { children: ReactNode }) => {
-  const globalSettings = useSettingsStore(state => state.globalSettings);
+  const globalSettings = useGlobalSettings();
   const { t } = useTranslation(globalSettings.language);
 
   return (

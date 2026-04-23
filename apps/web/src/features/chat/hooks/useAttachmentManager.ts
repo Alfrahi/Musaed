@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from 'react';
-import { useSettingsStore } from '../../../store';
+import { useGlobalSettings, useLanguage } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 import toast from 'react-hot-toast';
 
@@ -17,8 +17,9 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB Limit
 export function useAttachmentManager() {
   const [images, setImages] = useState<string[]>([]);
   const [files, setFiles] = useState<FileAttachment[]>([]);
-  const { globalSettings } = useSettingsStore();
-  const { t } = useTranslation(globalSettings.language);
+  const globalSettings = useGlobalSettings();
+  const language = useLanguage();
+  const { t } = useTranslation(language);
 
   const removeImage = useCallback((index: number) => {
     setImages(prev => prev.filter((_, idx) => idx !== index));

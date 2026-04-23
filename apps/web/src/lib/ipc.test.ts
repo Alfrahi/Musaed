@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
-import { invoke, checkIsTauri } from './ipc';
+import { checkIsTauri, ollamaApi } from './ipc';
 import { mockIPC } from '@tauri-apps/api/mocks';
 import { BackendErrorCode } from '@musaed/contracts';
 
@@ -29,28 +29,28 @@ describe('IPC Bridge', () => {
 
   it('invokes a command and returns data', async () => {
     const mockModels = [{ name: 'test-model', size: 100, digest: '123', details: {} }];
-    
+
     mockIPC((cmd, args) => {
       if (cmd === 'get_ollama_models') {
         return { success: true, data: mockModels };
       }
     });
 
-    const result = await invoke('get_ollama_models', { baseUrl: 'http://localhost' });
+    const result = await ollamaApi.getModels('http://localhost:11434');
     expect(result).toEqual(mockModels);
   });
 
   it('handles backend errors gracefully', async () => {
     mockIPC((cmd) => {
       if (cmd === 'get_ollama_models') {
-        return { 
-          success: false, 
-          error: { code: BackendErrorCode.OllamaUnavailable, message: 'Ollama is down' } 
+        return {
+          success: false,
+          error: { code: BackendErrorCode.OllamaUnavailable, message: 'Ollama is down' }
         };
       }
     });
 
-    const result = await invoke('get_ollama_models', { baseUrl: 'http://localhost' });
+    const result = await ollamaApi.getModels('http://localhost:11434');
     expect(result).toBeNull();
   });
 });

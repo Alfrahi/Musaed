@@ -7,7 +7,8 @@ import {
     OllamaHealth,
     getConnectionManager
 } from '@/lib/connection-manager';
-import { useSettingsStore, useUIStore } from '@/store';
+import { useSettingsStore } from '@/store';
+import { useSetOllamaConnected } from '@/store/hooks';
 import { checkIsTauri, ollamaApi } from '@/lib/ipc';
 
 /**
@@ -15,7 +16,7 @@ import { checkIsTauri, ollamaApi } from '@/lib/ipc';
  */
 export function useOllamaConnection() {
     const { globalSettings } = useSettingsStore();
-    const { setOllamaConnected } = useUIStore();
+    const setOllamaConnected = useSetOllamaConnected();
     const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.DISCONNECTED);
     const [health, setHealth] = useState<OllamaHealth | null>(null);
     const [manager, setManager] = useState<OllamaConnectionManager | null>(null);

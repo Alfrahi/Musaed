@@ -1,15 +1,15 @@
 "use client";
 
-import { useModelStore, useSettingsStore } from '@/store';
+import { usePullStatus, useLanguage } from '@/store/hooks';
 import { useTranslation } from '@/lib/i18n';
 import { Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMemo } from 'react';
 
 const TaskStatus = () => {
-  const { pullStatus } = useModelStore();
-  const { globalSettings } = useSettingsStore();
-  const { t } = useTranslation(globalSettings.language);
+  const pullStatus = usePullStatus();
+  const language = useLanguage();
+  const { t } = useTranslation(language);
 
   const activeTasks = useMemo(() => {
     return Object.entries(pullStatus).filter(([_, status]) => status !== null);

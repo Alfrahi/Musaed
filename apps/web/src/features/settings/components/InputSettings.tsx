@@ -1,14 +1,15 @@
 "use client";
 
 import { Keyboard } from 'lucide-react';
-import { useSettingsStore } from '../../../store';
+import { useGlobalSettings, useLanguage } from '../../../store/hooks';
 import { useSettingsActions } from '../hooks/useSettingsActions';
 import { useTranslation } from '../../../lib/i18n';
 
 const InputSettings = () => {
-  const { globalSettings } = useSettingsStore();
+  const globalSettings = useGlobalSettings();
+  const language = useLanguage();
   const { updateGlobalSettings } = useSettingsActions();
-  const { t } = useTranslation(globalSettings.language);
+  const { t } = useTranslation(language);
 
   return (
     <div className="flex flex-col gap-3">
