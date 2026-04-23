@@ -1,15 +1,28 @@
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { vi, afterEach } from 'vitest';
+import { mockIPC, clearMocks } from '@tauri-apps/api/mocks';
 
-// Do not set __TAURI_INTERNALS__ here — persisted stores should use localStorage in Vitest.
-// Tests that need a Tauri host (e.g. ipc.test.ts) define the global in that file only.
+// ── Tauri IPC Mock ──────────────────────────────────────────────────────────
+// Sets up __TAURI_INTERNALS__ so checkIsTauri() returns true in all tests.
+// Individual tests register command handlers via mockIPC() as needed.
+// clearMocks() is called after each test to reset the IPC handler.
 
-// Mocking window.crypto for UUID generation in tests
+mockIPC(() => {});
+
+afterEach(() => {
+  clearMocks();
+});
+
+// ── Crypto ──────────────────────────────────────────────────────────────────
+// Deterministic UUID for snapshot stability.
+
 Object.defineProperty(window, 'crypto', {
   value: {
     randomUUID: () => 'test-uuid',
   },
 });
 
-// Mocking scroll functions for Virtuoso/Window
+// ── Scroll ──────────────────────────────────────────────────────────────────
+// Virtuoso / Window scroll mocks for headless test environment.
+
 window.HTMLElement.prototype.scrollTo = vi.fn();
