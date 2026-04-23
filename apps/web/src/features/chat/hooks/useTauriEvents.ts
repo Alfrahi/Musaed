@@ -28,7 +28,7 @@ export function useTauriEvents() {
   const setModels = useSetModels();
 
   useEffect(() => {
-    let unlisteners: (() => void)[] = [];
+    const unlisteners: (() => void)[] = [];
     let isMounted = true;
 
     const setup = async () => {

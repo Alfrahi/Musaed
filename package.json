@@ -2,6 +2,7 @@
   "name": "musaed",
   "private": true,
   "license": "MIT",
+  "test:lint": "pnpm install && pnpm lint",
   "scripts": {
     "dev": "tauri dev",
     "build": "tauri build",
@@ -12,8 +13,18 @@
     "validate": "pnpm lint && pnpm type-check && pnpm --filter web i18n:check"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@next/eslint-plugin-next": "^16.2.4",
     "@tauri-apps/cli": "^2.10.1",
+    "eslint": "^9.18.0",
+    "eslint-config-next": "16.2.3",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "prettier": "^3.4.2",
+    "prettier-plugin-tailwindcss": "^0.7.3",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.58.1",
     "vitest": "^3.2.4"
   },
   "dependencies": {
