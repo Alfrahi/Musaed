@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Square, ImageIcon, Paperclip } from 'lucide-react';
 import { useCurrentConversationId, useActiveStreams, useGlobalSettings, useSelectedModel } from '@/store/hooks';
 import { useTranslation } from '@/lib/i18n';
+import { checkIsTauri } from '@/lib/ipc';
 import { useAutosizeTextArea } from '@/hooks/useAutosizeTextArea';
 import { ModelSelector } from '@/features/library';
 import { useChatActions } from '../hooks/useChatActions';
@@ -14,9 +15,7 @@ import AttachmentPreview from './AttachmentPreview';
 const InputArea = () => {
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const currentConversationId = useCurrentConversationId();
   const activeStreams = useActiveStreams();
   const globalSettings = useGlobalSettings();
@@ -24,14 +23,16 @@ const InputArea = () => {
   const { sendMessage } = useChatActions();
   const { abortStreaming } = useConversationActions();
   const { t } = useTranslation(globalSettings.language);
-  const { 
-    images, 
-    files, 
-    handleImageUpload, 
-    handleFileUpload, 
-    removeImage, 
-    removeFile, 
-    clearAttachments 
+  const {
+    images,
+    files,
+    handleImageUpload,
+    handleFileUpload,
+    handleTauriImageUpload,
+    handleTauriFileUpload,
+    removeImage,
+    removeFile,
+    clearAttachments
   } = useAttachmentManager();
 
   useAutosizeTextArea(textareaRef.current, input);
@@ -82,22 +83,6 @@ const InputArea = () => {
         
         <div className="border border-sidebar-border bg-zinc-50 dark:bg-zinc-950 p-1 rounded-lg focus-within:ring-1 focus-within:ring-blue-500/50 transition-all">
           <form onSubmit={onSend} className="flex flex-col">
-            <input 
-              type="file" 
-              ref={imageInputRef} 
-              className="hidden" 
-              accept="image/*" 
-              multiple 
-              onChange={(e) => handleImageUpload(e.target.files)} 
-            />
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              multiple 
-              onChange={(e) => handleFileUpload(e.target.files)} 
-            />
-
             <textarea
               ref={textareaRef}
               value={input}
@@ -113,17 +98,38 @@ const InputArea = () => {
                 <ModelSelector />
                 <div className="w-[1px] h-3 bg-sidebar-border ms-2 me-2" />
                 
-                <button 
-                  type="button" 
-                  onClick={() => imageInputRef.current?.click()} 
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (checkIsTauri()) {
+                      handleTauriImageUpload();
+                    } else {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = 'image/*';
+                      input.multiple = true;
+                      input.onchange = () => handleImageUpload(input.files);
+                      input.click();
+                    }
+                  }}
                   className="p-2 rounded-lg text-zinc-400 hover:text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
                   title={t('chat.attachImage')}
                 >
                   <ImageIcon size={14} />
                 </button>
-                <button 
-                  type="button" 
-                  onClick={() => fileInputRef.current?.click()} 
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (checkIsTauri()) {
+                      handleTauriFileUpload();
+                    } else {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.multiple = true;
+                      input.onchange = () => handleFileUpload(input.files);
+                      input.click();
+                    }
+                  }}
                   className="p-2 rounded-lg text-zinc-400 hover:text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
                   title={t('common.files')}
                 >

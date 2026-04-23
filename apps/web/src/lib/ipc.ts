@@ -156,6 +156,13 @@ export const dialog = {
     checkIsTauri() ? (await import('@tauri-apps/plugin-dialog')).ask(msg, opts) : window.confirm(msg),
   save: async (opts: { filters: { name: string; extensions: string[] }[]; defaultPath?: string }) =>
     checkIsTauri() ? (await import('@tauri-apps/plugin-dialog')).save(opts) : null,
+  open: async (opts: {
+    filters?: { name: string; extensions: string[] }[];
+    multiple?: boolean;
+    directory?: boolean;
+    defaultPath?: string;
+  }): Promise<string | string[] | null> =>
+    checkIsTauri() ? (await import('@tauri-apps/plugin-dialog')).open(opts) : null,
 };
 
 /**
@@ -180,4 +187,8 @@ export const store = {
 export const fs = {
   writeTextFile: async (path: string, content: string) =>
     checkIsTauri() && (await import('@tauri-apps/plugin-fs')).writeTextFile(path, content),
+  readTextFile: async (path: string): Promise<string | null> =>
+    checkIsTauri() ? (await import('@tauri-apps/plugin-fs')).readTextFile(path) : null,
+  readFile: async (path: string): Promise<Uint8Array | null> =>
+    checkIsTauri() ? (await import('@tauri-apps/plugin-fs')).readFile(path) : null,
 };
