@@ -1,5 +1,3 @@
-"use client";
-
 export { default as HomeClient } from './components/HomeClient';
 export { default as DirectionProvider } from './components/DirectionProvider';
 export { default as ToastProvider } from './components/ToastProvider';

@@ -5,6 +5,7 @@ import { useTranslation } from '../../../lib/i18n';
 import { useLanguage } from '../../../store/hooks';
 import { checkIsTauri, logApi, store, dialog } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
+import toast from 'react-hot-toast';
 
 /**
  * Hook for managing system logs fetch and deletion actions.
@@ -30,6 +31,7 @@ export function useLogActions() {
       }
     } catch (err) {
       logger.error('Failed to fetch logs', { error: err });
+      toast.error(t('error.genericError'));
     } finally {
       setIsLoading(false);
     }
@@ -58,6 +60,7 @@ export function useLogActions() {
         }
       } catch (err) {
         logger.error('Failed to clear logs', { error: err });
+        toast.error(t('error.genericError'));
       }
     }
   }, [isTauri, t]);

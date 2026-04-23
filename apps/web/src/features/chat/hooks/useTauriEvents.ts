@@ -64,6 +64,8 @@ export function useTauriEvents() {
           const sanitized = sanitizeError(payload);
           const state = useConversationStore.getState();
 
+          logger.error('Backend error event', { error: sanitized });
+
           if (sanitized.requestId) {
             const convId = Object.entries(state.activeStreams).find(([_, id]) => id === sanitized.requestId)?.[0];
             if (convId) {

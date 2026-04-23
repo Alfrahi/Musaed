@@ -5,7 +5,7 @@ import { shallow } from 'zustand/shallow';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Conversation, Message } from '@musaed/contracts';
 import { createTauriStorage } from '../../lib/tauri-storage';
-import { useUIStore } from './ui-store';
+import { setStreaming, setHydrated } from '../actions';
 
 interface ConversationState {
   conversations: Record<string, Conversation>;
@@ -40,13 +40,13 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
       setSearchQuery: (query) => set({ searchQuery: query }),
       
       startStream: (conversationId, requestId) => set((state) => {
-        useUIStore.getState().setStreaming(true);
+        setStreaming(true);
         return { activeStreams: { ...state.activeStreams, [conversationId]: String(requestId) } };
       }),
 
       stopStream: (conversationId) => set((state) => {
         const { [conversationId]: _, ...remainingStreams } = state.activeStreams;
-        useUIStore.getState().setStreaming(Object.keys(remainingStreams).length > 0);
+        setStreaming(Object.keys(remainingStreams).length > 0);
         return { activeStreams: remainingStreams };
       }),
 
@@ -98,7 +98,7 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
         conversationIds: state.conversationIds,
         currentConversationId: state.currentConversationId 
       }),
-      onRehydrateStorage: () => () => useUIStore.getState().setHydrated(true),
+      onRehydrateStorage: () => () => setHydrated(true),
     }
   ),
   shallow

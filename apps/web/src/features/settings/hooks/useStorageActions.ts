@@ -4,6 +4,7 @@ import { useCallback, useState, useEffect } from 'react';
 import { useConversations, useConversationIds, useSetConversations, useModels, useGlobalSettings } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 import { checkIsTauri, dialog, fs } from '../../../lib/ipc';
+import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
 import { ConversationSchema } from '@musaed/contracts';
 
@@ -126,6 +127,7 @@ export function useStorageActions() {
           throw new Error("Invalid format");
         }
       } catch {
+        logger.error('Import failed: invalid JSON format');
         toast.error(t('settings.storage.importError'));
       }
     } else {
@@ -147,6 +149,7 @@ export function useStorageActions() {
               throw new Error("Invalid format");
             }
           } catch {
+            logger.error('Import failed: invalid JSON format');
             toast.error(t('settings.storage.importError'));
           }
         };

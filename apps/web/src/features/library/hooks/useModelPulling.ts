@@ -54,6 +54,7 @@ export function useModelPulling() {
     } catch (err) {
       logger.error('Model pull trigger failed', { error: err });
       updatePullStatus(name, null);
+      toast.error(t('error.genericError'));
     }
   };
 

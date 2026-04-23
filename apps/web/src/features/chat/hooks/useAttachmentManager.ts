@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useGlobalSettings, useLanguage } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 import { checkIsTauri, dialog, fs } from '../../../lib/ipc';
+import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
 
 export interface FileAttachment {
@@ -109,7 +110,10 @@ export function useAttachmentManager() {
     const paths = Array.isArray(selected) ? selected : [selected];
     for (const filePath of paths) {
       const data = await fs.readFile(filePath);
-      if (!data) continue;
+      if (!data) {
+        logger.error('Failed to read image file', { path: filePath });
+        continue;
+      }
       if (!validateSize(data.byteLength)) continue;
       const ext = filePath.split('.').pop()?.toLowerCase() || 'png';
       const mime = mimeFromExtension(filePath);
@@ -128,7 +132,10 @@ export function useAttachmentManager() {
     const paths = Array.isArray(selected) ? selected : [selected];
     for (const filePath of paths) {
       const content = await fs.readTextFile(filePath);
-      if (content === null) continue;
+      if (content === null) {
+        logger.error('Failed to read file', { path: filePath });
+        continue;
+      }
       if (!validateSize(new Blob([content]).size)) continue;
       const name = fileNameFromPath(filePath);
       const mime = mimeFromExtension(filePath);
