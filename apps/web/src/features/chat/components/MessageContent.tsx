@@ -1,9 +1,23 @@
 "use client";
 
 import { useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { Message, REDACTED_THINKING_TAG_END, REDACTED_THINKING_TAG_START } from '@musaed/contracts';
 import ThinkingBlock from './ThinkingBlock';
-import MarkdownRenderer from './MarkdownRenderer';
+
+const MarkdownRenderer = dynamic(
+  () => import('./MarkdownRenderer'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="animate-pulse space-y-2">
+        <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-3/4" />
+        <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-1/2" />
+        <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-5/6" />
+      </div>
+    ),
+  }
+);
 
 interface ParsedContent {
   thinking: string;

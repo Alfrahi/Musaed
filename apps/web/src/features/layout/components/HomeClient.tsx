@@ -10,10 +10,34 @@ import { useGlobalShortcuts } from '@/hooks/useGlobalShortcuts';
 import { cn } from '@/lib/utils';
 import { checkIsTauri } from '@/lib/ipc';
 
-import { Sidebar } from '@/features/sidebar';
-import { ChatWindow, InputArea, useChatInitialization, useTauriEvents } from '@/features/chat';
+import { useChatInitialization, useTauriEvents } from '@/features/chat';
 import TaskStatus from './TaskStatus';
 import OllamaConnectionStatus from './OllamaConnectionStatus';
+
+const Sidebar = dynamic(() => import('@/features/sidebar').then(m => m.Sidebar), {
+  ssr: false,
+  loading: () => (
+    <div className="w-72 border-e border-sidebar-border bg-zinc-50 dark:bg-zinc-900/50 animate-pulse" />
+  ),
+});
+
+const ChatWindow = dynamic(() => import('@/features/chat').then(m => m.ChatWindow), {
+  ssr: false,
+  loading: () => (
+    <div className="flex-1 flex items-center justify-center bg-zinc-50/30 dark:bg-zinc-950">
+      <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  ),
+});
+
+const InputArea = dynamic(() => import('@/features/chat').then(m => m.InputArea), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4 border-t border-sidebar-border bg-background animate-pulse">
+      <div className="h-12 bg-zinc-100 dark:bg-zinc-800 rounded-none" />
+    </div>
+  ),
+});
 
 const SettingsModal = dynamic(() => import('@/features/settings').then(m => m.SettingsModal), { ssr: false });
 const ModelLibrary = dynamic(() => import('@/features/library').then(m => m.ModelLibrary), { ssr: false });

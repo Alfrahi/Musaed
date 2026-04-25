@@ -1,5 +1,7 @@
 "use client";
 
+import React from 'react';
+import dynamic from 'next/dynamic';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -9,9 +11,21 @@ import type { PluggableList } from 'unified';
 import 'highlight.js/styles/github-dark.css';
 import 'katex/dist/katex.min.css';
 import CodeBlock from './CodeBlock';
-import MermaidRenderer from './MermaidRenderer';
 import { opener } from '../../../lib/ipc';
 import { useGlobalSettings } from '../../../store/hooks';
+
+const MermaidRenderer = dynamic(
+  () => import('./MermaidRenderer'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-200 dark:border-zinc-800 animate-pulse">
+        <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-1/3 mb-2" />
+        <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-2/3" />
+      </div>
+    ),
+  }
+);
 
 interface MarkdownRendererProps {
   content: string;
