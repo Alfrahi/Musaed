@@ -10,6 +10,7 @@ import rehypeKatex from 'rehype-katex';
 import type { PluggableList } from 'unified';
 import 'highlight.js/styles/github-dark.css';
 import 'katex/dist/katex.min.css';
+
 import CodeBlock from './CodeBlock';
 import { opener } from '../../../lib/ipc';
 import { useGlobalSettings } from '../../../store/hooks';
@@ -28,78 +29,135 @@ const MermaidRenderer = dynamic(
 );
 
 interface MarkdownRendererProps {
+  /** Markdown content to render (may contain LaTeX) */
   content: string;
 }
 
-const ALLOWED_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
+/**
+ * Normalizes LaTeX delimiters from various LLM outputs into standard $...$ and $$...$$ format.
+ * Handles common edge cases including extra whitespace and double-backslash variants.
+ */
+const normalizeLatexDelimiters = (content: string): string => {
+  if (!content?.trim()) return content;
 
-function resolveAllowedHref(href: string | undefined | null): string | null {
-  if (!href || href.trim() === '') return null;
-  try {
-    const base =
-    typeof window !== 'undefined' && window.location?.href
-    ? window.location.href
-    : 'https://invalid.invalid/';
-    const u = new URL(href, base);
-    if (ALLOWED_LINK_PROTOCOLS.has(u.protocol)) {
-      return u.toString();
-    }
-  } catch {
-    /* ignore */
-  }
-  return null;
-}
+  let transformed = content;
+
+  // Escaped block: \[ ... \] or \\[ ... \\] → $$ ... $$
+  transformed = transformed.replace(
+    /\\{1,2}\[\s*([\s\S]*?)\s*\\{1,2}\]/g,
+    (_, inner) => `\n$$\n${inner.trim()}\n$$\n`
+  );
+
+  // Escaped inline: \( ... \) or \\( ... \\) → $ ... $
+  transformed = transformed.replace(
+    /\\{1,2}\(\s*([\s\S]*?)\s*\\{1,2}\)/g,
+    (_, inner) => `$${inner.trim()}$`
+  );
+
+  // Plain inline math: ( formula ) → $ formula $
+  transformed = transformed.replace(
+    /(?<![\w$\\])\(\s*([^)]*?[\^_={}+\-*/\\][^)]*?)\s*\)(?![\w$\\])/g,
+    (_, inner) => `$${inner.trim()}$`
+  );
+
+  // Plain block math: [ formula ] on its own line → $$ formula $$
+  transformed = transformed.replace(
+    /^\s*\[\s*([\s\S]*?)\s*\]\s*$/gm,
+    (_, inner) => `\n$$\n${inner.trim()}\n$$\n`
+  );
+
+  // Fix common LLM \left / \right delimiter mismatches
+  transformed = transformed.replace(/\\left\s*\[/g, '\\left[');
+  transformed = transformed.replace(/\\right\s*\]/g, '\\right]');
+  transformed = transformed.replace(/\\left\s*\{/g, '\\left\\{');
+  transformed = transformed.replace(/\\right\s*\}/g, '\\right\\}');
+
+  return transformed;
+};
 
 const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
   const globalSettings = useGlobalSettings();
 
-  // Memoize plugins to avoid re-creating them on every render
-  const remarkPlugins = useMemo(() => {
+  const processedContent = useMemo(() => {
+    if (!globalSettings.enableLatex) {
+      return content;
+    }
+
+    let normalized = normalizeLatexDelimiters(content);
+    // Stabilize markdown parsing by reducing excessive newlines
+    normalized = normalized.replace(/\n{3,}/g, '\n\n');
+
+    return normalized;
+  }, [content, globalSettings.enableLatex]);
+
+  const remarkPlugins = useMemo<PluggableList>(() => {
     const plugins: PluggableList = [remarkGfm];
-    if (globalSettings.enableLatex) plugins.push(remarkMath);
+    if (globalSettings.enableLatex) {
+      plugins.push([remarkMath, { singleDollarTextMath: true }]);
+    }
     return plugins;
   }, [globalSettings.enableLatex]);
 
-  const rehypePlugins = useMemo(() => {
+  const rehypePlugins = useMemo<PluggableList>(() => {
     const plugins: PluggableList = [rehypeHighlight];
-    if (globalSettings.enableLatex) plugins.push(rehypeKatex);
+
+    if (globalSettings.enableLatex) {
+      plugins.push([
+        rehypeKatex,
+        {
+          throwOnError: false,
+          errorColor: '#ef4444',
+          strict: false,
+          output: 'html',
+          trust: true,
+        },
+      ]);
+    }
+
     return plugins;
   }, [globalSettings.enableLatex]);
 
   const handleLinkClick = useCallback(async (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    const safe = resolveAllowedHref(href);
-    if (!safe) {
+    const safeHref = resolveAllowedHref(href);
+    if (!safeHref) {
       e.preventDefault();
       return;
     }
     e.preventDefault();
-    await opener.openUrl(safe);
+    await opener.openUrl(safeHref);
   }, []);
 
-  // Memoize components to ensure stability across renders
   const components = useMemo(() => ({
-    p: ({ children }: { children?: React.ReactNode }) => <div className="mbe-4 last:mbe-0 leading-relaxed" dir="auto">{children}</div>,
+    p: ({ children }: { children?: React.ReactNode }) => (
+      <div className="mbe-4 last:mbe-0 leading-relaxed" dir="auto">{children}</div>
+    ),
+
     pre: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
-    ul: ({ children }: { children?: React.ReactNode }) => <ul className="list-disc ps-6 mbe-4 space-y-1">{children}</ul>,
-    ol: ({ children }: { children?: React.ReactNode }) => <ol className="list-decimal ps-6 mbe-4 space-y-1">{children}</ol>,
+
+    ul: ({ children }: { children?: React.ReactNode }) => (
+      <ul className="list-disc ps-6 mbe-4 space-y-1">{children}</ul>
+    ),
+
+    ol: ({ children }: { children?: React.ReactNode }) => (
+      <ol className="list-decimal ps-6 mbe-4 space-y-1">{children}</ol>
+    ),
+
     li: ({ children }: { children?: React.ReactNode }) => <li className="mbe-1">{children}</li>,
+
     blockquote: ({ children }: { children?: React.ReactNode }) => (
       <blockquote className="border-is-4 border-zinc-200 dark:border-zinc-800 ps-4 italic mbe-4 text-zinc-500">
         {children}
       </blockquote>
     ),
+
     a: ({ href, children, ...props }: React.ComponentPropsWithoutRef<'a'>) => {
-      const safe = resolveAllowedHref(href);
-      if (!safe) {
-        return (
-          <span className="text-zinc-500 cursor-not-allowed font-medium" title="Unsupported link">
-            {children}
-          </span>
-        );
+      const safeHref = resolveAllowedHref(href);
+      if (!safeHref) {
+        return <span className="text-zinc-500 cursor-not-allowed font-medium" title="Unsupported link">{children}</span>;
       }
       return (
         <a
-          href={safe}
+          href={safeHref}
           onClick={(e) => handleLinkClick(e, href || '')}
           className="text-blue-500 hover:underline cursor-pointer font-medium transition-colors"
           target="_blank"
@@ -110,24 +168,24 @@ const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
         </a>
       );
     },
+
     code: ({ className, children, ...props }: React.HTMLAttributes<HTMLElement>) => {
       const match = /language-(\w+)/.exec(className || '');
-      const lang = match ? match[1] : '';
+      const language = match ? match[1] : '';
 
-      console.log('Code block language:', lang, 'Enable Mermaid:', globalSettings.enableMermaid);
-      if (globalSettings.enableMermaid && lang === 'mermaid') {
-        const content = String(children ?? '');
-        console.log('Rendering MermaidRenderer with content:', content);
-        return <MermaidRenderer content={content} />;
+      if (globalSettings.enableMermaid && language === 'mermaid') {
+        return <MermaidRenderer content={String(children ?? '')} />;
       }
 
-      return match ? (
-        <CodeBlock
-          language={lang}
-          value={children}
-        />
-      ) : (
-        <code className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-sm font-mono text-blue-600 dark:text-blue-400" {...props}>
+      if (match) {
+        return <CodeBlock language={language} value={children} />;
+      }
+
+      return (
+        <code
+          className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-sm font-mono text-blue-600 dark:text-blue-400"
+          {...props}
+        >
           {children}
         </code>
       );
@@ -140,9 +198,32 @@ const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
       rehypePlugins={rehypePlugins}
       components={components}
     >
-      {content}
+      {processedContent}
     </ReactMarkdown>
   );
 };
+
+/**
+ * Sanitizes hrefs to only allow safe protocols in a Tauri desktop environment.
+ */
+function resolveAllowedHref(href: string | undefined | null): string | null {
+  if (!href?.trim()) return null;
+
+  try {
+    const base = typeof window !== 'undefined' && window.location?.href
+      ? window.location.href
+      : 'https://invalid.invalid/';
+
+    const url = new URL(href, base);
+    if (ALLOWED_LINK_PROTOCOLS.has(url.protocol)) {
+      return url.toString();
+    }
+  } catch {
+    // Invalid URL → treat as unsafe
+  }
+  return null;
+}
+
+const ALLOWED_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
 
 export default React.memo(MarkdownRenderer);
