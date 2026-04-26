@@ -148,6 +148,22 @@ export function stripRedactedThinkingBlocks(content: string): string {
   return content.replace(re, '').trim();
 }
 
+/**
+ * Strips redacted thinking blocks from content using a Web Worker.
+ * Falls back to synchronous implementation if the Web Worker fails.
+ * @param content The content to process.
+ * @returns A promise that resolves with the processed content.
+ */
+export async function stripRedactedThinkingBlocksAsync(content: string): Promise<string> {
+  try {
+    const { stripRedactedThinkingBlocksWorker } = await import('./workerUtils');
+    return await stripRedactedThinkingBlocksWorker(content);
+  } catch (error) {
+    console.warn('Web Worker failed, falling back to synchronous stripRedactedThinkingBlocks:', error);
+    return stripRedactedThinkingBlocks(content);
+  }
+}
+
 export const OllamaHealthIpcSchema = z.object({
   isRunning: z.boolean(),
   version: z.string().nullish(),
