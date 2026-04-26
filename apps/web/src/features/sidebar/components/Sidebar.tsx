@@ -2,7 +2,8 @@
 
 import { Eraser } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
-import { useConversations, useConversationIds, useSearchQuery, useIsHydrated, useLanguage } from '@/store/hooks';
+import { useSearchQuery, useIsHydrated, useLanguage } from '@/store/hooks';
+import { useConversationStore, selectFilteredConversations } from '@/store/stores/conversation-store';
 import { useTranslation } from '@/lib/i18n';
 import SearchInput from './SearchInput';
 import ConversationItem from './ConversationItem';
@@ -13,8 +14,7 @@ import { useSidebarActions } from '../hooks/useSidebarActions';
 import { useSidebarGrouping } from '../hooks/useSidebarGrouping';
 
 const Sidebar = () => {
-  const conversations = useConversations();
-  const conversationIds = useConversationIds();
+  const filteredConversations = useConversationStore(selectFilteredConversations);
   const searchQuery = useSearchQuery();
   const language = useLanguage();
   const isHydrated = useIsHydrated();
@@ -22,8 +22,8 @@ const Sidebar = () => {
   const { handleClearAll } = useSidebarActions();
 
   const [virtualItems, loadMore] = useSidebarGrouping(
-    conversations,
-    conversationIds,
+    filteredConversations.reduce((acc, conv) => ({ ...acc, [conv.id]: conv }), {}),
+    filteredConversations.map(conv => conv.id),
     searchQuery,
     language
   );
@@ -54,7 +54,7 @@ const Sidebar = () => {
                      item.group === 'today' ? t('sidebar.recentChats') :
                      t(`sidebar.${item.group}`)}
                   </span>
-                  {item.group === 'today' && !searchQuery && conversationIds.length > 0 && (
+                  {item.group === 'today' && !searchQuery && filteredConversations.length > 0 && (
                     <button
                       onClick={handleClearAll}
                       className="p-1 text-zinc-400 hover:text-red-500 transition-colors"
@@ -73,7 +73,7 @@ const Sidebar = () => {
             );
           }}
           endReached={() => {
-            if (virtualItems.length < conversationIds.length) {
+            if (virtualItems.length < filteredConversations.length) {
               loadMore();
             }
           }}

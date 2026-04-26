@@ -2,7 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Send, Square, ImageIcon, Paperclip } from 'lucide-react';
-import { useCurrentConversationId, useActiveStreams, useGlobalSettings, useSelectedModel } from '@/store/hooks';
+import { useCurrentConversationId, useGlobalSettings } from '@/store/hooks';
+import { useConversationStore, selectIsStreaming } from '@/store/stores/conversation-store';
+import { useModelStore, selectSelectedModel } from '@/store/stores/model-store';
 import { useTranslation } from '@/lib/i18n';
 import { checkIsTauri } from '@/lib/ipc';
 import { useAutosizeTextArea } from '@/hooks/useAutosizeTextArea';
@@ -17,9 +19,9 @@ const InputArea = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const currentConversationId = useCurrentConversationId();
-  const activeStreams = useActiveStreams();
+  const isStreaming = useConversationStore(selectIsStreaming(currentConversationId || ''));
   const globalSettings = useGlobalSettings();
-  const selectedModel = useSelectedModel();
+  const selectedModel = useModelStore(selectSelectedModel);
   const { sendMessage } = useChatActions();
   const { abortStreaming } = useConversationActions();
   const { t } = useTranslation(globalSettings.language);
@@ -43,7 +45,6 @@ const InputArea = () => {
   }, [currentConversationId, clearAttachments]);
 
   if (!currentConversationId) return null;
-  const isStreaming = !!activeStreams[currentConversationId];
 
   const onSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -74,13 +75,13 @@ const InputArea = () => {
   return (
     <div className="shrink-0 border-bs border-sidebar-border bg-background p-4">
       <div className="max-w-4xl ms-auto me-auto space-y-3">
-        <AttachmentPreview 
-          images={images} 
-          files={files} 
-          onRemoveImage={removeImage} 
-          onRemoveFile={removeFile} 
+        <AttachmentPreview
+          images={images}
+          files={files}
+          onRemoveImage={removeImage}
+          onRemoveFile={removeFile}
         />
-        
+
         <div className="border border-sidebar-border bg-zinc-50 dark:bg-zinc-950 p-1 rounded-lg focus-within:ring-1 focus-within:ring-blue-500/50 transition-all">
           <form onSubmit={onSend} className="flex flex-col">
             <textarea
@@ -92,12 +93,12 @@ const InputArea = () => {
               className="w-full bg-transparent border-none p-3 focus:ring-0 focus:outline-none outline-none resize-none min-h-[60px] max-h-48 text-[14px] placeholder:text-zinc-400 font-sans shadow-none"
               rows={1}
             />
-            
+
             <div className="flex items-center justify-between ps-2 pe-2 pbe-2">
               <div className="flex items-center gap-1">
                 <ModelSelector />
                 <div className="w-[1px] h-3 bg-sidebar-border ms-2 me-2" />
-                
+
                 <button
                   type="button"
                   onClick={() => {
@@ -139,7 +140,7 @@ const InputArea = () => {
 
               <div className="flex items-center gap-3">
                 <span className="hidden sm:block text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">
-                  {isStreaming 
+                  {isStreaming
                     ? t('chat.shortcutStop')
                     : (globalSettings.enterToSend ? t('chat.shortcutSend') : t('chat.shortcutMultiLine'))
                   }

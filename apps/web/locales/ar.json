@@ -72,8 +72,8 @@
     "fileLabel": "الملف: {name}",
     "contentLabel": "المحتوى:",
     "imageOnlyApiPrompt": "صف الصورة أو الصور المرفقة.",
-    "shortcutSend": "إدخال للإرسال",
-    "shortcutMultiLine": "Cmd/Ctrl + إدخال للإرسال",
+    "shortcutSend": "إظغط Enter للإرسال",
+    "shortcutMultiLine": "Ctrl + Enter للإرسال",
     "shortcutStop": "ESC للإيقاف",
     "errorPrefix": "خطأ"
   },
@@ -105,8 +105,8 @@
     "viewLogs": "عرض السجلات",
     "resetPreferences": "إعادة تعيين التفضيلات",
     "confirmReset": "هل أنت متأكد أن تريد إعادة تعيين جميع الإعدادات إلى الافتراضي؟ لن يتم حذف سجل المحادثات.",
-    "enterToSend": "الإدخال للإرسال",
-    "enterToSendDescription": "عند التفعيل، يؤدي الضغط على Enter إلى إرسال الرسالة. استخدم Shift+Enter لأسطر جديدة. عند التعطيل، استخدم Cmd/Ctrl+Enter للإرسال.",
+    "enterToSend": "إظغط Enter للإرسال",
+    "enterToSendDescription": "عند التفعيل، يؤدي الضغط على Enter إلى إرسال الرسالة. استخدم Shift+Enter لسطر جديد. عند التعطيل، استخدم Ctrl+Enter للإرسال.",
     "markdown": {
       "title": "عرض Markdown",
       "enableLatex": "معادلات LaTeX",

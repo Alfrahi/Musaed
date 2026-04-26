@@ -20,6 +20,16 @@ interface ModelState {
   updatePullStatus: (name: string, status: PullStatus | null) => void;
 }
 
+// Selectors for the model store
+export const selectSelectedModel = (state: ModelState) =>
+  state.models.find(model => model.name === state.selectedModel) || null;
+
+export const selectModelPullStatus = (modelName: string) => (state: ModelState) =>
+  state.pullStatus[modelName] || null;
+
+export const selectIsModelPulling = (modelName: string) => (state: ModelState) =>
+  !!state.pullStatus[modelName];
+
 export const useModelStore = createWithEqualityFn<ModelState>()(
   persist(
     (set) => ({

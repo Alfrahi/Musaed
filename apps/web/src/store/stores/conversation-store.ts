@@ -24,6 +24,28 @@ export interface ConversationState {
   batchUpdate: (updater: (state: ConversationState) => Partial<ConversationState>) => void;
 }
 
+// Selectors for the conversation store
+export const selectCurrentConversation = (state: ConversationState) =>
+  state.currentConversationId ? state.conversations[state.currentConversationId] : null;
+
+export const selectFilteredConversations = (state: ConversationState) => {
+  const { conversations, conversationIds, searchQuery } = state;
+  if (!searchQuery) return conversationIds.map(id => conversations[id]);
+  return conversationIds
+    .map(id => conversations[id])
+    .filter(conv =>
+      conv.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+};
+
+export const selectIsStreaming = (conversationId: string) => (state: ConversationState) =>
+  !!state.activeStreams[conversationId];
+
+export const selectLastMessage = (conversationId: string) => (state: ConversationState) => {
+  const conv = state.conversations[conversationId];
+  return conv?.messages[conv.messages.length - 1] || null;
+};
+
 export const useConversationStore = createWithEqualityFn<ConversationState>()(
   persist(
     (set) => ({
@@ -40,7 +62,7 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
 
       setCurrentConversationId: (id) => set({ currentConversationId: id }),
       setSearchQuery: (query) => set({ searchQuery: query }),
-      
+
       startStream: (conversationId, requestId) => set((state) => {
         setStreaming(true);
         return { activeStreams: { ...state.activeStreams, [conversationId]: String(requestId) } };
@@ -92,11 +114,11 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
         const lastIdx = messages.length - 1;
         const currentMsg = messages[lastIdx];
 
-        messages[lastIdx] = { 
-          ...currentMsg, 
-          ...update, 
-          content: replace 
-            ? (update.content ?? currentMsg.content) 
+        messages[lastIdx] = {
+          ...currentMsg,
+          ...update,
+          content: replace
+            ? (update.content ?? currentMsg.content)
             : (currentMsg.content + (update.content ?? ''))
         };
 
@@ -113,10 +135,10 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
     {
       name: 'musaed-conversation-storage-v2',
       storage: createJSONStorage(() => createTauriStorage('conversation-state-v2.json')),
-      partialize: (state) => ({ 
-        conversations: state.conversations, 
+      partialize: (state) => ({
+        conversations: state.conversations,
         conversationIds: state.conversationIds,
-        currentConversationId: state.currentConversationId 
+        currentConversationId: state.currentConversationId
       }),
       onRehydrateStorage: () => () => setHydrated(true),
     }

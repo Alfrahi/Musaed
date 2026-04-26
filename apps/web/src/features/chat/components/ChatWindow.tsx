@@ -3,7 +3,8 @@
 import { useRef, useEffect, useState } from 'react';
 import { Bot, ArrowDown, Plus, Sparkles, Shield } from 'lucide-react';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
-import { useConversations, useCurrentConversationId, useGlobalSettings, useIsHydrated } from '../../../store/hooks';
+import { useGlobalSettings, useIsHydrated } from '../../../store/hooks';
+import { useConversationStore, selectCurrentConversation } from '../../../store/stores/conversation-store';
 import MessageBubble from './MessageBubble';
 import ChatWindowSkeleton from './ChatWindowSkeleton';
 import { useTranslation } from '../../../lib/i18n';
@@ -11,16 +12,13 @@ import { cn } from '../../../lib/utils';
 import { useConversationActions } from '../hooks/useConversationActions';
 
 const ChatWindow = () => {
-  const conversations = useConversations();
-  const currentConversationId = useCurrentConversationId();
+  const currentConversation = useConversationStore(selectCurrentConversation);
   const globalSettings = useGlobalSettings();
   const isHydrated = useIsHydrated();
   const { createNewConversation } = useConversationActions();
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const { t } = useTranslation(globalSettings.language);
   const [showScrollButton, setShowScrollButton] = useState(false);
-
-  const currentConversation = currentConversationId ? conversations[currentConversationId] : null;
 
   useEffect(() => {
     if (virtuosoRef.current && currentConversation?.messages.length) {
@@ -66,7 +64,7 @@ const ChatWindow = () => {
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg">
-          <button 
+          <button
             onClick={createNewConversation}
             className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-none hover:border-blue-500 dark:hover:border-blue-500 transition-all text-start group"
           >
@@ -78,7 +76,7 @@ const ChatWindow = () => {
               <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mbs-0.5">{t('chat.startFresh')}</p>
             </div>
           </button>
-          
+
           <div className="flex items-center gap-4 p-4 bg-zinc-100/50 dark:bg-zinc-900/50 border border-transparent rounded-none text-start opacity-60">
             <div className="w-10 h-10 rounded-none bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
               <Shield size={20} />

@@ -22,6 +22,13 @@ interface UIState {
   setInfoOpen: (isInfoOpen: boolean) => void;
 }
 
+// Selectors for the UI store
+export const selectIsAnyModalOpen = (state: UIState) =>
+  state.isSettingsOpen || state.isLibraryOpen || state.isInfoOpen;
+
+export const selectHasError = (state: UIState) =>
+  !!state.error;
+
 export const useUIStore = createWithEqualityFn<UIState>()(
   (set) => ({
     isStreaming: false,

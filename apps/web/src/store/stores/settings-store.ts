@@ -11,6 +11,13 @@ interface SettingsState {
   setGlobalSettings: (globalSettings: ChatSettings) => void;
 }
 
+// Selectors for the settings store
+export const selectTheme = (state: SettingsState) =>
+  state.globalSettings.theme;
+
+export const selectIsSettingEnabled = (key: keyof ChatSettings) => (state: SettingsState) =>
+  !!state.globalSettings[key];
+
 export const useSettingsStore = createWithEqualityFn<SettingsState>()(
   persist(
     (set) => ({
