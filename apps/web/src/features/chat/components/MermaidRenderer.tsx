@@ -43,8 +43,81 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
     return looksLikeMermaid ? content.trim() : '';
   }, [content]);
 
+  const detectUnsupportedDiagram = (code: string): string | null => {
+    const trimmed = code.trim();
+
+    if (trimmed.startsWith('xychart-beta')) {
+      return 'xychart-beta is not supported in this Mermaid version.';
+    }
+
+    return null;
+  };
+
   const preprocessMermaidContent = useCallback((raw: string): string => {
     let processed = raw.trim();
+
+    if (
+      /^(graph|flowchart)/im.test(processed) &&
+      processed.includes('requirement ')
+    ) {
+      // Force correct diagram type
+      processed = processed.replace(/^(graph|flowchart)[^\n]*/im, 'requirementDiagram');
+    }
+
+    // ✅ REMOVE flowchart node syntax inside requirementDiagram
+    if (processed.startsWith('requirementDiagram')) {
+      processed = processed.replace(/^\s*\w+\[[^\]]+\]\s*$/gm, '');
+    }
+
+    // ✅ FIX: convert JS-style comments to Mermaid comments
+    processed = processed.replace(/^\s*\/\/(.*)$/gm, '%% $1');
+
+    // ✅ ER FIX
+    processed = processed.replace(/\|\|--o\s+\{/g, '||--o{');
+
+      // ✅ REQUIREMENT ENUM FIX
+      if (processed.includes('requirementDiagram')) {
+        processed = processed
+        .replace(/risk:\s*Low/g, 'risk: low')
+        .replace(/risk:\s*Medium/g, 'risk: medium')
+        .replace(/risk:\s*High/g, 'risk: high')
+        .replace(/verifMethod/g, 'verifymethod')
+        .replace(/verifymethod:\s*Test/g, 'verifymethod: test')
+        .replace(/type:\s*Component/g, 'type: component');
+      }
+
+      // ✅ SANKEY FIX (safer version)
+      if (processed.trim().startsWith('sankey-beta') && processed.includes('-->')) {
+        const lines = processed.split('\n');
+        const converted: string[] = ['sankey-beta'];
+
+        for (const line of lines) {
+          const match = line.match(/(.*?)-->(.*?):\s*(\d+)/);
+          if (match) {
+            const source = match[1].trim();
+            const target = match[2].trim();
+            const value = match[3].trim();
+            converted.push(`${source},${target},${value}`);
+          }
+        }
+
+        if (converted.length > 1) {
+          processed = converted.join('\n');
+        }
+      }
+
+      // ✅ PIE FIX
+      if (processed.includes('pie')) {
+        processed = processed.replace(/\(.*?%\)/g, '');
+      }
+
+      // ✅ PIE LABEL FIX (auto-quote labels)
+      if (processed.trim().startsWith('pie')) {
+        processed = processed.replace(
+          /^(\s*)([A-Za-z0-9 _-]+)\s*:/gm,
+                                      '$1"$2":'
+        );
+      }
 
     // Convert invalid top-level types
     if (/^(cluster|dependencyGraph)/im.test(processed)) {
@@ -61,6 +134,11 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
 
         if (!trimmed) {
           newLines.push(line);
+          continue;
+        }
+
+        if (trimmed.startsWith('description:')) {
+          newLines.push(`        %% ${trimmed}`);
           continue;
         }
 
@@ -148,6 +226,14 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
 
     setIsRendering(true);
     setError(null);
+
+    const unsupported = detectUnsupportedDiagram(mermaidContent);
+    if (unsupported) {
+      setError(unsupported);
+      setSvg('');
+      setIsRendering(false);
+      return;
+    }
 
     try {
       const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : theme;
