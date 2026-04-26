@@ -5,6 +5,7 @@ import { useUIStore } from './stores/ui-store';
 import { useSettingsStore } from './stores/settings-store';
 import { useModelStore } from './stores/model-store';
 import type { Conversation, Message, ChatSettings, OllamaModel } from '@musaed/contracts';
+import type { ConversationState } from './stores/conversation-store';
 
 // ---------------------------------------------------------------------------
 // useConversationStore selectors
@@ -47,6 +48,10 @@ export function useAddMessage(): (conversationId: string, message: Message) => v
   return useConversationStore((s) => s.addMessage);
 }
 
+export function useAddMessages(): (conversationId: string, messages: Message[]) => void {
+  return useConversationStore((s) => s.addMessages);
+}
+
 export function useUpdateLastMessage(): (
   conversationId: string,
   update: Partial<Message>,
@@ -61,6 +66,10 @@ export function useStartStream(): (conversationId: string, requestId: string) =>
 
 export function useStopStream(): (conversationId: string) => void {
   return useConversationStore((s) => s.stopStream);
+}
+
+export function useBatchUpdate(): (updater: (state: ConversationState) => Partial<ConversationState>) => void {
+  return useConversationStore((s) => s.batchUpdate);
 }
 
 // ---------------------------------------------------------------------------

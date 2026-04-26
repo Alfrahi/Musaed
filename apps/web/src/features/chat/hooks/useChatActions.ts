@@ -1,6 +1,6 @@
 "use client";
 import { useCallback } from 'react';
-import { useCurrentConversationId, useConversations, useAddMessage, useUpdateLastMessage, useSelectedModel, useGlobalSettings, useSetUIError } from '../../../store/hooks';
+import { useCurrentConversationId, useConversations, useAddMessage, useAddMessages, useUpdateLastMessage, useSelectedModel, useGlobalSettings, useSetUIError } from '../../../store/hooks';
 import { Message } from '@musaed/contracts';
 import { useTranslation } from '../../../lib/i18n';
 import { chatApi } from '../../../lib/ipc';
@@ -25,6 +25,7 @@ export function useChatActions() {
   const currentConversationId = useCurrentConversationId();
   const conversations = useConversations();
   const addMessage = useAddMessage();
+  const addMessages = useAddMessages();
   const updateLastMessage = useUpdateLastMessage();
   const selectedModel = useSelectedModel();
   const globalSettings = useGlobalSettings();
@@ -89,8 +90,7 @@ export function useChatActions() {
       requestId,
     };
 
-    addMessage(currentConversationId, userMsg);
-    addMessage(currentConversationId, assistantMsg);
+    addMessages(currentConversationId, [userMsg, assistantMsg]);
 
     try {
       const { ollamaUrl, systemPrompt, ...params } = globalSettings;

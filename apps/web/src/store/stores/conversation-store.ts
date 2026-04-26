@@ -7,7 +7,7 @@ import { Conversation, Message } from '@musaed/contracts';
 import { createTauriStorage } from '../../lib/tauri-storage';
 import { setStreaming, setHydrated } from '../actions';
 
-interface ConversationState {
+export interface ConversationState {
   conversations: Record<string, Conversation>;
   conversationIds: string[];
   currentConversationId: string | null;
@@ -17,9 +17,11 @@ interface ConversationState {
   setCurrentConversationId: (id: string | null) => void;
   setSearchQuery: (searchQuery: string) => void;
   addMessage: (conversationId: string, message: Message) => void;
+  addMessages: (conversationId: string, messages: Message[]) => void;
   updateLastMessage: (conversationId: string, update: Partial<Message>, replace?: boolean) => void;
   startStream: (conversationId: string, requestId: string) => void;
   stopStream: (conversationId: string) => void;
+  batchUpdate: (updater: (state: ConversationState) => Partial<ConversationState>) => void;
 }
 
 export const useConversationStore = createWithEqualityFn<ConversationState>()(
@@ -66,6 +68,22 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
         };
       }),
 
+      addMessages: (conversationId, messages) => set((state) => {
+        const conv = state.conversations[conversationId];
+        if (!conv) return state;
+
+        return {
+          conversations: {
+            ...state.conversations,
+            [conversationId]: {
+              ...conv,
+              messages: [...conv.messages, ...messages],
+              updatedAt: Date.now(),
+            },
+          },
+        };
+      }),
+
       updateLastMessage: (conversationId, update, replace = false) => set((state) => {
         const conv = state.conversations[conversationId];
         if (!conv || conv.messages.length === 0) return state;
@@ -89,6 +107,8 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
           }
         };
       }),
+
+      batchUpdate: (updater) => set(updater),
     }),
     {
       name: 'musaed-conversation-storage-v2',

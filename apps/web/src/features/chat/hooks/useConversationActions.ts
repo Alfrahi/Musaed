@@ -2,9 +2,10 @@
 
 import { useCallback } from 'react';
 import { useConversationStore, useModelStore, useSettingsStore } from '../../../store';
-import { useSetConversations, useSetCurrentConversationId, useStopStream } from '../../../store/hooks';
+import { useSetConversations, useSetCurrentConversationId, useStopStream, useBatchUpdate } from '../../../store/hooks';
 import { chatApi } from '../../../lib/ipc';
 import { useTranslation } from '../../../lib/i18n';
+import type { Conversation } from '@musaed/contracts';
 
 /**
  * Hook for managing conversation lifecycle actions like creation, deletion, and streaming control.
@@ -13,6 +14,7 @@ export function useConversationActions() {
   const setConversations = useSetConversations();
   const setCurrentConversationId = useSetCurrentConversationId();
   const stopStream = useStopStream();
+  const batchUpdate = useBatchUpdate();
 
   /**
    * Initializes a new conversation with default settings.
@@ -22,9 +24,9 @@ export function useConversationActions() {
     const modelState = useModelStore.getState();
     const settingsState = useSettingsStore.getState();
     const { t } = useTranslation(settingsState.globalSettings.language);
-    
+
     const id = crypto.randomUUID();
-    const newConv = {
+    const newConv: Conversation = {
       id,
       title: t('sidebar.newChat'),
       messages: [],
@@ -33,11 +35,13 @@ export function useConversationActions() {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    
-    const currentList = state.conversationIds.map(id => state.conversations[id]);
-    setConversations([newConv, ...currentList]);
-    setCurrentConversationId(id);
-  }, [setConversations, setCurrentConversationId]);
+
+    batchUpdate((state) => ({
+      conversations: { [id]: newConv, ...state.conversations },
+      conversationIds: [id, ...state.conversationIds],
+      currentConversationId: id,
+    }));
+  }, [batchUpdate]);
 
   /**
    * Aborts an active streaming request for a conversation.
@@ -59,16 +63,17 @@ export function useConversationActions() {
   const deleteConversation = useCallback((id: string) => {
     const state = useConversationStore.getState();
     abortStreaming(id);
-    
-    const remaining = state.conversationIds
-      .filter(cid => cid !== id)
-      .map(cid => state.conversations[cid]);
-      
-    setConversations(remaining);
-    if (state.currentConversationId === id) {
-      setCurrentConversationId(null);
-    }
-  }, [abortStreaming, setConversations, setCurrentConversationId]);
+
+    const { [id]: _, ...remainingConversations } = state.conversations;
+    const remainingIds = state.conversationIds.filter(cid => cid !== id);
+    const newCurrentId = state.currentConversationId === id ? null : state.currentConversationId;
+
+    batchUpdate(() => ({
+      conversations: remainingConversations,
+      conversationIds: remainingIds,
+      currentConversationId: newCurrentId,
+    }));
+  }, [abortStreaming, batchUpdate]);
 
   /**
    * Updates the display title of a conversation.
@@ -87,9 +92,13 @@ export function useConversationActions() {
   const clearAllConversations = useCallback(() => {
     const activeStreams = useConversationStore.getState().activeStreams;
     Object.keys(activeStreams).forEach(id => abortStreaming(id));
-    setConversations([]);
-    setCurrentConversationId(null);
-  }, [abortStreaming, setConversations, setCurrentConversationId]);
+
+    batchUpdate(() => ({
+      conversations: {},
+      conversationIds: [],
+      currentConversationId: null,
+    }));
+  }, [abortStreaming, batchUpdate]);
 
   /**
    * Internal helper to start streaming state.
