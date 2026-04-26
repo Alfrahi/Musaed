@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useMemo } from 'react';
 import { useConversations, useConversationIds, useSetConversations, useModels, useGlobalSettings } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 import { checkIsTauri, dialog, fs } from '../../../lib/ipc';
@@ -19,16 +19,19 @@ export function useStorageActions() {
   const [historySize, setHistorySize] = useState<number | null>(null);
   const [modelsSize, setModelsSize] = useState<number | null>(null);
 
-  const calculateSizes = useCallback(() => {
+  const memoizedHistorySize = useMemo(() => {
     const json = JSON.stringify({ conversations, conversationIds });
-    setHistorySize(new Blob([json]).size);
-    const totalModelsSize = models.reduce((acc, m) => acc + (m.size || 0), 0);
-    setModelsSize(totalModelsSize);
-  }, [conversations, conversationIds, models]);
+    return new Blob([json]).size;
+  }, [conversations, conversationIds]);
+
+  const memoizedModelsSize = useMemo(() => {
+    return models.reduce((acc, m) => acc + (m.size || 0), 0);
+  }, [models]);
 
   useEffect(() => {
-    calculateSizes();
-  }, [calculateSizes]);
+    setHistorySize(memoizedHistorySize);
+    setModelsSize(memoizedModelsSize);
+  }, [memoizedHistorySize, memoizedModelsSize]);
 
   const handleExportJson = useCallback(async () => {
     const data = {

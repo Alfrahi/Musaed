@@ -35,7 +35,7 @@ export function useChatActions() {
   /**
    * Internal helper to build the contextual prompt including file contents
    */
-  const buildPromptWithContext = (input: string, files: FileAttachment[]) => {
+  const buildPromptWithContext = useCallback((input: string, files: FileAttachment[]) => {
     if (files.length === 0) return input;
 
     const fileContext = files.map(f =>
@@ -43,7 +43,7 @@ export function useChatActions() {
     ).join('\n\n---\n\n');
 
     return `${input}\n\n${t('chat.fileContextLabel')}\n${fileContext}`;
-  };
+  }, [t]);
 
   /**
    * Sends a message to Ollama via the IPC bridge.
