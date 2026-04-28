@@ -177,8 +177,8 @@ export const opener = {
  * Store plugin wrappers
  */
 export const store = {
-  load: async (file: string, opts?: any) =>
-    checkIsTauri() ? (await import('@tauri-apps/plugin-store')).load(file, opts) : null,
+  load: async (file: string, opts?: unknown) =>
+    checkIsTauri() ? (await import('@tauri-apps/plugin-store')).load(file, opts as any) : null,
 };
 
 /**

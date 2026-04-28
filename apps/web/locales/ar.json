@@ -112,7 +112,11 @@
       "enableLatex": "معادلات LaTeX",
       "latexDescription": "عرض المعادلات الرياضية باستخدام KaTeX",
       "enableMermaid": "رسوم Mermaid",
-      "mermaidDescription": "عرض الرسوم البيانية والمخططات باستخدام Mermaid.js"
+      "mermaidDescription": "عرض الرسوم البيانية والمخططات باستخدام Mermaid.js",
+      "renderingDiagram": "جاري عرض الرسم البياني...",
+      "mermaidError": "خطأ في عرض Mermaid",
+      "copySource": "نسخ المصدر",
+      "requirementNote": "مخطط requirementDiagram صارم — يجب أن تستخدم العلاقات كلمات مفتاحية مثل <code>satisfies</code> و <code>verifies</code> وما إلى ذلك."
     },
     "storage": {
       "title": "إدارة التخزين",

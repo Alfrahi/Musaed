@@ -1,6 +1,6 @@
 "use client";
 
-import { Sun, Moon, Monitor } from 'lucide-react';
+import { Sun, Moon, Monitor, LucideIcon } from 'lucide-react';
 import { useGlobalSettings, useLanguage } from '../../../store/hooks';
 import { useSettingsActions } from '../hooks/useSettingsActions';
 import { useTranslation } from '../../../lib/i18n';
@@ -13,7 +13,7 @@ const ThemeSettings = () => {
   const { updateGlobalSettings } = useSettingsActions();
   const { t } = useTranslation(language);
 
-  const themes: { id: Theme; icon: any }[] = [
+  const themes: { id: Theme; icon: LucideIcon }[] = [
     { id: 'light', icon: Sun },
     { id: 'dark', icon: Moon },
     { id: 'system', icon: Monitor },

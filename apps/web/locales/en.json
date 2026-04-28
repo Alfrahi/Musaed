@@ -112,7 +112,11 @@
       "enableLatex": "LaTeX Formulas",
       "latexDescription": "Render mathematical equations using KaTeX",
       "enableMermaid": "Mermaid Diagrams",
-      "mermaidDescription": "Render charts and diagrams using Mermaid.js"
+      "mermaidDescription": "Render charts and diagrams using Mermaid.js",
+      "renderingDiagram": "Rendering diagram...",
+      "mermaidError": "Mermaid Rendering Error",
+      "copySource": "Copy Source",
+      "requirementNote": "requirementDiagram is strict — relationships must use keywords like <code>satisfies</code>, <code>verifies</code>, etc."
     },
     "storage": {
       "title": "Storage Management",

@@ -1,4 +1,5 @@
 import { Language } from '@musaed/contracts';
+import { useCallback, useMemo } from 'react';
 import IntlMessageFormat from 'intl-messageformat';
 import en from '../../locales/en.json';
 import ar from '../../locales/ar.json';
@@ -35,7 +36,7 @@ export const getSystemLanguage = (): Language => {
 export const useTranslation = (lang: Language) => {
   const activeLocale = lang === 'ar' ? 'ar-YE' : 'en-US';
 
-  const t = (key: TranslationKey | string, values?: Record<string, string | number | boolean>) => {
+  const t = useCallback((key: TranslationKey | string, values?: Record<string, string | number | boolean>) => {
     const keys = key.split('.');
     const dict = (translations[lang] || translations.en) as Record<string, unknown>;
     const defaultDict = translations.en as Record<string, unknown>;
@@ -62,11 +63,11 @@ export const useTranslation = (lang: Language) => {
     } catch {
       return value;
     }
-  };
+  }, [lang, activeLocale]);
 
   const isRtl = lang === 'ar';
 
-  const formatDate = (date: number | Date, options?: Intl.DateTimeFormatOptions) => {
+  const formatDate = useCallback((date: number | Date, options?: Intl.DateTimeFormatOptions) => {
     const locale = lang === 'ar' ? 'ar-YE-u-ca-islamic' : 'en-US';
     const cacheKey = `${locale}:${JSON.stringify(options)}`;
     
@@ -76,9 +77,9 @@ export const useTranslation = (lang: Language) => {
       dateTimeFormatters.set(cacheKey, formatter);
     }
     return formatter.format(date);
-  };
+  }, [lang]);
 
-  const formatNumber = (num: number, options?: Intl.NumberFormatOptions) => {
+  const formatNumber = useCallback((num: number, options?: Intl.NumberFormatOptions) => {
     const cacheKey = `${activeLocale}:${JSON.stringify(options)}`;
     
     let formatter = numberFormatters.get(cacheKey);
@@ -87,16 +88,16 @@ export const useTranslation = (lang: Language) => {
       numberFormatters.set(cacheKey, formatter);
     }
     return formatter.format(num);
-  };
+  }, [activeLocale]);
 
-  const formatFileSize = (bytes: number) => {
+  const formatFileSize = useCallback((bytes: number) => {
     if (bytes === 0) return `0 ${t('common.units.b')}`;
     const k = 1024;
     const units = ['b', 'kb', 'mb', 'gb', 'tb'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     const value = parseFloat((bytes / Math.pow(k, i)).toFixed(2));
     return `${formatNumber(value)} ${t(`common.units.${units[i]}`)}`;
-  };
+  }, [t, formatNumber]);
 
-  return { t, isRtl, formatDate, formatNumber, formatFileSize };
+  return useMemo(() => ({ t, isRtl, formatDate, formatNumber, formatFileSize }), [t, isRtl, formatDate, formatNumber, formatFileSize]);
 };

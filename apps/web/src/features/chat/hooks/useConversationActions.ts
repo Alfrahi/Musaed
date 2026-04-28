@@ -15,15 +15,15 @@ export function useConversationActions() {
   const setCurrentConversationId = useSetCurrentConversationId();
   const stopStream = useStopStream();
   const batchUpdate = useBatchUpdate();
+  const settingsState = useSettingsStore.getState();
+  const { t } = useTranslation(settingsState.globalSettings.language);
 
   /**
    * Initializes a new conversation with default settings.
    */
   const createNewConversation = useCallback(() => {
-    const state = useConversationStore.getState();
     const modelState = useModelStore.getState();
-    const settingsState = useSettingsStore.getState();
-    const { t } = useTranslation(settingsState.globalSettings.language);
+    const settingsStateInner = useSettingsStore.getState();
 
     const id = crypto.randomUUID();
     const newConv: Conversation = {
@@ -31,7 +31,7 @@ export function useConversationActions() {
       title: t('sidebar.newChat'),
       messages: [],
       model: modelState.selectedModel,
-      settings: settingsState.globalSettings,
+      settings: settingsStateInner.globalSettings,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };

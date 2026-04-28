@@ -3,18 +3,15 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import mermaid from 'mermaid';
 
+import { extractMermaidContent, detectUnsupportedDiagram, preprocessMermaidContent } from '../utils/mermaid-utils';
+import { useLanguage } from '../../../store/hooks';
+import { useTranslation } from '../../../lib/i18n';
+
 interface MermaidRendererProps {
   content: string;
   theme?: 'default' | 'dark' | 'base' | 'forest' | 'neutral';
   className?: string;
 }
-
-const SUPPORTED_DIAGRAM_TYPES = [
-  'flowchart', 'graph', 'sequenceDiagram', 'classDiagram', 'stateDiagram', 'stateDiagram-v2',
-  'erDiagram', 'journey', 'gantt', 'pie', 'mindmap', 'timeline', 'gitGraph', 'requirementDiagram',
-  'architecture', 'block', 'c4Diagram', 'xyChart', 'sankey-beta', 'quadrantChart', 'radarChart',
-  'barChart', 'packetDiagram', 'blockDiagram', 'dependencyGraph'
-] as const;
 
 const MermaidRenderer: React.FC<MermaidRendererProps> = ({
   content,
@@ -25,222 +22,33 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
+  const language = useLanguage();
+  const { t } = useTranslation(language);
 
-  const mermaidContent = useMemo(() => {
-    if (!content?.trim()) return '';
-
-    let match = content.match(/```mermaid\s*([\s\S]*?)```/i);
-    if (!match) {
-      match = content.match(/```\s*([\s\S]*?)```/);
-    }
-
-    if (match?.[1]) return match[1].trim();
-
-    const looksLikeMermaid = SUPPORTED_DIAGRAM_TYPES.some((type) =>
-      content.trim().startsWith(type) || content.includes(type)
-    );
-
-    return looksLikeMermaid ? content.trim() : '';
-  }, [content]);
-
-  const detectUnsupportedDiagram = (code: string): string | null => {
-    const trimmed = code.trim();
-
-    if (trimmed.startsWith('xychart-beta')) {
-      return 'xychart-beta is not supported in this Mermaid version.';
-    }
-
-    return null;
-  };
-
-  const preprocessMermaidContent = useCallback((raw: string): string => {
-    let processed = raw.trim();
-
-    if (
-      /^(graph|flowchart)/im.test(processed) &&
-      processed.includes('requirement ')
-    ) {
-      // Force correct diagram type
-      processed = processed.replace(/^(graph|flowchart)[^\n]*/im, 'requirementDiagram');
-    }
-
-    // ✅ REMOVE flowchart node syntax inside requirementDiagram
-    if (processed.startsWith('requirementDiagram')) {
-      processed = processed.replace(/^\s*\w+\[[^\]]+\]\s*$/gm, '');
-    }
-
-    // ✅ FIX: convert JS-style comments to Mermaid comments
-    processed = processed.replace(/^\s*\/\/(.*)$/gm, '%% $1');
-
-    // ✅ ER FIX
-    processed = processed.replace(/\|\|--o\s+\{/g, '||--o{');
-
-      // ✅ REQUIREMENT ENUM FIX
-      if (processed.includes('requirementDiagram')) {
-        processed = processed
-        .replace(/risk:\s*Low/g, 'risk: low')
-        .replace(/risk:\s*Medium/g, 'risk: medium')
-        .replace(/risk:\s*High/g, 'risk: high')
-        .replace(/verifMethod/g, 'verifymethod')
-        .replace(/verifymethod:\s*Test/g, 'verifymethod: test')
-        .replace(/type:\s*Component/g, 'type: component');
-      }
-
-      // ✅ SANKEY FIX (safer version)
-      if (processed.trim().startsWith('sankey-beta') && processed.includes('-->')) {
-        const lines = processed.split('\n');
-        const converted: string[] = ['sankey-beta'];
-
-        for (const line of lines) {
-          const match = line.match(/(.*?)-->(.*?):\s*(\d+)/);
-          if (match) {
-            const source = match[1].trim();
-            const target = match[2].trim();
-            const value = match[3].trim();
-            converted.push(`${source},${target},${value}`);
-          }
-        }
-
-        if (converted.length > 1) {
-          processed = converted.join('\n');
-        }
-      }
-
-      // ✅ PIE FIX
-      if (processed.includes('pie')) {
-        processed = processed.replace(/\(.*?%\)/g, '');
-      }
-
-      // ✅ PIE LABEL FIX (auto-quote labels)
-      if (processed.trim().startsWith('pie')) {
-        processed = processed.replace(
-          /^(\s*)([A-Za-z0-9 _-]+)\s*:/gm,
-                                      '$1"$2":'
-        );
-      }
-
-    // Convert invalid top-level types
-    if (/^(cluster|dependencyGraph)/im.test(processed)) {
-      processed = processed.replace(/^(cluster|dependencyGraph)\b/im, 'flowchart TD');
-    }
-
-    // === REQUIREMENT DIAGRAM - IMPROVED ===
-    if (processed.includes('requirementDiagram')) {
-      const lines = processed.split('\n');
-      const newLines: string[] = [];
-
-      for (let line of lines) {
-        const trimmed = line.trim();
-
-        if (!trimmed) {
-          newLines.push(line);
-          continue;
-        }
-
-        if (trimmed.startsWith('description:')) {
-          newLines.push(`        %% ${trimmed}`);
-          continue;
-        }
-
-        // Auto-fix simple arrows --> into valid requirement relationship
-        if (trimmed.match(/\w+\s*-->\s*\w+/)) {
-          const fixed = trimmed.replace(/(\w+)\s*-->\s*(\w+)/, '$1 - satisfies -> $2');
-          newLines.push('    ' + fixed);  // indent for readability
-          continue;
-        }
-
-        // Fix property values (add quotes when needed)
-        if (trimmed.includes(':') && !trimmed.includes('- ')) {
-          const [key, ...valueParts] = trimmed.split(':');
-          let value = valueParts.join(':').trim();
-
-          if (value && !/^["'].*["']$/.test(value)) {
-            if (/\s/.test(value) || /["':]/.test(value)) {
-              value = `"${value}"`;
-            }
-          }
-          newLines.push(`        ${key.trim()}: ${value}`);
-        } else {
-          newLines.push(line);
-        }
-      }
-      processed = newLines.join('\n');
-    }
-
-    // General safe quote fix for other diagrams
-    if (!processed.includes('requirementDiagram')) {
-      processed = processed.replace(/(\s|^)'([^'\n]+)'(?=\s|$|[;,\]{}])/g, '$1"$2"');
-    }
-
-    // ER Diagram
-    if (processed.includes('erDiagram')) {
-      processed = processed.replace(/(\w+)\s*\{([^}]+)\}/g, (_, entity, attrs) => {
-        const formatted = attrs.trim().split('\n').map((l: string) => `        ${l.trim()}`).join('\n');
-        return `${entity} {\n${formatted}\n    }`;
-      });
-    }
-
-    // Quadrant Chart
-    if (processed.includes('quadrantChart')) {
-      processed = processed.replace(/"([^"]+)"\s*:\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)/g, '"$1": [$2, $3]');
-      if (!/x-axis/i.test(processed)) processed = processed.replace(/^(quadrantChart\s*)/im, '$1\n  x-axis Low --> High\n');
-      if (!/y-axis/i.test(processed)) processed = processed.replace(/^(quadrantChart\s*)/im, '$1\n  y-axis Low --> High\n');
-    }
-
-    // Gantt
-    if (processed.includes('gantt')) {
-      if (!/dateFormat/i.test(processed)) processed = processed.replace(/^(gantt\b)/im, '$1\n  dateFormat YYYY-MM-DD');
-      if (!/axisFormat/i.test(processed)) processed = processed.replace(/^(gantt\b)/im, '$1\n  axisFormat %Y-%m-%d');
-
-      processed = processed.replace(
-        /^(\s*)([^:\n]+?)\s*:\s*(?![\d-]|after|crit|done|milestone|active)([^,\n]+?)(?:,\s*([^\n]+))?$/gm,
-        (_, indent, taskName, __, durationPart) => {
-          const cleanTask = taskName.trim();
-          const duration = (durationPart?.trim() || '7d').replace(/^\s*,\s*/, '');
-          return `${indent}${cleanTask} : 2026-01-01, ${duration}`;
-        }
-      );
-    }
-
-    // Flowchart / Graph
-    if (/^(flowchart|graph)/im.test(processed)) {
-      processed = processed.replace(/^(flowchart|graph)\s+\w*/im, 'flowchart TD');
-      processed = processed.replace(/->>/g, '-->');
-      processed = processed.replace(/([^\n;}])\s*$/gm, '$1;');
-    }
-
-    // Pie
-    if (processed.includes('pie')) {
-      processed = processed.replace(/(\d+(?:\.\d+)?)%/g, '$1');
-    }
-
-    return processed;
-  }, []);
+  const mermaidContent = useMemo(() => extractMermaidContent(content), [content]);
 
   const renderMermaid = useCallback(async () => {
-    if (!mermaidContent) {
-      setSvg('');
-      setError(null);
+    if (!mermaidContent || isRendering) {
       return;
     }
 
-    setIsRendering(true);
+    setSvg('');
     setError(null);
+    setIsRendering(true);
 
     const unsupported = detectUnsupportedDiagram(mermaidContent);
     if (unsupported) {
       setError(unsupported);
-      setSvg('');
       setIsRendering(false);
       return;
     }
 
     try {
-      const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : theme;
+      const isDark = document.documentElement.classList.contains('dark');
 
       mermaid.initialize({
         startOnLoad: false,
-        theme: currentTheme as any,
+        theme: (isDark ? 'dark' : theme) as any,
         securityLevel: 'loose',
         suppressErrorRendering: true,
         flowchart: { useMaxWidth: true, htmlLabels: true },
@@ -259,15 +67,13 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
 
       setSvg(renderedSvg);
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Mermaid render error:', err);
 
-      let message = err.message || String(err);
+      let message = err instanceof Error ? err.message : String(err);
 
       if (message.includes('Parse error') || message.includes('Lexer error')) {
-        message += '\n\n💡 For requirementDiagram:\n';
-        message += '   • Use " - satisfies -> ", " - verifies -> ", etc.\n';
-        message += '   • Your original --> was automatically converted to " - satisfies -> "';
+        message += `\n\n💡 ${t('settings.markdown.requirementNote').replace(/<\/?code>/g, '')}`;
       }
 
       setError(message);
@@ -277,7 +83,7 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
     } finally {
       setIsRendering(false);
     }
-  }, [mermaidContent, preprocessMermaidContent, theme]);
+  }, [mermaidContent, theme, t]);
 
   useEffect(() => { renderMermaid(); }, [renderMermaid]);
 
@@ -292,7 +98,6 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
   const copySource = () => {
     if (mermaidContent) {
       navigator.clipboard.writeText(`\`\`\`mermaid\n${mermaidContent}\n\`\`\``);
-      alert('Mermaid source copied to clipboard');
     }
   };
 
@@ -303,7 +108,7 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
       <div className={`flex justify-center items-center p-8 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg ${className}`}>
         <div className="flex items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400">
           <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-          Rendering diagram...
+          {t('settings.markdown.renderingDiagram')}
         </div>
       </div>
     );
@@ -313,12 +118,12 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
     return (
       <div className={`p-6 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 rounded-xl text-sm ${className}`}>
         <div className="flex justify-between items-start mb-3">
-          <div className="font-semibold text-red-700 dark:text-red-400">Mermaid Rendering Error</div>
+          <div className="font-semibold text-red-700 dark:text-red-400">{t('settings.markdown.mermaidError')}</div>
           <button
             onClick={copySource}
             className="px-3 py-1 text-xs bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-red-200 dark:border-red-800 rounded-md transition-colors"
           >
-            📋 Copy Source
+            📋 {t('settings.markdown.copySource')}
           </button>
         </div>
 
@@ -326,9 +131,10 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
           {error}
         </pre>
 
-        <p className="mt-3 text-xs text-red-500/80">
-          requirementDiagram is strict — relationships must use keywords like <code>satisfies</code>, <code>verifies</code>, etc.
-        </p>
+        <p 
+          className="mt-3 text-xs text-red-500/80"
+          dangerouslySetInnerHTML={{ __html: t('settings.markdown.requirementNote') }}
+        />
       </div>
     );
   }

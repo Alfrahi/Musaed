@@ -22,7 +22,7 @@ import DiagnosticsSettings from './DiagnosticsSettings';
 import InputSettings from './InputSettings';
 import StorageSettings from './StorageSettings';
 import MarkdownSettings from './MarkdownSettings';
-import { useTranslation } from '../../../lib/i18n';
+import { TranslationKey, useTranslation } from '../../../lib/i18n';
 import { dialog } from '../../../lib/ipc';
 import { ModalLayout } from '../../layout';
 import { cn } from '../../../lib/utils';
@@ -50,11 +50,11 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
   };
 
   const tabs = useMemo(() => [
-    { id: 'general' as const, label: t('settings.tabs.general' as any), icon: Settings2 },
-    { id: 'appearance' as const, label: t('settings.tabs.appearance' as any), icon: Layout },
-    { id: 'ai' as const, label: t('settings.tabs.ai' as any), icon: Cpu },
-    { id: 'storage' as const, label: t('settings.tabs.storage' as any), icon: HardDrive },
-    { id: 'advanced' as const, label: t('settings.tabs.advanced' as any), icon: Terminal },
+    { id: 'general' as const, label: t('settings.tabs.general' as TranslationKey), icon: Settings2 },
+    { id: 'appearance' as const, label: t('settings.tabs.appearance' as TranslationKey), icon: Layout },
+    { id: 'ai' as const, label: t('settings.tabs.ai' as TranslationKey), icon: Cpu },
+    { id: 'storage' as const, label: t('settings.tabs.storage' as TranslationKey), icon: HardDrive },
+    { id: 'advanced' as const, label: t('settings.tabs.advanced' as TranslationKey), icon: Terminal },
   ], [t]);
 
   const renderContent = () => {
