@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from 'react';
-import { useLanguage } from '../../../store/hooks';
 import dynamic from 'next/dynamic';
 import { Message, REDACTED_THINKING_TAG_END, REDACTED_THINKING_TAG_START } from '@musaed/contracts';
 import ThinkingBlock from './ThinkingBlock';

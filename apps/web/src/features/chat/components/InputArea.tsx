@@ -1,76 +1,41 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useCallback } from 'react';
 import { Send, Square, ImageIcon, Paperclip } from 'lucide-react';
-import { useCurrentConversationId, useGlobalSettings } from '@/store/hooks';
-import { useConversationStore, selectIsStreaming } from '@/store/stores/conversation-store';
-import { useModelStore, selectSelectedModel } from '@/store/stores/model-store';
-import { useTranslation } from '@/lib/i18n';
-import { checkIsTauri } from '@/lib/ipc';
-import { useAutosizeTextArea } from '@/hooks/useAutosizeTextArea';
-import { ModelSelector } from '@/features/library';
-import { useChatActions } from '../hooks/useChatActions';
-import { useConversationActions } from '../hooks/useConversationActions';
-import { useAttachmentManager } from '../hooks/useAttachmentManager';
+import { useChatInput } from '../hooks/useChatInput';
+import { abortStreaming } from '../hooks/useConversationActions';
 import AttachmentPreview from './AttachmentPreview';
+import { ModelSelector } from '@/features/library';
 
-const InputArea = () => {
-  const [input, setInput] = useState('');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  const currentConversationId = useCurrentConversationId();
-  const isStreaming = useConversationStore(selectIsStreaming(currentConversationId || ''));
-  const globalSettings = useGlobalSettings();
-  const selectedModel = useModelStore(selectSelectedModel);
-  const { sendMessage } = useChatActions();
-  const { abortStreaming } = useConversationActions();
-  const { t } = useTranslation(globalSettings.language);
+/**
+ * Chat input area - pure Tauri desktop implementation.
+ */
+export const InputArea = () => {
   const {
+    input,
+    setInput,
+    textareaRef,
+    isStreaming,
+    selectedModel,
     images,
     files,
-    handleImageUpload,
-    handleFileUpload,
+    onSend,
+    handleKeyDown,
     handleTauriImageUpload,
     handleTauriFileUpload,
     removeImage,
     removeFile,
-    clearAttachments
-  } = useAttachmentManager();
+    t,
+    currentConversationId,
+    // We need enterToSend from globalSettings
+    enterToSend,           // ← Added
+  } = useChatInput();
 
-  useAutosizeTextArea(textareaRef.current, input);
-
-  useEffect(() => {
-    clearAttachments();
-    setInput('');
-  }, [currentConversationId, clearAttachments]);
-
-  if (!currentConversationId) return null;
-
-  const onSend = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!input.trim() && images.length === 0 && files.length === 0) return;
-    await sendMessage(input, images, files);
-    setInput('');
-    clearAttachments();
-    textareaRef.current?.focus();
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    const isModEnter = (e.metaKey || e.ctrlKey) && e.key === 'Enter';
-    const isPlainEnter = e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey;
-
-    if (globalSettings.enterToSend) {
-      if (isPlainEnter) {
-        e.preventDefault();
-        onSend();
-      }
-    } else {
-      if (isModEnter) {
-        e.preventDefault();
-        onSend();
-      }
+  const handleAbort = useCallback(() => {
+    if (currentConversationId) {
+      abortStreaming(currentConversationId);
     }
-  };
+  }, [currentConversationId]);
 
   return (
     <div className="shrink-0 border-bs border-sidebar-border bg-background p-4">
@@ -83,11 +48,11 @@ const InputArea = () => {
         />
 
         <div className="border border-sidebar-border bg-zinc-50 dark:bg-zinc-950 p-1 rounded-lg focus-within:ring-1 focus-within:ring-blue-500/50 transition-all">
-          <form onSubmit={onSend} className="flex flex-col">
+          <form onSubmit={(e) => { e.preventDefault(); onSend(); }} className="flex flex-col">
             <textarea
               ref={textareaRef}
               value={input}
-              onChange={e => setInput(e.target.value)}
+              onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={t('chat.askAnything')}
               className="w-full bg-transparent border-none p-3 focus:ring-0 focus:outline-none outline-none resize-none min-h-[60px] max-h-48 text-[14px] placeholder:text-zinc-400 font-sans shadow-none"
@@ -101,36 +66,16 @@ const InputArea = () => {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    if (checkIsTauri()) {
-                      handleTauriImageUpload();
-                    } else {
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.accept = 'image/*';
-                      input.multiple = true;
-                      input.onchange = () => handleImageUpload(input.files);
-                      input.click();
-                    }
-                  }}
+                  onClick={handleTauriImageUpload}
                   className="p-2 rounded-lg text-zinc-400 hover:text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
                   title={t('chat.attachImage')}
                 >
                   <ImageIcon size={14} />
                 </button>
+
                 <button
                   type="button"
-                  onClick={() => {
-                    if (checkIsTauri()) {
-                      handleTauriFileUpload();
-                    } else {
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.multiple = true;
-                      input.onchange = () => handleFileUpload(input.files);
-                      input.click();
-                    }
-                  }}
+                  onClick={handleTauriFileUpload}
                   className="p-2 rounded-lg text-zinc-400 hover:text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
                   title={t('common.files')}
                 >
@@ -142,14 +87,14 @@ const InputArea = () => {
                 <span className="hidden sm:block text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">
                   {isStreaming
                     ? t('chat.shortcutStop')
-                    : (globalSettings.enterToSend ? t('chat.shortcutSend') : t('chat.shortcutMultiLine'))
+                    : (enterToSend ? t('chat.shortcutSend') : t('chat.shortcutMultiLine'))
                   }
                 </span>
 
                 {isStreaming ? (
                   <button
                     type="button"
-                    onClick={() => abortStreaming(currentConversationId)}
+                    onClick={handleAbort}
                     className="h-8 ps-4 pe-4 flex items-center gap-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95"
                   >
                     <Square size={10} fill="currentColor" />

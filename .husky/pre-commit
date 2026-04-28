@@ -1,0 +1,13 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🛡️ Running Musaed Pre-commit Guard..."
+
+# 1. Run lint-staged (Fixes simple issues, enforces logical props & any)
+pnpm exec lint-staged
+
+# 2. Run Architecture Check (Enforces domain boundaries)
+pnpm arch-check
+
+# 3. Run Type Check (Final safety net)
+pnpm type-check

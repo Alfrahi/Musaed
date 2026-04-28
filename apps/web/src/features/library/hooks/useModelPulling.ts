@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback } from 'react';
-import { useModelStore } from '../../../store';
 import { usePullStatus, useUpdatePullStatus, useGlobalSettings, useLanguage } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 import { ollamaApi, checkIsTauri } from '../../../lib/ipc';

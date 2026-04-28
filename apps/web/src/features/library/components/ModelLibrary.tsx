@@ -4,14 +4,14 @@ import { useState, useMemo, useCallback } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
 import { useModels, usePullStatus, useIsOllamaConnected, useGlobalSettings, useLanguage } from '../../../store/hooks';
-import { useTranslation, TranslationKey } from '../../../lib/i18n';
+import { useTranslation } from '../../../lib/i18n';
 import ModelCard from './ModelCard';
 import LibrarySearchHeader from './LibrarySearchHeader';
 import { useModelPulling } from '../hooks/useModelPulling';
 import { useModelActions } from '../hooks/useModelActions';
 import { dialog } from '../../../lib/ipc';
 import { cn } from '../../../lib/utils';
-import { ModalLayout } from '../../layout';
+import { ModalLayout } from '@/components/ui';
 
 interface ModelLibraryProps {
   isOpen: boolean;

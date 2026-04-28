@@ -1,6 +1,6 @@
 "use client";
 
-import { Skeleton } from '../../layout';
+import { Skeleton } from '@/components/ui';
 
 const SidebarSkeleton = () => {
   return (

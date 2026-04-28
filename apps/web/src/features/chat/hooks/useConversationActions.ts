@@ -2,28 +2,37 @@
 
 import { useCallback } from 'react';
 import { useConversationStore, useModelStore, useSettingsStore } from '../../../store';
-import { useSetConversations, useSetCurrentConversationId, useStopStream, useBatchUpdate } from '../../../store/hooks';
+import { useSetConversations, useSetCurrentConversationId, useBatchUpdate } from '../../../store/hooks';
 import { chatApi } from '../../../lib/ipc';
 import { useTranslation } from '../../../lib/i18n';
 import type { Conversation } from '@musaed/contracts';
 
 /**
- * Hook for managing conversation lifecycle actions like creation, deletion, and streaming control.
+ * Abort active streaming for a conversation.
  */
-export function useConversationActions() {
+export function abortStreaming(conversationId: string): void {
+  const state = useConversationStore.getState();
+  const requestId = state.activeStreams[conversationId];
+
+  if (requestId) {
+    chatApi.abort(requestId);
+  }
+  state.stopStream(conversationId);
+}
+
+/**
+ * Hook for conversation management (create, delete, rename, clear).
+ */
+export const useConversationActions = () => {
   const setConversations = useSetConversations();
   const setCurrentConversationId = useSetCurrentConversationId();
-  const stopStream = useStopStream();
   const batchUpdate = useBatchUpdate();
-  const settingsState = useSettingsStore.getState();
-  const { t } = useTranslation(settingsState.globalSettings.language);
 
-  /**
-   * Initializes a new conversation with default settings.
-   */
+  const { t } = useTranslation(useSettingsStore.getState().globalSettings.language);
+
   const createNewConversation = useCallback(() => {
     const modelState = useModelStore.getState();
-    const settingsStateInner = useSettingsStore.getState();
+    const settingsState = useSettingsStore.getState();
 
     const id = crypto.randomUUID();
     const newConv: Conversation = {
@@ -31,7 +40,7 @@ export function useConversationActions() {
       title: t('sidebar.newChat'),
       messages: [],
       model: modelState.selectedModel,
-      settings: settingsStateInner.globalSettings,
+      settings: settingsState.globalSettings,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -41,29 +50,12 @@ export function useConversationActions() {
       conversationIds: [id, ...state.conversationIds],
       currentConversationId: id,
     }));
-  }, [batchUpdate]);
+  }, [batchUpdate, t]);
 
-  /**
-   * Aborts an active streaming request for a conversation.
-   */
-  const abortStreaming = useCallback((conversationId: string) => {
-    const activeStreams = useConversationStore.getState().activeStreams;
-    const requestId = activeStreams[conversationId];
-    
-    if (requestId) {
-      chatApi.abort(requestId);
-    }
-    
-    stopStream(conversationId);
-  }, [stopStream]);
-
-  /**
-   * Removes a conversation and stops any active streams.
-   */
   const deleteConversation = useCallback((id: string) => {
-    const state = useConversationStore.getState();
     abortStreaming(id);
 
+    const state = useConversationStore.getState();
     const { [id]: _, ...remainingConversations } = state.conversations;
     const remainingIds = state.conversationIds.filter(cid => cid !== id);
     const newCurrentId = state.currentConversationId === id ? null : state.currentConversationId;
@@ -73,39 +65,36 @@ export function useConversationActions() {
       conversationIds: remainingIds,
       currentConversationId: newCurrentId,
     }));
-  }, [abortStreaming, batchUpdate]);
+  }, [batchUpdate]);
 
-  /**
-   * Updates the display title of a conversation.
-   */
   const updateConversationTitle = useCallback((id: string, title: string) => {
     const state = useConversationStore.getState();
-    const currentList = state.conversationIds.map(cid => 
-      cid === id ? { ...state.conversations[cid], title, updatedAt: Date.now() } : state.conversations[cid]
+    const updated = state.conversationIds.map(cid =>
+      cid === id
+        ? { ...state.conversations[cid], title, updatedAt: Date.now() }
+        : state.conversations[cid]
     );
-    setConversations(currentList);
+    setConversations(updated);
   }, [setConversations]);
 
-  /**
-   * Clears the entire chat history.
-   */
   const clearAllConversations = useCallback(() => {
-    const activeStreams = useConversationStore.getState().activeStreams;
-    Object.keys(activeStreams).forEach(id => abortStreaming(id));
+    const state = useConversationStore.getState();
+    Object.keys(state.activeStreams).forEach(abortStreaming);
 
     batchUpdate(() => ({
       conversations: {},
       conversationIds: [],
       currentConversationId: null,
     }));
-  }, [abortStreaming, batchUpdate]);
+  }, [batchUpdate]);
 
-  /**
-   * Internal helper to start streaming state.
-   */
+  // Expose streaming control functions
   const initiateStreaming = useCallback((conversationId: string, requestId: string) => {
-    const startStream = useConversationStore.getState().startStream;
-    startStream(conversationId, requestId);
+    useConversationStore.getState().startStream(conversationId, requestId);
+  }, []);
+
+  const stopStreaming = useCallback((conversationId: string) => {
+    useConversationStore.getState().stopStream(conversationId);
   }, []);
 
   return {
@@ -114,7 +103,6 @@ export function useConversationActions() {
     updateConversationTitle,
     clearAllConversations,
     initiateStreaming,
-    stopStreaming: stopStream,
-    abortStreaming
+    stopStreaming,
   };
-}
+};

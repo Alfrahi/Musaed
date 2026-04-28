@@ -7,7 +7,7 @@ import { cn } from '../../../lib/utils';
 import { useLanguage } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 import { useLogActions } from '../hooks/useLogActions';
-import { ModalLayout } from '../../layout';
+import { ModalLayout } from '@/components/ui';
 
 interface LogViewerProps {
   isOpen: boolean;

@@ -1,6 +1,5 @@
 "use client";
 
-import React from 'react';
 import { Info } from 'lucide-react';
 import { useSetInfoOpen, useLanguage } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';

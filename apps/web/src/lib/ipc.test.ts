@@ -15,7 +15,7 @@ describe('IPC Bridge', () => {
   it('invokes a command and returns data', async () => {
     const mockModels = [{ name: 'test-model', size: 100, digest: '123', details: {} }];
 
-    mockIPC((cmd, args) => {
+    mockIPC((cmd) => {
       if (cmd === 'get_ollama_models') {
         return { success: true, data: mockModels };
       }

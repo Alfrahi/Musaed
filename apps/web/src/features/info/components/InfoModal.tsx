@@ -1,8 +1,8 @@
 "use client";
 
 import React from 'react';
-import { Info, Github, Globe, Shield, Cpu, X } from 'lucide-react';
-import { ModalLayout } from '../../layout';
+import { Info, Github, Shield, Cpu, X } from 'lucide-react';
+import { ModalLayout } from '@/components/ui';
 import { useTranslation } from '../../../lib/i18n';
 import { useLanguage } from '../../../store/hooks';
 import { opener } from '../../../lib/ipc';

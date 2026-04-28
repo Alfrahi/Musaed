@@ -110,7 +110,7 @@ export function preprocessMermaidContent(raw: string): string {
     const lines = processed.split('\n');
     const newLines: string[] = [];
 
-    for (let line of lines) {
+    for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed) {
         newLines.push(line);

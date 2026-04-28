@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { Check, Copy } from 'lucide-react';
-import { cn } from '../../../lib/utils';
 import { useTranslation } from '../../../lib/i18n';
 import { useGlobalSettings, useLanguage } from '../../../store/hooks';
 

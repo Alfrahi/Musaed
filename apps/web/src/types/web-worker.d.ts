@@ -7,7 +7,7 @@ declare module 'web-worker:*' {
   interface WebWorker {
     onmessage: Listener | null;
     onerror: ErrorListener | null;
-    postMessage(data: any): void;
+    postMessage(data: unknown): void;
     terminate(): void;
   }
 

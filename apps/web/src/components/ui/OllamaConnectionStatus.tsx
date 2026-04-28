@@ -7,7 +7,7 @@ import { useLanguage } from '@/store/hooks';
 import { AlertCircle, CheckCircle2, Loader2, WifiOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function OllamaConnectionStatus() {
+const OllamaConnectionStatus = () => {
     const { connectionState, health, isHealthy, isChecking, reconnect } = useOllamaConnection();
     const language = useLanguage();
     const { t } = useTranslation(language);
@@ -70,4 +70,6 @@ export default function OllamaConnectionStatus() {
         </motion.div>
         </AnimatePresence>
     );
-}
+};
+
+export default OllamaConnectionStatus;

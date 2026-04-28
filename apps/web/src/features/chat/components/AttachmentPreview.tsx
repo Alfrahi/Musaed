@@ -3,7 +3,7 @@
 import { X, FileText } from 'lucide-react';
 import { useTranslation } from '../../../lib/i18n';
 import { useLanguage } from '../../../store/hooks';
-import { FileAttachment } from '../hooks/useAttachmentManager';
+import { FileAttachment } from '../hooks/useAttachmentUtils';
 import { attachmentImageSrc } from '../imageAttachment';
 
 interface AttachmentPreviewProps {

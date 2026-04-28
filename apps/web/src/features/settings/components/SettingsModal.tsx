@@ -5,11 +5,9 @@ import {
   X, 
   Settings2, 
   RotateCcw, 
-  Languages, 
   Cpu, 
   HardDrive, 
   Terminal,
-  Type,
   Layout
 } from 'lucide-react';
 import { useGlobalSettings } from '../../../store/hooks';
@@ -24,7 +22,7 @@ import StorageSettings from './StorageSettings';
 import MarkdownSettings from './MarkdownSettings';
 import { TranslationKey, useTranslation } from '../../../lib/i18n';
 import { dialog } from '../../../lib/ipc';
-import { ModalLayout } from '../../layout';
+import { ModalLayout } from '@/components/ui';
 import { cn } from '../../../lib/utils';
 
 interface SettingsModalProps {

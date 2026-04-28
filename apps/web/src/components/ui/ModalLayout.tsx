@@ -3,20 +3,19 @@
 import React, { ReactNode } from 'react';
 import FocusTrap from 'focus-trap-react';
 import { motion } from 'framer-motion';
-import { cn } from '../../../lib/utils';
+import { cn } from '@/lib/utils';
 
 interface ModalLayoutProps {
   isOpen: boolean;
-  onClose: () => void;
   children: ReactNode;
   maxWidth?: string;
   className?: string;
   zIndex?: string;
+  onClose?: () => void;
 }
 
 const ModalLayout = ({ 
   isOpen, 
-  onClose, 
   children, 
   maxWidth = "max-w-md",
   className,

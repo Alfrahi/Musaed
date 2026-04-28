@@ -1,10 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Enables only required permissions for Musaed operations with strict filesystem scoping.",
-  "windows": [
-    "main"
-  ],
+  "description": "Enables only required permissions for Musaed with strict but practical filesystem scoping.",
+  "windows": ["main"],
   "permissions": [
     "core:default",
     "core:event:default",
@@ -16,7 +14,17 @@
     "dialog:allow-save",
     "dialog:allow-message",
     {
-      "identifier": "fs:allow-write-text-file",
+      "identifier": "fs:allow-read-file",
+      "allow": [
+        { "path": "$PICTURE/**/*" },
+        { "path": "$DOCUMENT/Musaed/**/*" },
+        { "path": "$DESKTOP/Musaed/**/*" },
+        { "path": "$DOWNLOAD/Musaed/**/*" },
+        { "path": "$APP_DATA/musaed/**/*" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-read-text-file",
       "allow": [
         { "path": "$APP_DATA/musaed/**/*" },
         { "path": "$DOCUMENT/Musaed/**/*" },
@@ -25,7 +33,7 @@
       ]
     },
     {
-      "identifier": "fs:allow-read-text-file",
+      "identifier": "fs:allow-write-text-file",
       "allow": [
         { "path": "$APP_DATA/musaed/**/*" },
         { "path": "$DOCUMENT/Musaed/**/*" },
@@ -45,6 +53,7 @@
     "store:allow-set",
     "store:allow-get",
     "store:allow-save",
+
     "updater:default",
     "allow-ollama-commands",
     "allow-logging-commands"

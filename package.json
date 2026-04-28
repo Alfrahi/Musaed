@@ -8,10 +8,11 @@
     "build": "tauri build",
     "prod:build": "pnpm validate && pnpm --filter web i18n:check && pnpm --filter web prod:build && tauri build",
     "test": "pnpm --filter web test",
-    "lint": "eslint .",
+    "lint": "pnpm -F web exec eslint src",
     "type-check": "pnpm --filter \"*\" type-check",
     "validate": "pnpm lint && pnpm type-check && pnpm --filter web i18n:check",
-    "arch-check": "depcruise apps/web/src --config .dependency-cruiser.js"
+    "arch-check": "pnpm -F web exec depcruise src --config ../../.dependency-cruiser.js",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
@@ -26,8 +27,10 @@
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-import-x": "^4.16.2",
     "eslint-plugin-jsx-a11y": "^6.10.2",
-    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.1.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.7.3",
     "ts-node": "^10.9.2",
@@ -44,5 +47,13 @@
     "remark-math": "^6.0.0",
     "unified": "^11.0.5",
     "zod": "^4.3.6"
+  },
+  "lint-staged": {
+    "apps/web/src/**/*.{ts,tsx}": [
+      "eslint --fix"
+    ],
+    "packages/contracts/src/**/*.ts": [
+      "eslint --fix"
+    ]
   }
 }

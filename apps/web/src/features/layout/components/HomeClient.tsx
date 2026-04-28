@@ -11,8 +11,8 @@ import { cn } from '@/lib/utils';
 import { checkIsTauri } from '@/lib/ipc';
 
 import { useChatInitialization, useTauriEvents } from '@/features/chat';
-import TaskStatus from './TaskStatus';
-import OllamaConnectionStatus from './OllamaConnectionStatus';
+import TaskStatus from '@/components/ui/TaskStatus';
+import OllamaConnectionStatus from '@/components/ui/OllamaConnectionStatus';
 
 const Sidebar = dynamic(() => import('@/features/sidebar').then(m => m.Sidebar), {
   ssr: false,
@@ -43,8 +43,7 @@ const SettingsModal = dynamic(() => import('@/features/settings').then(m => m.Se
 const ModelLibrary = dynamic(() => import('@/features/library').then(m => m.ModelLibrary), { ssr: false });
 const InfoModal = dynamic(() => import('@/features/info').then(m => m.InfoModal), { ssr: false });
 
-export default function HomeClient() {
-  const globalSettings = useGlobalSettings();
+const HomeClient = () => {  const globalSettings = useGlobalSettings();
   const isHydrated = useIsHydrated();
   const isLibraryOpen = useIsLibraryOpen();
   const isSettingsOpen = useIsSettingsOpen();
@@ -128,3 +127,5 @@ export default function HomeClient() {
     </main>
   );
 }
+
+export default HomeClient;

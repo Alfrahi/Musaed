@@ -1,59 +1,45 @@
 "use client";
+
 import { useCallback } from 'react';
-import { useCurrentConversationId, useConversations, useAddMessage, useAddMessages, useUpdateLastMessage, useSelectedModel, useGlobalSettings, useSetUIError } from '../../../store/hooks';
+import { useCurrentConversationId, useConversations, useAddMessages, useUpdateLastMessage, useSelectedModel, useGlobalSettings, useSetUIError } from '../../../store/hooks';
 import { Message } from '@musaed/contracts';
 import { useTranslation } from '../../../lib/i18n';
 import { chatApi } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
 import { useConversationActions } from './useConversationActions';
-import { FileAttachment } from './useAttachmentManager';
+import { FileAttachment } from './useAttachmentUtils';
 import { toOllamaBase64Image } from '../imageAttachment';
 
-/**
- * Generates alternative text content for Ollama when only images are provided.
- */
-function ollamaUserTextContent(content: string, hasImages: boolean, t: (key: string) => string): string {
-  if (hasImages && !content.trim()) return t('chat.imageOnlyApiPrompt');
-  return content;
+function buildPromptWithContext(input: string, files: FileAttachment[], t: (key: string, values?: Record<string, string | number | boolean>) => string): string {
+  if (files.length === 0) return input;
+  const fileContext = files.map(f =>
+    `${t('chat.fileLabel', { name: f.name })}\n${t('chat.contentLabel')}\n${f.content}`
+  ).join('\n\n---\n\n');
+  return `${input}\n\n${t('chat.fileContextLabel')}\n${fileContext}`;
+}
+
+function getUserMessageContent(content: string, hasImages: boolean, t: (key: string) => string): string {
+  return (hasImages && !content.trim()) ? t('chat.imageOnlyApiPrompt') : content;
 }
 
 /**
- * Hook for handling chat message sending and streaming initialization.
+ * Sends a message to Ollama with proper error handling and streaming setup.
  */
-export function useChatActions() {
+export const useChatActions = () => {
   const currentConversationId = useCurrentConversationId();
   const conversations = useConversations();
-  const addMessage = useAddMessage();
   const addMessages = useAddMessages();
   const updateLastMessage = useUpdateLastMessage();
   const selectedModel = useSelectedModel();
   const globalSettings = useGlobalSettings();
   const setError = useSetUIError();
-  const { initiateStreaming, stopStreaming } = useConversationActions();
+
+  const conversationActions = useConversationActions();
+  const { initiateStreaming, stopStreaming } = conversationActions;
   const { t } = useTranslation(globalSettings.language);
 
-  /**
-   * Internal helper to build the contextual prompt including file contents
-   */
-  const buildPromptWithContext = useCallback((input: string, files: FileAttachment[]) => {
-    if (files.length === 0) return input;
-
-    const fileContext = files.map(f =>
-      `${t('chat.fileLabel', { name: f.name })}\n${t('chat.contentLabel')}\n${f.content}`
-    ).join('\n\n---\n\n');
-
-    return `${input}\n\n${t('chat.fileContextLabel')}\n${fileContext}`;
-  }, [t]);
-
-  /**
-   * Sends a message to Ollama via the IPC bridge.
-   */
-  const sendMessage = useCallback(async (
-    input: string,
-    images: string[],
-    files: FileAttachment[] = []
-  ) => {
+  const sendMessage = useCallback(async (input: string, images: string[], files: FileAttachment[] = []) => {
     const trimmedInput = input.trim();
     const hasAttachments = images.length > 0 || files.length > 0;
 
@@ -61,7 +47,6 @@ export function useChatActions() {
       if (!selectedModel) toast.error(t('chat.noModelSelected'));
       return;
     }
-
     if (!trimmedInput && !hasAttachments) return;
 
     const currentConv = conversations[currentConversationId];
@@ -70,7 +55,7 @@ export function useChatActions() {
     const requestId = crypto.randomUUID();
     initiateStreaming(currentConversationId, requestId);
 
-    const fullPrompt = buildPromptWithContext(trimmedInput, files);
+    const fullPrompt = buildPromptWithContext(trimmedInput, files, t);
 
     const userMsg: Message = {
       id: crypto.randomUUID(),
@@ -102,17 +87,12 @@ export function useChatActions() {
           { role: 'system', content: systemPrompt },
           ...currentConv.messages.map(m => ({
             role: m.role,
-            content:
-            m.role === 'user'
-              ? ollamaUserTextContent(m.content ?? '', !!(m.images && m.images.length > 0), t)
-              : m.content,
-            images: m.images?.map(toOllamaBase64Image)
+            content: m.role === 'user' ? getUserMessageContent(m.content ?? '', !!(m.images?.length), t) : m.content,
           })),
           {
             role: 'user',
-            content: ollamaUserTextContent(fullPrompt, images.length > 0, t),
-            images: images.length > 0 ? images.map(toOllamaBase64Image) : undefined
-          }
+            content: getUserMessageContent(fullPrompt, images.length > 0, t),
+          },
         ],
         requestId,
         options: {
@@ -121,17 +101,13 @@ export function useChatActions() {
           num_ctx: params.num_ctx,
           top_k: params.top_k,
           top_p: params.top_p,
-          stop: params.stop
-        }
+          stop: params.stop,
+        },
       });
 
-      if (success !== true) {
-        throw new Error(t('chat.connectionFailed'));
-      }
-
+      if (success !== true) throw new Error(t('chat.connectionFailed'));
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-
       if (!msg.toLowerCase().includes('aborted')) {
         logger.error('Chat error', { error: msg, requestId });
         updateLastMessage(currentConversationId, { content: `\n\n[${t('chat.errorPrefix')}: ${msg}]`, done: true }, false);
@@ -146,12 +122,12 @@ export function useChatActions() {
     selectedModel,
     globalSettings,
     t,
-    addMessage,
+    addMessages,
     updateLastMessage,
     initiateStreaming,
     stopStreaming,
-    setError
+    setError,
   ]);
 
   return { sendMessage };
-}
+};

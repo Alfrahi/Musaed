@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Brain, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
-import { cn } from '../../../lib/utils';
 import { useGlobalSettings, useLanguage } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 
