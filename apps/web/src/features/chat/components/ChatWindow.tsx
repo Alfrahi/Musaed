@@ -107,8 +107,12 @@ const ChatWindow = () => {
         className="h-full"
         data={currentConversation.messages}
         atBottomThreshold={60}
-        atBottomStateChange={setShowScrollButton}
-        itemContent={renderMessage}
+        atBottomStateChange={(atBottom) => setShowScrollButton(!atBottom)}
+        itemContent={(index, msg) => (
+          <div className={cn(index === currentConversation.messages.length - 1 && "pbe-32")}>
+          <MessageBubble message={msg} />
+          </div>
+        )}
         followOutput="smooth"
       />
 
