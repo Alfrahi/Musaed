@@ -6,16 +6,16 @@ import { useTranslation } from '../../../lib/i18n';
 import { checkIsTauri, dialog, fs } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
-import { ConversationSchema } from '@musaed/contracts';
+import { ConversationSchema, OllamaModel } from '@musaed/contracts';
+import { z } from 'zod';
 
-export function useStorageActions() {
-  const conversations = useConversations();
-  const conversationIds = useConversationIds();
-  const setConversations = useSetConversations();
-  const models = useModels();
-  const globalSettings = useGlobalSettings();
-  const { t, formatDate } = useTranslation(globalSettings.language);
+type Conversation = z.infer<typeof ConversationSchema>;
 
+const useSizeCalculations = (
+  conversations: Record<string, Conversation>,
+  conversationIds: string[],
+  models: OllamaModel[]
+) => {
   const [historySize, setHistorySize] = useState<number | null>(null);
   const [modelsSize, setModelsSize] = useState<number | null>(null);
 
@@ -33,6 +33,10 @@ export function useStorageActions() {
     setModelsSize(memoizedModelsSize);
   }, [memoizedHistorySize, memoizedModelsSize]);
 
+  return { historySize, modelsSize };
+};
+
+const useExportJson = (conversations: Record<string, Conversation>) => {
   const handleExportJson = useCallback(async () => {
     const data = {
       version: 1,
@@ -64,20 +68,28 @@ export function useStorageActions() {
     }
   }, [conversations]);
 
+  return handleExportJson;
+};
+
+const useExportMarkdownBundle = (
+  conversations: Record<string, Conversation>,
+  formatDate: (date: number | Date) => string,
+  t: (key: string) => string
+) => {
   const handleExportMarkdownBundle = useCallback(async () => {
     const convs = Object.values(conversations);
     if (convs.length === 0) return;
 
     toast.loading("Preparing bundle...", { duration: 1000 });
-    
+
     const safeTitle = `musaed_bundle_${new Date().toISOString().split('T')[0]}`;
     const fileName = `${safeTitle}.md`;
-    
+
     let fullMarkdown = `# Musaed Chat History Export\n\nGenerated on: ${formatDate(Date.now())}\n\n---\n\n`;
-    
+
     for (const conv of convs) {
       fullMarkdown += `## ${conv.title}\n**Model:** ${conv.model}\n**Date:** ${formatDate(conv.createdAt)}\n\n`;
-      conv.messages.forEach(msg => {
+      conv.messages.forEach((msg: { role: string; content: string }) => {
         fullMarkdown += `### ${msg.role === 'user' ? t('export.user') : t('export.assistant')}\n${msg.content}\n\n`;
       });
       fullMarkdown += `\n---\n\n`;
@@ -104,6 +116,67 @@ export function useStorageActions() {
     }
   }, [conversations, formatDate, t]);
 
+  return handleExportMarkdownBundle;
+};
+
+const validateAndSetConversations = (
+  raw: unknown,
+  setConversations: (conversations: Conversation[]) => void,
+  t: (key: string) => string
+) => {
+  try {
+    if (raw && typeof raw === 'object' && 'conversations' in raw && Array.isArray(raw.conversations)) {
+      const validated = raw.conversations.map((c: unknown) => ConversationSchema.parse(c));
+      setConversations(validated);
+      toast.success(t('settings.storage.importSuccess'));
+    } else {
+      throw new Error("Invalid format");
+    }
+  } catch {
+    logger.error('Import failed: invalid JSON format');
+    toast.error(t('settings.storage.importError'));
+  }
+};
+
+const handleTauriImport = async (
+  setConversations: (conversations: Conversation[]) => void,
+  t: (key: string) => string
+) => {
+  const selected = await dialog.open({
+    multiple: false,
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  });
+  if (!selected || Array.isArray(selected)) return;
+  const content = await fs.readTextFile(selected);
+  if (content === null) return;
+  const raw = JSON.parse(content);
+  validateAndSetConversations(raw, setConversations, t);
+};
+
+const handleWebImport = (
+  setConversations: (conversations: Conversation[]) => void,
+  t: (key: string) => string
+) => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const raw = JSON.parse(event.target?.result as string);
+      validateAndSetConversations(raw, setConversations, t);
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+};
+
+const useImportJson = (
+  setConversations: (conversations: Conversation[]) => void,
+  t: (key: string) => string
+) => {
   const handleImportJson = useCallback(async () => {
     const confirmed = await dialog.ask(t('settings.storage.confirmImport'), {
       title: t('settings.storage.importData'),
@@ -113,54 +186,31 @@ export function useStorageActions() {
     if (!confirmed) return;
 
     if (checkIsTauri()) {
-      const selected = await dialog.open({
-        multiple: false,
-        filters: [{ name: 'JSON', extensions: ['json'] }],
-      });
-      if (!selected || Array.isArray(selected)) return;
-      const content = await fs.readTextFile(selected);
-      if (content === null) return;
-      try {
-        const raw = JSON.parse(content);
-        if (raw && typeof raw === 'object' && Array.isArray(raw.conversations)) {
-          const validated = raw.conversations.map((c: unknown) => ConversationSchema.parse(c));
-          setConversations(validated);
-          toast.success(t('settings.storage.importSuccess'));
-        } else {
-          throw new Error("Invalid format");
-        }
-      } catch {
-        logger.error('Import failed: invalid JSON format');
-        toast.error(t('settings.storage.importError'));
-      }
+      await handleTauriImport(setConversations, t);
     } else {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.json';
-      input.onchange = async (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-          try {
-            const raw = JSON.parse(event.target?.result as string);
-            if (raw && typeof raw === 'object' && Array.isArray(raw.conversations)) {
-              const validated = raw.conversations.map((c: unknown) => ConversationSchema.parse(c));
-              setConversations(validated);
-              toast.success(t('settings.storage.importSuccess'));
-            } else {
-              throw new Error("Invalid format");
-            }
-          } catch {
-            logger.error('Import failed: invalid JSON format');
-            toast.error(t('settings.storage.importError'));
-          }
-        };
-        reader.readAsText(file);
-      };
-      input.click();
+      handleWebImport(setConversations, t);
     }
   }, [setConversations, t]);
+
+  return handleImportJson;
+};
+
+export function useStorageActions() {
+  const conversations = useConversations();
+  const conversationIds = useConversationIds();
+  const setConversations = useSetConversations();
+  const models = useModels();
+  const globalSettings = useGlobalSettings();
+  const { t, formatDate } = useTranslation(globalSettings.language);
+
+  const { historySize, modelsSize } = useSizeCalculations(
+    conversations,
+    conversationIds,
+    models
+  );
+  const handleExportJson = useExportJson(conversations);
+  const handleExportMarkdownBundle = useExportMarkdownBundle(conversations, formatDate, t);
+  const handleImportJson = useImportJson(setConversations, t);
 
   return {
     historySize,
