@@ -35,38 +35,32 @@ interface MarkdownRendererProps {
 
 /**
  * Normalizes LaTeX delimiters from various LLM outputs into standard $...$ and $$...$$ format.
- * Handles common edge cases including extra whitespace and double-backslash variants.
  */
 const normalizeLatexDelimiters = (content: string): string => {
   if (!content?.trim()) return content;
 
   let transformed = content;
 
-  // Escaped block: \[ ... \] or \\[ ... \\] → $$ ... $$
   transformed = transformed.replace(
     /\\{1,2}\[\s*([\s\S]*?)\s*\\{1,2}\]/g,
     (_, inner) => `\n$$\n${inner.trim()}\n$$\n`
   );
 
-  // Escaped inline: \( ... \) or \\( ... \\) → $ ... $
   transformed = transformed.replace(
     /\\{1,2}\(\s*([\s\S]*?)\s*\\{1,2}\)/g,
     (_, inner) => `$${inner.trim()}$`
   );
 
-  // Plain inline math: ( formula ) → $ formula $
   transformed = transformed.replace(
     /(?<![\w$\\])\(\s*([^)]*?[\^_={}+\-*/\\][^)]*?)\s*\)(?![\w$\\])/g,
     (_, inner) => `$${inner.trim()}$`
   );
 
-  // Plain block math: [ formula ] on its own line → $$ formula $$
   transformed = transformed.replace(
     /^\s*\[\s*([\s\S]*?)\s*\]\s*$/gm,
     (_, inner) => `\n$$\n${inner.trim()}\n$$\n`
   );
 
-  // Fix common LLM \left / \right delimiter mismatches
   transformed = transformed.replace(/\\left\s*\[/g, '\\left[');
   transformed = transformed.replace(/\\right\s*\]/g, '\\right]');
   transformed = transformed.replace(/\\left\s*\{/g, '\\left\\{');
@@ -75,81 +69,75 @@ const normalizeLatexDelimiters = (content: string): string => {
   return transformed;
 };
 
-const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
-  const globalSettings = useGlobalSettings();
+/** Sanitizes hrefs to only allow safe protocols in a Tauri desktop environment. */
+const ALLOWED_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
 
-  const processedContent = useMemo(() => {
-    if (!globalSettings.enableLatex) {
-      return content;
-    }
+function resolveAllowedHref(href: string | undefined | null): string | null {
+  if (!href?.trim()) return null;
 
+  try {
+    const base = typeof window !== 'undefined' && window.location?.href
+      ? window.location.href
+      : 'https://invalid.invalid/';
+
+    const url = new URL(href, base);
+    if (ALLOWED_LINK_PROTOCOLS.has(url.protocol)) return url.toString();
+  } catch { /* Invalid URL → treat as unsafe */ }
+
+  return null;
+}
+
+/** Process content — apply LaTeX normalization if enabled. */
+const useProcessedContent = (content: string, enableLatex: boolean) =>
+  useMemo(() => {
+    if (!enableLatex) return content;
     let normalized = normalizeLatexDelimiters(content);
-    // Stabilize markdown parsing by reducing excessive newlines
     normalized = normalized.replace(/\n{3,}/g, '\n\n');
-
     return normalized;
-  }, [content, globalSettings.enableLatex]);
+  }, [content, enableLatex]);
 
-  const remarkPlugins = useMemo<PluggableList>(() => {
+/** Build remark plugins list based on settings. */
+const useRemarkPlugins = (enableLatex: boolean): PluggableList =>
+  useMemo(() => {
     const plugins: PluggableList = [remarkGfm];
-    if (globalSettings.enableLatex) {
-      plugins.push([remarkMath, { singleDollarTextMath: true }]);
-    }
+    if (enableLatex) plugins.push([remarkMath, { singleDollarTextMath: true }]);
     return plugins;
-  }, [globalSettings.enableLatex]);
+  }, [enableLatex]);
 
-  const rehypePlugins = useMemo<PluggableList>(() => {
+/** Build rehype plugins list based on settings. */
+const useRehypePlugins = (enableLatex: boolean): PluggableList =>
+  useMemo(() => {
     const plugins: PluggableList = [rehypeHighlight];
-
-    if (globalSettings.enableLatex) {
-      plugins.push([
-        rehypeKatex,
-        {
-          throwOnError: false,
-          errorColor: '#ef4444',
-          strict: false,
-          output: 'html',
-          trust: true,
-        },
-      ]);
+    if (enableLatex) {
+      plugins.push([rehypeKatex, {
+        throwOnError: false, errorColor: '#ef4444', strict: false, output: 'html', trust: true,
+      }]);
     }
-
     return plugins;
-  }, [globalSettings.enableLatex]);
+  }, [enableLatex]);
 
-  const handleLinkClick = useCallback(async (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    const safeHref = resolveAllowedHref(href);
-    if (!safeHref) {
-      e.preventDefault();
-      return;
-    }
-    e.preventDefault();
-    await opener.openUrl(safeHref);
-  }, []);
-
-  const components = useMemo(() => ({
+/** Markdown component renderers for custom styling and behavior. */
+const useMarkdownComponents = (
+  enableMermaid: boolean,
+  handleLinkClick: (e: React.MouseEvent<HTMLAnchorElement>, href: string) => Promise<void>,
+) =>
+  useMemo(() => ({
     p: ({ children }: { children?: React.ReactNode }) => (
       <div className="mbe-4 last:mbe-0 leading-relaxed" dir="auto">{children}</div>
     ),
-
     pre: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
-
     ul: ({ children }: { children?: React.ReactNode }) => (
       <ul className="list-disc ps-6 mbe-4 space-y-1">{children}</ul>
     ),
-
     ol: ({ children }: { children?: React.ReactNode }) => (
       <ol className="list-decimal ps-6 mbe-4 space-y-1">{children}</ol>
     ),
-
     li: ({ children }: { children?: React.ReactNode }) => <li className="mbe-1">{children}</li>,
-
     blockquote: ({ children }: { children?: React.ReactNode }) => (
       <blockquote className="border-is-4 border-zinc-200 dark:border-zinc-800 ps-4 italic mbe-4 text-zinc-500">
         {children}
       </blockquote>
     ),
-
     a: ({ href, children, ...props }: React.ComponentPropsWithoutRef<'a'>) => {
       const safeHref = resolveAllowedHref(href);
       if (!safeHref) {
@@ -168,62 +156,42 @@ const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
         </a>
       );
     },
-
     code: ({ className, children, ...props }: React.HTMLAttributes<HTMLElement>) => {
       const match = /language-(\w+)/.exec(className || '');
       const language = match ? match[1] : '';
 
-      if (globalSettings.enableMermaid && language === 'mermaid') {
-        return <MermaidRenderer content={String(children ?? '')} />;
-      }
-
-      if (match) {
-        return <CodeBlock language={language} value={children} />;
-      }
+      if (enableMermaid && language === 'mermaid') return <MermaidRenderer content={String(children ?? '')} />;
+      if (match) return <CodeBlock language={language} value={children} />;
 
       return (
-        <code
-          className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-sm font-mono text-blue-600 dark:text-blue-400"
-          {...props}
-        >
+        <code className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-sm font-mono text-blue-600 dark:text-blue-400" {...props}>
           {children}
         </code>
       );
     },
-  }), [globalSettings.enableMermaid, handleLinkClick]);
+  }), [enableMermaid, handleLinkClick]);
+
+const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
+  const globalSettings = useGlobalSettings();
+
+  const processedContent = useProcessedContent(content, globalSettings.enableLatex);
+  const remarkPlugins = useRemarkPlugins(globalSettings.enableLatex);
+  const rehypePlugins = useRehypePlugins(globalSettings.enableLatex);
+
+  const handleLinkClick = useCallback(async (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    const safeHref = resolveAllowedHref(href);
+    if (!safeHref) { e.preventDefault(); return; }
+    e.preventDefault();
+    await opener.openUrl(safeHref);
+  }, []);
+
+  const components = useMarkdownComponents(globalSettings.enableMermaid, handleLinkClick);
 
   return (
-    <ReactMarkdown
-      remarkPlugins={remarkPlugins}
-      rehypePlugins={rehypePlugins}
-      components={components}
-    >
+    <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins} components={components}>
       {processedContent}
     </ReactMarkdown>
   );
 };
-
-/**
- * Sanitizes hrefs to only allow safe protocols in a Tauri desktop environment.
- */
-function resolveAllowedHref(href: string | undefined | null): string | null {
-  if (!href?.trim()) return null;
-
-  try {
-    const base = typeof window !== 'undefined' && window.location?.href
-      ? window.location.href
-      : 'https://invalid.invalid/';
-
-    const url = new URL(href, base);
-    if (ALLOWED_LINK_PROTOCOLS.has(url.protocol)) {
-      return url.toString();
-    }
-  } catch {
-    // Invalid URL → treat as unsafe
-  }
-  return null;
-}
-
-const ALLOWED_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
 
 export default React.memo(MarkdownRenderer);

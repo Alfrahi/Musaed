@@ -14,11 +14,35 @@ export function abortStreaming(conversationId: string): void {
   const state = useConversationStore.getState();
   const requestId = state.activeStreams[conversationId];
 
-  if (requestId) {
-    chatApi.abort(requestId);
-  }
+  if (requestId) chatApi.abort(requestId);
   state.stopStream(conversationId);
 }
+
+/** Create a new conversation with current model and settings. */
+const createConversation = (
+  batchUpdate: (updater: (state: import('../../../store/stores/conversation-store').ConversationState) => Partial<import('../../../store/stores/conversation-store').ConversationState>) => void,
+  t: (key: string) => string,
+) => {
+  const modelState = useModelStore.getState();
+  const settingsState = useSettingsStore.getState();
+
+  const id = crypto.randomUUID();
+  const newConv: Conversation = {
+    id,
+    title: t('sidebar.newChat'),
+    messages: [],
+    model: modelState.selectedModel,
+    settings: settingsState.globalSettings,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+
+  batchUpdate((state) => ({
+    conversations: { [id]: newConv, ...state.conversations },
+    conversationIds: [id, ...state.conversationIds],
+    currentConversationId: id,
+  }));
+};
 
 /**
  * Hook for conversation management (create, delete, rename, clear).
@@ -31,25 +55,7 @@ export const useConversationActions = () => {
   const { t } = useTranslation(useSettingsStore.getState().globalSettings.language);
 
   const createNewConversation = useCallback(() => {
-    const modelState = useModelStore.getState();
-    const settingsState = useSettingsStore.getState();
-
-    const id = crypto.randomUUID();
-    const newConv: Conversation = {
-      id,
-      title: t('sidebar.newChat'),
-      messages: [],
-      model: modelState.selectedModel,
-      settings: settingsState.globalSettings,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-
-    batchUpdate((state) => ({
-      conversations: { [id]: newConv, ...state.conversations },
-      conversationIds: [id, ...state.conversationIds],
-      currentConversationId: id,
-    }));
+    createConversation(batchUpdate, t);
   }, [batchUpdate, t]);
 
   const deleteConversation = useCallback((id: string) => {
@@ -78,9 +84,7 @@ export const useConversationActions = () => {
   }, [setConversations]);
 
   const clearAllConversations = useCallback(() => {
-    const state = useConversationStore.getState();
-    Object.keys(state.activeStreams).forEach(abortStreaming);
-
+    Object.keys(useConversationStore.getState().activeStreams).forEach(abortStreaming);
     batchUpdate(() => ({
       conversations: {},
       conversationIds: [],
@@ -88,7 +92,6 @@ export const useConversationActions = () => {
     }));
   }, [batchUpdate]);
 
-  // Expose streaming control functions
   const initiateStreaming = useCallback((conversationId: string, requestId: string) => {
     useConversationStore.getState().startStream(conversationId, requestId);
   }, []);

@@ -1,64 +1,28 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { Bot, ArrowDown, Plus, Sparkles, Shield } from 'lucide-react';
+import { ArrowDown } from 'lucide-react';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 import { useGlobalSettings, useIsHydrated } from '../../../store/hooks';
 import { useConversationStore, selectCurrentConversation } from '../../../store/stores/conversation-store';
-import { Message } from '@musaed/contracts';
 import MessageBubble from './MessageBubble';
 import ChatWindowSkeleton from './ChatWindowSkeleton';
+import EmptyState from './EmptyState';
 import { useTranslation } from '../../../lib/i18n';
 import { cn } from '../../../lib/utils';
-import { useConversationActions } from '../hooks/useConversationActions';
 
-const EmptyState = () => {
-  const { createNewConversation } = useConversationActions();
-  const globalSettings = useGlobalSettings();
-  const { t } = useTranslation(globalSettings.language);
-
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center ps-8 pe-8 bg-zinc-50/30 dark:bg-zinc-950">
-      <div className="relative mbe-8">
-        <div className="w-20 h-20 bg-white dark:bg-zinc-900 rounded-none flex items-center justify-center shadow-xl border border-zinc-100 dark:border-zinc-800 rotate-3">
-          <Bot size={40} className="text-blue-600" />
-        </div>
-        <div className="absolute inset-be-[-0.5rem] inset-ie-[-0.5rem] w-8 h-8 bg-blue-600 rounded-none flex items-center justify-center text-white shadow-lg -rotate-12">
-          <Sparkles size={16} />
-        </div>
-      </div>
-
-      <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 mbe-2 tracking-tight">
-        {t('chat.welcome', { appName: t('common.appName') })}
-      </h2>
-      <p className="max-w-md text-sm text-zinc-500 dark:text-zinc-400 text-center mbe-10 leading-relaxed">
-        {t('chat.selectConversation')}
-      </p>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg">
-        <button onClick={createNewConversation} className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-none hover:border-blue-500 dark:hover:border-blue-500 transition-all text-start group">
-          <div className="w-10 h-10 rounded-none bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 group-hover:text-blue-600 transition-colors">
-            <Plus size={20} />
-          </div>
-          <div>
-            <p className="text-sm font-bold">{t('sidebar.newChat')}</p>
-            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mbs-0.5">{t('chat.startFresh')}</p>
-          </div>
-        </button>
-
-        <div className="flex items-center gap-4 p-4 bg-zinc-100/50 dark:bg-zinc-900/50 border border-transparent rounded-none text-start opacity-60">
-          <div className="w-10 h-10 rounded-none bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
-            <Shield size={20} />
-          </div>
-          <div>
-            <p className="text-sm font-bold">{t('chat.privateNote')}</p>
-            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mbs-0.5">{t('chat.runningLocally')}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+/** Floating scroll-to-bottom button. */
+const ScrollButton = ({ onClick, label }: { onClick: () => void; label: string }) => (
+  <div className="absolute inset-be-6 start-1/2 -translate-x-1/2 flex justify-center pointer-events-none z-20">
+    <button
+      onClick={onClick}
+      className="p-2 bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-300 rounded-none shadow-lg border border-zinc-200 dark:border-zinc-700 hover:text-blue-500 transition-all pointer-events-auto active:scale-95"
+      aria-label={label}
+    >
+      <ArrowDown size={20} />
+    </button>
+  </div>
+);
 
 /**
  * Main chat window with virtualized messages.
@@ -71,31 +35,20 @@ const ChatWindow = () => {
   const { t } = useTranslation(globalSettings.language);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
+  const lastMsgCount = currentConversation?.messages.length;
+  const lastMsgContent = currentConversation?.messages.at(-1)?.content;
+
   useEffect(() => {
-    if (virtuosoRef.current && currentConversation?.messages.length) {
-      virtuosoRef.current.scrollToIndex({
-        index: currentConversation.messages.length - 1,
-        align: 'end',
-        behavior: 'auto',
-      });
+    if (virtuosoRef.current && lastMsgCount) {
+      virtuosoRef.current.scrollToIndex({ index: lastMsgCount - 1, align: 'end', behavior: 'auto' });
     }
-  }, [currentConversation?.messages.length, currentConversation?.messages.at(-1)?.content]);
+  }, [lastMsgCount, lastMsgContent]);
 
   const scrollToBottom = useCallback(() => {
     if (virtuosoRef.current && currentConversation) {
-      virtuosoRef.current.scrollToIndex({
-        index: currentConversation.messages.length - 1,
-        align: 'end',
-        behavior: 'smooth',
-      });
+      virtuosoRef.current.scrollToIndex({ index: currentConversation.messages.length - 1, align: 'end', behavior: 'smooth' });
     }
   }, [currentConversation]);
-
-  const renderMessage = useCallback((index: number, msg: Message) => (
-    <div className={cn(index === (currentConversation?.messages.length ?? 0) - 1 && "pbe-32")}>
-      <MessageBubble message={msg} />
-    </div>
-  ), [currentConversation?.messages.length]);
 
   if (!isHydrated) return <ChatWindowSkeleton />;
   if (!currentConversation) return <EmptyState />;
@@ -110,22 +63,13 @@ const ChatWindow = () => {
         atBottomStateChange={(atBottom) => setShowScrollButton(!atBottom)}
         itemContent={(index, msg) => (
           <div className={cn(index === currentConversation.messages.length - 1 && "pbe-32")}>
-          <MessageBubble message={msg} />
+            <MessageBubble message={msg} />
           </div>
         )}
         followOutput="smooth"
       />
-
       {showScrollButton && currentConversation.messages.length > 0 && (
-        <div className="absolute inset-be-6 start-1/2 -translate-x-1/2 flex justify-center pointer-events-none z-20">
-          <button
-            onClick={scrollToBottom}
-            className="p-2 bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-300 rounded-none shadow-lg border border-zinc-200 dark:border-zinc-700 hover:text-blue-500 transition-all pointer-events-auto active:scale-95"
-            aria-label={t('common.done')}
-          >
-            <ArrowDown size={20} />
-          </button>
-        </div>
+        <ScrollButton onClick={scrollToBottom} label={t('common.done')} />
       )}
     </div>
   );
