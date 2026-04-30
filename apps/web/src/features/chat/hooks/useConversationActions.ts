@@ -5,6 +5,7 @@ import { useConversationStore, useModelStore, useSettingsStore } from '../../../
 import { useSetConversations, useBatchUpdate } from '../../../store/hooks';
 import { chatApi } from '../../../lib/ipc';
 import { useTranslation } from '../../../lib/i18n';
+import { stopBatching } from '../../../store/batch-manager';
 import type { Conversation } from '@musaed/contracts';
 
 /**
@@ -15,6 +16,7 @@ export function abortStreaming(conversationId: string): void {
   const requestId = state.activeStreams[conversationId];
 
   if (requestId) chatApi.abort(requestId);
+  stopBatching(conversationId);
   state.stopStream(conversationId);
 }
 

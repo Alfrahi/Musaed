@@ -4,6 +4,7 @@ import { useConversationStore } from './stores/conversation-store';
 import { useUIStore } from './stores/ui-store';
 import { useSettingsStore } from './stores/settings-store';
 import { useModelStore } from './stores/model-store';
+import { useStreamingStore, selectLiveContent } from './stores/streaming-store';
 import type { Conversation, Message, ChatSettings, OllamaModel } from '@musaed/contracts';
 import type { ConversationState } from './stores/conversation-store';
 
@@ -249,4 +250,16 @@ export function useUpdatePullStatus(): (
   status: { status: string; progress?: number } | null,
 ) => void {
   return useModelStore((s) => s.updatePullStatus);
+}
+
+// ---------------------------------------------------------------------------
+// useStreamingStore selectors
+// ---------------------------------------------------------------------------
+
+export function useLiveContent(conversationId: string): string | null {
+  return useStreamingStore(selectLiveContent(conversationId));
+}
+
+export function useIsLiveStreaming(conversationId: string): boolean {
+  return useStreamingStore((s) => conversationId in s.liveContent);
 }

@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import { z } from 'zod';
 import { useConversationStore, useSettingsStore } from '../../../store';
+import { useStreamingStore } from '../../../store/stores/streaming-store';
+import { startBatching, flushAndStop, stopAllBatching } from '../../../store/batch-manager';
 import { useUpdatePullStatus, useSetModels } from '../../../store/hooks';
 import { listen, ollamaApi } from '../../../lib/ipc';
 import {
@@ -23,18 +25,32 @@ const handleToken = (payload: OllamaToken) => {
   const convId = Object.entries(state.activeStreams).find(([_, id]) => id === requestId)?.[0];
   if (!convId) return;
 
+  const token = payload.message?.content ?? "";
+  const streamingStore = useStreamingStore.getState();
+  const isFirstToken = !(convId in streamingStore.liveContent);
+
+  // Accumulate token in the lightweight streaming buffer
+  streamingStore.appendToken(convId, token);
+
+  // Stash metrics so they're included in the next batch flush
   const metrics: Partial<Message> = {};
   if (payload.eval_count != null) metrics.eval_count = payload.eval_count;
   if (payload.eval_duration != null) metrics.eval_duration = payload.eval_duration;
   if (payload.total_duration != null) metrics.total_duration = payload.total_duration;
+  if (Object.keys(metrics).length > 0) {
+    streamingStore.setPendingMetrics(convId, metrics);
+  }
 
-  state.updateLastMessage(convId, {
-    content: payload.message?.content ?? "",
-    done: payload.done,
-    ...metrics
-  });
+  // Start the batch timer on the first token if not already running
+  if (isFirstToken) {
+    startBatching(convId);
+  }
 
-  if (payload.done) state.stopStream(convId);
+  // On stream completion, flush remaining content immediately and stop
+  if (payload.done) {
+    flushAndStop(convId);
+    state.stopStream(convId);
+  }
 };
 
 /** Handle backend error events. */
@@ -47,6 +63,7 @@ const handleError = (payload: BackendError) => {
   if (sanitized.requestId) {
     const convId = Object.entries(state.activeStreams).find(([_, id]) => id === sanitized.requestId)?.[0];
     if (convId) {
+      flushAndStop(convId);
       state.stopStream(convId);
       toast.error(sanitized.message);
       return;
@@ -54,7 +71,11 @@ const handleError = (payload: BackendError) => {
   }
 
   toast.error(sanitized.message);
-  Object.keys(state.activeStreams).forEach(id => state.stopStream(id));
+  // Flush all active streams on unattributed errors
+  Object.keys(state.activeStreams).forEach((id) => {
+    flushAndStop(id);
+    state.stopStream(id);
+  });
 };
 
 /** Create pull-progress event handler. */
@@ -119,6 +140,7 @@ export function useTauriEvents() {
     setup();
     return () => {
       isMounted = false;
+      stopAllBatching();
       unlisteners.forEach(un => un());
     };
   }, [updatePullStatus, setModels]);

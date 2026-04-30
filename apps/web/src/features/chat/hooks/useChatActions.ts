@@ -7,6 +7,7 @@ import { useTranslation } from '../../../lib/i18n';
 import { chatApi } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
+import { flushAndStop } from '../../../store/batch-manager';
 import { useConversationActions } from './useConversationActions';
 import { FileAttachment } from './useAttachmentUtils';
 
@@ -53,6 +54,8 @@ const handleStreamError = (
   if (msg.toLowerCase().includes('aborted')) return;
 
   logger.error('Chat error', { error: msg, requestId });
+  // Flush any buffered tokens before appending the error message
+  flushAndStop(conversationId);
   updateLastMessage(conversationId, { content: `\n\n[${t('chat.errorPrefix')}: ${msg}]`, done: true }, false);
   stopStreaming(conversationId);
   setError(msg);
