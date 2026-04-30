@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import { useGlobalSettings, useIsHydrated, useIsLibraryOpen, useIsSettingsOpen, useIsInfoOpen, useSetLibraryOpen, useSetSettingsOpen, useSetInfoOpen } from '@/store/hooks';
 import { Sliders, Library } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
@@ -60,7 +61,7 @@ const AppHeader = ({
     )}
   >
     <div className="flex items-center gap-4 pointer-events-none">
-      <img src="/favicon.ico" alt={appName} className="w-10 h-10 object-contain" />
+      <Image src="/favicon.ico" alt={appName} width={40} height={40} unoptimized className="w-10 h-10 object-contain" />
       <div className="h-3 w-[1px] bg-sidebar-border" />
       <div className="pointer-events-auto"><OllamaConnectionStatus /></div>
     </div>

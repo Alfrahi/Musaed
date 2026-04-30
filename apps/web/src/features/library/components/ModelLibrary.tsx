@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
-import { useModels, usePullStatus, useIsOllamaConnected, useGlobalSettings, useLanguage } from '../../../store/hooks';
+import { useModels, usePullStatus, useIsOllamaConnected, useLanguage } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 import ModelCard from './ModelCard';
 import LibrarySearchHeader from './LibrarySearchHeader';
@@ -106,11 +106,10 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
   const models = useModels();
   const pullStatus = usePullStatus();
   const isOllamaConnected = useIsOllamaConnected();
-  const _globalSettings = useGlobalSettings();
   const language = useLanguage();
   const { fetchModels, deleteModel } = useModelActions();
   const [searchQuery, setSearchQuery] = useState('');
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'featured' | 'installed'>('featured');
   const { t } = useTranslation(language);
   const { handlePull, translateOllamaStatus } = useModelPulling();

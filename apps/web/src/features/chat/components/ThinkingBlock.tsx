@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Brain, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
-import { useGlobalSettings, useLanguage } from '../../../store/hooks';
+import { useLanguage } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 
 interface ThinkingBlockProps {
@@ -13,7 +13,6 @@ interface ThinkingBlockProps {
 
 const ThinkingBlock = ({ content, isCollapsed: initialCollapsed = false, isStreaming = false }: ThinkingBlockProps) => {
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
-  const globalSettings = useGlobalSettings();
   const language = useLanguage();
   const { t } = useTranslation(language);
 
@@ -21,7 +20,7 @@ const ThinkingBlock = ({ content, isCollapsed: initialCollapsed = false, isStrea
     if (isStreaming && isCollapsed) {
       setIsCollapsed(false);
     }
-  }, [isStreaming]);
+  }, [isStreaming, isCollapsed]);
 
   useEffect(() => {
     setIsCollapsed(initialCollapsed);

@@ -9,7 +9,6 @@ import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
 import { useConversationActions } from './useConversationActions';
 import { FileAttachment } from './useAttachmentUtils';
-import { toOllamaBase64Image } from '../imageAttachment';
 
 /** Build prompt with file context injected. */
 function buildPromptWithContext(input: string, files: FileAttachment[], t: (key: string, values?: Record<string, string | number | boolean>) => string): string {
@@ -104,7 +103,7 @@ export const useChatActions = () => {
     addMessages(currentConversationId, [userMsg, assistantMsg]);
 
     try {
-      const { ollamaUrl, systemPrompt, ...params } = globalSettings;
+      const { ollamaUrl, ...params } = globalSettings;
       const success = await chatApi.chat({
         baseUrl: ollamaUrl,
         model: selectedModel,

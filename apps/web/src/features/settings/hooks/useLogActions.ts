@@ -35,7 +35,7 @@ export function useLogActions() {
     } finally {
       setIsLoading(false);
     }
-  }, [isTauri]);
+  }, [isTauri, t]);
 
   /**
    * Clears both the local log store and the backend log buffer.

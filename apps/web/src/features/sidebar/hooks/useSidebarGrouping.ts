@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useCallback } from 'react';
 import { Conversation, Language } from '@musaed/contracts';
-import { useTranslation } from '../../../lib/i18n';
 
 export type TimeGroup = 'search' | 'today' | 'yesterday' | 'lastWeek' | 'older';
 
@@ -29,11 +28,10 @@ export function useSidebarGrouping(
   conversations: Record<string, Conversation>,
   conversationIds: string[],
   searchQuery: string,
-  language: Language,
+  _language: Language,
   initialLoadCount: number = 50,
   loadMoreCount: number = 20
 ) {
-  const { t } = useTranslation(language);
   const [loadedCount, setLoadedCount] = useState(initialLoadCount);
 
   // Memoize the filtered conversations to avoid recalculating when only `t` changes.

@@ -15,9 +15,8 @@ import { useSidebarGrouping } from '../hooks/useSidebarGrouping';
 
 /** Group header (Today, Yesterday, etc.) with optional clear-all button. */
 const GroupHeader = ({
-  item, showClear, onClear, clearLabel, label,
+  showClear, onClear, clearLabel, label,
 }: {
-  item: { group?: string };
   showClear: boolean;
   onClear: () => void;
   clearLabel: string;
@@ -44,7 +43,6 @@ const SidebarItemContent = ({ item, searchQuery, filteredConversations, handleCl
   if (item.type === 'header') {
     return (
       <GroupHeader
-        item={item}
         showClear={item.group === 'today' && !searchQuery && filteredConversations.length > 0}
         onClear={handleClearAll}
         clearLabel={t('sidebar.clearAll')}

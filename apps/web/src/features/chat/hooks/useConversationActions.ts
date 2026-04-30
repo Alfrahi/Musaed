@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 import { useConversationStore, useModelStore, useSettingsStore } from '../../../store';
-import { useSetConversations, useSetCurrentConversationId, useBatchUpdate } from '../../../store/hooks';
+import { useSetConversations, useBatchUpdate } from '../../../store/hooks';
 import { chatApi } from '../../../lib/ipc';
 import { useTranslation } from '../../../lib/i18n';
 import type { Conversation } from '@musaed/contracts';
@@ -49,7 +49,6 @@ const createConversation = (
  */
 export const useConversationActions = () => {
   const setConversations = useSetConversations();
-  const setCurrentConversationId = useSetCurrentConversationId();
   const batchUpdate = useBatchUpdate();
 
   const { t } = useTranslation(useSettingsStore.getState().globalSettings.language);
@@ -62,7 +61,7 @@ export const useConversationActions = () => {
     abortStreaming(id);
 
     const state = useConversationStore.getState();
-    const { [id]: _, ...remainingConversations } = state.conversations;
+    const { [id]: _removed, ...remainingConversations } = state.conversations;  
     const remainingIds = state.conversationIds.filter(cid => cid !== id);
     const newCurrentId = state.currentConversationId === id ? null : state.currentConversationId;
 

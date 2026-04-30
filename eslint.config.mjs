@@ -77,14 +77,14 @@ export default tseslint.config(
       ],
 
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
 
       'react/function-component-definition': ['error', { namedComponents: 'arrow-function' }],
 
-//      'max-lines-per-function': [
-//        'error',
-//        { max: 60, skipBlankLines: true, skipComments: true },
-//      ],
+      'max-lines-per-function': [
+        'error',
+        { max: 60, skipBlankLines: true, skipComments: true },
+      ],
 
       'no-restricted-imports': [
         'error',

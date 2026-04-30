@@ -1,6 +1,6 @@
 // Simple test script for Web Worker functionality
 
-const { stripRedactedThinkingBlocksAsync } = require('@musaed/contracts');
+import { stripRedactedThinkingBlocksAsync } from '@musaed/contracts';
 
 // Test Web Worker functionality
 async function testStripRedactedThinkingBlocks() {

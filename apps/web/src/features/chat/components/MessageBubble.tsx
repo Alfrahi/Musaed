@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import Image from 'next/image';
 import { Copy, Check } from 'lucide-react';
 import { Message } from '@musaed/contracts';
 import { cn } from '../../../lib/utils';
@@ -51,11 +52,14 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
           {message.images && message.images.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {message.images.map((img, idx) => (
-                <img 
-                  key={idx} 
-                  src={attachmentImageSrc(img)} 
-                  alt="" 
-                  className="max-w-sm border border-sidebar-border shadow-sm" 
+                <Image
+                  key={idx}
+                  src={attachmentImageSrc(img)}
+                  alt=""
+                  width={384}
+                  height={256}
+                  unoptimized
+                  className="max-w-sm border border-sidebar-border shadow-sm"
                 />
               ))}
             </div>

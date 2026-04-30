@@ -100,7 +100,7 @@ export const createTauriStorage = (filename: string): StateStorage => ({
       await runMigrations(filename, appStore, name);
       const value = await appStore.get<string>(name);
       return value !== undefined && value !== null ? value : null;
-    } catch (err) {
+    } catch (_err) {
       return null;
     }
   },

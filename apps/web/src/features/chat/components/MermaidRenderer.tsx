@@ -124,9 +124,10 @@ const useMermaidRender = (
   useEffect(() => { renderDiagram(); }, [renderDiagram]);
 
   useEffect(() => {
+    const container = containerRef.current;
     return () => {
       setSvg(''); setError(null);
-      if (containerRef.current) containerRef.current.innerHTML = '';
+      if (container) container.innerHTML = '';
     };
   }, []);
 

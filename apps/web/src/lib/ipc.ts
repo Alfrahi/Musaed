@@ -94,7 +94,7 @@ async function callInternal<K extends keyof CommandMap>(
       }
     }
     return null;
-  } catch (err) {
+  } catch (_err) {
     return null;
   }
 }

@@ -78,7 +78,7 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
       }),
 
       stopStream: (conversationId) => set((state) => {
-        const { [conversationId]: _, ...remainingStreams } = state.activeStreams;
+        const { [conversationId]: _stream, ...remainingStreams } = state.activeStreams;
         setStreaming(Object.keys(remainingStreams).length > 0);
         return { activeStreams: remainingStreams };
       }),
