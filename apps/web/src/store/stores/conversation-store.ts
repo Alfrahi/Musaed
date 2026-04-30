@@ -33,9 +33,7 @@ export const selectFilteredConversations = (state: ConversationState) => {
   if (!searchQuery) return conversationIds.map(id => conversations[id]);
   return conversationIds
     .map(id => conversations[id])
-    .filter(conv =>
-      conv.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    .filter(conv => conv.title.toLowerCase().includes(searchQuery.toLowerCase()));
 };
 
 export const selectIsStreaming = (conversationId: string) => (state: ConversationState) =>
@@ -44,6 +42,17 @@ export const selectIsStreaming = (conversationId: string) => (state: Conversatio
 export const selectLastMessage = (conversationId: string) => (state: ConversationState) => {
   const conv = state.conversations[conversationId];
   return conv?.messages[conv.messages.length - 1] || null;
+};
+
+/** Helper to update a conversation in state. */
+const withUpdatedConv = (
+  state: ConversationState,
+  conversationId: string,
+  updater: (conv: Conversation) => Conversation,
+): Partial<ConversationState> => {
+  const conv = state.conversations[conversationId];
+  if (!conv) return state;
+  return { conversations: { ...state.conversations, [conversationId]: updater(conv) } };
 };
 
 export const useConversationStore = createWithEqualityFn<ConversationState>()(
@@ -74,37 +83,17 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
         return { activeStreams: remainingStreams };
       }),
 
-      addMessage: (conversationId, message) => set((state) => {
-        const conv = state.conversations[conversationId];
-        if (!conv) return state;
+      addMessage: (conversationId, message) => set((state) =>
+        withUpdatedConv(state, conversationId, (conv) => ({
+          ...conv, messages: [...conv.messages, message], updatedAt: Date.now()
+        }))
+      ),
 
-        return {
-          conversations: {
-            ...state.conversations,
-            [conversationId]: {
-              ...conv,
-              messages: [...conv.messages, message],
-              updatedAt: Date.now()
-            }
-          }
-        };
-      }),
-
-      addMessages: (conversationId, messages) => set((state) => {
-        const conv = state.conversations[conversationId];
-        if (!conv) return state;
-
-        return {
-          conversations: {
-            ...state.conversations,
-            [conversationId]: {
-              ...conv,
-              messages: [...conv.messages, ...messages],
-              updatedAt: Date.now(),
-            },
-          },
-        };
-      }),
+      addMessages: (conversationId, messages) => set((state) =>
+        withUpdatedConv(state, conversationId, (conv) => ({
+          ...conv, messages: [...conv.messages, ...messages], updatedAt: Date.now()
+        }))
+      ),
 
       updateLastMessage: (conversationId, update, replace = false) => set((state) => {
         const conv = state.conversations[conversationId];
@@ -112,14 +101,12 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
 
         const messages = [...conv.messages];
         const lastIdx = messages.length - 1;
-        const currentMsg = messages[lastIdx];
-
         messages[lastIdx] = {
-          ...currentMsg,
+          ...messages[lastIdx],
           ...update,
           content: replace
-            ? (update.content ?? currentMsg.content)
-            : (currentMsg.content + (update.content ?? ''))
+            ? (update.content ?? messages[lastIdx].content)
+            : (messages[lastIdx].content + (update.content ?? ''))
         };
 
         return {

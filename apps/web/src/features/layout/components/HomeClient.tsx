@@ -16,9 +16,7 @@ import OllamaConnectionStatus from '@/components/ui/OllamaConnectionStatus';
 
 const Sidebar = dynamic(() => import('@/features/sidebar').then(m => m.Sidebar), {
   ssr: false,
-  loading: () => (
-    <div className="w-72 border-e border-sidebar-border bg-zinc-50 dark:bg-zinc-900/50 animate-pulse" />
-  ),
+  loading: () => <div className="w-72 border-e border-sidebar-border bg-zinc-50 dark:bg-zinc-900/50 animate-pulse" />,
 });
 
 const ChatWindow = dynamic(() => import('@/features/chat').then(m => m.ChatWindow), {
@@ -43,7 +41,43 @@ const SettingsModal = dynamic(() => import('@/features/settings').then(m => m.Se
 const ModelLibrary = dynamic(() => import('@/features/library').then(m => m.ModelLibrary), { ssr: false });
 const InfoModal = dynamic(() => import('@/features/info').then(m => m.InfoModal), { ssr: false });
 
-const HomeClient = () => {  const globalSettings = useGlobalSettings();
+/** App header bar with title, connection status, and toolbar buttons. */
+const AppHeader = ({
+  isTauri, isMac, isRtl, onLibraryOpen, onSettingsOpen, appName,
+}: {
+  isTauri: boolean;
+  isMac: boolean;
+  isRtl: boolean;
+  onLibraryOpen: () => void;
+  onSettingsOpen: () => void;
+  appName: string;
+}) => (
+  <header
+    data-tauri-drag-region={isTauri ? "true" : undefined}
+    className={cn(
+      "h-[73px] border-b border-sidebar-border flex items-center px-4 justify-between shrink-0 bg-background/50 backdrop-blur-md z-20 select-none",
+      isTauri && isMac && (isRtl ? "pe-20" : "ps-20")
+    )}
+  >
+    <div className="flex items-center gap-4 pointer-events-none">
+      <img src="/favicon.ico" alt={appName} className="w-10 h-10 object-contain" />
+      <div className="h-3 w-[1px] bg-sidebar-border" />
+      <div className="pointer-events-auto"><OllamaConnectionStatus /></div>
+    </div>
+    <div className="flex items-center gap-2">
+      <TaskStatus />
+      <button onClick={onLibraryOpen} className="w-10 h-10 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 rounded-none border border-transparent hover:border-sidebar-border" title={appName}>
+        <Library size={18} />
+      </button>
+      <button onClick={onSettingsOpen} className="w-10 h-10 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 rounded-none border border-transparent hover:border-sidebar-border" title={appName}>
+        <Sliders size={18} />
+      </button>
+    </div>
+  </header>
+);
+
+const HomeClient = () => {
+  const globalSettings = useGlobalSettings();
   const isHydrated = useIsHydrated();
   const isLibraryOpen = useIsLibraryOpen();
   const isSettingsOpen = useIsSettingsOpen();
@@ -60,9 +94,7 @@ const HomeClient = () => {  const globalSettings = useGlobalSettings();
 
   useEffect(() => {
     setMounted(true);
-    if (isHydrated) {
-      initializeApp();
-    }
+    if (isHydrated) initializeApp();
   }, [isHydrated, initializeApp]);
 
   const isMac = useMemo(() => typeof window !== 'undefined' && navigator.userAgent.toUpperCase().includes('MAC'), []);
@@ -73,52 +105,18 @@ const HomeClient = () => {  const globalSettings = useGlobalSettings();
   return (
     <main className="flex h-screen bg-background overflow-hidden font-sans">
       <Sidebar />
-      
       <div className="flex-1 flex flex-col min-w-0 border-is border-sidebar-border">
-        <header
-          data-tauri-drag-region={isTauri ? "true" : undefined}
-          className={cn(
-            "h-[73px] border-b border-sidebar-border flex items-center px-4 justify-between shrink-0 bg-background/50 backdrop-blur-md z-20 select-none",
-            isTauri && isMac && (isRtl ? "pe-20" : "ps-20")
-          )}
-        >
-          <div className="flex items-center gap-4 pointer-events-none">
-            <img 
-              src="/favicon.ico" 
-              alt={t('common.appName')} 
-              className="w-10 h-10 object-contain" 
-            />
-            <div className="h-3 w-[1px] bg-sidebar-border" />
-            <div className="pointer-events-auto">
-              <OllamaConnectionStatus />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <TaskStatus />
-            <button
-              onClick={() => setLibraryOpen(true)}
-              className="w-10 h-10 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 rounded-none border border-transparent hover:border-sidebar-border"
-              title={t('library.title')}
-            >
-              <Library size={18} />
-            </button>
-            <button
-              onClick={() => setSettingsOpen(true)}
-              className="w-10 h-10 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 rounded-none border border-transparent hover:border-sidebar-border"
-              title={t('settings.title')}
-            >
-              <Sliders size={18} />
-            </button>
-          </div>
-        </header>
-
+        <AppHeader
+          isTauri={isTauri} isMac={isMac} isRtl={isRtl}
+          onLibraryOpen={() => setLibraryOpen(true)}
+          onSettingsOpen={() => setSettingsOpen(true)}
+          appName={t('common.appName')}
+        />
         <div className="flex-1 relative flex flex-col min-h-0">
           <ChatWindow />
           <InputArea />
         </div>
       </div>
-
       <AnimatePresence>
         {isSettingsOpen && <SettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />}
         {isLibraryOpen && <ModelLibrary isOpen={isLibraryOpen} onClose={() => setLibraryOpen(false)} />}
@@ -126,6 +124,6 @@ const HomeClient = () => {  const globalSettings = useGlobalSettings();
       </AnimatePresence>
     </main>
   );
-}
+};
 
 export default HomeClient;

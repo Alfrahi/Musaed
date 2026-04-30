@@ -13,6 +13,26 @@ import SidebarInfo from './SidebarInfo';
 import { useSidebarActions } from '../hooks/useSidebarActions';
 import { useSidebarGrouping } from '../hooks/useSidebarGrouping';
 
+/** Group header (Today, Yesterday, etc.) with optional clear-all button. */
+const GroupHeader = ({
+  item, showClear, onClear, clearLabel, label,
+}: {
+  item: { group?: string };
+  showClear: boolean;
+  onClear: () => void;
+  clearLabel: string;
+  label: string;
+}) => (
+  <div className="ps-3 pe-3 pbs-6 pbe-2 flex items-center justify-between sticky inset-bs-0 bg-sidebar z-10 border-b border-zinc-100 dark:border-zinc-800 mbe-1">
+    <span className="text-[9px] font-black text-zinc-400 uppercase">{label}</span>
+    {showClear && (
+      <button onClick={onClear} className="p-1 text-zinc-400 hover:text-red-500 transition-colors" title={clearLabel}>
+        <Eraser size={10} />
+      </button>
+    )}
+  </div>
+);
+
 const Sidebar = () => {
   const filteredConversations = useConversationStore(selectFilteredConversations);
   const searchQuery = useSearchQuery();
@@ -45,25 +65,20 @@ const Sidebar = () => {
         <Virtuoso
           style={{ height: '100%' }}
           data={virtualItems}
-          itemContent={(index, item) => {
+          itemContent={(_index, item) => {
             if (item.type === 'header') {
               return (
-                <div className="ps-3 pe-3 pbs-6 pbe-2 flex items-center justify-between sticky inset-bs-0 bg-sidebar z-10 border-b border-zinc-100 dark:border-zinc-800 mbe-1">
-                  <span className="text-[9px] font-black text-zinc-400 uppercase">
-                    {item.group === 'search' ? t('sidebar.searchResults') :
-                     item.group === 'today' ? t('sidebar.recentChats') :
-                     t(`sidebar.${item.group}`)}
-                  </span>
-                  {item.group === 'today' && !searchQuery && filteredConversations.length > 0 && (
-                    <button
-                      onClick={handleClearAll}
-                      className="p-1 text-zinc-400 hover:text-red-500 transition-colors"
-                      title={t('sidebar.clearAll')}
-                    >
-                      <Eraser size={10} />
-                    </button>
-                  )}
-                </div>
+                <GroupHeader
+                  item={item}
+                  showClear={item.group === 'today' && !searchQuery && filteredConversations.length > 0}
+                  onClear={handleClearAll}
+                  clearLabel={t('sidebar.clearAll')}
+                  label={
+                    item.group === 'search' ? t('sidebar.searchResults') :
+                    item.group === 'today' ? t('sidebar.recentChats') :
+                    t(`sidebar.${item.group}`)
+                  }
+                />
               );
             }
             return (
@@ -73,9 +88,7 @@ const Sidebar = () => {
             );
           }}
           endReached={() => {
-            if (virtualItems.length < filteredConversations.length) {
-              loadMore();
-            }
+            if (virtualItems.length < filteredConversations.length) loadMore();
           }}
           overscan={200}
           increaseViewportBy={200}
