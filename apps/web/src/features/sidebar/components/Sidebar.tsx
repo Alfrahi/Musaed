@@ -33,6 +33,36 @@ const GroupHeader = ({
   </div>
 );
 
+/** Renders a single virtualized sidebar item (group header or conversation). */
+const SidebarItemContent = ({ item, searchQuery, filteredConversations, handleClearAll, t }: {
+  item: import('../hooks/useSidebarGrouping').SidebarItem;
+  searchQuery: string;
+  filteredConversations: import('@musaed/contracts').Conversation[];
+  handleClearAll: () => void;
+  t: (key: string) => string;
+}) => {
+  if (item.type === 'header') {
+    return (
+      <GroupHeader
+        item={item}
+        showClear={item.group === 'today' && !searchQuery && filteredConversations.length > 0}
+        onClear={handleClearAll}
+        clearLabel={t('sidebar.clearAll')}
+        label={
+          item.group === 'search' ? t('sidebar.searchResults') :
+          item.group === 'today' ? t('sidebar.recentChats') :
+          t(`sidebar.${item.group}`)
+        }
+      />
+    );
+  }
+  return (
+    <div className="ps-0 pe-0">
+      <ConversationItem conversation={item.data!} />
+    </div>
+  );
+};
+
 const Sidebar = () => {
   const filteredConversations = useConversationStore(selectFilteredConversations);
   const searchQuery = useSearchQuery();
@@ -65,28 +95,12 @@ const Sidebar = () => {
         <Virtuoso
           style={{ height: '100%' }}
           data={virtualItems}
-          itemContent={(_index, item) => {
-            if (item.type === 'header') {
-              return (
-                <GroupHeader
-                  item={item}
-                  showClear={item.group === 'today' && !searchQuery && filteredConversations.length > 0}
-                  onClear={handleClearAll}
-                  clearLabel={t('sidebar.clearAll')}
-                  label={
-                    item.group === 'search' ? t('sidebar.searchResults') :
-                    item.group === 'today' ? t('sidebar.recentChats') :
-                    t(`sidebar.${item.group}`)
-                  }
-                />
-              );
-            }
-            return (
-              <div className="ps-0 pe-0">
-                <ConversationItem conversation={item.data!} />
-              </div>
-            );
-          }}
+          itemContent={(_index, item) => (
+            <SidebarItemContent
+              item={item} searchQuery={searchQuery} filteredConversations={filteredConversations}
+              handleClearAll={handleClearAll} t={t}
+            />
+          )}
           endReached={() => {
             if (virtualItems.length < filteredConversations.length) loadMore();
           }}
