@@ -86,9 +86,11 @@ const MermaidDiagram = ({
   />
 );
 
-const MermaidRenderer: React.FC<MermaidRendererProps> = ({
-  content, theme = 'default', className = '',
-}) => {
+/** Hook encapsulating mermaid rendering state and logic. */
+const useMermaidRender = (
+  mermaidContent: string | null,
+  theme: MermaidRendererProps['theme'],
+) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -96,55 +98,52 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
   const language = useLanguage();
   const { t } = useTranslation(language);
 
-  const mermaidContent = useMemo(() => extractMermaidContent(content), [content]);
-
-  const copySource = useCallback(() => {
-    if (mermaidContent) {
-      navigator.clipboard.writeText(`\`\`\`mermaid\n${mermaidContent}\n\`\`\``);
-    }
-  }, [mermaidContent]);
-
-  const renderMermaid = useCallback(async () => {
+  const renderDiagram = useCallback(async () => {
     if (!mermaidContent || isRendering) return;
-
-    setSvg('');
-    setError(null);
-    setIsRendering(true);
+    setSvg(''); setError(null); setIsRendering(true);
 
     const unsupported = detectUnsupportedDiagram(mermaidContent);
     if (unsupported) { setError(unsupported); setIsRendering(false); return; }
 
     try {
       initMermaid(theme);
-
       const id = `mermaid-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       const processedContent = preprocessMermaidContent(mermaidContent);
       const { svg: renderedSvg } = await mermaid.render(id, processedContent);
-
-      setSvg(renderedSvg);
-      setError(null);
+      setSvg(renderedSvg); setError(null);
     } catch (err: unknown) {
       let message = err instanceof Error ? err.message : String(err);
       if (message.includes('Parse error') || message.includes('Lexer error')) {
         message += `\n\n💡 ${t('settings.markdown.requirementNote').replace(/<\/?code>/g, '')}`;
       }
-      setError(message);
-      setSvg('');
+      setError(message); setSvg('');
       if (containerRef.current) containerRef.current.innerHTML = '';
-    } finally {
-      setIsRendering(false);
-    }
+    } finally { setIsRendering(false); }
   }, [mermaidContent, theme, t, isRendering]);
 
-  useEffect(() => { renderMermaid(); }, [renderMermaid]);
+  useEffect(() => { renderDiagram(); }, [renderDiagram]);
 
   useEffect(() => {
     return () => {
-      setSvg('');
-      setError(null);
+      setSvg(''); setError(null);
       if (containerRef.current) containerRef.current.innerHTML = '';
     };
   }, []);
+
+  return { containerRef, svg, error, isRendering, t };
+};
+
+const MermaidRenderer: React.FC<MermaidRendererProps> = ({
+  content, theme = 'default', className = '',
+}) => {
+  const mermaidContent = useMemo(() => extractMermaidContent(content), [content]);
+  const { containerRef, svg, error, isRendering, t } = useMermaidRender(mermaidContent, theme);
+
+  const copySource = useCallback(() => {
+    if (mermaidContent) {
+      navigator.clipboard.writeText(`\`\`\`mermaid\n${mermaidContent}\n\`\`\``);
+    }
+  }, [mermaidContent]);
 
   if (!mermaidContent) return null;
 
@@ -155,11 +154,8 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
   if (error) {
     return (
       <MermaidError
-        error={error}
-        className={className}
-        onCopySource={copySource}
-        errorTitle={t('settings.markdown.mermaidError')}
-        copyLabel={t('settings.markdown.copySource')}
+        error={error} className={className} onCopySource={copySource}
+        errorTitle={t('settings.markdown.mermaidError')} copyLabel={t('settings.markdown.copySource')}
         requirementNote={t('settings.markdown.requirementNote')}
       />
     );
