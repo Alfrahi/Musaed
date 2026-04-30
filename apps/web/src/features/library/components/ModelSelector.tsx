@@ -7,6 +7,102 @@ import { cn } from '../../../lib/utils';
 import { useTranslation } from '../../../lib/i18n';
 import { useModelActions } from '../hooks/useModelActions';
 
+/** Dropdown trigger button with selected model name. */
+const SelectorTrigger = ({
+  selectedModel, isOpen, onClick, placeholder,
+}: {
+  selectedModel: string;
+  isOpen: boolean;
+  onClick: () => void;
+  placeholder: string;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={cn(
+      "flex items-center gap-2 ps-3 pe-3 py-2 rounded-none border border-transparent hover:border-sidebar-border hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all text-[13px] font-bold uppercase text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 outline-none focus-visible:ring-1 focus-visible:ring-blue-500",
+      isOpen && "border-sidebar-border bg-zinc-100 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100"
+    )}
+    aria-haspopup="listbox"
+    aria-expanded={isOpen}
+  >
+    <Settings2 size={16} className={cn("transition-transform duration-300", isOpen && "rotate-90")} />
+    <span className="truncate max-w-[150px]">{selectedModel || placeholder}</span>
+    <ChevronDown size={14} className={cn("transition-transform duration-200", isOpen && "rotate-180")} />
+  </button>
+);
+
+/** Refresh models button. */
+const RefreshButton = ({ onClick, isStreaming, title }: { onClick: () => void; isStreaming: boolean; title: string }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-none transition-colors text-zinc-400 hover:text-blue-500"
+    title={title}
+  >
+    <RefreshCw size={14} className={cn(isStreaming && "animate-spin")} />
+  </button>
+);
+
+/** Single model option in the dropdown. */
+const ModelOption = ({
+  name, isSelected, onSelect,
+}: {
+  name: string;
+  isSelected: boolean;
+  onSelect: () => void;
+}) => (
+  <button
+    type="button"
+    onClick={onSelect}
+    className={cn(
+      "w-full flex items-center justify-between ps-4 pe-4 py-3 text-start text-sm font-medium transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 outline-none focus:bg-zinc-50 dark:focus:bg-zinc-800/50",
+      isSelected ? "text-blue-600 dark:text-blue-400" : "text-zinc-600 dark:text-zinc-400"
+    )}
+    role="option"
+    aria-selected={isSelected}
+  >
+    <span className="truncate">{name}</span>
+    {isSelected && <Check size={16} className="shrink-0" />}
+  </button>
+);
+
+/** Empty state when no models are available. */
+const EmptyModels = ({ message }: { message: string }) => (
+  <div className="ps-4 pe-4 py-6 text-center">
+    <p className="text-xs font-bold text-zinc-400 uppercase italic">{message}</p>
+  </div>
+);
+
+/** Dropdown panel with model list. */
+const ModelDropdown = ({
+  models, selectedModel, onSelect, headerLabel, emptyLabel,
+}: {
+  models: { name: string }[];
+  selectedModel: string;
+  onSelect: (name: string) => void;
+  headerLabel: string;
+  emptyLabel: string;
+}) => (
+  <div
+    className="absolute inset-be-full mbe-2 start-0 min-w-[240px] bg-white dark:bg-zinc-900 border border-sidebar-border shadow-pro z-50 py-1 animate-in fade-in slide-in-from-bottom-2 duration-200"
+    role="listbox"
+  >
+    <div className="ps-4 pe-4 py-2.5 border-be border-sidebar-border mbe-1">
+      <span className="text-[11px] font-black text-zinc-400 uppercase">{headerLabel}</span>
+    </div>
+    <div className="max-h-[300px] overflow-y-auto">
+      {models.length > 0 ? (
+        models.map(m => (
+          <ModelOption key={m.name} name={m.name} isSelected={selectedModel === m.name} onSelect={() => onSelect(m.name)} />
+        ))
+      ) : (
+        <EmptyModels message={emptyLabel} />
+      )}
+    </div>
+  </div>
+);
+
 const ModelSelector = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -36,71 +132,23 @@ const ModelSelector = () => {
   return (
     <div className="relative font-sans" ref={dropdownRef}>
       <div className="flex items-center gap-1.5">
-        <button
-          type="button"
+        <SelectorTrigger
+          selectedModel={selectedModel}
+          isOpen={isOpen}
           onClick={() => setIsOpen(!isOpen)}
-          className={cn(
-            "flex items-center gap-2 ps-3 pe-3 py-2 rounded-none border border-transparent hover:border-sidebar-border hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all text-[13px] font-bold uppercase text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 outline-none focus-visible:ring-1 focus-visible:ring-blue-500",
-            isOpen && "border-sidebar-border bg-zinc-100 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100"
-          )}
-          aria-haspopup="listbox"
-          aria-expanded={isOpen}
-        >
-          <Settings2 size={16} className={cn("transition-transform duration-300", isOpen && "rotate-90")} />
-          <span className="truncate max-w-[150px]">
-            {selectedModel || t('library.noModelsFound')}
-          </span>
-          <ChevronDown size={14} className={cn("transition-transform duration-200", isOpen && "rotate-180")} />
-        </button>
-
-        <button 
-          type="button"
-          onClick={() => fetchModels(true)}
-          className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-none transition-colors text-zinc-400 hover:text-blue-500"
-          title={t('library.refreshModels')}
-        >
-          <RefreshCw size={14} className={cn(isStreaming && "animate-spin")} />
-        </button>
+          placeholder={t('library.noModelsFound')}
+        />
+        <RefreshButton onClick={() => fetchModels(true)} isStreaming={isStreaming} title={t('library.refreshModels')} />
       </div>
 
       {isOpen && (
-        <div 
-          className="absolute inset-be-full mbe-2 start-0 min-w-[240px] bg-white dark:bg-zinc-900 border border-sidebar-border shadow-pro z-50 py-1 animate-in fade-in slide-in-from-bottom-2 duration-200"
-          role="listbox"
-        >
-          <div className="ps-4 pe-4 py-2.5 border-be border-sidebar-border mbe-1">
-            <span className="text-[11px] font-black text-zinc-400 uppercase">
-              {t('a11y.selectModel')}
-            </span>
-          </div>
-          
-          <div className="max-h-[300px] overflow-y-auto">
-            {models.length > 0 ? (
-              models.map((m) => (
-                <button
-                  key={m.name}
-                  type="button"
-                  onClick={() => handleSelect(m.name)}
-                  className={cn(
-                    "w-full flex items-center justify-between ps-4 pe-4 py-3 text-start text-sm font-medium transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 outline-none focus:bg-zinc-50 dark:focus:bg-zinc-800/50",
-                    selectedModel === m.name ? "text-blue-600 dark:text-blue-400" : "text-zinc-600 dark:text-zinc-400"
-                  )}
-                  role="option"
-                  aria-selected={selectedModel === m.name}
-                >
-                  <span className="truncate">{m.name}</span>
-                  {selectedModel === m.name && <Check size={16} className="shrink-0" />}
-                </button>
-              ))
-            ) : (
-              <div className="ps-4 pe-4 py-6 text-center">
-                <p className="text-xs font-bold text-zinc-400 uppercase italic">
-                  {t('library.noModelsFound')}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+        <ModelDropdown
+          models={models}
+          selectedModel={selectedModel}
+          onSelect={handleSelect}
+          headerLabel={t('a11y.selectModel')}
+          emptyLabel={t('library.noModelsFound')}
+        />
       )}
     </div>
   );
