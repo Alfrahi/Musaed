@@ -60,6 +60,7 @@ pub fn run() {
         ollama::validate_model,
         ollama::pull_model,
         ollama::delete_model,
+        ollama::verify_ollama_service,
         ollama::check_ollama_health,
         logging::append_to_log,
         logging::clear_logs,

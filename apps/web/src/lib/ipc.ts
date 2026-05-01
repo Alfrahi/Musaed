@@ -20,6 +20,7 @@ export interface CommandMap {
   'delete_model': { args: { baseUrl: string, name: string }, return: boolean };
   'pull_model': { args: { baseUrl: string, name: string }, return: void };
   'check_ollama_health': { args: { baseUrl: string }, return: OllamaHealthIpc };
+  'verify_ollama_service': { args: { baseUrl: string }, return: string };
   'append_to_log': { args: { entry: string }, return: void };
   'clear_logs': { args: Record<string, never>, return: void };
 }
@@ -33,6 +34,7 @@ const CommandReturnSchemas: { [K in keyof CommandMap]: z.ZodType<CommandMap[K]['
   'delete_model': z.boolean(),
   'pull_model': voidSchema,
   'check_ollama_health': OllamaHealthIpcSchema,
+  'verify_ollama_service': z.string(),
   'append_to_log': voidSchema,
   'clear_logs': voidSchema,
 };
@@ -45,14 +47,29 @@ export const checkIsTauri = (): boolean =>
 
 /**
  * Validates that the provided URL is a safe local-only target.
+ * Strips any path, query, or fragment to prevent SSRF via path injection.
  */
 export const isValidOllamaUrl = (url: string): boolean => {
   try {
-    const { hostname } = new URL(url);
+    const parsed = new URL(url);
+    const { hostname } = parsed;
     const isLocal = ['localhost', '127.0.0.1', '::1'].includes(hostname) || hostname.endsWith('.local');
     const isPrivateIP = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(hostname);
     return isLocal || isPrivateIP;
   } catch { return false; }
+};
+
+/**
+ * Sanitizes a user-supplied Ollama URL by stripping path, query, and fragment.
+ * Returns only scheme + host + port.
+ */
+export const sanitizeOllamaUrl = (url: string): string => {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return url;
+  }
 };
 
 /**
@@ -107,6 +124,7 @@ export const ollamaApi = {
   deleteModel: (baseUrl: string, name: string) => callInternal('delete_model', { baseUrl, name }),
   pullModel: (baseUrl: string, name: string) => callInternal('pull_model', { baseUrl, name }),
   checkHealth: (baseUrl: string) => callInternal('check_ollama_health', { baseUrl }, { quiet: true }),
+  verifyService: (baseUrl: string) => callInternal('verify_ollama_service', { baseUrl }),
 };
 
 /**

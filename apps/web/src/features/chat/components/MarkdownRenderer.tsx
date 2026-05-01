@@ -110,7 +110,7 @@ const useRehypePlugins = (enableLatex: boolean): PluggableList =>
     const plugins: PluggableList = [rehypeHighlight];
     if (enableLatex) {
       plugins.push([rehypeKatex, {
-        throwOnError: false, errorColor: '#ef4444', strict: false, output: 'html', trust: true,
+        throwOnError: false, errorColor: '#ef4444', strict: false, output: 'html', trust: false,
       }]);
     }
     return plugins;

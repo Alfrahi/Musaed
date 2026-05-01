@@ -7,6 +7,29 @@ import { Conversation, Message } from '@musaed/contracts';
 import { createTauriStorage } from '../../lib/tauri-storage';
 import { setStreaming, setHydrated } from '../actions';
 
+/**
+ * Wraps createTauriStorage with pause/resume control so that disk writes
+ * are skipped entirely while streaming is active. When streaming ends the
+ * persist middleware naturally writes the full, up-to-date state.
+ */
+const persistController = (() => {
+  const base = createTauriStorage('conversation-state-v2.json');
+  let paused = false;
+
+  return {
+    storage: {
+      getItem: base.getItem,
+      setItem: (name: string, value: string) => {
+        if (paused) return;
+        void base.setItem(name, value);
+      },
+      removeItem: base.removeItem,
+    },
+    pause: () => { paused = true; },
+    resume: () => { paused = false; },
+  };
+})();
+
 export interface ConversationState {
   conversations: Record<string, Conversation>;
   conversationIds: string[];
@@ -72,14 +95,21 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
       setCurrentConversationId: (id) => set({ currentConversationId: id }),
       setSearchQuery: (query) => set({ searchQuery: query }),
 
-      startStream: (conversationId, requestId) => set((state) => {
-        setStreaming(true);
-        return { activeStreams: { ...state.activeStreams, [conversationId]: String(requestId) } };
-      }),
+      startStream: (conversationId, requestId) => {
+        persistController.pause();
+        return set((state) => {
+          setStreaming(true);
+          return { activeStreams: { ...state.activeStreams, [conversationId]: String(requestId) } };
+        });
+      },
 
       stopStream: (conversationId) => set((state) => {
         const { [conversationId]: _stream, ...remainingStreams } = state.activeStreams;
-        setStreaming(Object.keys(remainingStreams).length > 0);
+        const hasMoreStreams = Object.keys(remainingStreams).length > 0;
+        setStreaming(hasMoreStreams);
+        if (!hasMoreStreams) {
+          persistController.resume();
+        }
         return { activeStreams: remainingStreams };
       }),
 
@@ -121,7 +151,7 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
     }),
     {
       name: 'musaed-conversation-storage-v2',
-      storage: createJSONStorage(() => createTauriStorage('conversation-state-v2.json')),
+      storage: createJSONStorage(() => persistController.storage),
       partialize: (state) => ({
         conversations: state.conversations,
         conversationIds: state.conversationIds,
@@ -132,3 +162,9 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
   ),
   shallow
 );
+
+/** Resume persistence (if paused) and trigger a full state persist to disk. */
+export function persistConversationsNow(): void {
+  persistController.resume();
+  useConversationStore.setState({});
+}

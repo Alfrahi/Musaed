@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { useConversationStore, useSettingsStore } from '../../../store';
 import { useStreamingStore } from '../../../store/stores/streaming-store';
 import { startBatching, flushAndStop, stopAllBatching } from '../../../store/batch-manager';
+import { persistConversationsNow } from '../../../store/stores/conversation-store';
 import { useUpdatePullStatus, useSetModels } from '../../../store/hooks';
 import { listen, ollamaApi } from '../../../lib/ipc';
 import {
@@ -141,6 +142,7 @@ export function useTauriEvents() {
     return () => {
       isMounted = false;
       stopAllBatching();
+      persistConversationsNow();
       unlisteners.forEach(un => un());
     };
   }, [updatePullStatus, setModels]);

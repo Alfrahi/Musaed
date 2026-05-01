@@ -6,7 +6,10 @@ use url::{Host, Url};
 const MAX_BASE_URL_BYTES: usize = 2048;
 
 /// Parses and validates a user-supplied Ollama base URL.
+///
 /// Allowed: `http`/`https`, no credentials, host is localhost / *.local / loopback / private IPv4 / IPv6 loopback only.
+/// Any path, query, or fragment is **stripped** so only scheme + host + port remain,
+/// preventing SSRF via path injection (e.g. `http://127.0.0.1:8080/internal-api/delete-user`).
 pub fn parse_ollama_base_url(raw: &str) -> Result<Url, String> {
     let s = raw.trim();
     if s.is_empty() {
@@ -32,32 +35,37 @@ pub fn parse_ollama_base_url(raw: &str) -> Result<Url, String> {
         return Err("URL must not contain credentials".into());
     }
 
+    // Validate the host before accepting the URL.
     match url.host() {
         Some(Host::Domain(domain)) => {
-            if allowed_domain(domain) {
-                Ok(url)
-            } else {
-                Err(format!(
+            if !allowed_domain(domain) {
+                return Err(format!(
                     "Host {domain:?} is not an allowed local or private Ollama address"
-                ))
+                ));
             }
         }
         Some(Host::Ipv4(ip)) => {
-            if allowed_ipv4(ip) {
-                Ok(url)
-            } else {
-                Err(format!("IPv4 address {ip} is not allowed for Ollama"))
+            if !allowed_ipv4(ip) {
+                return Err(format!("IPv4 address {ip} is not allowed for Ollama"));
             }
         }
         Some(Host::Ipv6(ip)) => {
-            if allowed_ipv6(ip) {
-                Ok(url)
-            } else {
-                Err(format!("IPv6 address {ip} is not allowed for Ollama"))
+            if !allowed_ipv6(ip) {
+                return Err(format!("IPv6 address {ip} is not allowed for Ollama"));
             }
         }
-        None => Err("URL is missing a host".into()),
+        None => return Err("URL is missing a host".into()),
     }
+
+    // SSRF mitigation: rebuild URL with only scheme + host + port,
+    // discarding any path, query, or fragment supplied by the user.
+    let port_suffix = match url.port() {
+        Some(p) => format!(":{p}"),
+        None => String::new(),
+    };
+    let host_str = url.host_str().ok_or("URL is missing a host")?;
+    let clean = format!("{}://{}{}", url.scheme(), host_str, port_suffix);
+    Url::parse(&clean).map_err(|e| format!("Failed to rebuild clean URL: {e}"))
 }
 
 fn allowed_domain(domain: &str) -> bool {
@@ -90,7 +98,8 @@ mod tests {
 
     #[test]
     fn allows_localhost_default_port() {
-        assert!(parse_ollama_base_url("http://localhost:11434").is_ok());
+        let url = parse_ollama_base_url("http://localhost:11434").unwrap();
+        assert_eq!(url.as_str(), "http://localhost:11434/");
     }
 
     #[test]
@@ -105,6 +114,36 @@ mod tests {
 
     #[test]
     fn allows_private_class_c() {
-        assert!(parse_ollama_base_url("http://192.168.1.5:11434").is_ok());
+        let url = parse_ollama_base_url("http://192.168.1.5:11434").unwrap();
+        assert_eq!(url.as_str(), "http://192.168.1.5:11434/");
+    }
+
+    // --- SSRF path-stripping tests ---
+
+    #[test]
+    fn strips_arbitrary_path() {
+        let url = parse_ollama_base_url("http://127.0.0.1:8080/internal-api/delete-user").unwrap();
+        assert_eq!(url.as_str(), "http://127.0.0.1:8080/");
+        assert_eq!(url.path(), "/");
+    }
+
+    #[test]
+    fn strips_path_and_preserves_port() {
+        let url = parse_ollama_base_url("http://localhost:11434/v1/chat/completions").unwrap();
+        assert_eq!(url.as_str(), "http://localhost:11434/");
+    }
+
+    #[test]
+    fn strips_query_and_fragment() {
+        let url = parse_ollama_base_url("http://localhost:11434/foo?bar=baz#frag").unwrap();
+        assert_eq!(url.as_str(), "http://localhost:11434/");
+        assert!(url.query().is_none());
+        assert!(url.fragment().is_none());
+    }
+
+    #[test]
+    fn no_path_remains_clean() {
+        let url = parse_ollama_base_url("http://localhost:11434").unwrap();
+        assert_eq!(url.as_str(), "http://localhost:11434/");
     }
 }

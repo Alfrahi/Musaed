@@ -95,6 +95,7 @@
     },
     "ollamaUrl": "رابط خادم Ollama",
     "invalidOllamaUrl": "يُسمح فقط بـ localhost أو *.local أو عناوين شبكة خاصة (10.x، 172.16–31.x، 192.168.x).",
+    "notOllamaService": "الخادم على هذا العنوان لا يبدو أنه مثيل Ollama.",
     "systemPrompt": "توجيه النظام",
     "temperature": "درجة الإبداع",
     "topP": "Top P",

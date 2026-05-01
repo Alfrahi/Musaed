@@ -640,6 +640,77 @@ pub async fn delete_model(base_url: String, name: String) -> ApiResponse<bool> {
     }
 }
 
+// ==================== SERVICE VERIFICATION ====================
+
+/// Verifies that the given base URL actually points to an Ollama instance
+/// by requesting `/` and checking the `Server` response header.
+#[tauri::command]
+pub async fn verify_ollama_service(base_url: String) -> ApiResponse<String> {
+    log::info!("Verifying Ollama service at: {}", base_url);
+
+    let url = match ollama_endpoint(&base_url, "") {
+        Ok(u) => u,
+        Err(msg) => return invalid_ollama_base(msg),
+    };
+
+    match time::timeout(Duration::from_secs(5), HTTP_CLIENT.get(&url).send()).await {
+        Ok(Ok(resp)) => {
+            let server_header = resp
+                .headers()
+                .get("server")
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("")
+                .to_ascii_lowercase();
+
+            if server_header.contains("ollama") {
+                let version = server_header.clone();
+                log::info!("Ollama service verified (server header: {:?})", server_header);
+                ApiResponse {
+                    success: true,
+                    data: Some(version),
+                    error: None,
+                }
+            } else {
+                log::warn!(
+                    "Service at {} does not appear to be Ollama (server header: {:?})",
+                    url,
+                    server_header
+                );
+                ApiResponse {
+                    success: false,
+                    data: None,
+                    error: Some(BackendError::new(
+                        "NOT_OLLAMA",
+                        "The server at this address does not appear to be Ollama".to_string(),
+                    )),
+                }
+            }
+        }
+        Ok(Err(e)) => {
+            log::warn!("Service verification request failed: {}", e);
+            ApiResponse {
+                success: false,
+                data: None,
+                error: Some(BackendError::new(
+                    "CONNECTION_FAILED",
+                    "Could not connect to the server".to_string(),
+                )),
+            }
+        }
+        Err(_) => {
+            log::warn!("Service verification timed out");
+            ApiResponse {
+                success: false,
+                data: None,
+                error: Some(BackendError::new(
+                    "TIMEOUT",
+                    "Connection timed out while verifying server".to_string(),
+                )),
+            }
+        }
+    }
+}
+
 // ==================== HEALTH CHECK ====================
 
 #[tauri::command]
@@ -653,14 +724,34 @@ pub async fn check_ollama_health(base_url: String) -> ApiResponse<OllamaHealth> 
     };
 
     match time::timeout(Duration::from_secs(10), HTTP_CLIENT.get(&url).send()).await {
-        Ok(Ok(_)) => {
+        Ok(Ok(resp)) => {
             let response_time = start.elapsed().as_millis();
-            log::info!("Ollama health check passed ({}ms)", response_time);
+
+            // Extract version from Server header (e.g., "Ollama 0.5.6")
+            let version = resp
+                .headers()
+                .get("server")
+                .and_then(|v| v.to_str().ok())
+                .and_then(|s| {
+                    let lower = s.to_ascii_lowercase();
+                    // Extract version number after "ollama"
+                    lower
+                        .strip_prefix("ollama")
+                        .or_else(|| lower.strip_prefix("ollama "))
+                        .map(|v| v.trim().to_string())
+                        .filter(|v| !v.is_empty())
+                });
+
+            log::info!(
+                "Ollama health check passed ({}ms){}",
+                response_time,
+                version.as_deref().map(|v| format!(", version: {}", v)).unwrap_or_default()
+            );
             ApiResponse {
                 success: true,
                 data: Some(OllamaHealth {
                     is_running: true,
-                    version: None,
+                    version,
                     response_time_ms: response_time,
                 }),
                 error: None,
