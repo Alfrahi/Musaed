@@ -6,8 +6,6 @@ import { Copy, Check } from 'lucide-react';
 import { Message } from '@musaed/contracts';
 import { cn } from '../../../lib/utils';
 import MessageContent from './MessageContent';
-import { useLanguage } from '../../../store/hooks';
-import { useTranslation } from '../../../lib/i18n';
 import { attachmentImageSrc } from '../imageAttachment';
 import { useMessageActions } from '../hooks/useMessageActions';
 import { MessageAvatar } from './MessageAvatar';
@@ -15,15 +13,20 @@ import { MessageStats } from './MessageStats';
 
 interface MessageBubbleProps {
   message: Message;
+  labels: {
+    user: string;
+    assistant: string;
+    copy: string;
+    tokens: string;
+  };
+  formatNumber: (num: number, options?: Intl.NumberFormatOptions) => string;
 }
 
 /**
  * Renders a single message bubble in the chat window.
  */
-const MessageBubble = ({ message }: MessageBubbleProps) => {
+const MessageBubble = ({ message, labels, formatNumber }: MessageBubbleProps) => {
   const isUser = message.role === 'user';
-  const language = useLanguage();
-  const { t, formatNumber } = useTranslation(language);
   const { copied, handleCopy, tps } = useMessageActions(message);
 
   return (
@@ -37,13 +40,13 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
         <div className="flex-1 min-w-0 space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase text-zinc-400">
-              {isUser ? t('chat.user') : t('chat.assistant')}
+              {isUser ? labels.user : labels.assistant}
               {!isUser && message.model && <span className="ms-3 text-zinc-500">{message.model}</span>}
             </span>
-            <button 
-              onClick={handleCopy} 
+            <button
+              onClick={handleCopy}
               className="text-zinc-400 hover:text-foreground p-1 transition-colors"
-              aria-label={t('common.copy')}
+              aria-label={labels.copy}
             >
               {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
             </button>
@@ -69,7 +72,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
             <MessageContent message={message} isUser={isUser} />
           </div>
 
-          <MessageStats message={message} tps={tps} formatNumber={formatNumber} t={t} />
+          <MessageStats message={message} tps={tps} formatNumber={formatNumber} tokensLabel={labels.tokens} />
         </div>
       </div>
     </div>

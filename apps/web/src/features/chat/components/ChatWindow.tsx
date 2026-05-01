@@ -9,9 +9,27 @@ import { useStreamingStore, selectLiveContent } from '../../../store/stores/stre
 import MessageBubble from './MessageBubble';
 import ChatWindowSkeleton from './ChatWindowSkeleton';
 import EmptyState from './EmptyState';
-import { useTranslation } from '../../../lib/i18n';
+import { useTranslation, TranslationKey } from '../../../lib/i18n';
 import { cn } from '../../../lib/utils';
 import { Message } from '@musaed/contracts';
+
+interface MessageLabels {
+  user: string;
+  assistant: string;
+  copy: string;
+  tokens: string;
+}
+
+/** Pre-resolved translated labels shared across all message bubbles. */
+const useMessageLabels = (
+  t: (key: TranslationKey | string, values?: Record<string, string | number | boolean>) => string,
+): MessageLabels =>
+  useMemo(() => ({
+    user: t('chat.user'),
+    assistant: t('chat.assistant'),
+    copy: t('common.copy'),
+    tokens: t('chat.tokens'),
+  }), [t]);
 
 /** Floating scroll-to-bottom button. */
 const ScrollButton = ({ onClick, label }: { onClick: () => void; label: string }) => (
@@ -36,7 +54,8 @@ const ChatWindow = () => {
   const globalSettings = useGlobalSettings();
   const isHydrated = useIsHydrated();
   const virtuosoRef = useRef<VirtuosoHandle>(null);
-  const { t } = useTranslation(globalSettings.language);
+  const { t, formatNumber } = useTranslation(globalSettings.language);
+  const messageLabels = useMessageLabels(t);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
   // Live streaming content — only the last message's buffer changes frequently
@@ -86,7 +105,7 @@ const ChatWindow = () => {
         atBottomStateChange={(atBottom) => setShowScrollButton(!atBottom)}
         itemContent={(index, msg) => (
           <div className={cn(index === messages.length - 1 && "pbe-32")}>
-            <MessageBubble message={msg} />
+            <MessageBubble message={msg} labels={messageLabels} formatNumber={formatNumber} />
           </div>
         )}
         followOutput="smooth"

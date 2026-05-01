@@ -15,6 +15,13 @@ use tokio_util::sync::CancellationToken;
 pub const MAX_TOTAL_IMAGE_SIZE_BYTES: usize = 10 * 1024 * 1024;
 pub const PULL_PROGRESS_THROTTLE_MS: u64 = 400;
 pub const MAX_CONCURRENT_CHATS: usize = 8;
+/// Maximum number of in-flight requests to Ollama across *all* command types
+/// (health checks, model discovery, chat, pull, etc.).
+pub const MAX_CONCURRENT_REQUESTS: usize = 16;
+/// Timeout for fast discovery / health-check requests (seconds).
+pub const FAST_TIMEOUT_SECS: u64 = 10;
+/// Timeout for the shared general-purpose client (seconds).
+pub const DEFAULT_TIMEOUT_SECS: u64 = 120;
 pub const STREAM_IDLE_TIMEOUT_SECS: u64 = 300;
 pub const STREAM_ABSOLUTE_TIMEOUT_SECS: u64 = 900;
 pub const INITIAL_REQUEST_TIMEOUT_SECS: u64 = 300;
@@ -30,14 +37,38 @@ pub static REQUEST_CACHE: Lazy<DashMap<String, Instant>> = Lazy::new(DashMap::ne
 /// Semaphore limiting the number of concurrent chat streams.
 pub static CONCURRENT_SEMAPHORE: Lazy<Semaphore> = Lazy::new(|| Semaphore::new(MAX_CONCURRENT_CHATS));
 
-/// Shared HTTP client with sensible defaults for Ollama communication.
+/// Global rate limiter for *all* Ollama-bound HTTP traffic.
+pub static GLOBAL_SEMAPHORE: Lazy<Semaphore> = Lazy::new(|| Semaphore::new(MAX_CONCURRENT_REQUESTS));
+
+/// General-purpose HTTP client used for long-lived operations (chat, pull).
 pub static HTTP_CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
     reqwest::Client::builder()
-        .timeout(Duration::from_secs(120))
+        .timeout(Duration::from_secs(DEFAULT_TIMEOUT_SECS))
         .pool_max_idle_per_host(10)
         .build()
         .expect("Failed to build HTTP client")
 });
+
+/// Fast HTTP client for short-lived discovery / health-check calls.
+pub static FAST_HTTP_CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
+    reqwest::Client::builder()
+        .timeout(Duration::from_secs(FAST_TIMEOUT_SECS))
+        .connect_timeout(Duration::from_secs(5))
+        .pool_max_idle_per_host(4)
+        .build()
+        .expect("Failed to build fast HTTP client")
+});
+
+// ====================== RATE-LIMIT HELPERS ======================
+
+/// Acquires a permit from the global semaphore, returning a typed error on
+/// closure so callers can map it to an `ApiResponse` without panicking.
+pub async fn acquire_global_permit() -> Result<tokio::sync::SemaphorePermit<'static>, String> {
+    GLOBAL_SEMAPHORE
+        .acquire()
+        .await
+        .map_err(|_| "Global request limit reached — too many concurrent Ollama requests".to_string())
+}
 
 // ====================== URL HELPERS ======================
 

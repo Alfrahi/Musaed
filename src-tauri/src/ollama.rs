@@ -5,8 +5,9 @@ use crate::payloads::{
     OllamaModel, OllamaToken, PullProgress, PullStreamError,
 };
 use crate::shared::{
-    invalid_ollama_base, ollama_endpoint, retry_with_backoff, ABORT_HANDLES, CONCURRENT_SEMAPHORE,
-    HTTP_CLIENT, INITIAL_REQUEST_TIMEOUT_SECS, MAX_TOTAL_IMAGE_SIZE_BYTES, REQUEST_CACHE,
+    acquire_global_permit, invalid_ollama_base, ollama_endpoint, retry_with_backoff,
+    ABORT_HANDLES, CONCURRENT_SEMAPHORE, FAST_HTTP_CLIENT, HTTP_CLIENT,
+    INITIAL_REQUEST_TIMEOUT_SECS, MAX_TOTAL_IMAGE_SIZE_BYTES, REQUEST_CACHE,
     STREAM_ABSOLUTE_TIMEOUT_SECS, STREAM_IDLE_TIMEOUT_SECS,
 };
 use dashmap::mapref::entry::Entry;
@@ -27,6 +28,17 @@ pub async fn get_ollama_models(base_url: String) -> ApiResponse<Vec<OllamaModel>
     log::info!("Fetching Ollama models from: {}", base_url);
     let start = std::time::Instant::now();
 
+    let _global_permit = match acquire_global_permit().await {
+        Ok(p) => p,
+        Err(msg) => {
+            return ApiResponse {
+                success: false,
+                data: None,
+                error: Some(BackendError::new("RATE_LIMITED", msg)),
+            }
+        }
+    };
+
     let url = match ollama_endpoint(&base_url, "api/tags") {
         Ok(u) => u,
         Err(msg) => return invalid_ollama_base(msg),
@@ -35,7 +47,7 @@ pub async fn get_ollama_models(base_url: String) -> ApiResponse<Vec<OllamaModel>
     match retry_with_backoff(
         || {
             let url = url.clone();
-            async move { HTTP_CLIENT.get(&url).send().await }
+            async move { FAST_HTTP_CLIENT.get(&url).send().await }
         },
         2,
         500,
@@ -131,6 +143,17 @@ pub async fn chat_with_ollama<R: Runtime>(
     let url = match ollama_endpoint(&base_url, "api/chat") {
         Ok(u) => u,
         Err(msg) => return invalid_ollama_base(msg),
+    };
+
+    let _global_permit = match acquire_global_permit().await {
+        Ok(p) => p,
+        Err(msg) => {
+            return ApiResponse {
+                success: false,
+                data: None,
+                error: Some(BackendError::new("RATE_LIMITED", msg)),
+            }
+        }
     };
 
     // Atomic duplicate check
@@ -237,7 +260,9 @@ pub async fn chat_with_ollama<R: Runtime>(
     let app_clone = app.clone();
 
     tokio::spawn(async move {
+        // Hold both permits for the entire lifetime of the stream
         let _permit = permit;
+        let _global = _global_permit;
 
         defer! {
             ABORT_HANDLES.remove(&request_id_clone);
@@ -392,12 +417,27 @@ pub async fn validate_model(
 ) -> ApiResponse<ModelValidation> {
     log::info!("Validating model: {}", model_name);
 
+    let _global_permit = match acquire_global_permit().await {
+        Ok(p) => p,
+        Err(msg) => {
+            return ApiResponse {
+                success: false,
+                data: Some(ModelValidation {
+                    is_valid: false,
+                    model_name: model_name.clone(),
+                    details: None,
+                }),
+                error: Some(BackendError::new("RATE_LIMITED", msg)),
+            }
+        }
+    };
+
     let url = match ollama_endpoint(&base_url, "api/show") {
         Ok(u) => u,
         Err(msg) => return invalid_ollama_base(msg),
     };
 
-    match HTTP_CLIENT
+    match FAST_HTTP_CLIENT
         .post(&url)
         .json(&json!({ "name": model_name }))
         .send()
@@ -481,10 +521,22 @@ pub async fn pull_model<R: Runtime>(
         Err(msg) => return invalid_ollama_base(msg),
     };
 
+    let _global_permit = match acquire_global_permit().await {
+        Ok(p) => p,
+        Err(msg) => {
+            return ApiResponse {
+                success: false,
+                data: None,
+                error: Some(BackendError::new("RATE_LIMITED", msg)),
+            }
+        }
+    };
+
     let app_clone = app.clone();
     let name_clone = name.clone();
 
     tokio::spawn(async move {
+        let _global = _global_permit;
         let pull_start = std::time::Instant::now();
         let mut last_emit = std::time::Instant::now();
 
@@ -597,12 +649,23 @@ pub async fn pull_model<R: Runtime>(
 pub async fn delete_model(base_url: String, name: String) -> ApiResponse<bool> {
     log::info!("Deleting model: {}", name);
 
+    let _global_permit = match acquire_global_permit().await {
+        Ok(p) => p,
+        Err(msg) => {
+            return ApiResponse {
+                success: false,
+                data: Some(false),
+                error: Some(BackendError::new("RATE_LIMITED", msg)),
+            }
+        }
+    };
+
     let url = match ollama_endpoint(&base_url, "api/delete") {
         Ok(u) => u,
         Err(msg) => return invalid_ollama_base(msg),
     };
 
-    match HTTP_CLIENT
+    match FAST_HTTP_CLIENT
         .delete(&url)
         .json(&json!({ "name": name }))
         .send()
@@ -648,13 +711,24 @@ pub async fn delete_model(base_url: String, name: String) -> ApiResponse<bool> {
 pub async fn verify_ollama_service(base_url: String) -> ApiResponse<String> {
     log::info!("Verifying Ollama service at: {}", base_url);
 
+    let _global_permit = match acquire_global_permit().await {
+        Ok(p) => p,
+        Err(msg) => {
+            return ApiResponse {
+                success: false,
+                data: None,
+                error: Some(BackendError::new("RATE_LIMITED", msg)),
+            }
+        }
+    };
+
     let url = match ollama_endpoint(&base_url, "") {
         Ok(u) => u,
         Err(msg) => return invalid_ollama_base(msg),
     };
 
-    match time::timeout(Duration::from_secs(5), HTTP_CLIENT.get(&url).send()).await {
-        Ok(Ok(resp)) => {
+    match FAST_HTTP_CLIENT.get(&url).send().await {
+        Ok(resp) => {
             let server_header = resp
                 .headers()
                 .get("server")
@@ -686,26 +760,27 @@ pub async fn verify_ollama_service(base_url: String) -> ApiResponse<String> {
                 }
             }
         }
-        Ok(Err(e)) => {
-            log::warn!("Service verification request failed: {}", e);
-            ApiResponse {
-                success: false,
-                data: None,
-                error: Some(BackendError::new(
-                    "CONNECTION_FAILED",
-                    "Could not connect to the server".to_string(),
-                )),
-            }
-        }
-        Err(_) => {
-            log::warn!("Service verification timed out");
-            ApiResponse {
-                success: false,
-                data: None,
-                error: Some(BackendError::new(
-                    "TIMEOUT",
-                    "Connection timed out while verifying server".to_string(),
-                )),
+        Err(e) => {
+            if e.is_timeout() {
+                log::warn!("Service verification timed out");
+                ApiResponse {
+                    success: false,
+                    data: None,
+                    error: Some(BackendError::new(
+                        "TIMEOUT",
+                        "Connection timed out while verifying server".to_string(),
+                    )),
+                }
+            } else {
+                log::warn!("Service verification request failed: {}", e);
+                ApiResponse {
+                    success: false,
+                    data: None,
+                    error: Some(BackendError::new(
+                        "CONNECTION_FAILED",
+                        "Could not connect to the server".to_string(),
+                    )),
+                }
             }
         }
     }
@@ -718,13 +793,28 @@ pub async fn check_ollama_health(base_url: String) -> ApiResponse<OllamaHealth> 
     log::info!("Checking Ollama health: {}", base_url);
     let start = std::time::Instant::now();
 
+    let _global_permit = match acquire_global_permit().await {
+        Ok(p) => p,
+        Err(msg) => {
+            return ApiResponse {
+                success: false,
+                data: Some(OllamaHealth {
+                    is_running: false,
+                    version: None,
+                    response_time_ms: 0,
+                }),
+                error: Some(BackendError::new("RATE_LIMITED", msg)),
+            }
+        }
+    };
+
     let url = match ollama_endpoint(&base_url, "api/tags") {
         Ok(u) => u,
         Err(msg) => return invalid_ollama_base(msg),
     };
 
-    match time::timeout(Duration::from_secs(10), HTTP_CLIENT.get(&url).send()).await {
-        Ok(Ok(resp)) => {
+    match FAST_HTTP_CLIENT.get(&url).send().await {
+        Ok(resp) => {
             let response_time = start.elapsed().as_millis();
 
             // Extract version from Server header (e.g., "Ollama 0.5.6")
@@ -757,32 +847,33 @@ pub async fn check_ollama_health(base_url: String) -> ApiResponse<OllamaHealth> 
                 error: None,
             }
         }
-        Ok(Err(e)) => {
-            log::warn!("Ollama health check failed: {}", e);
-            ApiResponse {
-                success: false,
-                data: Some(OllamaHealth {
-                    is_running: false,
-                    version: None,
-                    response_time_ms: start.elapsed().as_millis(),
-                }),
-                error: Some(
-                    BackendError::new("HEALTH_CHECK_FAILED", e.to_string()).retryable(),
-                ),
-            }
-        }
-        Err(_) => {
-            log::warn!("Ollama health check timed out");
-            ApiResponse {
-                success: false,
-                data: Some(OllamaHealth {
-                    is_running: false,
-                    version: None,
-                    response_time_ms: start.elapsed().as_millis(),
-                }),
-                error: Some(
-                    BackendError::new("HEALTH_CHECK_TIMEOUT", "Request timed out").retryable(),
-                ),
+        Err(e) => {
+            if e.is_timeout() {
+                log::warn!("Ollama health check timed out");
+                ApiResponse {
+                    success: false,
+                    data: Some(OllamaHealth {
+                        is_running: false,
+                        version: None,
+                        response_time_ms: start.elapsed().as_millis(),
+                    }),
+                    error: Some(
+                        BackendError::new("HEALTH_CHECK_TIMEOUT", "Request timed out").retryable(),
+                    ),
+                }
+            } else {
+                log::warn!("Ollama health check failed: {}", e);
+                ApiResponse {
+                    success: false,
+                    data: Some(OllamaHealth {
+                        is_running: false,
+                        version: None,
+                        response_time_ms: start.elapsed().as_millis(),
+                    }),
+                    error: Some(
+                        BackendError::new("HEALTH_CHECK_FAILED", e.to_string()).retryable(),
+                    ),
+                }
             }
         }
     }
