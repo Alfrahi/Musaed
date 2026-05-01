@@ -32,7 +32,6 @@ fn append_log_entry<R: Runtime>(app: AppHandle<R>, entry: String) {
 
 #[tauri::command]
 pub async fn append_to_log<R: Runtime>(app: AppHandle<R>, entry: String) -> ApiResponse<()> {
-    log::info!("Log entry: {}", entry);
     append_log_entry(app, entry);
     ApiResponse {
         success: true,
@@ -44,14 +43,17 @@ pub async fn append_to_log<R: Runtime>(app: AppHandle<R>, entry: String) -> ApiR
 #[tauri::command]
 pub async fn clear_logs<R: Runtime>(app: AppHandle<R>) -> ApiResponse<()> {
     log::info!("Clearing logs");
-    match get_log_path(&app) {
-        Ok(path) => {
-            if path.exists() {
-                let _ = std::fs::write(&path, b"");
+    let _ = tokio::task::spawn_blocking(move || {
+        match get_log_path(&app) {
+            Ok(path) => {
+                if path.exists() {
+                    let _ = std::fs::write(&path, b"");
+                }
             }
+            Err(e) => log::error!("Failed to resolve log path: {}", e),
         }
-        Err(e) => log::error!("Failed to resolve log path: {}", e),
-    }
+    })
+    .await;
     ApiResponse {
         success: true,
         data: Some(()),

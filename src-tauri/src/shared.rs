@@ -4,7 +4,7 @@ use crate::ollama_url::parse_ollama_base_url;
 use crate::payloads::ApiResponse;
 use crate::payloads::BackendError;
 use dashmap::DashMap;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::Semaphore;
@@ -24,24 +24,32 @@ pub const FAST_TIMEOUT_SECS: u64 = 10;
 pub const DEFAULT_TIMEOUT_SECS: u64 = 120;
 pub const STREAM_IDLE_TIMEOUT_SECS: u64 = 300;
 pub const STREAM_ABSOLUTE_TIMEOUT_SECS: u64 = 900;
+pub const PULL_ABSOLUTE_TIMEOUT_SECS: u64 = 3600;
 pub const INITIAL_REQUEST_TIMEOUT_SECS: u64 = 300;
+
+// ====================== EVENT NAMES ======================
+
+pub const EVENT_OLLAMA_TOKEN: &str = "ollama-token";
+pub const EVENT_OLLAMA_ERROR: &str = "ollama-error";
+pub const EVENT_PULL_PROGRESS: &str = "pull-progress";
+pub const EVENT_PULL_ERROR: &str = "pull-error";
 
 // ====================== GLOBAL STATE ======================
 
 /// Map of request_id -> CancellationToken for aborting active chat streams.
-pub static ABORT_HANDLES: Lazy<DashMap<String, Arc<CancellationToken>>> = Lazy::new(DashMap::new);
+pub static ABORT_HANDLES: LazyLock<DashMap<String, Arc<CancellationToken>>> = LazyLock::new(DashMap::new);
 
 /// Map of request_id -> Instant for deduplicating chat requests.
-pub static REQUEST_CACHE: Lazy<DashMap<String, Instant>> = Lazy::new(DashMap::new);
+pub static REQUEST_CACHE: LazyLock<DashMap<String, Instant>> = LazyLock::new(DashMap::new);
 
 /// Semaphore limiting the number of concurrent chat streams.
-pub static CONCURRENT_SEMAPHORE: Lazy<Semaphore> = Lazy::new(|| Semaphore::new(MAX_CONCURRENT_CHATS));
+pub static CONCURRENT_SEMAPHORE: LazyLock<Semaphore> = LazyLock::new(|| Semaphore::new(MAX_CONCURRENT_CHATS));
 
 /// Global rate limiter for *all* Ollama-bound HTTP traffic.
-pub static GLOBAL_SEMAPHORE: Lazy<Semaphore> = Lazy::new(|| Semaphore::new(MAX_CONCURRENT_REQUESTS));
+pub static GLOBAL_SEMAPHORE: LazyLock<Semaphore> = LazyLock::new(|| Semaphore::new(MAX_CONCURRENT_REQUESTS));
 
 /// General-purpose HTTP client used for long-lived operations (chat, pull).
-pub static HTTP_CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
+pub static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     reqwest::Client::builder()
         .timeout(Duration::from_secs(DEFAULT_TIMEOUT_SECS))
         .pool_max_idle_per_host(10)
@@ -50,7 +58,7 @@ pub static HTTP_CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
 });
 
 /// Fast HTTP client for short-lived discovery / health-check calls.
-pub static FAST_HTTP_CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
+pub static FAST_HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     reqwest::Client::builder()
         .timeout(Duration::from_secs(FAST_TIMEOUT_SECS))
         .connect_timeout(Duration::from_secs(5))
@@ -137,4 +145,110 @@ where
         }
     }
     unreachable!()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_invalid_ollama_base_returns_error_response() {
+        let resp: ApiResponse<String> = invalid_ollama_base("bad url");
+        assert!(!resp.success);
+        assert!(resp.data.is_none());
+        let err = resp.error.unwrap();
+        assert_eq!(err.code, "INVALID_URL");
+        assert_eq!(err.message, "bad url");
+    }
+
+    #[test]
+    fn test_ollama_endpoint_valid_url() {
+        let result = ollama_endpoint("http://localhost:11434", "api/tags");
+        assert!(result.is_ok());
+        assert!(result.unwrap().ends_with("/api/tags"));
+    }
+
+    #[test]
+    fn test_ollama_endpoint_rejects_public_ip() {
+        let result = ollama_endpoint("http://8.8.8.8:11434", "api/tags");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_ollama_endpoint_rejects_empty_url() {
+        let result = ollama_endpoint("", "api/tags");
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_acquire_global_permit_succeeds() {
+        let result = acquire_global_permit().await;
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_constants_sanity() {
+        assert_eq!(MAX_TOTAL_IMAGE_SIZE_BYTES, 10 * 1024 * 1024);
+        assert!(FAST_TIMEOUT_SECS < DEFAULT_TIMEOUT_SECS);
+        assert!(STREAM_IDLE_TIMEOUT_SECS < STREAM_ABSOLUTE_TIMEOUT_SECS);
+        assert!(MAX_CONCURRENT_CHATS <= MAX_CONCURRENT_REQUESTS);
+        assert!(!EVENT_OLLAMA_TOKEN.is_empty());
+        assert!(!EVENT_OLLAMA_ERROR.is_empty());
+        assert!(!EVENT_PULL_PROGRESS.is_empty());
+        assert!(!EVENT_PULL_ERROR.is_empty());
+    }
+
+    #[test]
+    fn test_event_name_constants_match_expected() {
+        assert_eq!(EVENT_OLLAMA_TOKEN, "ollama-token");
+        assert_eq!(EVENT_OLLAMA_ERROR, "ollama-error");
+        assert_eq!(EVENT_PULL_PROGRESS, "pull-progress");
+        assert_eq!(EVENT_PULL_ERROR, "pull-error");
+    }
+
+    #[tokio::test]
+    async fn test_retry_succeeds_immediately() {
+        use std::sync::atomic::{AtomicU32, Ordering};
+        let calls = AtomicU32::new(0);
+        let result: Result<&str, reqwest::Error> = retry_with_backoff(
+            || {
+                calls.fetch_add(1, Ordering::SeqCst);
+                async { Ok("done") }
+            },
+            2,
+            1,
+        )
+        .await;
+        assert_eq!(result.unwrap(), "done");
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn test_retry_returns_after_max_retries() {
+        use std::sync::atomic::{AtomicU32, Ordering};
+        let calls = AtomicU32::new(0);
+        let result: Result<&str, reqwest::Error> = retry_with_backoff(
+            || {
+                let count = calls.fetch_add(1, Ordering::SeqCst);
+                async move {
+                    // Simulate a timeout error by constructing one from a builder
+                    let client = reqwest::Client::new();
+                    let res = client
+                        .get("http://127.0.0.1:1")
+                        .timeout(Duration::from_millis(1))
+                        .send()
+                        .await;
+                    // If the actual request somehow succeeds, return it; otherwise return the error
+                    drop(count);
+                    res.map(|_| "should not happen")
+                }
+            },
+            1,
+            1,
+        )
+        .await;
+        // We expect failure since port 1 is not listening
+        assert!(result.is_err());
+        assert_eq!(calls.load(Ordering::SeqCst), 2); // initial + 1 retry
+    }
 }

@@ -6,9 +6,10 @@ use crate::payloads::{
 };
 use crate::shared::{
     acquire_global_permit, invalid_ollama_base, ollama_endpoint, retry_with_backoff,
-    ABORT_HANDLES, CONCURRENT_SEMAPHORE, FAST_HTTP_CLIENT, HTTP_CLIENT,
-    INITIAL_REQUEST_TIMEOUT_SECS, MAX_TOTAL_IMAGE_SIZE_BYTES, REQUEST_CACHE,
-    STREAM_ABSOLUTE_TIMEOUT_SECS, STREAM_IDLE_TIMEOUT_SECS,
+    ABORT_HANDLES, CONCURRENT_SEMAPHORE, EVENT_OLLAMA_ERROR, EVENT_OLLAMA_TOKEN,
+    EVENT_PULL_ERROR, EVENT_PULL_PROGRESS, FAST_HTTP_CLIENT, HTTP_CLIENT,
+    INITIAL_REQUEST_TIMEOUT_SECS, MAX_TOTAL_IMAGE_SIZE_BYTES, PULL_ABSOLUTE_TIMEOUT_SECS,
+    REQUEST_CACHE, STREAM_ABSOLUTE_TIMEOUT_SECS, STREAM_IDLE_TIMEOUT_SECS,
 };
 use dashmap::mapref::entry::Entry;
 use futures::StreamExt;
@@ -287,7 +288,7 @@ pub async fn chat_with_ollama<R: Runtime>(
                 request_id_clone
             );
             let _ = app_clone.emit(
-                "ollama-error",
+                EVENT_OLLAMA_ERROR,
                 &BackendError::new("STREAM_TIMEOUT", "Chat stream timed out")
                     .with_request_id(request_id_clone.clone()),
             );
@@ -346,7 +347,7 @@ async fn process_chat_stream<R: Runtime>(
                                 if let Some(err) = token_data.get("error") {
                                     let msg = err.as_str().map(str::to_owned).unwrap_or_else(|| err.to_string());
                                     let _ = app.emit(
-                                        "ollama-error",
+                                        EVENT_OLLAMA_ERROR,
                                         &BackendError::new("OLLAMA_ERROR", msg)
                                             .with_request_id(request_id.to_string()),
                                     );
@@ -360,7 +361,7 @@ async fn process_chat_stream<R: Runtime>(
                                 match serde_json::from_value::<OllamaToken>(token_data) {
                                     Ok(token) => {
                                         *token_count += 1;
-                                        let _ = app.emit("ollama-token", &token);
+                                        let _ = app.emit(EVENT_OLLAMA_TOKEN, &token);
                                     }
                                     Err(e) => log::warn!("Failed to parse token: {}", e),
                                 }
@@ -376,7 +377,7 @@ async fn process_chat_stream<R: Runtime>(
                     Err(_) => {
                         log::warn!("Idle timeout on stream for request_id: {}", request_id);
                         let _ = app.emit(
-                            "ollama-error",
+                            EVENT_OLLAMA_ERROR,
                             &BackendError::new("STREAM_IDLE_TIMEOUT", "No data received for too long")
                                 .with_request_id(request_id.to_string()),
                         );
@@ -540,101 +541,126 @@ pub async fn pull_model<R: Runtime>(
         let pull_start = std::time::Instant::now();
         let mut last_emit = std::time::Instant::now();
 
-        match HTTP_CLIENT
-            .post(&url)
-            .json(&json!({ "name": name_clone, "stream": true }))
-            .send()
-            .await
-        {
-            Ok(response) => {
-                if !response.status().is_success() {
-                    let status = response.status().as_u16();
-                    let body = response.text().await.unwrap_or_default();
-                    log::error!(
-                        "Pull request failed for model {}: HTTP {} — {}",
-                        name_clone,
-                        status,
-                        body
-                    );
-                    let _ = app_clone.emit(
-                        "pull-error",
-                        &PullStreamError {
-                            name: name_clone.clone(),
-                            error: format!(
-                                "HTTP {}: {}",
+        let pull_result = time::timeout(
+            Duration::from_secs(PULL_ABSOLUTE_TIMEOUT_SECS),
+            async {
+                match HTTP_CLIENT
+                    .post(&url)
+                    .json(&json!({ "name": name_clone, "stream": true }))
+                    .send()
+                    .await
+                {
+                    Ok(response) => {
+                        if !response.status().is_success() {
+                            let status = response.status().as_u16();
+                            let body = response.text().await.unwrap_or_default();
+                            log::error!(
+                                "Pull request failed for model {}: HTTP {} — {}",
+                                name_clone,
                                 status,
-                                body.chars().take(500).collect::<String>()
-                            ),
-                            duration: pull_start.elapsed().as_secs(),
-                        },
-                    );
-                    return;
-                }
-
-                log::info!("Pull request accepted for model: {}", name_clone);
-
-                let stream = response.bytes_stream();
-                let mut lines = FramedRead::new(
-                    tokio_util::io::StreamReader::new(stream.map(|res| {
-                        res.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
-                    })),
-                    LinesCodec::new(),
-                );
-
-                while let Some(Ok(line)) = lines.next().await {
-                    if let Ok(mut progress_val) =
-                        serde_json::from_str::<serde_json::Value>(&line)
-                    {
-                        if let Some(err) = progress_val.get("error") {
-                            let msg = err
-                                .as_str()
-                                .map(str::to_owned)
-                                .unwrap_or_else(|| err.to_string());
-                            log::error!("Pull stream error for {}: {}", name_clone, msg);
+                                body
+                            );
                             let _ = app_clone.emit(
-                                "pull-error",
+                                EVENT_PULL_ERROR,
                                 &PullStreamError {
                                     name: name_clone.clone(),
-                                    error: msg,
+                                    error: format!(
+                                        "HTTP {}: {}",
+                                        status,
+                                        body.chars().take(500).collect::<String>()
+                                    ),
                                     duration: pull_start.elapsed().as_secs(),
                                 },
                             );
                             return;
                         }
 
-                        if let Some(obj) = progress_val.as_object_mut() {
-                            obj.insert("name".to_string(), json!(name_clone));
-                        }
+                        log::info!("Pull request accepted for model: {}", name_clone);
 
-                        if let Ok(p) = serde_json::from_value::<PullProgress>(progress_val) {
-                            if last_emit.elapsed().as_millis() as u64
-                                > crate::shared::PULL_PROGRESS_THROTTLE_MS
-                                || p.status.contains("success")
+                        let stream = response.bytes_stream();
+                        let mut lines = FramedRead::new(
+                            tokio_util::io::StreamReader::new(stream.map(|res| {
+                                res.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+                            })),
+                            LinesCodec::new(),
+                        );
+
+                        while let Some(Ok(line)) = lines.next().await {
+                            if let Ok(mut progress_val) =
+                                serde_json::from_str::<serde_json::Value>(&line)
                             {
-                                let _ = app_clone.emit("pull-progress", &p);
-                                last_emit = std::time::Instant::now();
+                                if let Some(err) = progress_val.get("error") {
+                                    let msg = err
+                                        .as_str()
+                                        .map(str::to_owned)
+                                        .unwrap_or_else(|| err.to_string());
+                                    log::error!("Pull stream error for {}: {}", name_clone, msg);
+                                    let _ = app_clone.emit(
+                                        EVENT_PULL_ERROR,
+                                        &PullStreamError {
+                                            name: name_clone.clone(),
+                                            error: msg,
+                                            duration: pull_start.elapsed().as_secs(),
+                                        },
+                                    );
+                                    return;
+                                }
+
+                                if let Some(obj) = progress_val.as_object_mut() {
+                                    obj.insert("name".to_string(), json!(name_clone));
+                                }
+
+                                if let Ok(p) = serde_json::from_value::<PullProgress>(progress_val) {
+                                    if last_emit.elapsed().as_millis() as u64
+                                        > crate::shared::PULL_PROGRESS_THROTTLE_MS
+                                        || p.status.contains("success")
+                                    {
+                                        let _ = app_clone.emit(EVENT_PULL_PROGRESS, &p);
+                                        last_emit = std::time::Instant::now();
+                                    }
+                                }
                             }
                         }
+
+                        log::info!(
+                            "Model pull completed: {} (duration: {:?})",
+                            name_clone,
+                            pull_start.elapsed()
+                        );
+                    }
+                    Err(e) => {
+                        log::error!("Pull request failed for model {}: {}", name_clone, e);
+                        let _ = app_clone.emit(
+                            EVENT_PULL_ERROR,
+                            &PullStreamError {
+                                name: name_clone.clone(),
+                                error: e.to_string(),
+                                duration: pull_start.elapsed().as_secs(),
+                            },
+                        );
                     }
                 }
+            },
+        )
+        .await;
 
-                log::info!(
-                    "Model pull completed: {} (duration: {:?})",
-                    name_clone,
-                    pull_start.elapsed()
-                );
-            }
-            Err(e) => {
-                log::error!("Pull request failed for model {}: {}", name_clone, e);
-                let _ = app_clone.emit(
-                    "pull-error",
-                    &PullStreamError {
-                        name: name_clone.clone(),
-                        error: e.to_string(),
-                        duration: pull_start.elapsed().as_secs(),
-                    },
-                );
-            }
+        if pull_result.is_err() {
+            log::warn!(
+                "Pull timed out after {} seconds for model: {}",
+                PULL_ABSOLUTE_TIMEOUT_SECS,
+                name_clone
+            );
+            let _ = app_clone.emit(
+                EVENT_PULL_ERROR,
+                &PullStreamError {
+                    name: name_clone.clone(),
+                    error: format!(
+                        "Pull timed out after {} seconds",
+                        PULL_ABSOLUTE_TIMEOUT_SECS
+                    ),
+                    duration: pull_start.elapsed().as_secs(),
+                },
+            );
         }
     });
 
@@ -815,7 +841,7 @@ pub async fn check_ollama_health(base_url: String) -> ApiResponse<OllamaHealth> 
 
     match FAST_HTTP_CLIENT.get(&url).send().await {
         Ok(resp) => {
-            let response_time = start.elapsed().as_millis();
+            let response_time = start.elapsed().as_millis() as u64;
 
             // Extract version from Server header (e.g., "Ollama 0.5.6")
             let version = resp
@@ -855,7 +881,7 @@ pub async fn check_ollama_health(base_url: String) -> ApiResponse<OllamaHealth> 
                     data: Some(OllamaHealth {
                         is_running: false,
                         version: None,
-                        response_time_ms: start.elapsed().as_millis(),
+                        response_time_ms: start.elapsed().as_millis() as u64,
                     }),
                     error: Some(
                         BackendError::new("HEALTH_CHECK_TIMEOUT", "Request timed out").retryable(),
@@ -868,7 +894,7 @@ pub async fn check_ollama_health(base_url: String) -> ApiResponse<OllamaHealth> 
                     data: Some(OllamaHealth {
                         is_running: false,
                         version: None,
-                        response_time_ms: start.elapsed().as_millis(),
+                        response_time_ms: start.elapsed().as_millis() as u64,
                     }),
                     error: Some(
                         BackendError::new("HEALTH_CHECK_FAILED", e.to_string()).retryable(),
@@ -876,5 +902,89 @@ pub async fn check_ollama_health(base_url: String) -> ApiResponse<OllamaHealth> 
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::shared::{ABORT_HANDLES, REQUEST_CACHE};
+
+    fn make_messages_with_images(image_sizes: Vec<usize>) -> Vec<ChatMessage> {
+        image_sizes
+            .into_iter()
+            .enumerate()
+            .map(|(i, size)| ChatMessage {
+                role: "user".to_string(),
+                content: format!("msg {}", i),
+                images: Some(vec!["A".repeat(size)]),
+            })
+            .collect()
+    }
+
+    #[test]
+    fn image_size_check_passes_under_limit() {
+        let messages = make_messages_with_images(vec![1024, 2048]);
+        let total_b64_len: usize = messages
+            .iter()
+            .filter_map(|m| m.images.as_ref())
+            .flatten()
+            .map(|s| s.len())
+            .sum();
+        assert!(total_b64_len <= MAX_TOTAL_IMAGE_SIZE_BYTES * 4 / 3 + 1024);
+    }
+
+    #[test]
+    fn image_size_check_exceeds_limit() {
+        let messages = make_messages_with_images(vec![MAX_TOTAL_IMAGE_SIZE_BYTES]);
+        let total_b64_len: usize = messages
+            .iter()
+            .filter_map(|m| m.images.as_ref())
+            .flatten()
+            .map(|s| s.len())
+            .sum();
+        assert!(total_b64_len > MAX_TOTAL_IMAGE_SIZE_BYTES * 4 / 3 + 1024);
+    }
+
+    #[tokio::test]
+    async fn duplicate_request_detected() {
+        let req_id = "test-dup-req".to_string();
+        REQUEST_CACHE.insert(req_id.clone(), Instant::now());
+
+        let entry = REQUEST_CACHE.entry(req_id.clone());
+        assert!(matches!(entry, Entry::Occupied(_)));
+
+        REQUEST_CACHE.remove(&req_id);
+    }
+
+    #[tokio::test]
+    async fn abort_cancels_token() {
+        let req_id = "test-abort-req".to_string();
+        let token = Arc::new(CancellationToken::new());
+        ABORT_HANDLES.insert(req_id.clone(), token.clone());
+
+        assert!(!token.is_cancelled());
+
+        if let Some((_, t)) = ABORT_HANDLES.remove(&req_id) {
+            t.cancel();
+        }
+
+        assert!(token.is_cancelled());
+    }
+
+    #[test]
+    fn messages_without_images_have_zero_size() {
+        let messages = vec![ChatMessage {
+            role: "user".to_string(),
+            content: "hello".to_string(),
+            images: None,
+        }];
+        let total_b64_len: usize = messages
+            .iter()
+            .filter_map(|m| m.images.as_ref())
+            .flatten()
+            .map(|s| s.len())
+            .sum();
+        assert_eq!(total_b64_len, 0);
     }
 }

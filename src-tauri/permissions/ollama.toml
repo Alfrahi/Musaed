@@ -9,4 +9,5 @@ commands.allow = [
     "abort_chat",
     "check_ollama_health",
     "validate_model",
+    "verify_ollama_service",
 ]
