@@ -32,9 +32,18 @@ impl log::Log for FileLogger {
         if !self.enabled(record.metadata()) { return; }
         let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
         let message = format!("[{}] {} - {}\n", timestamp, record.level(), record.args());
+
+        // Always write to file
         if let Ok(mut file) = self.file.lock() {
             let _ = file.write_all(message.as_bytes());
             let _ = file.flush();
+        }
+
+        // In debug builds, also echo to stderr for console visibility
+        #[cfg(debug_assertions)]
+        {
+            let _ = std::io::stderr().write_all(message.as_bytes());
+            let _ = std::io::stderr().flush();
         }
     }
 
@@ -62,7 +71,15 @@ pub fn init_file_logger<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<
     log::set_boxed_logger(Box::new(FileLogger::global()))
     .map_err(|e| format!("Failed to set logger: {}", e))?;
 
-    log::set_max_level(LevelFilter::Info);
+    #[cfg(debug_assertions)]
+    {
+        log::set_max_level(LevelFilter::Debug);
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        log::set_max_level(LevelFilter::Info);
+    }
+
     log::info!("✅ File logger initialized at: {}", log_path.display());
     Ok(())
 }

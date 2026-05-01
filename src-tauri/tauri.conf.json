@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'none'; img-src 'self' data: https:; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self' http://localhost:11434 http://127.0.0.1:11434; font-src 'self' data:;"
+      "csp": "default-src 'none'; img-src 'self' data: https:; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self' http: https:; font-src 'self' data:;"
       }
   },
   "plugins": {

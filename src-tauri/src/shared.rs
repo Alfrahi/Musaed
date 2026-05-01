@@ -39,6 +39,10 @@ pub const EVENT_PULL_ERROR: &str = "pull-error";
 /// Map of request_id -> CancellationToken for aborting active chat streams.
 pub static ABORT_HANDLES: LazyLock<DashMap<String, Arc<CancellationToken>>> = LazyLock::new(DashMap::new);
 
+/// Map of model name -> CancellationToken for aborting active model pulls.
+pub static PULL_ABORT_HANDLES: LazyLock<DashMap<String, Arc<CancellationToken>>> =
+    LazyLock::new(DashMap::new);
+
 /// Map of request_id -> Instant for deduplicating chat requests.
 pub static REQUEST_CACHE: LazyLock<DashMap<String, Instant>> = LazyLock::new(DashMap::new);
 

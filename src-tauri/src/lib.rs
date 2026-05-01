@@ -36,17 +36,8 @@ pub fn run() {
     }
 
     builder = builder.setup(|app| {
-        // Fixed: pass app.handle() instead of app
         if let Err(e) = logger::init_file_logger(app.handle()) {
             eprintln!("⚠️ Failed to initialize file logger: {}", e);
-        }
-
-        #[cfg(debug_assertions)]
-        {
-            let mut builder = env_logger::Builder::new();
-            builder.filter_level(log::LevelFilter::Debug);
-            let _ = builder.try_init();
-            log::debug!("Debug console logging enabled");
         }
 
         Ok(())
@@ -59,6 +50,7 @@ pub fn run() {
         ollama::abort_chat,
         ollama::validate_model,
         ollama::pull_model,
+        ollama::abort_pull,
         ollama::delete_model,
         ollama::verify_ollama_service,
         ollama::check_ollama_health,

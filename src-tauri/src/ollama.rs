@@ -8,8 +8,8 @@ use crate::shared::{
     acquire_global_permit, invalid_ollama_base, ollama_endpoint, retry_with_backoff,
     ABORT_HANDLES, CONCURRENT_SEMAPHORE, EVENT_OLLAMA_ERROR, EVENT_OLLAMA_TOKEN,
     EVENT_PULL_ERROR, EVENT_PULL_PROGRESS, FAST_HTTP_CLIENT, HTTP_CLIENT,
-    INITIAL_REQUEST_TIMEOUT_SECS, MAX_TOTAL_IMAGE_SIZE_BYTES, PULL_ABSOLUTE_TIMEOUT_SECS,
-    REQUEST_CACHE, STREAM_ABSOLUTE_TIMEOUT_SECS, STREAM_IDLE_TIMEOUT_SECS,
+    INITIAL_REQUEST_TIMEOUT_SECS, MAX_TOTAL_IMAGE_SIZE_BYTES, PULL_ABORT_HANDLES,
+    PULL_ABSOLUTE_TIMEOUT_SECS, REQUEST_CACHE, STREAM_ABSOLUTE_TIMEOUT_SECS, STREAM_IDLE_TIMEOUT_SECS,
 };
 use dashmap::mapref::entry::Entry;
 use futures::StreamExt;
@@ -533,6 +533,9 @@ pub async fn pull_model<R: Runtime>(
         }
     };
 
+    let cancel_token = Arc::new(CancellationToken::new());
+    PULL_ABORT_HANDLES.insert(name.clone(), cancel_token.clone());
+
     let app_clone = app.clone();
     let name_clone = name.clone();
 
@@ -585,38 +588,66 @@ pub async fn pull_model<R: Runtime>(
                             LinesCodec::new(),
                         );
 
-                        while let Some(Ok(line)) = lines.next().await {
-                            if let Ok(mut progress_val) =
-                                serde_json::from_str::<serde_json::Value>(&line)
-                            {
-                                if let Some(err) = progress_val.get("error") {
-                                    let msg = err
-                                        .as_str()
-                                        .map(str::to_owned)
-                                        .unwrap_or_else(|| err.to_string());
-                                    log::error!("Pull stream error for {}: {}", name_clone, msg);
+                        loop {
+                            tokio::select! {
+                                _ = cancel_token.cancelled() => {
+                                    log::info!("Pull cancelled for model: {}", name_clone);
                                     let _ = app_clone.emit(
                                         EVENT_PULL_ERROR,
                                         &PullStreamError {
                                             name: name_clone.clone(),
-                                            error: msg,
+                                            error: "Pull cancelled".to_string(),
                                             duration: pull_start.elapsed().as_secs(),
                                         },
                                     );
                                     return;
                                 }
+                                next = time::timeout(Duration::from_secs(1), lines.next()) => {
+                                    match next {
+                                        Ok(Some(Ok(line))) => {
+                                            if let Ok(mut progress_val) =
+                                                serde_json::from_str::<serde_json::Value>(&line)
+                                            {
+                                                if let Some(err) = progress_val.get("error") {
+                                                    let msg = err
+                                                        .as_str()
+                                                        .map(str::to_owned)
+                                                        .unwrap_or_else(|| err.to_string());
+                                                    log::error!("Pull stream error for {}: {}", name_clone, msg);
+                                                    let _ = app_clone.emit(
+                                                        EVENT_PULL_ERROR,
+                                                        &PullStreamError {
+                                                            name: name_clone.clone(),
+                                                            error: msg,
+                                                            duration: pull_start.elapsed().as_secs(),
+                                                        },
+                                                    );
+                                                    return;
+                                                }
 
-                                if let Some(obj) = progress_val.as_object_mut() {
-                                    obj.insert("name".to_string(), json!(name_clone));
-                                }
+                                                if let Some(obj) = progress_val.as_object_mut() {
+                                                    obj.insert("name".to_string(), json!(name_clone));
+                                                }
 
-                                if let Ok(p) = serde_json::from_value::<PullProgress>(progress_val) {
-                                    if last_emit.elapsed().as_millis() as u64
-                                        > crate::shared::PULL_PROGRESS_THROTTLE_MS
-                                        || p.status.contains("success")
-                                    {
-                                        let _ = app_clone.emit(EVENT_PULL_PROGRESS, &p);
-                                        last_emit = std::time::Instant::now();
+                                                if let Ok(p) = serde_json::from_value::<PullProgress>(progress_val) {
+                                                    if last_emit.elapsed().as_millis() as u64
+                                                        > crate::shared::PULL_PROGRESS_THROTTLE_MS
+                                                        || p.status.contains("success")
+                                                    {
+                                                        let _ = app_clone.emit(EVENT_PULL_PROGRESS, &p);
+                                                        last_emit = std::time::Instant::now();
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        Ok(Some(Err(e))) => {
+                                            log::error!("Stream read error: {}", e);
+                                            break;
+                                        }
+                                        Ok(None) => break,
+                                        Err(_) => {
+                                            // Timeout - continue loop to check for cancellation
+                                        }
                                     }
                                 }
                             }
@@ -663,6 +694,24 @@ pub async fn pull_model<R: Runtime>(
             );
         }
     });
+
+    ApiResponse {
+        success: true,
+        data: Some(()),
+        error: None,
+    }
+}
+
+#[tauri::command]
+pub async fn abort_pull(name: String) -> ApiResponse<()> {
+    log::info!("Aborting model pull: {}", name);
+
+    if let Some((_, token)) = PULL_ABORT_HANDLES.remove(&name) {
+        token.cancel();
+        log::info!("Model pull {} cancelled successfully", name);
+    } else {
+        log::warn!("No active pull found for model: {}", name);
+    }
 
     ApiResponse {
         success: true,
@@ -986,5 +1035,26 @@ mod tests {
             .map(|s| s.len())
             .sum();
         assert_eq!(total_b64_len, 0);
+    }
+
+    #[tokio::test]
+    async fn abort_pull_cancels_token() {
+        let model_name = "test-model".to_string();
+        let token = Arc::new(CancellationToken::new());
+        PULL_ABORT_HANDLES.insert(model_name.clone(), token.clone());
+
+        assert!(!token.is_cancelled());
+
+        if let Some((_, t)) = PULL_ABORT_HANDLES.remove(&model_name) {
+            t.cancel();
+        }
+
+        assert!(token.is_cancelled());
+    }
+
+    #[tokio::test]
+    async fn abort_pull_handles_nonexistent_model() {
+        let result = abort_pull("nonexistent".to_string()).await;
+        assert!(result.success);
     }
 }
