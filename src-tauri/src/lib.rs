@@ -40,6 +40,8 @@ pub fn run() {
             eprintln!("⚠️ Failed to initialize file logger: {}", e);
         }
 
+        shared::spawn_cache_eviction_task();
+
         Ok(())
     });
 

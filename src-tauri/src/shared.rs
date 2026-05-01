@@ -26,6 +26,12 @@ pub const STREAM_IDLE_TIMEOUT_SECS: u64 = 300;
 pub const STREAM_ABSOLUTE_TIMEOUT_SECS: u64 = 900;
 pub const PULL_ABSOLUTE_TIMEOUT_SECS: u64 = 3600;
 pub const INITIAL_REQUEST_TIMEOUT_SECS: u64 = 300;
+/// Maximum age of a request-cache entry before it is considered stale and evicted.
+/// Set slightly above `STREAM_ABSOLUTE_TIMEOUT_SECS` so legitimate in-flight streams
+/// are never evicted prematurely.
+pub const REQUEST_CACHE_TTL_SECS: u64 = STREAM_ABSOLUTE_TIMEOUT_SECS + 60;
+/// How often the background eviction task sweeps `REQUEST_CACHE` (seconds).
+pub const REQUEST_CACHE_EVICTION_INTERVAL_SECS: u64 = 120;
 
 // ====================== EVENT NAMES ======================
 
@@ -99,6 +105,50 @@ pub fn ollama_endpoint(base_url: &str, path: &str) -> Result<String, String> {
     base.join(path)
         .map(|u| u.to_string())
         .map_err(|e| e.to_string())
+}
+
+// ====================== CACHE EVICTION ======================
+
+/// Removes all entries from `REQUEST_CACHE` whose age exceeds `REQUEST_CACHE_TTL_SECS`.
+/// Returns the number of entries evicted (useful for diagnostics / logging).
+pub fn evict_stale_requests() -> usize {
+    evict_older_than(Duration::from_secs(REQUEST_CACHE_TTL_SECS))
+}
+
+/// Removes entries older than the given TTL, using [`Instant::now`] as reference.
+/// Exposed for tests that need a shorter TTL than the production default.
+fn evict_older_than(ttl: Duration) -> usize {
+    let now = Instant::now();
+    let before = REQUEST_CACHE.len();
+    let cutoff = now.checked_sub(ttl);
+    match cutoff {
+        Some(c) => REQUEST_CACHE.retain(|_, inserted_at| *inserted_at > c),
+        None => {
+            // TTL exceeds system uptime — nothing can be stale yet, so retain all.
+        }
+    }
+    before - REQUEST_CACHE.len()
+}
+
+/// Spawns a background task that periodically sweeps `REQUEST_CACHE` for stale entries.
+/// Must be called from within a Tokio runtime context (e.g. from an async setup or
+/// via `tauri::async_runtime::spawn`).
+pub fn spawn_cache_eviction_task() {
+    tauri::async_runtime::spawn(async {
+        let mut interval = tokio::time::interval(Duration::from_secs(REQUEST_CACHE_EVICTION_INTERVAL_SECS));
+        loop {
+            interval.tick().await;
+            let evicted = evict_stale_requests();
+            if evicted > 0 {
+                log::warn!(
+                    "Evicted {} stale request-cache entr{} (TTL={}s)",
+                    evicted,
+                    if evicted == 1 { "y" } else { "ies" },
+                    REQUEST_CACHE_TTL_SECS,
+                );
+            }
+        }
+    });
 }
 
 // ====================== RETRY LOGIC ======================
@@ -225,6 +275,65 @@ mod tests {
         .await;
         assert_eq!(result.unwrap(), "done");
         assert_eq!(calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn test_evict_stale_requests_removes_expired() {
+        // Insert an entry, wait briefly, then evict with a very short TTL.
+        // The entry should be removed because it's older than 1ms.
+        REQUEST_CACHE.insert("stale-req".to_string(), Instant::now());
+        // Tiny sleep so the entry is genuinely older than 0ms.
+        std::thread::sleep(std::time::Duration::from_millis(2));
+        REQUEST_CACHE.insert("fresh-req".to_string(), Instant::now());
+
+        let evicted = evict_older_than(Duration::from_millis(1));
+        assert_eq!(evicted, 1);
+        assert!(REQUEST_CACHE.get("stale-req").is_none(), "stale entry should be removed");
+        assert!(REQUEST_CACHE.get("fresh-req").is_some(), "fresh entry should remain");
+
+        REQUEST_CACHE.remove("fresh-req");
+    }
+
+    #[test]
+    fn test_evict_stale_requests_empty_cache() {
+        let evicted = evict_older_than(Duration::from_secs(0));
+        assert_eq!(evicted, 0);
+    }
+
+    #[test]
+    fn test_evict_stale_requests_all_fresh() {
+        REQUEST_CACHE.insert("r1".to_string(), Instant::now());
+        REQUEST_CACHE.insert("r2".to_string(), Instant::now());
+
+        // 1-hour TTL — both entries are fresh
+        let evicted = evict_older_than(Duration::from_secs(3600));
+        assert_eq!(evicted, 0);
+        assert_eq!(REQUEST_CACHE.len(), 2);
+
+        REQUEST_CACHE.remove("r1");
+        REQUEST_CACHE.remove("r2");
+    }
+
+    #[test]
+    fn test_evict_stale_requests_all_stale() {
+        REQUEST_CACHE.insert("s1".to_string(), Instant::now());
+        REQUEST_CACHE.insert("s2".to_string(), Instant::now());
+
+        // Tiny sleep so both entries are older than 0ms
+        std::thread::sleep(std::time::Duration::from_millis(2));
+
+        let evicted = evict_older_than(Duration::from_millis(1));
+        assert_eq!(evicted, 2);
+        assert!(REQUEST_CACHE.is_empty());
+    }
+
+    #[test]
+    fn test_ttl_is_greater_than_stream_timeout() {
+        // Ensure TTL never evicts legitimate in-flight streams
+        assert!(
+            REQUEST_CACHE_TTL_SECS > STREAM_ABSOLUTE_TIMEOUT_SECS,
+            "REQUEST_CACHE_TTL_SECS must exceed STREAM_ABSOLUTE_TIMEOUT_SECS to avoid evicting live streams"
+        );
     }
 
     #[tokio::test]
