@@ -135,18 +135,15 @@ export const PullErrorSchema = z.object({
 
 export type PullError = z.infer<typeof PullErrorSchema>;
 
-export const REDACTED_THINKING_TAG_START = '<think>';
-export const REDACTED_THINKING_TAG_END = '</think>';
+// Re-export redacted-thinking utilities from the shared module (avoids circular deps with workerUtils)
+export {
+  REDACTED_THINKING_TAG_START,
+  REDACTED_THINKING_TAG_END,
+  REDACTED_THINKING_REGEX_SOURCE,
+  stripRedactedThinkingBlocks,
+} from './redactedThinking';
 
-const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-export function stripRedactedThinkingBlocks(content: string): string {
-  const re = new RegExp(
-    `${escapeRegExp(REDACTED_THINKING_TAG_START)}[\\s\\S]*?${escapeRegExp(REDACTED_THINKING_TAG_END)}`,
-    'gi'
-  );
-  return content.replace(re, '').trim();
-}
+import { stripRedactedThinkingBlocks } from './redactedThinking';
 
 /**
  * Strips redacted thinking blocks from content using a Web Worker.
