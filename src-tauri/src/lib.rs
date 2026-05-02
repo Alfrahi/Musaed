@@ -56,6 +56,7 @@ pub fn run() {
         ollama::delete_model,
         ollama::verify_ollama_service,
         ollama::check_ollama_health,
+        ollama::generate_title,
         logging::append_to_log,
         logging::clear_logs,
     ])

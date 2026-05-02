@@ -2333,6 +2333,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "musaed"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "dashmap",
+ "futures",
+ "log",
+ "mockito",
+ "rand 0.8.5",
+ "reqwest 0.12.28",
+ "scopeguard",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-opener",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-store",
+ "tauri-plugin-updater",
+ "tokio",
+ "tokio-util",
+ "url",
+]
+
+[[package]]
 name = "native-tls"
 version = "0.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5174,33 +5201,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5428f8bf88ea5ddc08faddef2ac4a67e390b88186c703ce6dbd955e1c145aca5"
 dependencies = [
  "wit-bindgen",
-]
-
-[[package]]
-name = "musaed"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "dashmap",
- "futures",
- "log",
- "mockito",
- "rand 0.8.5",
- "reqwest 0.12.28",
- "scopeguard",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-opener",
- "tauri-plugin-single-instance",
- "tauri-plugin-store",
- "tauri-plugin-updater",
- "tokio",
- "tokio-util",
- "url",
 ]
 
 [[package]]

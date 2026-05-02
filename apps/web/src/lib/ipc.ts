@@ -21,6 +21,7 @@ export interface CommandMap {
   'pull_model': { args: { baseUrl: string, name: string }, return: void };
   'check_ollama_health': { args: { baseUrl: string }, return: OllamaHealthIpc };
   'verify_ollama_service': { args: { baseUrl: string }, return: string };
+  'generate_title': { args: { baseUrl: string, model: string, userMessage: string, assistantMessage: string, language: string }, return: string };
   'append_to_log': { args: { entry: string }, return: void };
   'clear_logs': { args: Record<string, never>, return: void };
 }
@@ -35,6 +36,7 @@ const CommandReturnSchemas: { [K in keyof CommandMap]: z.ZodType<CommandMap[K]['
   'pull_model': voidSchema,
   'check_ollama_health': OllamaHealthIpcSchema,
   'verify_ollama_service': z.string(),
+  'generate_title': z.string(),
   'append_to_log': voidSchema,
   'clear_logs': voidSchema,
 };
@@ -133,6 +135,13 @@ export const ollamaApi = {
 export const chatApi = {
   chat: (args: CommandMap['chat_with_ollama']['args']) => callInternal('chat_with_ollama', args),
   abort: (requestId: string) => callInternal('abort_chat', { requestId }),
+};
+
+/**
+ * Title Generation API
+ */
+export const titleApi = {
+  generate: (args: CommandMap['generate_title']['args']) => callInternal('generate_title', args, { quiet: true }),
 };
 
 /**

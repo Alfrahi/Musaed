@@ -11,4 +11,5 @@ commands.allow = [
     "check_ollama_health",
     "validate_model",
     "verify_ollama_service",
+    "generate_title",
 ]

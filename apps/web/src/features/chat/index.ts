@@ -6,3 +6,5 @@ export { useConversationActions } from './hooks/useConversationActions';
 export { useAttachmentManager } from './hooks/useAttachmentManager';
 export { useTauriEvents } from './hooks/useTauriEvents';
 export { useChatInitialization } from './hooks/useChatInitialization';
+export { useAutoTitle, triggerAutoTitle } from './hooks/useAutoTitle';
+export { isDefaultTitle, generateConversationTitle } from './utils/title-generator';

@@ -8,6 +8,7 @@ import { startBatching, flushAndStop, stopAllBatching } from '../../../store/bat
 import { persistConversationsNow } from '../../../store/stores/conversation-store';
 import { useUpdatePullStatus, useSetModels } from '../../../store/hooks';
 import { listen, ollamaApi } from '../../../lib/ipc';
+import { triggerAutoTitle } from './useAutoTitle';
 import {
   sanitizeError,
   BackendErrorSchema, PullProgressSchema, PullErrorSchema,
@@ -51,6 +52,9 @@ const handleToken = (payload: OllamaToken) => {
   if (payload.done) {
     flushAndStop(convId);
     state.stopStream(convId);
+
+    // Auto-generate title for conversations that still have the default title
+    triggerAutoTitle(convId);
   }
 };
 
