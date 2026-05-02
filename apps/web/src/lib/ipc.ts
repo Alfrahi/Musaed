@@ -203,9 +203,18 @@ export const opener = {
 /**
  * Store plugin wrappers
  */
+export interface StoreOptions {
+  defaults?: Record<string, unknown>;
+  autoSave?: boolean | number;
+  serializeFnName?: string;
+  deserializeFnName?: string;
+  createNew?: boolean;
+  overrideDefaults?: boolean;
+}
+
 export const store = {
-  load: async (file: string, opts?: unknown) =>
-    checkIsTauri() ? (await import('@tauri-apps/plugin-store')).load(file, opts as any) : null,
+  load: async (file: string, opts?: StoreOptions) =>
+    checkIsTauri() ? (await import('@tauri-apps/plugin-store')).load(file, opts as import('@tauri-apps/plugin-store').StoreOptions) : null,
 };
 
 /**

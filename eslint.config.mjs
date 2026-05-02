@@ -114,7 +114,6 @@ export default tseslint.config(
     rules: {
       'no-restricted-syntax': 'off',
       'no-restricted-imports': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 
