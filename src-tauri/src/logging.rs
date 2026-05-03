@@ -1,8 +1,7 @@
 //! Tauri commands for application logging and diagnostics.
 
+use crate::logger::ChannelLogger;
 use crate::payloads::ApiResponse;
-use std::fs::OpenOptions;
-use std::io::Write;
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager, Runtime};
 
@@ -27,27 +26,19 @@ fn get_log_path<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String> {
     Ok(log_dir.join("musaed.log"))
 }
 
-/// Appends a single log entry to the backend log file in a blocking task.
-/// Entries from the frontend are prefixed with `[FRONTEND]` to distinguish
-/// them from backend log lines and make cross-origin injection obvious.
-fn append_log_entry<R: Runtime>(app: AppHandle<R>, entry: String) {
-    // Sanitize to prevent log injection: strip \n, \r and control characters
+/// Routes a frontend log entry through the async channel logger.
+/// Entries are prefixed with `[FRONTEND]` to distinguish them from backend
+/// log lines and make cross-origin injection obvious.
+fn append_log_entry(entry: String) {
     let sanitized = sanitize_log_entry(&entry);
-    let prefixed = format!("[FRONTEND] {}", sanitized);
-
-    let _ = tokio::task::spawn_blocking(move || {
-        if let Ok(path) = get_log_path(&app) {
-            if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(path) {
-                let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
-                let _ = writeln!(file, "[{}] {}", timestamp, prefixed);
-            }
-        }
-    });
+    let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
+    let line = format!("[{}] [FRONTEND] {}\n", timestamp, sanitized);
+    ChannelLogger::log_direct(line);
 }
 
 #[tauri::command]
-pub async fn append_to_log<R: Runtime>(app: AppHandle<R>, entry: String) -> ApiResponse<()> {
-    append_log_entry(app, entry);
+pub async fn append_to_log(entry: String) -> ApiResponse<()> {
+    append_log_entry(entry);
     ApiResponse {
         success: true,
         data: Some(()),
@@ -58,6 +49,9 @@ pub async fn append_to_log<R: Runtime>(app: AppHandle<R>, entry: String) -> ApiR
 #[tauri::command]
 pub async fn clear_logs<R: Runtime>(app: AppHandle<R>) -> ApiResponse<()> {
     log::info!("Clearing logs");
+    // Flush pending writes before truncating the file.
+    ChannelLogger::global().flush();
+
     let _ = tokio::task::spawn_blocking(move || {
         match get_log_path(&app) {
             Ok(path) => {
