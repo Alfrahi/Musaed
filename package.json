@@ -50,11 +50,16 @@
     "zod": "^4.3.6"
   },
   "lint-staged": {
-    "apps/web/src/**/*.{ts,tsx}": [
-      "eslint --fix"
+    "apps/**/*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
     ],
-    "packages/contracts/src/**/*.ts": [
-      "eslint --fix"
+    "packages/**/*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,md}": [
+      "prettier --write"
     ]
   }
 }

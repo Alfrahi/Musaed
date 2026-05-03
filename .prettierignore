@@ -1,0 +1,25 @@
+# Dependencies
+node_modules
+pnpm-lock.yaml
+
+# Build output
+dist
+build
+.next
+out
+
+# Coverage
+coverage
+
+# Tauri / Rust
+src-tauri
+src-tauri/**/*.rs
+
+# Generated files
+*.tsbuildinfo
+src-tauri/gen
+
+# Static assets (fonts, images, icons)
+apps/web/public/fonts
+apps/web/src/app/favicon.ico
+src-tauri/icons
