@@ -4,12 +4,15 @@
 //! [`generate_title`] Tauri command that produces a short conversation title.
 
 use crate::payloads::{ApiResponse, BackendError};
-use crate::validation::{is_valid_language, is_valid_model_name, validation_error, MAX_TITLE_INPUT_LEN};
+use crate::validation::{
+    is_valid_language, is_valid_model_name, validation_error, MAX_TITLE_INPUT_LEN,
+};
 use serde_json::json;
 use std::time::Duration;
 
 use super::client::{
-    acquire_global_permit, invalid_ollama_base, ollama_endpoint, FAST_HTTP_CLIENT, FAST_TIMEOUT_SECS,
+    acquire_global_permit, invalid_ollama_base, ollama_endpoint, FAST_HTTP_CLIENT,
+    FAST_TIMEOUT_SECS,
 };
 
 /// Strips common thinking/reasoning blocks from model output.
@@ -23,7 +26,9 @@ pub(crate) fn strip_thinking_blocks(content: &str) -> String {
     // Strip <redacted-thinking>...</redacted-thinking> blocks
     // (must match the frontend's `stripThinkingBlocks` logic)
     while let Some(start) = result.find("<redacted-thinking>") {
-        if let Some(end) = result[start + "<redacted-thinking>".len()..].find("</redacted-thinking>") {
+        if let Some(end) =
+            result[start + "<redacted-thinking>".len()..].find("</redacted-thinking>")
+        {
             result = format!(
                 "{}{}",
                 &result[..start],
@@ -52,7 +57,11 @@ pub(crate) fn strip_thinking_blocks(content: &str) -> String {
     // Strip <lemma>...</lemma> blocks
     while let Some(start) = result.find("<lemma>") {
         if let Some(end) = result[start + "<lemma>".len()..].find("</lemma>") {
-            result = format!("{}{}", &result[..start], &result[start + "<lemma>".len() + end + "</lemma>".len()..]);
+            result = format!(
+                "{}{}",
+                &result[..start],
+                &result[start + "<lemma>".len() + end + "</lemma>".len()..]
+            );
         } else {
             result = result[..start].to_string();
             break;
@@ -63,7 +72,11 @@ pub(crate) fn strip_thinking_blocks(content: &str) -> String {
 
     // Some models output chain-of-thought as plain text before the title.
     // Take only the last non-empty line - the actual title.
-    let lines: Vec<&str> = result.lines().map(|l| l.trim()).filter(|l| !l.is_empty()).collect();
+    let lines: Vec<&str> = result
+        .lines()
+        .map(|l| l.trim())
+        .filter(|l| !l.is_empty())
+        .collect();
     lines.last().map(|l| l.to_string()).unwrap_or(result)
 }
 
@@ -215,7 +228,11 @@ pub async fn generate_title(
                 data: None,
                 error: Some(BackendError::new(
                     "OLLAMA_ERROR",
-                    format!("HTTP {}: {}", status, body.chars().take(200).collect::<String>()),
+                    format!(
+                        "HTTP {}: {}",
+                        status,
+                        body.chars().take(200).collect::<String>()
+                    ),
                 )),
             }
         }

@@ -1,8 +1,6 @@
 //! Integration tests for Ollama IPC commands using mockito.
 
-use musaed_lib::payloads::{
-    ApiResponse, ModelValidation, OllamaHealth, OllamaModel,
-};
+use musaed_lib::payloads::{ApiResponse, ModelValidation, OllamaHealth, OllamaModel};
 
 /// Helper: returns the mockito server URL in a format that passes `ollama_url` validation.
 fn mock_base_url(server: &mockito::ServerGuard) -> String {
@@ -41,8 +39,7 @@ async fn get_models_success() {
         .create_async()
         .await;
 
-    let result: ApiResponse<Vec<OllamaModel>> =
-        musaed_lib::ollama::get_ollama_models(url).await;
+    let result: ApiResponse<Vec<OllamaModel>> = musaed_lib::ollama::get_ollama_models(url).await;
 
     mock.assert_async().await;
     assert!(result.success);
@@ -64,8 +61,7 @@ async fn get_models_empty_list() {
         .create_async()
         .await;
 
-    let result: ApiResponse<Vec<OllamaModel>> =
-        musaed_lib::ollama::get_ollama_models(url).await;
+    let result: ApiResponse<Vec<OllamaModel>> = musaed_lib::ollama::get_ollama_models(url).await;
 
     mock.assert_async().await;
     assert!(result.success);
@@ -95,8 +91,7 @@ async fn get_models_server_error() {
 
     // The command will try to parse the 500 response body as JSON.
     // reqwest doesn't treat 500 as an error, so it'll try to deserialize and fail.
-    let result: ApiResponse<Vec<OllamaModel>> =
-        musaed_lib::ollama::get_ollama_models(url).await;
+    let result: ApiResponse<Vec<OllamaModel>> = musaed_lib::ollama::get_ollama_models(url).await;
 
     mock.assert_async().await;
     assert!(!result.success);
@@ -211,8 +206,7 @@ async fn verify_service_detects_ollama() {
         .create_async()
         .await;
 
-    let result: ApiResponse<String> =
-        musaed_lib::ollama::verify_ollama_service(url).await;
+    let result: ApiResponse<String> = musaed_lib::ollama::verify_ollama_service(url).await;
 
     mock.assert_async().await;
     assert!(result.success);
@@ -231,8 +225,7 @@ async fn verify_service_rejects_non_ollama() {
         .create_async()
         .await;
 
-    let result: ApiResponse<String> =
-        musaed_lib::ollama::verify_ollama_service(url).await;
+    let result: ApiResponse<String> = musaed_lib::ollama::verify_ollama_service(url).await;
 
     mock.assert_async().await;
     assert!(!result.success);
@@ -254,8 +247,7 @@ async fn health_check_healthy() {
         .create_async()
         .await;
 
-    let result: ApiResponse<OllamaHealth> =
-        musaed_lib::ollama::check_ollama_health(url).await;
+    let result: ApiResponse<OllamaHealth> = musaed_lib::ollama::check_ollama_health(url).await;
 
     mock.assert_async().await;
     assert!(result.success);
@@ -271,8 +263,7 @@ async fn health_check_connection_refused() {
     // Instead, use localhost with a high random port.
     let url = "http://127.0.0.1:1".to_string();
 
-    let result: ApiResponse<OllamaHealth> =
-        musaed_lib::ollama::check_ollama_health(url).await;
+    let result: ApiResponse<OllamaHealth> = musaed_lib::ollama::check_ollama_health(url).await;
 
     assert!(!result.success);
     let health = result.data.unwrap();

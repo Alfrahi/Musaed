@@ -63,15 +63,13 @@ pub async fn clear_logs<R: Runtime>(app: AppHandle<R>) -> ApiResponse<()> {
     // Flush pending writes before truncating the file.
     ChannelLogger::global().flush();
 
-    let _ = tokio::task::spawn_blocking(move || {
-        match get_log_path(&app) {
-            Ok(path) => {
-                if path.exists() {
-                    let _ = std::fs::write(&path, b"");
-                }
+    let _ = tokio::task::spawn_blocking(move || match get_log_path(&app) {
+        Ok(path) => {
+            if path.exists() {
+                let _ = std::fs::write(&path, b"");
             }
-            Err(e) => log::error!("Failed to resolve log path: {}", e),
         }
+        Err(e) => log::error!("Failed to resolve log path: {}", e),
     })
     .await;
     ApiResponse {

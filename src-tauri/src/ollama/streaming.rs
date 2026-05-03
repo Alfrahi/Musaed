@@ -12,9 +12,7 @@ use tokio::time;
 use tokio_util::codec::{FramedRead, LinesCodec};
 use tokio_util::sync::CancellationToken;
 
-use super::client::{
-    EVENT_OLLAMA_ERROR, EVENT_OLLAMA_TOKEN, STREAM_IDLE_TIMEOUT_SECS,
-};
+use super::client::{EVENT_OLLAMA_ERROR, EVENT_OLLAMA_TOKEN, STREAM_IDLE_TIMEOUT_SECS};
 
 /// Processes the SSE stream from Ollama's chat endpoint, emitting tokens as Tauri events.
 pub(crate) async fn process_chat_stream<R: Runtime>(
@@ -28,9 +26,7 @@ pub(crate) async fn process_chat_stream<R: Runtime>(
     // Cap line length at 1 MiB to prevent unbounded memory allocation from
     // a malformed or malicious SSE stream (resource-exhaustion mitigation).
     let mut lines = FramedRead::new(
-        tokio_util::io::StreamReader::new(
-            stream.map(|res| res.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))),
-        ),
+        tokio_util::io::StreamReader::new(stream.map(|res| res.map_err(std::io::Error::other))),
         LinesCodec::new_with_max_length(1_048_576),
     );
 

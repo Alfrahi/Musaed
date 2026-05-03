@@ -84,9 +84,7 @@ pub async fn get_ollama_models(base_url: String) -> ApiResponse<Vec<OllamaModel>
                     data: None,
                     error: Some(
                         BackendError::new("INVALID_RESPONSE", e.to_string())
-                            .with_context(
-                                "Failed to parse JSON response from Ollama".to_string(),
-                            ),
+                            .with_context("Failed to parse JSON response from Ollama".to_string()),
                     ),
                 }
             }
@@ -109,14 +107,14 @@ pub async fn get_ollama_models(base_url: String) -> ApiResponse<Vec<OllamaModel>
 // ==================== MODEL VALIDATION ====================
 
 #[tauri::command]
-pub async fn validate_model(
-    base_url: String,
-    model_name: String,
-) -> ApiResponse<ModelValidation> {
+pub async fn validate_model(base_url: String, model_name: String) -> ApiResponse<ModelValidation> {
     log::info!("Validating model: {}", model_name);
 
     if !is_valid_model_name(&model_name) {
-        return validation_error("INVALID_INPUT", format!("Invalid model name: {:?}", model_name));
+        return validation_error(
+            "INVALID_INPUT",
+            format!("Invalid model name: {:?}", model_name),
+        );
     }
 
     let _global_permit = match acquire_global_permit().await {
@@ -145,37 +143,34 @@ pub async fn validate_model(
         .send()
         .await
     {
-        Ok(resp) if resp.status().is_success() => {
-            match resp.json::<serde_json::Value>().await {
-                Ok(json) => {
-                    let details =
-                        serde_json::from_value(json.get("details").cloned().unwrap_or_default())
-                            .ok();
-                    log::info!("Model {} validation successful", model_name);
-                    ApiResponse {
-                        success: true,
-                        data: Some(ModelValidation {
-                            is_valid: true,
-                            model_name: model_name.clone(),
-                            details,
-                        }),
-                        error: None,
-                    }
-                }
-                Err(e) => {
-                    log::error!("Failed to parse model details: {}", e);
-                    ApiResponse {
-                        success: false,
-                        data: Some(ModelValidation {
-                            is_valid: false,
-                            model_name,
-                            details: None,
-                        }),
-                        error: Some(BackendError::new("PARSE_ERROR", e.to_string())),
-                    }
+        Ok(resp) if resp.status().is_success() => match resp.json::<serde_json::Value>().await {
+            Ok(json) => {
+                let details =
+                    serde_json::from_value(json.get("details").cloned().unwrap_or_default()).ok();
+                log::info!("Model {} validation successful", model_name);
+                ApiResponse {
+                    success: true,
+                    data: Some(ModelValidation {
+                        is_valid: true,
+                        model_name: model_name.clone(),
+                        details,
+                    }),
+                    error: None,
                 }
             }
-        }
+            Err(e) => {
+                log::error!("Failed to parse model details: {}", e);
+                ApiResponse {
+                    success: false,
+                    data: Some(ModelValidation {
+                        is_valid: false,
+                        model_name,
+                        details: None,
+                    }),
+                    error: Some(BackendError::new("PARSE_ERROR", e.to_string())),
+                }
+            }
+        },
         Ok(_) => {
             log::warn!("Model validation failed for {}", model_name);
             ApiResponse {
@@ -290,7 +285,7 @@ pub async fn pull_model<R: Runtime>(
                         let stream = response.bytes_stream();
                         let mut lines = FramedRead::new(
                             tokio_util::io::StreamReader::new(stream.map(|res| {
-                                res.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+                                res.map_err(std::io::Error::other)
                             })),
                             LinesCodec::new(),
                         );
@@ -477,7 +472,10 @@ pub async fn delete_model(base_url: String, name: String) -> ApiResponse<bool> {
             ApiResponse {
                 success: false,
                 data: Some(false),
-                error: Some(BackendError::new("DELETE_ERROR", format!("HTTP {}", status))),
+                error: Some(BackendError::new(
+                    "DELETE_ERROR",
+                    format!("HTTP {}", status),
+                )),
             }
         }
         Err(e) => {
@@ -530,7 +528,10 @@ pub async fn verify_ollama_service(base_url: String) -> ApiResponse<String> {
 
             if server_header.contains("ollama") {
                 let version = server_header.clone();
-                log::info!("Ollama service verified (server header: {:?})", server_header);
+                log::info!(
+                    "Ollama service verified (server header: {:?})",
+                    server_header
+                );
                 ApiResponse {
                     success: true,
                     data: Some(version),

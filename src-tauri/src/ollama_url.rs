@@ -25,9 +25,7 @@ pub fn parse_ollama_base_url(raw: &str) -> Result<Url, String> {
     match url.scheme() {
         "http" | "https" => {}
         other => {
-            return Err(format!(
-                "Only http and https are allowed (got {other:?})"
-            ));
+            return Err(format!("Only http and https are allowed (got {other:?})"));
         }
     }
 

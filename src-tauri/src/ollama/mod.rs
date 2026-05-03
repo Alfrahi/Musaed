@@ -23,8 +23,7 @@ pub mod types;
 
 pub use commands::{abort_chat, chat_with_ollama, check_ollama_health};
 pub use models::{
-    abort_pull, delete_model, get_ollama_models, pull_model, validate_model,
-    verify_ollama_service,
+    abort_pull, delete_model, get_ollama_models, pull_model, validate_model, verify_ollama_service,
 };
 pub use title::generate_title;
 
@@ -40,7 +39,9 @@ use title::strip_thinking_blocks;
 mod tests {
     use super::*;
     use crate::payloads::ChatMessage;
-    use crate::shared::{ABORT_HANDLES, PULL_ABORT_HANDLES, REQUEST_CACHE, MAX_TOTAL_IMAGE_SIZE_BYTES};
+    use crate::shared::{
+        ABORT_HANDLES, MAX_TOTAL_IMAGE_SIZE_BYTES, PULL_ABORT_HANDLES, REQUEST_CACHE,
+    };
     use dashmap::mapref::entry::Entry;
     use std::sync::Arc;
     use std::time::Instant;

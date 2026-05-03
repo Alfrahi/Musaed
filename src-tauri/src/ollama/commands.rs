@@ -44,10 +44,7 @@ pub async fn chat_with_ollama<R: Runtime>(
 
     // --- Input validation ---
     if !is_valid_model_name(&model) {
-        return validation_error(
-            "INVALID_INPUT",
-            format!("Invalid model name: {:?}", model),
-        );
+        return validation_error("INVALID_INPUT", format!("Invalid model name: {:?}", model));
     }
     if !is_valid_request_id(&request_id) {
         return validation_error(
@@ -180,9 +177,7 @@ pub async fn chat_with_ollama<R: Runtime>(
                 error: Some(
                     BackendError::new("REQUEST_ERROR", e.to_string())
                         .with_request_id(request_id)
-                        .with_context(
-                            "Failed to connect to Ollama chat endpoint".to_string(),
-                        )
+                        .with_context("Failed to connect to Ollama chat endpoint".to_string())
                         .retryable(),
                 ),
             };
@@ -227,7 +222,13 @@ pub async fn chat_with_ollama<R: Runtime>(
 
         let stream_result = time::timeout(
             Duration::from_secs(STREAM_ABSOLUTE_TIMEOUT_SECS),
-            process_chat_stream(&app_clone, &request_id_clone, response, &cancel_token, &mut token_count),
+            process_chat_stream(
+                &app_clone,
+                &request_id_clone,
+                response,
+                &cancel_token,
+                &mut token_count,
+            ),
         )
         .await;
 
@@ -270,7 +271,10 @@ pub async fn abort_chat(request_id: String) -> ApiResponse<()> {
     log::info!("Aborting chat request: {}", request_id);
 
     if !is_valid_request_id(&request_id) {
-        return validation_error("INVALID_INPUT", format!("Invalid request_id: {:?}", request_id));
+        return validation_error(
+            "INVALID_INPUT",
+            format!("Invalid request_id: {:?}", request_id),
+        );
     }
 
     if let Some((_, token)) = ABORT_HANDLES.remove(&request_id) {
@@ -338,7 +342,10 @@ pub async fn check_ollama_health(base_url: String) -> ApiResponse<OllamaHealth> 
             log::info!(
                 "Ollama health check passed ({}ms){}",
                 response_time,
-                version.as_deref().map(|v| format!(", version: {}", v)).unwrap_or_default()
+                version
+                    .as_deref()
+                    .map(|v| format!(", version: {}", v))
+                    .unwrap_or_default()
             );
             ApiResponse {
                 success: true,

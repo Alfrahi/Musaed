@@ -74,7 +74,8 @@ pub fn is_valid_model_name(name: &str) -> bool {
     if name.is_empty() || name.len() > MAX_MODEL_NAME_LEN {
         return false;
     }
-    name.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == ':' || c == '.')
+    name.chars()
+        .all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == ':' || c == '.')
 }
 
 /// Pattern for valid request IDs: alphanumeric with dash and underscore.
@@ -355,7 +356,11 @@ mod tests {
     #[test]
     fn too_many_stop_sequences() {
         let opts = ChatOptions {
-            stop: Some((0..=MAX_STOP_SEQUENCES).map(|i| format!("stop{}", i)).collect()),
+            stop: Some(
+                (0..=MAX_STOP_SEQUENCES)
+                    .map(|i| format!("stop{}", i))
+                    .collect(),
+            ),
             ..Default::default()
         };
         let err = validate_chat_options(&opts).unwrap_err();

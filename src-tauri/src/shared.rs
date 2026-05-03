@@ -4,8 +4,8 @@ use crate::ollama_url::parse_ollama_base_url;
 use crate::payloads::ApiResponse;
 use crate::payloads::BackendError;
 use dashmap::DashMap;
-use std::sync::LazyLock;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::time::{Duration, Instant};
 use tokio::sync::Semaphore;
 use tokio_util::sync::CancellationToken;
@@ -47,7 +47,8 @@ pub const EVENT_PULL_ERROR: &str = "pull-error";
 // ====================== GLOBAL STATE ======================
 
 /// Map of request_id -> CancellationToken for aborting active chat streams.
-pub static ABORT_HANDLES: LazyLock<DashMap<String, Arc<CancellationToken>>> = LazyLock::new(DashMap::new);
+pub static ABORT_HANDLES: LazyLock<DashMap<String, Arc<CancellationToken>>> =
+    LazyLock::new(DashMap::new);
 
 /// Map of model name -> CancellationToken for aborting active model pulls.
 pub static PULL_ABORT_HANDLES: LazyLock<DashMap<String, Arc<CancellationToken>>> =
@@ -57,10 +58,12 @@ pub static PULL_ABORT_HANDLES: LazyLock<DashMap<String, Arc<CancellationToken>>>
 pub static REQUEST_CACHE: LazyLock<DashMap<String, Instant>> = LazyLock::new(DashMap::new);
 
 /// Semaphore limiting the number of concurrent chat streams.
-pub static CONCURRENT_SEMAPHORE: LazyLock<Semaphore> = LazyLock::new(|| Semaphore::new(MAX_CONCURRENT_CHATS));
+pub static CONCURRENT_SEMAPHORE: LazyLock<Semaphore> =
+    LazyLock::new(|| Semaphore::new(MAX_CONCURRENT_CHATS));
 
 /// Global rate limiter for *all* Ollama-bound HTTP traffic.
-pub static GLOBAL_SEMAPHORE: LazyLock<Semaphore> = LazyLock::new(|| Semaphore::new(MAX_CONCURRENT_REQUESTS));
+pub static GLOBAL_SEMAPHORE: LazyLock<Semaphore> =
+    LazyLock::new(|| Semaphore::new(MAX_CONCURRENT_REQUESTS));
 
 /// General-purpose HTTP client used for long-lived operations (chat, pull).
 pub static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
@@ -86,10 +89,9 @@ pub static FAST_HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
 /// Acquires a permit from the global semaphore, returning a typed error on
 /// closure so callers can map it to an `ApiResponse` without panicking.
 pub async fn acquire_global_permit() -> Result<tokio::sync::SemaphorePermit<'static>, String> {
-    GLOBAL_SEMAPHORE
-        .acquire()
-        .await
-        .map_err(|_| "Global request limit reached — too many concurrent Ollama requests".to_string())
+    GLOBAL_SEMAPHORE.acquire().await.map_err(|_| {
+        "Global request limit reached — too many concurrent Ollama requests".to_string()
+    })
 }
 
 // ====================== URL HELPERS ======================
@@ -183,7 +185,8 @@ fn evict_older_than(ttl: Duration) -> usize {
 /// via `tauri::async_runtime::spawn`).
 pub fn spawn_cache_eviction_task() {
     tauri::async_runtime::spawn(async {
-        let mut interval = tokio::time::interval(Duration::from_secs(REQUEST_CACHE_EVICTION_INTERVAL_SECS));
+        let mut interval =
+            tokio::time::interval(Duration::from_secs(REQUEST_CACHE_EVICTION_INTERVAL_SECS));
         loop {
             interval.tick().await;
             let evicted = evict_stale_requests();
@@ -345,8 +348,14 @@ mod tests {
 
         let evicted = evict_older_than(Duration::from_millis(1));
         assert_eq!(evicted, 1);
-        assert!(REQUEST_CACHE.get("stale-req").is_none(), "stale entry should be removed");
-        assert!(REQUEST_CACHE.get("fresh-req").is_some(), "fresh entry should remain");
+        assert!(
+            REQUEST_CACHE.get("stale-req").is_none(),
+            "stale entry should be removed"
+        );
+        assert!(
+            REQUEST_CACHE.get("fresh-req").is_some(),
+            "fresh entry should remain"
+        );
 
         REQUEST_CACHE.remove("fresh-req");
     }
@@ -436,7 +445,10 @@ mod tests {
     fn test_request_cache_try_insert_rejects_duplicate() {
         let key = "bounded-dup".to_string();
         assert!(request_cache_try_insert(key.clone()));
-        assert!(!request_cache_try_insert(key.clone()), "duplicate should be rejected");
+        assert!(
+            !request_cache_try_insert(key.clone()),
+            "duplicate should be rejected"
+        );
         REQUEST_CACHE.remove(&key);
     }
 
