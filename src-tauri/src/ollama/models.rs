@@ -11,6 +11,7 @@
 use crate::payloads::{
     ApiResponse, BackendError, ModelValidation, OllamaModel, PullProgress, PullStreamError,
 };
+use crate::validation::{is_valid_model_name, validation_error};
 use futures::StreamExt;
 use serde_json::json;
 use std::sync::Arc;
@@ -114,6 +115,10 @@ pub async fn validate_model(
 ) -> ApiResponse<ModelValidation> {
     log::info!("Validating model: {}", model_name);
 
+    if !is_valid_model_name(&model_name) {
+        return validation_error("INVALID_INPUT", format!("Invalid model name: {:?}", model_name));
+    }
+
     let _global_permit = match acquire_global_permit().await {
         Ok(p) => p,
         Err(msg) => {
@@ -214,6 +219,10 @@ pub async fn pull_model<R: Runtime>(
     name: String,
 ) -> ApiResponse<()> {
     log::info!("Starting model pull: {}", name);
+
+    if !is_valid_model_name(&name) {
+        return validation_error("INVALID_INPUT", format!("Invalid model name: {:?}", name));
+    }
 
     let url = match ollama_endpoint(&base_url, "api/pull") {
         Ok(u) => u,
@@ -404,6 +413,10 @@ pub async fn pull_model<R: Runtime>(
 pub async fn abort_pull(name: String) -> ApiResponse<()> {
     log::info!("Aborting model pull: {}", name);
 
+    if !is_valid_model_name(&name) {
+        return validation_error("INVALID_INPUT", format!("Invalid model name: {:?}", name));
+    }
+
     if let Some((_, token)) = PULL_ABORT_HANDLES.remove(&name) {
         token.cancel();
         log::info!("Model pull {} cancelled successfully", name);
@@ -423,6 +436,10 @@ pub async fn abort_pull(name: String) -> ApiResponse<()> {
 #[tauri::command]
 pub async fn delete_model(base_url: String, name: String) -> ApiResponse<bool> {
     log::info!("Deleting model: {}", name);
+
+    if !is_valid_model_name(&name) {
+        return validation_error("INVALID_INPUT", format!("Invalid model name: {:?}", name));
+    }
 
     let _global_permit = match acquire_global_permit().await {
         Ok(p) => p,

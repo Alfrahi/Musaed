@@ -8,7 +8,14 @@ import {
   OllamaModelSchema,
   OllamaHealthIpcSchema,
   ModelValidation,
-  ModelValidationSchema
+  ModelValidationSchema,
+  ModelNameSchema,
+  RequestIdSchema,
+  LanguageSchema,
+  IpcChatMessageSchema,
+  IpcChatOptionsSchema,
+  LogEntrySchema,
+  VALIDATION_LIMITS,
 } from '@musaed/contracts';
 import toast from 'react-hot-toast';
 
@@ -30,6 +37,36 @@ export interface CommandMap {
 }
 
 const voidSchema = z.preprocess((val) => (val === null ? undefined : val), z.void());
+
+/**
+ * Input validation schemas for each command's args.
+ * Undefined entries mean the args are trivially valid (e.g. empty object).
+ */
+const CommandInputSchemas: { [K in keyof CommandMap]: z.ZodType<CommandMap[K]['args']> | undefined } = {
+  'get_ollama_models': undefined,
+  'chat_with_ollama': z.object({
+    baseUrl: z.string(),
+    model: ModelNameSchema,
+    messages: z.array(IpcChatMessageSchema).max(VALIDATION_LIMITS.MAX_MESSAGES_COUNT, 'Too many messages'),
+    options: IpcChatOptionsSchema,
+    requestId: RequestIdSchema,
+  }),
+  'abort_chat': z.object({ requestId: RequestIdSchema }),
+  'delete_model': z.object({ baseUrl: z.string(), name: ModelNameSchema }),
+  'pull_model': z.object({ baseUrl: z.string(), name: ModelNameSchema }),
+  'check_ollama_health': undefined,
+  'verify_ollama_service': undefined,
+  'generate_title': z.object({
+    baseUrl: z.string(),
+    model: ModelNameSchema,
+    userMessage: z.string().max(VALIDATION_LIMITS.MAX_TITLE_INPUT_LEN, 'userMessage exceeds size limit'),
+    assistantMessage: z.string().max(VALIDATION_LIMITS.MAX_TITLE_INPUT_LEN, 'assistantMessage exceeds size limit'),
+    language: LanguageSchema,
+  }),
+  'validate_model': z.object({ baseUrl: z.string(), modelName: ModelNameSchema }),
+  'append_to_log': z.object({ entry: LogEntrySchema }),
+  'clear_logs': undefined,
+};
 
 const CommandReturnSchemas: { [K in keyof CommandMap]: z.ZodType<CommandMap[K]['return']> | undefined } = {
   'get_ollama_models': z.array(OllamaModelSchema),
@@ -92,6 +129,19 @@ async function callInternal<K extends keyof CommandMap>(
       toast.error(`Security Block: ${args.baseUrl} is not a valid local address.`);
     }
     return null;
+  }
+
+  // Input validation via Zod schemas
+  const inputSchema = CommandInputSchemas[command];
+  if (inputSchema) {
+    const inputResult = inputSchema.safeParse(args);
+    if (!inputResult.success) {
+      console.error(`[IPC] Input validation failed for "${command}":`, inputResult.error.flatten());
+      if (!options?.quiet) {
+        toast.error(`Invalid request: ${inputResult.error.issues[0]?.message ?? 'validation failed'}`);
+      }
+      return null;
+    }
   }
 
   if (!checkIsTauri()) return null;
@@ -174,6 +224,11 @@ export async function listen<T>(
       const result = schema.safeParse(e.payload);
       if (result.success) {
         handler(result.data);
+      } else {
+        console.error(
+          `[IPC] Event "${event}" payload validation failed:`,
+          result.error.flatten()
+        );
       }
     } else {
       handler(e.payload);

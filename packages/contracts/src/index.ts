@@ -75,6 +75,76 @@ export interface ApiResponse<T> {
   error?: BackendError;
 }
 
+// ====================== IPC INPUT VALIDATION ======================
+
+/** Validation constants mirroring the Rust backend limits. */
+export const VALIDATION_LIMITS = {
+  MAX_MODEL_NAME_LEN: 128,
+  MAX_REQUEST_ID_LEN: 128,
+  MAX_MESSAGE_CONTENT_LEN: 50 * 1024,
+  MAX_MESSAGES_COUNT: 1000,
+  MAX_IMAGES_PER_MESSAGE: 10,
+  MAX_IMAGE_B64_LEN: 10 * 1024 * 1024,
+  MAX_LOG_ENTRY_LEN: 10 * 1024,
+  MAX_TITLE_INPUT_LEN: 10 * 1024,
+  MAX_ROLE_LEN: 32,
+  TEMPERATURE_RANGE: [0, 2] as const,
+  TOP_K_RANGE: [1, 200] as const,
+  TOP_P_RANGE: [0, 1] as const,
+  NUM_PREDICT_RANGE: [1, 32768] as const,
+  NUM_CTX_RANGE: [1, 131072] as const,
+  MAX_STOP_SEQUENCES: 10,
+  MAX_STOP_SEQUENCE_LEN: 256,
+} as const;
+
+const MODEL_NAME_RE = /^[a-zA-Z0-9._:-]+$/;
+
+/** Validates a model name matches the allowed character set and length. */
+export const ModelNameSchema = z
+  .string()
+  .min(1)
+  .max(VALIDATION_LIMITS.MAX_MODEL_NAME_LEN)
+  .regex(MODEL_NAME_RE, 'Model name contains invalid characters');
+
+/** Validates a request ID (alphanumeric, dash, underscore). */
+export const RequestIdSchema = z
+  .string()
+  .min(1)
+  .max(VALIDATION_LIMITS.MAX_REQUEST_ID_LEN)
+  .regex(/^[a-zA-Z0-9_-]+$/, 'Request ID contains invalid characters');
+
+/** Validates a language code is 'en' or 'ar'. */
+export const LanguageSchema = z.enum(['en', 'ar']);
+
+/** Validates a chat role. */
+export const ChatRoleSchema = z.enum(['system', 'user', 'assistant']);
+
+/** Validates ChatMessage with size/count limits. */
+export const IpcChatMessageSchema = z.object({
+  role: ChatRoleSchema,
+  content: z.string().max(VALIDATION_LIMITS.MAX_MESSAGE_CONTENT_LEN, 'Message content exceeds size limit'),
+  images: z
+    .array(z.string().max(VALIDATION_LIMITS.MAX_IMAGE_B64_LEN, 'Image exceeds size limit'))
+    .max(VALIDATION_LIMITS.MAX_IMAGES_PER_MESSAGE, 'Too many images per message')
+    .optional(),
+});
+
+/** Validates ChatOptions with numeric range constraints. */
+export const IpcChatOptionsSchema = z.object({
+  temperature: z.number().min(VALIDATION_LIMITS.TEMPERATURE_RANGE[0]).max(VALIDATION_LIMITS.TEMPERATURE_RANGE[1]).optional(),
+  topK: z.number().int().min(VALIDATION_LIMITS.TOP_K_RANGE[0]).max(VALIDATION_LIMITS.TOP_K_RANGE[1]).optional(),
+  topP: z.number().min(VALIDATION_LIMITS.TOP_P_RANGE[0]).max(VALIDATION_LIMITS.TOP_P_RANGE[1]).optional(),
+  numPredict: z.number().int().min(VALIDATION_LIMITS.NUM_PREDICT_RANGE[0]).max(VALIDATION_LIMITS.NUM_PREDICT_RANGE[1]).optional(),
+  numCtx: z.number().int().min(VALIDATION_LIMITS.NUM_CTX_RANGE[0]).max(VALIDATION_LIMITS.NUM_CTX_RANGE[1]).optional(),
+  stop: z
+    .array(z.string().max(VALIDATION_LIMITS.MAX_STOP_SEQUENCE_LEN))
+    .max(VALIDATION_LIMITS.MAX_STOP_SEQUENCES)
+    .optional(),
+});
+
+/** Validates a log entry string. */
+export const LogEntrySchema = z.string().max(VALIDATION_LIMITS.MAX_LOG_ENTRY_LEN, 'Log entry exceeds size limit');
+
 export const OllamaModelDetailsSchema = z.object({
   format: z.string().nullish(),
   family: z.string().nullish(),

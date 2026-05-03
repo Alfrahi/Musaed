@@ -4,6 +4,7 @@
 //! [`generate_title`] Tauri command that produces a short conversation title.
 
 use crate::payloads::{ApiResponse, BackendError};
+use crate::validation::{is_valid_language, is_valid_model_name, validation_error, MAX_TITLE_INPUT_LEN};
 use serde_json::json;
 use std::time::Duration;
 
@@ -78,6 +79,37 @@ pub async fn generate_title(
     language: String,
 ) -> ApiResponse<String> {
     log::info!("Generating title with model: {}", model);
+
+    // --- Input validation ---
+    if !is_valid_model_name(&model) {
+        return validation_error("INVALID_INPUT", format!("Invalid model name: {:?}", model));
+    }
+    if !is_valid_language(&language) {
+        return validation_error(
+            "INVALID_INPUT",
+            format!("Invalid language: {:?}; expected 'en' or 'ar'", language),
+        );
+    }
+    if user_message.len() > MAX_TITLE_INPUT_LEN {
+        return validation_error(
+            "INVALID_INPUT",
+            format!(
+                "user_message exceeds {} bytes (got {})",
+                MAX_TITLE_INPUT_LEN,
+                user_message.len()
+            ),
+        );
+    }
+    if assistant_message.len() > MAX_TITLE_INPUT_LEN {
+        return validation_error(
+            "INVALID_INPUT",
+            format!(
+                "assistant_message exceeds {} bytes (got {})",
+                MAX_TITLE_INPUT_LEN,
+                assistant_message.len()
+            ),
+        );
+    }
 
     let _global_permit = match acquire_global_permit().await {
         Ok(p) => p,

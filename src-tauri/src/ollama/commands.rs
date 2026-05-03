@@ -4,6 +4,10 @@
 //! an active chat session or when probing server status.
 
 use crate::payloads::{ApiResponse, BackendError, ChatMessage, ChatOptions, OllamaHealth};
+use crate::validation::{
+    is_valid_model_name, is_valid_request_id, validate_chat_message, validate_chat_options,
+    validation_error, MAX_MESSAGES_COUNT,
+};
 use scopeguard::defer;
 use serde_json::json;
 use std::sync::Arc;
@@ -37,6 +41,38 @@ pub async fn chat_with_ollama<R: Runtime>(
         model
     );
     let start = std::time::Instant::now();
+
+    // --- Input validation ---
+    if !is_valid_model_name(&model) {
+        return validation_error(
+            "INVALID_INPUT",
+            format!("Invalid model name: {:?}", model),
+        );
+    }
+    if !is_valid_request_id(&request_id) {
+        return validation_error(
+            "INVALID_INPUT",
+            format!("Invalid request_id: {:?}", request_id),
+        );
+    }
+    if messages.len() > MAX_MESSAGES_COUNT {
+        return validation_error(
+            "INVALID_INPUT",
+            format!(
+                "Too many messages: {} (max {})",
+                messages.len(),
+                MAX_MESSAGES_COUNT
+            ),
+        );
+    }
+    for msg in &messages {
+        if let Err(e) = validate_chat_message(msg) {
+            return validation_error("INVALID_INPUT", e);
+        }
+    }
+    if let Err(e) = validate_chat_options(&options) {
+        return validation_error("INVALID_INPUT", e);
+    }
 
     // Image size safety check
     let total_b64_len: usize = messages
@@ -232,6 +268,10 @@ pub async fn chat_with_ollama<R: Runtime>(
 #[tauri::command]
 pub async fn abort_chat(request_id: String) -> ApiResponse<()> {
     log::info!("Aborting chat request: {}", request_id);
+
+    if !is_valid_request_id(&request_id) {
+        return validation_error("INVALID_INPUT", format!("Invalid request_id: {:?}", request_id));
+    }
 
     if let Some((_, token)) = ABORT_HANDLES.remove(&request_id) {
         token.cancel();

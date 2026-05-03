@@ -2,6 +2,7 @@
 
 use crate::logger::ChannelLogger;
 use crate::payloads::ApiResponse;
+use crate::validation::{validation_error, MAX_LOG_ENTRY_LEN};
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager, Runtime};
 
@@ -38,6 +39,16 @@ fn append_log_entry(entry: String) {
 
 #[tauri::command]
 pub async fn append_to_log(entry: String) -> ApiResponse<()> {
+    if entry.len() > MAX_LOG_ENTRY_LEN {
+        return validation_error(
+            "INVALID_INPUT",
+            format!(
+                "Log entry exceeds {} bytes (got {})",
+                MAX_LOG_ENTRY_LEN,
+                entry.len()
+            ),
+        );
+    }
     append_log_entry(entry);
     ApiResponse {
         success: true,

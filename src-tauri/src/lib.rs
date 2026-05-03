@@ -6,6 +6,7 @@ pub mod ollama;
 pub mod ollama_url;
 pub mod payloads;
 pub mod shared;
+pub mod validation;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
