@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { stripRedactedThinkingBlocks, Conversation, Language } from '@musaed/contracts';
 import { titleApi } from '../../../lib/ipc';
@@ -8,10 +8,7 @@ import { logger } from '../../../lib/logger';
 const MAX_MESSAGE_LENGTH = 500;
 
 /** All localized variants of the default conversation title. */
-const DEFAULT_TITLES: ReadonlySet<string> = new Set([
-  'New Chat',
-  'محادثة جديدة',
-]);
+const DEFAULT_TITLES: ReadonlySet<string> = new Set(['New Chat', 'محادثة جديدة']);
 
 /**
  * Checks whether a conversation still has the default (un-renamed) title.
@@ -27,7 +24,10 @@ export function isDefaultTitle(title: string): boolean {
  */
 function cleanGeneratedTitle(raw: string): string {
   const stripped = stripRedactedThinkingBlocks(raw).trim();
-  const lines = stripped.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const lines = stripped
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
   return lines[lines.length - 1] ?? stripped;
 }
 
@@ -45,12 +45,12 @@ function truncate(text: string, maxLength: number): string {
 export async function generateConversationTitle(
   conversation: Conversation,
   ollamaUrl: string,
-  language: Language,
+  language: Language
 ): Promise<string | null> {
   const messages = conversation.messages;
 
-  const userMessage = messages.find(m => m.role === 'user');
-  const assistantMessage = messages.find(m => m.role === 'assistant');
+  const userMessage = messages.find((m) => m.role === 'user');
+  const assistantMessage = messages.find((m) => m.role === 'assistant');
 
   if (!userMessage?.content || !assistantMessage?.content) return null;
 

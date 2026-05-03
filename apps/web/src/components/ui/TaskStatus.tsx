@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { usePullStatus, useLanguage } from '@/store/hooks';
 import { useTranslation } from '@/lib/i18n';
@@ -27,7 +27,7 @@ const TaskStatus = () => {
         initial={{ opacity: 0, y: -10, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 10, scale: 0.95 }}
-        className="flex items-center gap-3 ps-3 pe-4 py-1.5 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm"
+        className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-100 py-1.5 ps-3 pe-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/80"
       >
         <div className="relative flex items-center justify-center">
           <Loader2 size={14} className="animate-spin text-blue-500" aria-hidden="true" />
@@ -37,19 +37,19 @@ const TaskStatus = () => {
             </div>
           )}
         </div>
-        
-        <div className="flex flex-col min-w-0">
+
+        <div className="flex min-w-0 flex-col">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-widest truncate max-w-[100px]">
+            <span className="max-w-[100px] truncate text-[10px] font-bold tracking-widest text-zinc-900 uppercase dark:text-zinc-100">
               {name === 'current' ? t('library.pulling') : name}
             </span>
             {status?.progress !== undefined && (
-              <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 font-mono">
+              <span className="font-mono text-[10px] font-black text-blue-600 dark:text-blue-400">
                 {status.progress}%
               </span>
             )}
           </div>
-          <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-[0.1em] leading-none">
+          <span className="text-[8px] leading-none font-bold tracking-[0.1em] text-zinc-500 uppercase">
             {t('library.pulling')}
           </span>
         </div>

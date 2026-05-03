@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { z } from 'zod';
 
@@ -10,17 +10,19 @@ export enum BackendErrorCode {
   FileSystemError = 'FILE_SYSTEM_ERROR',
   InternalError = 'INTERNAL_ERROR',
   Aborted = 'ABORTED',
-  Unknown = 'UNKNOWN'
+  Unknown = 'UNKNOWN',
 }
 
-export const BackendErrorSchema = z.object({
-  code: z.string().default(BackendErrorCode.Unknown),
-  message: z.string(),
-  requestId: z.string().nullish(),
-}).transform((data) => ({
-  ...data,
-  requestId: data.requestId
-}));
+export const BackendErrorSchema = z
+  .object({
+    code: z.string().default(BackendErrorCode.Unknown),
+    message: z.string(),
+    requestId: z.string().nullish(),
+  })
+  .transform((data) => ({
+    ...data,
+    requestId: data.requestId,
+  }));
 
 export type BackendError = z.infer<typeof BackendErrorSchema>;
 
@@ -28,7 +30,7 @@ export type BackendError = z.infer<typeof BackendErrorSchema>;
  * Sanitizes errors by redacting sensitive system paths and URLs while ensuring type safety.
  */
 export const sanitizeError = (error: unknown): BackendError => {
-  let message = "An unknown error occurred";
+  let message = 'An unknown error occurred';
   let code = BackendErrorCode.Unknown;
   let requestId: string | undefined;
 
@@ -38,11 +40,11 @@ export const sanitizeError = (error: unknown): BackendError => {
     message = error.message;
   } else if (error !== null && typeof error === 'object') {
     const errObj = error as Record<string, unknown>;
-    
+
     if (typeof errObj.message === 'string') {
       message = errObj.message;
     }
-    
+
     if (typeof errObj.code === 'string') {
       code = errObj.code as BackendErrorCode;
     }
@@ -55,17 +57,17 @@ export const sanitizeError = (error: unknown): BackendError => {
 
   const pathRegex = /([a-zA-Z]:\\(?:[^\\\s]+\\)+|(?:\/[^/\s]+)+\/)/g;
   const urlRegex = /(https?:\/\/[^\s]+)/g;
-  
+
   message = message.replace(pathRegex, '[PATH REDACTED] ');
-  
+
   if (!message.includes('localhost') && !message.includes('127.0.0.1')) {
     message = message.replace(urlRegex, '[URL REDACTED]');
   }
 
-  return { 
-    code, 
-    message: message.trim(), 
-    requestId 
+  return {
+    code,
+    message: message.trim(),
+    requestId,
   };
 };
 
@@ -122,7 +124,9 @@ export const ChatRoleSchema = z.enum(['system', 'user', 'assistant']);
 /** Validates ChatMessage with size/count limits. */
 export const IpcChatMessageSchema = z.object({
   role: ChatRoleSchema,
-  content: z.string().max(VALIDATION_LIMITS.MAX_MESSAGE_CONTENT_LEN, 'Message content exceeds size limit'),
+  content: z
+    .string()
+    .max(VALIDATION_LIMITS.MAX_MESSAGE_CONTENT_LEN, 'Message content exceeds size limit'),
   images: z
     .array(z.string().max(VALIDATION_LIMITS.MAX_IMAGE_B64_LEN, 'Image exceeds size limit'))
     .max(VALIDATION_LIMITS.MAX_IMAGES_PER_MESSAGE, 'Too many images per message')
@@ -131,11 +135,34 @@ export const IpcChatMessageSchema = z.object({
 
 /** Validates ChatOptions with numeric range constraints. */
 export const IpcChatOptionsSchema = z.object({
-  temperature: z.number().min(VALIDATION_LIMITS.TEMPERATURE_RANGE[0]).max(VALIDATION_LIMITS.TEMPERATURE_RANGE[1]).optional(),
-  topK: z.number().int().min(VALIDATION_LIMITS.TOP_K_RANGE[0]).max(VALIDATION_LIMITS.TOP_K_RANGE[1]).optional(),
-  topP: z.number().min(VALIDATION_LIMITS.TOP_P_RANGE[0]).max(VALIDATION_LIMITS.TOP_P_RANGE[1]).optional(),
-  numPredict: z.number().int().min(VALIDATION_LIMITS.NUM_PREDICT_RANGE[0]).max(VALIDATION_LIMITS.NUM_PREDICT_RANGE[1]).optional(),
-  numCtx: z.number().int().min(VALIDATION_LIMITS.NUM_CTX_RANGE[0]).max(VALIDATION_LIMITS.NUM_CTX_RANGE[1]).optional(),
+  temperature: z
+    .number()
+    .min(VALIDATION_LIMITS.TEMPERATURE_RANGE[0])
+    .max(VALIDATION_LIMITS.TEMPERATURE_RANGE[1])
+    .optional(),
+  topK: z
+    .number()
+    .int()
+    .min(VALIDATION_LIMITS.TOP_K_RANGE[0])
+    .max(VALIDATION_LIMITS.TOP_K_RANGE[1])
+    .optional(),
+  topP: z
+    .number()
+    .min(VALIDATION_LIMITS.TOP_P_RANGE[0])
+    .max(VALIDATION_LIMITS.TOP_P_RANGE[1])
+    .optional(),
+  numPredict: z
+    .number()
+    .int()
+    .min(VALIDATION_LIMITS.NUM_PREDICT_RANGE[0])
+    .max(VALIDATION_LIMITS.NUM_PREDICT_RANGE[1])
+    .optional(),
+  numCtx: z
+    .number()
+    .int()
+    .min(VALIDATION_LIMITS.NUM_CTX_RANGE[0])
+    .max(VALIDATION_LIMITS.NUM_CTX_RANGE[1])
+    .optional(),
   stop: z
     .array(z.string().max(VALIDATION_LIMITS.MAX_STOP_SEQUENCE_LEN))
     .max(VALIDATION_LIMITS.MAX_STOP_SEQUENCES)
@@ -143,7 +170,9 @@ export const IpcChatOptionsSchema = z.object({
 });
 
 /** Validates a log entry string. */
-export const LogEntrySchema = z.string().max(VALIDATION_LIMITS.MAX_LOG_ENTRY_LEN, 'Log entry exceeds size limit');
+export const LogEntrySchema = z
+  .string()
+  .max(VALIDATION_LIMITS.MAX_LOG_ENTRY_LEN, 'Log entry exceeds size limit');
 
 export const OllamaModelDetailsSchema = z.object({
   format: z.string().nullish(),
@@ -318,8 +347,8 @@ export const DEFAULT_SETTINGS: ChatSettings = {
   num_predict: 2048,
   num_ctx: 4096,
   stop: [],
-  systemPrompt: "",
-  ollamaUrl: "http://localhost:11434",
+  systemPrompt: '',
+  ollamaUrl: 'http://localhost:11434',
   language: 'en',
   theme: 'system',
   hasDetectedLanguage: false,

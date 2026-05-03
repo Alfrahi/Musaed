@@ -7,12 +7,14 @@ interface MessageAvatarProps {
 }
 
 export const MessageAvatar = React.memo(({ isUser }: MessageAvatarProps) => (
-  <div className={cn(
-    "w-8 h-8 shrink-0 flex items-center justify-center border",
-    isUser 
-      ? "bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500" 
-      : "bg-primary border-primary text-white"
-  )}>
+  <div
+    className={cn(
+      'flex h-8 w-8 shrink-0 items-center justify-center border',
+      isUser
+        ? 'border-zinc-200 bg-white text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800'
+        : 'bg-primary border-primary text-white'
+    )}
+  >
     {isUser ? <User size={16} /> : <Bot size={16} />}
   </div>
 ));

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
@@ -21,7 +21,9 @@ export interface StreamingState {
 
   appendToken: (conversationId: string, token: string) => void;
   setPendingMetrics: (conversationId: string, metrics: Partial<Message>) => void;
-  flushToConversation: (conversationId: string) => { content: string; metrics: Partial<Message> } | null;
+  flushToConversation: (
+    conversationId: string
+  ) => { content: string; metrics: Partial<Message> } | null;
   clearStream: (conversationId: string) => void;
   clearAll: () => void;
 }
@@ -76,7 +78,7 @@ export const useStreamingStore = createWithEqualityFn<StreamingState>()(
 
     clearAll: () => set({ liveContent: {}, liveMetrics: {}, pendingMetrics: {} }),
   }),
-  shallow,
+  shallow
 );
 
 // ---------------------------------------------------------------------------

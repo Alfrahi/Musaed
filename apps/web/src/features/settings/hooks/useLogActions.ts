@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useCallback } from 'react';
 import { useTranslation } from '../../../lib/i18n';
@@ -26,7 +26,7 @@ export function useLogActions() {
     try {
       const logStore = await store.load('logs.json', { autoSave: true });
       if (logStore) {
-        const result = await logStore.get<string[]>('entries') || [];
+        const result = (await logStore.get<string[]>('entries')) || [];
         setLogs(result);
       }
     } catch (err) {
@@ -42,10 +42,10 @@ export function useLogActions() {
    */
   const clearLogs = useCallback(async () => {
     if (!isTauri) return;
-    
+
     const confirmed = await dialog.ask(t('logs.confirmClear'), {
       title: t('logs.clearLogs'),
-      kind: 'warning'
+      kind: 'warning',
     });
 
     if (confirmed) {
@@ -69,6 +69,6 @@ export function useLogActions() {
     logs,
     isLoading,
     fetchLogs,
-    clearLogs
+    clearLogs,
   };
 }

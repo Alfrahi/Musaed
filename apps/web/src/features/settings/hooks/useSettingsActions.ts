@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useCallback } from 'react';
 import { DEFAULT_SETTINGS, ChatSettings } from '@musaed/contracts';
@@ -9,11 +9,14 @@ import { logger } from '../../../lib/logger';
 export function useSettingsActions() {
   const setGlobalSettings = useSetGlobalSettings();
 
-  const updateGlobalSettings = useCallback((update: Partial<ChatSettings>) => {
-    const currentSettings = useSettingsStore.getState().globalSettings;
-    logger.debug('Updating global settings', { update });
-    setGlobalSettings({ ...currentSettings, ...update });
-  }, [setGlobalSettings]);
+  const updateGlobalSettings = useCallback(
+    (update: Partial<ChatSettings>) => {
+      const currentSettings = useSettingsStore.getState().globalSettings;
+      logger.debug('Updating global settings', { update });
+      setGlobalSettings({ ...currentSettings, ...update });
+    },
+    [setGlobalSettings]
+  );
 
   const resetGlobalSettings = useCallback(() => {
     logger.warn('Resetting global settings to default');

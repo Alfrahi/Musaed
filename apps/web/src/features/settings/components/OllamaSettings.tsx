@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useEffect, useRef } from 'react';
 import { Globe, Terminal } from 'lucide-react';
@@ -19,7 +19,7 @@ const handleOllamaUrlBlurFactory = (
   lastValidRef: React.MutableRefObject<string>,
   updateGlobalSettings: (s: { ollamaUrl: string }) => void,
   fetchModels: () => Promise<unknown>,
-  t: (key: string) => string,
+  t: (key: string) => string
 ) => {
   const sanitized = sanitizeOllamaUrl(url);
 
@@ -50,7 +50,9 @@ const OllamaSettings = () => {
   const { t } = useTranslation(language);
 
   const lastValidOllamaUrlRef = useRef(
-    isValidOllamaUrl(globalSettings.ollamaUrl) ? globalSettings.ollamaUrl : DEFAULT_SETTINGS.ollamaUrl
+    isValidOllamaUrl(globalSettings.ollamaUrl)
+      ? globalSettings.ollamaUrl
+      : DEFAULT_SETTINGS.ollamaUrl
   );
 
   useEffect(() => {
@@ -65,7 +67,7 @@ const OllamaSettings = () => {
       lastValidOllamaUrlRef,
       updateGlobalSettings,
       fetchModels,
-      t,
+      t
     );
 
   return (
@@ -75,12 +77,12 @@ const OllamaSettings = () => {
           <Globe size={14} className="text-zinc-400" />
           <label>{t('settings.ollamaUrl')}</label>
         </div>
-        <input 
-          type="text" 
-          value={globalSettings.ollamaUrl} 
+        <input
+          type="text"
+          value={globalSettings.ollamaUrl}
           onChange={(e) => updateGlobalSettings({ ollamaUrl: e.target.value })}
           onBlur={onBlur}
-          className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl ps-3 pe-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          className="w-full rounded-xl border border-zinc-200 bg-zinc-50 py-2 ps-3 pe-3 text-xs transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
         />
       </div>
 
@@ -89,10 +91,10 @@ const OllamaSettings = () => {
           <Terminal size={14} className="text-zinc-400" />
           <label>{t('settings.systemPrompt')}</label>
         </div>
-        <textarea 
+        <textarea
           value={globalSettings.systemPrompt}
           onChange={(e) => updateGlobalSettings({ systemPrompt: e.target.value })}
-          className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl p-3 text-xs min-h-[100px] outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"
+          className="min-h-[100px] w-full resize-none rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
         />
       </div>
     </div>

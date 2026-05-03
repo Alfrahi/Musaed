@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
@@ -12,8 +12,7 @@ interface SettingsState {
 }
 
 // Selectors for the settings store
-export const selectTheme = (state: SettingsState) =>
-  state.globalSettings.theme;
+export const selectTheme = (state: SettingsState) => state.globalSettings.theme;
 
 export const selectIsSettingEnabled = (key: keyof ChatSettings) => (state: SettingsState) =>
   !!state.globalSettings[key];

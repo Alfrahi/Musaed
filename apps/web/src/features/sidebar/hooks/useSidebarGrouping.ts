@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useMemo, useState, useCallback } from 'react';
 import { Conversation, Language } from '@musaed/contracts';
@@ -36,18 +36,19 @@ export function useSidebarGrouping(
 
   // Memoize the filtered conversations to avoid recalculating when only `t` changes.
   const filtered = useMemo(() => {
-    const convList = conversationIds.map(id => conversations[id]).filter(Boolean);
+    const convList = conversationIds.map((id) => conversations[id]).filter(Boolean);
     const query = searchQuery.toLowerCase();
 
-    return convList.filter(conv =>
-      conv.title.toLowerCase().includes(query) ||
-      conv.messages.some(msg => msg.content.toLowerCase().includes(query))
+    return convList.filter(
+      (conv) =>
+        conv.title.toLowerCase().includes(query) ||
+        conv.messages.some((msg) => msg.content.toLowerCase().includes(query))
     );
   }, [conversations, conversationIds, searchQuery]);
 
   // Load more conversations.
   const loadMore = useCallback(() => {
-    setLoadedCount(prev => Math.min(prev + loadMoreCount, conversationIds.length));
+    setLoadedCount((prev) => Math.min(prev + loadMoreCount, conversationIds.length));
   }, [conversationIds.length, loadMoreCount]);
 
   // Get the currently loaded conversations.
@@ -60,7 +61,9 @@ export function useSidebarGrouping(
     if (searchQuery) {
       return [
         { type: 'header', group: 'search', id: 'header-search' } as SidebarItem,
-        ...loadedConversations.map(conv => ({ type: 'conversation', data: conv, id: conv.id } as SidebarItem))
+        ...loadedConversations.map(
+          (conv) => ({ type: 'conversation', data: conv, id: conv.id }) as SidebarItem
+        ),
       ];
     }
 
@@ -69,21 +72,29 @@ export function useSidebarGrouping(
     const yesterday = today - 86400000;
     const lastWeek = today - 86400000 * 7;
 
-    const groups: Record<TimeGroup, Conversation[]> = loadedConversations.reduce((acc, conv) => {
-      let groupKey: TimeGroup = 'older';
-      if (conv.updatedAt >= today) groupKey = 'today';
-      else if (conv.updatedAt >= yesterday) groupKey = 'yesterday';
-      else if (conv.updatedAt >= lastWeek) groupKey = 'lastWeek';
+    const groups: Record<TimeGroup, Conversation[]> = loadedConversations.reduce(
+      (acc, conv) => {
+        let groupKey: TimeGroup = 'older';
+        if (conv.updatedAt >= today) groupKey = 'today';
+        else if (conv.updatedAt >= yesterday) groupKey = 'yesterday';
+        else if (conv.updatedAt >= lastWeek) groupKey = 'lastWeek';
 
-      acc[groupKey].push(conv);
-      return acc;
-    }, { today: [], yesterday: [], lastWeek: [], older: [], search: [] } as Record<TimeGroup, Conversation[]>);
+        acc[groupKey].push(conv);
+        return acc;
+      },
+      { today: [], yesterday: [], lastWeek: [], older: [], search: [] } as Record<
+        TimeGroup,
+        Conversation[]
+      >
+    );
 
-    return (['today', 'yesterday', 'lastWeek', 'older'] as TimeGroup[]).flatMap(groupKey => {
+    return (['today', 'yesterday', 'lastWeek', 'older'] as TimeGroup[]).flatMap((groupKey) => {
       if (groups[groupKey].length === 0) return [];
       return [
         { type: 'header', group: groupKey, id: `header-${groupKey}` } as SidebarItem,
-        ...groups[groupKey].map(conv => ({ type: 'conversation', data: conv, id: conv.id } as SidebarItem))
+        ...groups[groupKey].map(
+          (conv) => ({ type: 'conversation', data: conv, id: conv.id }) as SidebarItem
+        ),
       ];
     });
   }, [loadedConversations, searchQuery]);

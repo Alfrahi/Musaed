@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useCallback } from 'react';
 import { useConversationStore, useModelStore, useSettingsStore } from '../../../store';
@@ -22,8 +22,12 @@ export function abortStreaming(conversationId: string): void {
 
 /** Create a new conversation with current model and settings. */
 const createConversation = (
-  batchUpdate: (updater: (state: import('../../../store/stores/conversation-store').ConversationState) => Partial<import('../../../store/stores/conversation-store').ConversationState>) => void,
-  t: (key: string) => string,
+  batchUpdate: (
+    updater: (
+      state: import('../../../store/stores/conversation-store').ConversationState
+    ) => Partial<import('../../../store/stores/conversation-store').ConversationState>
+  ) => void,
+  t: (key: string) => string
 ) => {
   const modelState = useModelStore.getState();
   const settingsState = useSettingsStore.getState();
@@ -59,30 +63,36 @@ export const useConversationActions = () => {
     createConversation(batchUpdate, t);
   }, [batchUpdate, t]);
 
-  const deleteConversation = useCallback((id: string) => {
-    abortStreaming(id);
+  const deleteConversation = useCallback(
+    (id: string) => {
+      abortStreaming(id);
 
-    const state = useConversationStore.getState();
-    const { [id]: _removed, ...remainingConversations } = state.conversations;  
-    const remainingIds = state.conversationIds.filter(cid => cid !== id);
-    const newCurrentId = state.currentConversationId === id ? null : state.currentConversationId;
+      const state = useConversationStore.getState();
+      const { [id]: _removed, ...remainingConversations } = state.conversations;
+      const remainingIds = state.conversationIds.filter((cid) => cid !== id);
+      const newCurrentId = state.currentConversationId === id ? null : state.currentConversationId;
 
-    batchUpdate(() => ({
-      conversations: remainingConversations,
-      conversationIds: remainingIds,
-      currentConversationId: newCurrentId,
-    }));
-  }, [batchUpdate]);
+      batchUpdate(() => ({
+        conversations: remainingConversations,
+        conversationIds: remainingIds,
+        currentConversationId: newCurrentId,
+      }));
+    },
+    [batchUpdate]
+  );
 
-  const updateConversationTitle = useCallback((id: string, title: string) => {
-    const state = useConversationStore.getState();
-    const updated = state.conversationIds.map(cid =>
-      cid === id
-        ? { ...state.conversations[cid], title, updatedAt: Date.now() }
-        : state.conversations[cid]
-    );
-    setConversations(updated);
-  }, [setConversations]);
+  const updateConversationTitle = useCallback(
+    (id: string, title: string) => {
+      const state = useConversationStore.getState();
+      const updated = state.conversationIds.map((cid) =>
+        cid === id
+          ? { ...state.conversations[cid], title, updatedAt: Date.now() }
+          : state.conversations[cid]
+      );
+      setConversations(updated);
+    },
+    [setConversations]
+  );
 
   const clearAllConversations = useCallback(() => {
     Object.keys(useConversationStore.getState().activeStreams).forEach(abortStreaming);

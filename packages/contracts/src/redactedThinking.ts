@@ -36,8 +36,7 @@ export const THINKING_REGEX_SOURCE = [
 ].join('|');
 
 /** @deprecated Use THINKING_REGEX_SOURCE instead. Kept for backward compatibility. */
-export const REDACTED_THINKING_REGEX_SOURCE =
-  `${escapeRegExp(REDACTED_THINKING_TAG_START)}[\\s\\S]*?${escapeRegExp(REDACTED_THINKING_TAG_END)}`;
+export const REDACTED_THINKING_REGEX_SOURCE = `${escapeRegExp(REDACTED_THINKING_TAG_START)}[\\s\\S]*?${escapeRegExp(REDACTED_THINKING_TAG_END)}`;
 
 // ── Strip function ──────────────────────────────────────────────────
 

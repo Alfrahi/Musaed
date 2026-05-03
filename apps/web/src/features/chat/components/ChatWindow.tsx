@@ -1,10 +1,18 @@
-"use client";
+'use client';
 
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { ArrowDown } from 'lucide-react';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
-import { useGlobalSettings, useIsHydrated, useActiveStreams, useCurrentConversationId } from '../../../store/hooks';
-import { useConversationStore, selectCurrentConversation } from '../../../store/stores/conversation-store';
+import {
+  useGlobalSettings,
+  useIsHydrated,
+  useActiveStreams,
+  useCurrentConversationId,
+} from '../../../store/hooks';
+import {
+  useConversationStore,
+  selectCurrentConversation,
+} from '../../../store/stores/conversation-store';
 import { useStreamingStore, selectLiveContent } from '../../../store/stores/streaming-store';
 import MessageBubble from './MessageBubble';
 import ChatWindowSkeleton from './ChatWindowSkeleton';
@@ -22,21 +30,24 @@ interface MessageLabels {
 
 /** Pre-resolved translated labels shared across all message bubbles. */
 const useMessageLabels = (
-  t: (key: TranslationKey | string, values?: Record<string, string | number | boolean>) => string,
+  t: (key: TranslationKey | string, values?: Record<string, string | number | boolean>) => string
 ): MessageLabels =>
-  useMemo(() => ({
-    user: t('chat.user'),
-    assistant: t('chat.assistant'),
-    copy: t('common.copy'),
-    tokens: t('chat.tokens'),
-  }), [t]);
+  useMemo(
+    () => ({
+      user: t('chat.user'),
+      assistant: t('chat.assistant'),
+      copy: t('common.copy'),
+      tokens: t('chat.tokens'),
+    }),
+    [t]
+  );
 
 /** Floating scroll-to-bottom button. */
 const ScrollButton = ({ onClick, label }: { onClick: () => void; label: string }) => (
-  <div className="absolute inset-be-6 start-1/2 -translate-x-1/2 flex justify-center pointer-events-none z-20">
+  <div className="inset-be-6 pointer-events-none absolute start-1/2 z-20 flex -translate-x-1/2 justify-center">
     <button
       onClick={onClick}
-      className="p-2 bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-300 rounded-none shadow-lg border border-zinc-200 dark:border-zinc-700 hover:text-blue-500 transition-all pointer-events-auto active:scale-95"
+      className="pointer-events-auto rounded-none border border-zinc-200 bg-white p-2 text-zinc-500 shadow-lg transition-all hover:text-blue-500 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
       aria-label={label}
     >
       <ArrowDown size={20} />
@@ -61,7 +72,7 @@ const ChatWindow = () => {
   // Live streaming content — only the last message's buffer changes frequently
   const isStreaming = currentConversationId ? !!activeStreams[currentConversationId] : false;
   const liveContent = useStreamingStore(
-    currentConversationId ? selectLiveContent(currentConversationId) : () => null,
+    currentConversationId ? selectLiveContent(currentConversationId) : () => null
   );
 
   // Build the messages list: replace last message content with live buffer during streaming
@@ -73,7 +84,7 @@ const ChatWindow = () => {
 
     const lastIdx = msgs.length - 1;
     return msgs.map((msg, i) =>
-      i === lastIdx ? { ...msg, content: msg.content + liveContent } : msg,
+      i === lastIdx ? { ...msg, content: msg.content + liveContent } : msg
     );
   }, [currentConversation?.messages, isStreaming, liveContent]);
 
@@ -82,13 +93,21 @@ const ChatWindow = () => {
   // Auto-scroll on new messages and when streaming content updates
   useEffect(() => {
     if (virtuosoRef.current && lastMsgCount) {
-      virtuosoRef.current.scrollToIndex({ index: lastMsgCount - 1, align: 'end', behavior: 'auto' });
+      virtuosoRef.current.scrollToIndex({
+        index: lastMsgCount - 1,
+        align: 'end',
+        behavior: 'auto',
+      });
     }
   }, [lastMsgCount, liveContent]);
 
   const scrollToBottom = useCallback(() => {
     if (virtuosoRef.current && messages.length > 0) {
-      virtuosoRef.current.scrollToIndex({ index: messages.length - 1, align: 'end', behavior: 'smooth' });
+      virtuosoRef.current.scrollToIndex({
+        index: messages.length - 1,
+        align: 'end',
+        behavior: 'smooth',
+      });
     }
   }, [messages.length]);
 
@@ -96,7 +115,7 @@ const ChatWindow = () => {
   if (!currentConversation) return <EmptyState />;
 
   return (
-    <div className="flex-1 relative overflow-hidden flex flex-col">
+    <div className="relative flex flex-1 flex-col overflow-hidden">
       <Virtuoso
         ref={virtuosoRef}
         className="h-full"
@@ -104,7 +123,7 @@ const ChatWindow = () => {
         atBottomThreshold={60}
         atBottomStateChange={(atBottom) => setShowScrollButton(!atBottom)}
         itemContent={(index, msg) => (
-          <div className={cn(index === messages.length - 1 && "pbe-32")}>
+          <div className={cn(index === messages.length - 1 && 'pbe-32')}>
             <MessageBubble message={msg} labels={messageLabels} formatNumber={formatNumber} />
           </div>
         )}

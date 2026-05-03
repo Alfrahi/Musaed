@@ -1,4 +1,8 @@
-export { OllamaConnectionManager, ConnectionState, getConnectionManager } from './connection-manager';
+export {
+  OllamaConnectionManager,
+  ConnectionState,
+  getConnectionManager,
+} from './connection-manager';
 export type { OllamaHealth, ConnectionManagerConfig } from './connection-manager';
 export { exportToMarkdown } from './export';
 export { useTranslation, getSystemLanguage } from './i18n';

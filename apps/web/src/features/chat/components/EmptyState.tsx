@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { Bot, Plus, Sparkles, Shield } from 'lucide-react';
 import { useGlobalSettings } from '../../../store/hooks';
@@ -12,40 +12,47 @@ const EmptyState = () => {
   const { t } = useTranslation(globalSettings.language);
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center ps-8 pe-8 bg-zinc-50/30 dark:bg-zinc-950">
-      <div className="relative mbe-8">
-        <div className="w-20 h-20 bg-white dark:bg-zinc-900 rounded-none flex items-center justify-center shadow-xl border border-zinc-100 dark:border-zinc-800 rotate-3">
+    <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50/30 ps-8 pe-8 dark:bg-zinc-950">
+      <div className="mbe-8 relative">
+        <div className="flex h-20 w-20 rotate-3 items-center justify-center rounded-none border border-zinc-100 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
           <Bot size={40} className="text-blue-600" />
         </div>
-        <div className="absolute inset-be-[-0.5rem] inset-ie-[-0.5rem] w-8 h-8 bg-blue-600 rounded-none flex items-center justify-center text-white shadow-lg -rotate-12">
+        <div className="inset-be-[-0.5rem] inset-ie-[-0.5rem] absolute flex h-8 w-8 -rotate-12 items-center justify-center rounded-none bg-blue-600 text-white shadow-lg">
           <Sparkles size={16} />
         </div>
       </div>
 
-      <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 mbe-2 tracking-tight">
+      <h2 className="mbe-2 text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
         {t('chat.welcome', { appName: t('common.appName') })}
       </h2>
-      <p className="max-w-md text-sm text-zinc-500 dark:text-zinc-400 text-center mbe-10 leading-relaxed">
+      <p className="mbe-10 max-w-md text-center text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
         {t('chat.selectConversation')}
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg">
-        <button onClick={createNewConversation} className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-none hover:border-blue-500 dark:hover:border-blue-500 transition-all text-start group">
-          <div className="w-10 h-10 rounded-none bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 group-hover:text-blue-600 transition-colors">
+      <div className="grid w-full max-w-lg grid-cols-1 gap-4 sm:grid-cols-2">
+        <button
+          onClick={createNewConversation}
+          className="group flex items-center gap-4 rounded-none border border-zinc-200 bg-white p-4 text-start transition-all hover:border-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-blue-500"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-none bg-zinc-100 text-zinc-500 transition-colors group-hover:text-blue-600 dark:bg-zinc-800">
             <Plus size={20} />
           </div>
           <div>
             <p className="text-sm font-bold">{t('sidebar.newChat')}</p>
-            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mbs-0.5">{t('chat.startFresh')}</p>
+            <p className="mbs-0.5 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+              {t('chat.startFresh')}
+            </p>
           </div>
         </button>
-        <div className="flex items-center gap-4 p-4 bg-zinc-100/50 dark:bg-zinc-900/50 border border-transparent rounded-none text-start opacity-60">
-          <div className="w-10 h-10 rounded-none bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+        <div className="flex items-center gap-4 rounded-none border border-transparent bg-zinc-100/50 p-4 text-start opacity-60 dark:bg-zinc-900/50">
+          <div className="flex h-10 w-10 items-center justify-center rounded-none bg-zinc-200 text-zinc-400 dark:bg-zinc-800">
             <Shield size={20} />
           </div>
           <div>
             <p className="text-sm font-bold">{t('chat.privateNote')}</p>
-            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mbs-0.5">{t('chat.runningLocally')}</p>
+            <p className="mbs-0.5 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+              {t('chat.runningLocally')}
+            </p>
           </div>
         </div>
       </div>

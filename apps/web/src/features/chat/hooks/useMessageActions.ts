@@ -15,11 +15,14 @@ export function useMessageActions(message: Message) {
   }, [message.content]);
 
   const durationNs = message.eval_duration || message.total_duration || 0;
-  const tps = message.eval_count !== undefined && durationNs > 0 ? (message.eval_count / (durationNs / 1e9)) : 0;
+  const tps =
+    message.eval_count !== undefined && durationNs > 0
+      ? message.eval_count / (durationNs / 1e9)
+      : 0;
 
   return {
     copied,
     handleCopy,
-    tps
+    tps,
   };
 }

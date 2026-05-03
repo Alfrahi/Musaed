@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React from 'react';
 import { Trash2, Zap, ShieldCheck, Code, BrainCircuit, HardDrive } from 'lucide-react';
@@ -22,11 +22,11 @@ interface InstalledModelCardProps {
 /**
  * Compact model card for installed models.
  */
-const InstalledModelCard = ({ 
-  name, 
-  size, 
+const InstalledModelCard = ({
+  name,
+  size,
   details,
-  onDelete, 
+  onDelete,
   language,
 }: InstalledModelCardProps) => {
   const { t, formatFileSize } = useTranslation(language);
@@ -35,32 +35,42 @@ const InstalledModelCard = ({
   const displaySize = size ? (typeof size === 'string' ? size : formatFileSize(size)) : null;
 
   return (
-    <div className="p-4 rounded-lg bg-white dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between group hover:border-zinc-300 dark:hover:border-zinc-700 transition-all">
+    <div className="group flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/50 dark:hover:border-zinc-700">
       <div className="flex items-center gap-4">
-        <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-500">
-          {isReasoning ? <BrainCircuit size={18} /> : isCode ? <Code size={18} /> : <Zap size={18} />}
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 dark:bg-zinc-800">
+          {isReasoning ? (
+            <BrainCircuit size={18} />
+          ) : isCode ? (
+            <Code size={18} />
+          ) : (
+            <Zap size={18} />
+          )}
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="font-bold text-sm">{name}</h3>
+            <h3 className="text-sm font-bold">{name}</h3>
             {details?.parameter_size && (
-              <span className={cn(
-                "px-1.5 py-0.5 text-[9px] font-black rounded-sm uppercase tracking-tighter",
-                isHeavy ? "bg-red-100 dark:bg-red-900/30 text-red-600" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
-              )}>
+              <span
+                className={cn(
+                  'rounded-sm px-1.5 py-0.5 text-[9px] font-black tracking-tighter uppercase',
+                  isHeavy
+                    ? 'bg-red-100 text-red-600 dark:bg-red-900/30'
+                    : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800'
+                )}
+              >
                 {details.parameter_size}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-3 mbs-1">
+          <div className="mbs-1 flex items-center gap-3">
             {displaySize && (
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+              <span className="flex items-center gap-1 text-[10px] font-bold tracking-widest text-zinc-400 uppercase">
                 <HardDrive size={10} />
                 {displaySize}
               </span>
             )}
             {details?.quantization_level && (
-              <span className="text-[10px] font-mono text-zinc-400">
+              <span className="font-mono text-[10px] text-zinc-400">
                 {details.quantization_level}
               </span>
             )}
@@ -68,14 +78,14 @@ const InstalledModelCard = ({
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <div className="px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-md text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+        <div className="flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 text-[10px] font-bold tracking-widest text-green-600 uppercase dark:bg-green-900/20 dark:text-green-400">
           <ShieldCheck size={12} />
           {t('common.ready')}
         </div>
         {onDelete && (
-          <button 
+          <button
             onClick={() => onDelete(name)}
-            className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+            className="rounded-lg p-2 text-zinc-400 transition-all hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
           >
             <Trash2 size={18} />
           </button>

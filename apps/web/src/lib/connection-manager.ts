@@ -1,10 +1,10 @@
 import { isValidOllamaUrl, checkIsTauri } from './ipc';
 
 export enum ConnectionState {
-  DISCONNECTED = "disconnected",
-  CONNECTING = "connecting",
-  CONNECTED = "connected",
-  ERROR = "error",
+  DISCONNECTED = 'disconnected',
+  CONNECTING = 'connecting',
+  CONNECTED = 'connected',
+  ERROR = 'error',
 }
 
 export interface OllamaHealth {
@@ -37,7 +37,7 @@ export class OllamaConnectionManager {
   subscribe(callback: (state: ConnectionState, health?: OllamaHealth) => void) {
     this.listeners.push(callback);
     return () => {
-      this.listeners = this.listeners.filter(cb => cb !== callback);
+      this.listeners = this.listeners.filter((cb) => cb !== callback);
     };
   }
 
@@ -71,8 +71,8 @@ export class OllamaConnectionManager {
     try {
       const start = Date.now();
       const res = await fetch(`${this.baseUrl}/api/tags`, {
-        method: "GET",
-        cache: "no-cache"
+        method: 'GET',
+        cache: 'no-cache',
       });
 
       const responseTimeMs = Date.now() - start;
@@ -110,7 +110,7 @@ export class OllamaConnectionManager {
 
   private setState(newState: ConnectionState, health?: OllamaHealth) {
     this.state = newState;
-    this.listeners.forEach(cb => cb(newState, health));
+    this.listeners.forEach((cb) => cb(newState, health));
   }
 }
 

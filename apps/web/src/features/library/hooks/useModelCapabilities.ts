@@ -15,10 +15,12 @@ export const useModelCapabilities = (name: string, details?: ModelDetails) => {
     const isVision = nameLower.includes('llava') || nameLower.includes('vision');
     const isCode = nameLower.includes('code') || nameLower.includes('coder');
     const isReasoning = nameLower.includes('r1') || nameLower.includes('reasoner');
-    
+
     const paramSize = details?.parameter_size?.toLowerCase() || '';
-    const isHeavy = paramSize.includes('70b') || paramSize.includes('110b') || paramSize.includes('405b');
-    const isLight = paramSize.includes('1b') || paramSize.includes('3b') || paramSize.includes('8b');
+    const isHeavy =
+      paramSize.includes('70b') || paramSize.includes('110b') || paramSize.includes('405b');
+    const isLight =
+      paramSize.includes('1b') || paramSize.includes('3b') || paramSize.includes('8b');
 
     return {
       isVision,

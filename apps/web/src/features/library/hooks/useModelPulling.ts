@@ -1,7 +1,12 @@
-"use client";
+'use client';
 
 import { useCallback } from 'react';
-import { usePullStatus, useUpdatePullStatus, useGlobalSettings, useLanguage } from '../../../store/hooks';
+import {
+  usePullStatus,
+  useUpdatePullStatus,
+  useGlobalSettings,
+  useLanguage,
+} from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 import { ollamaApi, checkIsTauri } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
@@ -16,27 +21,30 @@ export function useModelPulling() {
   const globalSettings = useGlobalSettings();
   const language = useLanguage();
   const { t } = useTranslation(language);
-  
+
   /**
    * Translates internal Ollama status codes to user-friendly text.
    */
-  const translateOllamaStatus = useCallback((status: string) => {
-    const key = status.toLowerCase();
-    if (key.includes('pulling manifest')) return t('library.status.pullingManifest');
-    if (key.includes('downloading')) return t('library.status.downloading');
-    if (key.includes('verifying')) return t('library.status.verifying');
-    if (key.includes('writing manifest')) return t('library.status.writingManifest');
-    if (key.includes('success')) return t('library.status.success');
-    if (key === 'starting') return t('library.status.starting');
-    return status;
-  }, [t]);
+  const translateOllamaStatus = useCallback(
+    (status: string) => {
+      const key = status.toLowerCase();
+      if (key.includes('pulling manifest')) return t('library.status.pullingManifest');
+      if (key.includes('downloading')) return t('library.status.downloading');
+      if (key.includes('verifying')) return t('library.status.verifying');
+      if (key.includes('writing manifest')) return t('library.status.writingManifest');
+      if (key.includes('success')) return t('library.status.success');
+      if (key === 'starting') return t('library.status.starting');
+      return status;
+    },
+    [t]
+  );
 
   /**
    * Triggers a model pull request.
    */
   const handlePull = async (name: string) => {
     if (!name.trim()) return;
-    
+
     updatePullStatus(name, { status: 'starting' });
 
     if (!checkIsTauri()) {

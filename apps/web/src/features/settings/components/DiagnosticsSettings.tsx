@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState } from 'react';
 import { Activity } from 'lucide-react';
@@ -19,7 +19,10 @@ const DiagnosticsSettings = () => {
             <Activity size={14} className="text-zinc-400" />
             <label>{t('settings.systemDiagnostics')}</label>
           </div>
-          <button onClick={() => setIsLogViewerOpen(true)} className="text-[10px] font-bold uppercase tracking-widest text-blue-600 hover:text-blue-700 transition-colors">
+          <button
+            onClick={() => setIsLogViewerOpen(true)}
+            className="text-[10px] font-bold tracking-widest text-blue-600 uppercase transition-colors hover:text-blue-700"
+          >
             {t('settings.viewLogs')}
           </button>
         </div>

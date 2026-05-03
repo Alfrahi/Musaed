@@ -1,7 +1,12 @@
-"use client";
+'use client';
 
 import { useCallback } from 'react';
-import { useConversations, useConversationIds, useSetConversations, useChatRetentionDays } from '../../../store/hooks';
+import {
+  useConversations,
+  useConversationIds,
+  useSetConversations,
+  useChatRetentionDays,
+} from '../../../store/hooks';
 import { logger } from '../../../lib/logger';
 
 export function useStorageCleanup() {
@@ -15,10 +20,10 @@ export function useStorageCleanup() {
     if (days <= 0) return;
 
     const now = Date.now();
-    const threshold = now - (days * 24 * 60 * 60 * 1000);
+    const threshold = now - days * 24 * 60 * 60 * 1000;
 
-    const currentList = conversationIds.map(id => conversations[id]).filter(Boolean);
-    const validConvs = currentList.filter(conv => conv.updatedAt >= threshold);
+    const currentList = conversationIds.map((id) => conversations[id]).filter(Boolean);
+    const validConvs = currentList.filter((conv) => conv.updatedAt >= threshold);
     const removedCount = currentList.length - validConvs.length;
 
     if (removedCount > 0) {

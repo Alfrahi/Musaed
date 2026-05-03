@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useCallback } from 'react';
 import { useLanguage } from '../../../store/hooks';
@@ -25,21 +25,21 @@ export function useAttachmentManager() {
   }, []);
 
   const removeImage = useCallback((index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
+    setImages((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   const removeFile = useCallback((index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   const handleTauriImageUpload = useCallback(async () => {
     const newImages = await handleTauriImageUploadInternal(t);
-    setImages(prev => [...prev, ...newImages]);
+    setImages((prev) => [...prev, ...newImages]);
   }, [t]);
 
   const handleTauriFileUpload = useCallback(async () => {
     const newFiles = await handleTauriFileUploadInternal(t);
-    setFiles(prev => [...prev, ...newFiles]);
+    setFiles((prev) => [...prev, ...newFiles]);
   }, [t]);
 
   return {

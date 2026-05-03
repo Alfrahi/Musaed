@@ -2,7 +2,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { DEFAULT_SETTINGS } from '@musaed/contracts';
 import { useConversationStore } from './conversation-store';
 
-const makeConversation = (id: string, messages: { id: string; role: 'user' | 'assistant'; content: string; timestamp: number }[]) => ({
+const makeConversation = (
+  id: string,
+  messages: { id: string; role: 'user' | 'assistant'; content: string; timestamp: number }[]
+) => ({
   id,
   title: 'Test',
   messages,
@@ -40,7 +43,12 @@ describe('Conversation Store', () => {
 
   it('updates the content of the last message (streaming simulation)', () => {
     const convId = 'test-id';
-    const initialMsg = { id: 'm1', role: 'assistant' as const, content: 'Hello', timestamp: Date.now() };
+    const initialMsg = {
+      id: 'm1',
+      role: 'assistant' as const,
+      content: 'Hello',
+      timestamp: Date.now(),
+    };
 
     useConversationStore.setState({
       conversations: { [convId]: makeConversation(convId, [initialMsg]) },

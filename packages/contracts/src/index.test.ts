@@ -13,7 +13,7 @@ import {
   REDACTED_THINKING_TAG_START,
   REDACTED_THINKING_TAG_END,
   THINK_TAG_START,
-  THINK_TAG_END
+  THINK_TAG_END,
 } from './index';
 
 describe('Contracts: Zod Schemas', () => {
@@ -26,8 +26,8 @@ describe('Contracts: Zod Schemas', () => {
         format: 'gguf',
         family: 'llama',
         parameter_size: '8B',
-        quantization_level: 'Q4_0'
-      }
+        quantization_level: 'Q4_0',
+      },
     };
     expect(OllamaModelSchema.safeParse(validModel).success).toBe(true);
   });
@@ -37,7 +37,7 @@ describe('Contracts: Zod Schemas', () => {
       id: '1',
       role: 'user',
       content: 'hello',
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
     expect(MessageSchema.safeParse(validMessage).success).toBe(true);
   });
@@ -51,7 +51,7 @@ describe('Contracts: Error Handling', () => {
   it('sanitizes errors and redacts sensitive paths', () => {
     const rawError = {
       code: 'FILE_SYSTEM_ERROR',
-      message: 'Failed to access C:\\Users\\Admin\\AppData\\Local\\Musaed'
+      message: 'Failed to access C:\\Users\\Admin\\AppData\\Local\\Musaed',
     };
     const sanitized = sanitizeError(rawError);
     expect(sanitized.code).toBe(BackendErrorCode.FileSystemError);
@@ -139,8 +139,6 @@ describe('Contracts: thinking blocks & pull errors', () => {
   });
 
   it('validates pull-error payloads', () => {
-    expect(
-      PullErrorSchema.safeParse({ name: 'm', error: 'x', duration: 1 }).success
-    ).toBe(true);
+    expect(PullErrorSchema.safeParse({ name: 'm', error: 'x', duration: 1 }).success).toBe(true);
   });
 });

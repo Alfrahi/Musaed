@@ -19,7 +19,7 @@ describe('UI Store', () => {
   it('sets and clears errors', () => {
     useUIStore.getState().setError('Failed to fetch');
     expect(useUIStore.getState().error).toBe('Failed to fetch');
-    
+
     useUIStore.getState().setError(null);
     expect(useUIStore.getState().error).toBeNull();
   });

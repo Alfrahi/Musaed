@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useCallback } from 'react';
 import { useUIStore, useConversationStore, useSettingsStore, useModelStore } from '@/store';
@@ -26,7 +26,7 @@ export function useChatInitialization() {
         const sysLang = getSystemLanguage();
         updateGlobalSettings({
           language: sysLang,
-          hasDetectedLanguage: true
+          hasDetectedLanguage: true,
         });
       }
 
@@ -36,7 +36,7 @@ export function useChatInitialization() {
       try {
         // Fetch models and handle smart selection
         await fetchModels();
-        
+
         const modelState = useModelStore.getState();
         if (!modelState.selectedModel && modelState.models.length > 0) {
           modelState.setSelectedModel(modelState.models[0].name);
@@ -58,7 +58,14 @@ export function useChatInitialization() {
       setInitialized(true);
       setError('error.initializationFailed');
     }
-  }, [updateGlobalSettings, fetchModels, createNewConversation, setInitialized, setError, runCleanup]);
+  }, [
+    updateGlobalSettings,
+    fetchModels,
+    createNewConversation,
+    setInitialized,
+    setError,
+    runCleanup,
+  ]);
 
   return { initializeApp };
 }

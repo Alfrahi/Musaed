@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useState, useMemo } from 'react';
 import { Check, Copy } from 'lucide-react';
@@ -17,14 +17,14 @@ function extractText(node: React.ReactNode): string {
   if (!node) return '';
   if (typeof node === 'string' || typeof node === 'number') return String(node);
   if (Array.isArray(node)) return node.map(extractText).join('');
-  
+
   if (React.isValidElement(node)) {
     const props = node.props as { children?: React.ReactNode };
     if (props.children) {
       return extractText(props.children);
     }
   }
-  
+
   return '';
 }
 
@@ -47,20 +47,20 @@ const CodeBlock = ({ language, value }: CodeBlockProps) => {
   const displayLanguage = language || t('common.text');
 
   return (
-    <div 
-      className="block relative group my-4 rounded-none overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-950"
+    <div
+      className="group relative my-4 block overflow-hidden rounded-none border border-zinc-200 bg-zinc-950 dark:border-zinc-800"
       role="region"
       aria-label={t('a11y.codeBlock', { language: displayLanguage })}
     >
-      <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
+      <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900 px-4 py-2">
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+          <span className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
             {displayLanguage}
           </span>
         </div>
-        <button 
+        <button
           onClick={onCopy}
-          className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors focus-visible:ring-1 focus-visible:ring-blue-500 outline-none rounded px-2 py-1"
+          className="flex items-center gap-1.5 rounded px-2 py-1 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors outline-none hover:text-white focus-visible:ring-1 focus-visible:ring-blue-500"
           aria-label={t('a11y.copyCode')}
         >
           {copied ? (
@@ -77,8 +77,8 @@ const CodeBlock = ({ language, value }: CodeBlockProps) => {
         </button>
       </div>
 
-      <div className="p-4 overflow-x-auto focus-visible:ring-2 focus-visible:ring-blue-500 outline-none">
-        <pre className="text-sm font-mono text-zinc-300 whitespace-pre">
+      <div className="overflow-x-auto p-4 outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+        <pre className="font-mono text-sm whitespace-pre text-zinc-300">
           <code>{value}</code>
         </pre>
       </div>

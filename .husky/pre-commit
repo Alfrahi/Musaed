@@ -1,6 +1,3 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
-
 echo "🛡️ Running Musaed Pre-commit Guard..."
 
 # 1. Run lint-staged (Fixes simple issues, enforces logical props & any)

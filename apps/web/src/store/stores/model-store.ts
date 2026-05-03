@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
@@ -22,7 +22,7 @@ interface ModelState {
 
 // Selectors for the model store
 export const selectSelectedModel = (state: ModelState) =>
-  state.models.find(model => model.name === state.selectedModel) || null;
+  state.models.find((model) => model.name === state.selectedModel) || null;
 
 export const selectModelPullStatus = (modelName: string) => (state: ModelState) =>
   state.pullStatus[modelName] || null;
@@ -38,15 +38,16 @@ export const useModelStore = createWithEqualityFn<ModelState>()(
       pullStatus: {},
       setModels: (models) => set({ models }),
       setSelectedModel: (selectedModel) => set({ selectedModel }),
-      updatePullStatus: (name, status) => set((state) => {
-        const next = { ...state.pullStatus };
-        if (status === null) {
-          delete next[name];
-        } else {
-          next[name] = status;
-        }
-        return { pullStatus: next };
-      }),
+      updatePullStatus: (name, status) =>
+        set((state) => {
+          const next = { ...state.pullStatus };
+          if (status === null) {
+            delete next[name];
+          } else {
+            next[name] = status;
+          }
+          return { pullStatus: next };
+        }),
     }),
     {
       name: 'musaed-model-storage',

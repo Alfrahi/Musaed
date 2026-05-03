@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { Search } from 'lucide-react';
 import { useSearchQuery, useSetSearchQuery, useLanguage } from '../../../store/hooks';
@@ -11,18 +11,18 @@ const SearchInput = () => {
   const { t } = useTranslation(language);
 
   return (
-    <div className="relative group ps-4 pe-4 mbe-4" role="search">
-      <Search 
-        size={14} 
-        className="absolute start-7 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-blue-500 transition-colors" 
+    <div className="group mbe-4 relative ps-4 pe-4" role="search">
+      <Search
+        size={14}
+        className="absolute start-7 top-1/2 -translate-y-1/2 text-zinc-400 transition-colors group-focus-within:text-blue-500"
         aria-hidden="true"
       />
-      <input 
+      <input
         type="text"
         placeholder={t('sidebar.searchChats')}
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        className="w-full bg-zinc-200/50 dark:bg-zinc-800/50 border-none rounded-none py-2 ps-9 pe-3 text-xs outline-none focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+        className="w-full rounded-none border-none bg-zinc-200/50 py-2 ps-9 pe-3 text-xs transition-all outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-blue-500/50 dark:bg-zinc-800/50 dark:placeholder:text-zinc-500"
         aria-label={t('sidebar.searchChats')}
       />
     </div>

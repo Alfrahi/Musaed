@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @font-face {
   font-family: 'Tajawal';
@@ -25,8 +25,10 @@
   --foreground: #09090b;
   --sidebar: #fbfbfb;
   --sidebar-border: #e4e4e7;
-  --font-sans: 'Tajawal', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans:
+    'Tajawal', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   color-scheme: light;
 }
 
@@ -39,7 +41,7 @@
   color-scheme: dark;
 }
 
-[lang="ar"] {
+[lang='ar'] {
   --font-sans: 'Tajawal', sans-serif;
   line-height: 1.6;
 }
@@ -50,10 +52,10 @@
   --color-foreground: var(--foreground);
   --color-sidebar: var(--sidebar);
   --color-sidebar-border: var(--sidebar-border);
-  
+
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
-  
+
   /* SOFTENED EDGES DESIGN SYSTEM - CAPPED AT 6PX */
   --radius-none: 0;
   --radius-sm: 2px;
@@ -63,9 +65,9 @@
   --radius-2xl: 6px;
   --radius-3xl: 6px;
   --radius-full: 6px;
-  
-  --shadow-native: 0 0 0 1px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1);
-  --shadow-pro: 0 8px 30px rgba(0,0,0,0.12);
+
+  --shadow-native: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-pro: 0 8px 30px rgba(0, 0, 0, 0.12);
 
   /* REMOVE LETTER SPACING */
   --tracking-tighter: 0;
@@ -76,7 +78,8 @@
   --tracking-widest: 0;
 }
 
-html, body {
+html,
+body {
   font-family: var(--font-sans);
   height: 100%;
   overflow: hidden;
@@ -88,12 +91,16 @@ html, body {
 }
 
 /* Enable selection only where appropriate */
-.prose, input, textarea, code, pre {
+.prose,
+input,
+textarea,
+code,
+pre {
   user-select: text;
 }
 
 /* RTL Mirroring for directional icons */
-[dir="rtl"] .mirror-rtl {
+[dir='rtl'] .mirror-rtl {
   transform: scaleX(-1);
 }
 

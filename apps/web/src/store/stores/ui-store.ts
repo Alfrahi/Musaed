@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
@@ -26,8 +26,7 @@ interface UIState {
 export const selectIsAnyModalOpen = (state: UIState) =>
   state.isSettingsOpen || state.isLibraryOpen || state.isInfoOpen;
 
-export const selectHasError = (state: UIState) =>
-  !!state.error;
+export const selectHasError = (state: UIState) => !!state.error;
 
 export const useUIStore = createWithEqualityFn<UIState>()(
   (set) => ({

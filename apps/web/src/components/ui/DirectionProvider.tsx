@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect } from 'react';
 import { useGlobalSettings, useIsHydrated } from '@/store/hooks';
@@ -7,7 +7,7 @@ import { useNativeUX } from '@/hooks/useNativeUX';
 const DirectionProvider = ({ children }: { children: React.ReactNode }) => {
   const globalSettings = useGlobalSettings();
   const isHydrated = useIsHydrated();
-  
+
   useNativeUX();
 
   // Layout synchronization
@@ -38,7 +38,7 @@ const DirectionProvider = ({ children }: { children: React.ReactNode }) => {
     if (globalSettings.theme === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       const handleChange = (e: MediaQueryListEvent) => applyTheme(e.matches ? 'dark' : 'light');
-      
+
       applyTheme(mediaQuery.matches ? 'dark' : 'light');
       mediaQuery.addEventListener('change', handleChange);
       return () => mediaQuery.removeEventListener('change', handleChange);

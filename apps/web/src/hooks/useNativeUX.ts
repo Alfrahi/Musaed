@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect } from 'react';
 
@@ -7,7 +7,7 @@ import { useEffect } from 'react';
  */
 function isInsideDragChromeTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
-  return Boolean(target.closest("[data-tauri-drag-region]"));
+  return Boolean(target.closest('[data-tauri-drag-region]'));
 }
 
 export function useNativeUX() {

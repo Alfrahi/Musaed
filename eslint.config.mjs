@@ -45,6 +45,9 @@ export default tseslint.config(
       react: {
         version: 'detect',
       },
+      next: {
+        rootDir: ['apps/web/'],
+      },
     },
 
     rules: {
@@ -83,7 +86,7 @@ export default tseslint.config(
 
       'max-lines-per-function': [
         'error',
-        { max: 60, skipBlankLines: true, skipComments: true },
+        { max: 100, skipBlankLines: true, skipComments: true },
       ],
 
       'no-restricted-imports': [

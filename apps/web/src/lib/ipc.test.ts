@@ -30,7 +30,7 @@ describe('IPC Bridge', () => {
       if (cmd === 'get_ollama_models') {
         return {
           success: false,
-          error: { code: BackendErrorCode.OllamaUnavailable, message: 'Ollama is down' }
+          error: { code: BackendErrorCode.OllamaUnavailable, message: 'Ollama is down' },
         };
       }
     });

@@ -2,10 +2,7 @@
 // Persistent Web Worker pool for off-main-thread text processing.
 // The worker blob is built from shared constants to prevent regex drift.
 
-import {
-  THINKING_REGEX_SOURCE,
-  stripThinkingBlocks,
-} from './redactedThinking';
+import { THINKING_REGEX_SOURCE, stripThinkingBlocks } from './redactedThinking';
 
 // ── Public result type ──────────────────────────────────────────────
 
@@ -52,7 +49,10 @@ const pendingQueue: Pending[] = [];
 let nextId = 0;
 
 /** Callbacks awaiting a response, keyed by request id. */
-const inflight = new Map<number, { resolve: (value: unknown) => void; reject: (reason: unknown) => void }>();
+const inflight = new Map<
+  number,
+  { resolve: (value: unknown) => void; reject: (reason: unknown) => void }
+>();
 
 /**
  * Builds the self-contained worker code blob.

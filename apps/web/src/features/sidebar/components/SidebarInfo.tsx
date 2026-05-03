@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { Info } from 'lucide-react';
 import { useSetInfoOpen, useLanguage } from '../../../store/hooks';
@@ -8,24 +8,24 @@ const SidebarInfo = () => {
   const setInfoOpen = useSetInfoOpen();
   const language = useLanguage();
   const { t } = useTranslation(language);
-  const version = "0.1.0";
+  const version = '0.1.0';
 
   return (
-    <div className="border-bs border-sidebar-border bg-zinc-50/50 dark:bg-zinc-900/20 shrink-0">
-      <button 
+    <div className="border-bs border-sidebar-border shrink-0 bg-zinc-50/50 dark:bg-zinc-900/20">
+      <button
         onClick={() => setInfoOpen(true)}
-        className="w-full p-4 flex items-center justify-between group hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all text-start"
+        className="group flex w-full items-center justify-between p-4 text-start transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
         aria-label={t('info.openInfo')}
       >
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-white dark:text-zinc-900 shrink-0 shadow-sm">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-zinc-900 text-white shadow-sm dark:bg-zinc-100 dark:text-zinc-900">
             <Info size={16} />
           </div>
-          <div className="flex flex-col min-w-0">
-            <span className="text-xs font-bold truncate dark:text-zinc-200 leading-none mbe-1">
+          <div className="flex min-w-0 flex-col">
+            <span className="mbe-1 truncate text-xs leading-none font-bold dark:text-zinc-200">
               {t('common.appName')}
             </span>
-            <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-500">
+            <span className="text-[9px] font-bold tracking-widest text-zinc-500 uppercase">
               v{version}
             </span>
           </div>

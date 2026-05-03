@@ -1,9 +1,12 @@
-"use client";
+'use client';
 
 import { Eraser } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import { useSearchQuery, useIsHydrated, useLanguage } from '@/store/hooks';
-import { useConversationStore, selectFilteredConversations } from '@/store/stores/conversation-store';
+import {
+  useConversationStore,
+  selectFilteredConversations,
+} from '@/store/stores/conversation-store';
 import { useTranslation } from '@/lib/i18n';
 import SearchInput from './SearchInput';
 import ConversationItem from './ConversationItem';
@@ -15,17 +18,24 @@ import { useSidebarGrouping } from '../hooks/useSidebarGrouping';
 
 /** Group header (Today, Yesterday, etc.) with optional clear-all button. */
 const GroupHeader = ({
-  showClear, onClear, clearLabel, label,
+  showClear,
+  onClear,
+  clearLabel,
+  label,
 }: {
   showClear: boolean;
   onClear: () => void;
   clearLabel: string;
   label: string;
 }) => (
-  <div className="ps-3 pe-3 pbs-6 pbe-2 flex items-center justify-between sticky inset-bs-0 bg-sidebar z-10 border-b border-zinc-100 dark:border-zinc-800 mbe-1">
+  <div className="pbs-6 pbe-2 inset-bs-0 bg-sidebar mbe-1 sticky z-10 flex items-center justify-between border-b border-zinc-100 ps-3 pe-3 dark:border-zinc-800">
     <span className="text-[9px] font-black text-zinc-400 uppercase">{label}</span>
     {showClear && (
-      <button onClick={onClear} className="p-1 text-zinc-400 hover:text-red-500 transition-colors" title={clearLabel}>
+      <button
+        onClick={onClear}
+        className="p-1 text-zinc-400 transition-colors hover:text-red-500"
+        title={clearLabel}
+      >
         <Eraser size={10} />
       </button>
     )}
@@ -33,7 +43,13 @@ const GroupHeader = ({
 );
 
 /** Renders a single virtualized sidebar item (group header or conversation). */
-const SidebarItemContent = ({ item, searchQuery, filteredConversations, handleClearAll, t }: {
+const SidebarItemContent = ({
+  item,
+  searchQuery,
+  filteredConversations,
+  handleClearAll,
+  t,
+}: {
   item: import('../hooks/useSidebarGrouping').SidebarItem;
   searchQuery: string;
   filteredConversations: import('@musaed/contracts').Conversation[];
@@ -47,9 +63,11 @@ const SidebarItemContent = ({ item, searchQuery, filteredConversations, handleCl
         onClear={handleClearAll}
         clearLabel={t('sidebar.clearAll')}
         label={
-          item.group === 'search' ? t('sidebar.searchResults') :
-          item.group === 'today' ? t('sidebar.recentChats') :
-          t(`sidebar.${item.group}`)
+          item.group === 'search'
+            ? t('sidebar.searchResults')
+            : item.group === 'today'
+              ? t('sidebar.recentChats')
+              : t(`sidebar.${item.group}`)
         }
       />
     );
@@ -71,21 +89,21 @@ const Sidebar = () => {
 
   const [virtualItems, loadMore] = useSidebarGrouping(
     filteredConversations.reduce((acc, conv) => ({ ...acc, [conv.id]: conv }), {}),
-    filteredConversations.map(conv => conv.id),
+    filteredConversations.map((conv) => conv.id),
     searchQuery,
     language
   );
 
   if (!isHydrated) {
     return (
-      <div className="w-60 bg-sidebar flex flex-col h-full border-e border-sidebar-border">
+      <div className="bg-sidebar border-sidebar-border flex h-full w-60 flex-col border-e">
         <SidebarSkeleton />
       </div>
     );
   }
 
   return (
-    <div className="w-60 bg-sidebar flex flex-col h-full select-none border-e border-sidebar-border">
+    <div className="bg-sidebar border-sidebar-border flex h-full w-60 flex-col border-e select-none">
       <SidebarHeader />
       <SearchInput />
 
@@ -95,8 +113,11 @@ const Sidebar = () => {
           data={virtualItems}
           itemContent={(_index, item) => (
             <SidebarItemContent
-              item={item} searchQuery={searchQuery} filteredConversations={filteredConversations}
-              handleClearAll={handleClearAll} t={t}
+              item={item}
+              searchQuery={searchQuery}
+              filteredConversations={filteredConversations}
+              handleClearAll={handleClearAll}
+              t={t}
             />
           )}
           endReached={() => {

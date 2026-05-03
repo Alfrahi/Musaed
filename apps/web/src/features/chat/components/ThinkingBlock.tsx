@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import { Brain, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
@@ -11,7 +11,11 @@ interface ThinkingBlockProps {
   isStreaming?: boolean;
 }
 
-const ThinkingBlock = ({ content, isCollapsed: initialCollapsed = false, isStreaming = false }: ThinkingBlockProps) => {
+const ThinkingBlock = ({
+  content,
+  isCollapsed: initialCollapsed = false,
+  isStreaming = false,
+}: ThinkingBlockProps) => {
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
   const language = useLanguage();
   const { t } = useTranslation(language);
@@ -29,14 +33,14 @@ const ThinkingBlock = ({ content, isCollapsed: initialCollapsed = false, isStrea
   if (!content.trim() && !isStreaming) return null;
 
   return (
-    <div 
-      className="mbs-4 mbe-4 rounded-none border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/20 overflow-hidden transition-all shadow-sm"
+    <div
+      className="mbs-4 mbe-4 overflow-hidden rounded-none border border-zinc-200 bg-zinc-50/50 shadow-sm transition-all dark:border-zinc-800 dark:bg-zinc-900/20"
       role="region"
       aria-label={t('a11y.thinkingSection')}
     >
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="w-full flex items-center justify-between ps-4 pe-4 py-2.5 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+        className="flex w-full items-center justify-between py-2.5 ps-4 pe-4 transition-colors outline-none hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800/50"
         aria-expanded={!isCollapsed}
       >
         <div className="flex items-center gap-2 text-zinc-500">
@@ -50,22 +54,31 @@ const ThinkingBlock = ({ content, isCollapsed: initialCollapsed = false, isStrea
           </span>
         </div>
         <div className="text-zinc-400">
-          {isCollapsed ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronUp size={14} aria-hidden="true" />}
+          {isCollapsed ? (
+            <ChevronDown size={14} aria-hidden="true" />
+          ) : (
+            <ChevronUp size={14} aria-hidden="true" />
+          )}
         </div>
       </button>
-      
+
       {!isCollapsed && (
-        <div 
-          className="ps-4 pe-4 pbe-4 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400 italic border-t border-zinc-100 dark:border-zinc-800/50 pbs-3 whitespace-pre-wrap font-serif"
+        <div
+          className="pbe-4 pbs-3 border-t border-zinc-100 ps-4 pe-4 font-serif text-xs leading-relaxed whitespace-pre-wrap text-zinc-500 italic dark:border-zinc-800/50 dark:text-zinc-400"
           dir="auto"
-          aria-live={isStreaming ? "polite" : "off"}
+          aria-live={isStreaming ? 'polite' : 'off'}
         >
           {content.trim() === '' && isStreaming ? (
             <span className="opacity-50">{t('chat.thinking')}</span>
           ) : (
             content
           )}
-          {isStreaming && <span className="inline-block w-1 h-3 ms-1 bg-blue-500/50 animate-pulse" aria-hidden="true" />}
+          {isStreaming && (
+            <span
+              className="ms-1 inline-block h-3 w-1 animate-pulse bg-blue-500/50"
+              aria-hidden="true"
+            />
+          )}
         </div>
       )}
     </div>

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useConversationStore } from './stores/conversation-store';
 import { useUIStore } from './stores/ui-store';
@@ -56,7 +56,7 @@ export function useAddMessages(): (conversationId: string, messages: Message[]) 
 export function useUpdateLastMessage(): (
   conversationId: string,
   update: Partial<Message>,
-  replace?: boolean,
+  replace?: boolean
 ) => void {
   return useConversationStore((s) => s.updateLastMessage);
 }
@@ -69,7 +69,9 @@ export function useStopStream(): (conversationId: string) => void {
   return useConversationStore((s) => s.stopStream);
 }
 
-export function useBatchUpdate(): (updater: (state: ConversationState) => Partial<ConversationState>) => void {
+export function useBatchUpdate(): (
+  updater: (state: ConversationState) => Partial<ConversationState>
+) => void {
   return useConversationStore((s) => s.batchUpdate);
 }
 
@@ -247,7 +249,7 @@ export function useSetSelectedModel(): (model: string) => void {
 
 export function useUpdatePullStatus(): (
   name: string,
-  status: { status: string; progress?: number } | null,
+  status: { status: string; progress?: number } | null
 ) => void {
   return useModelStore((s) => s.updatePullStatus);
 }

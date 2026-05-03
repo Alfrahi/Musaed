@@ -1,9 +1,18 @@
-"use client";
+'use client';
 
 import { useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
-import { useGlobalSettings, useIsHydrated, useIsLibraryOpen, useIsSettingsOpen, useIsInfoOpen, useSetLibraryOpen, useSetSettingsOpen, useSetInfoOpen } from '@/store/hooks';
+import {
+  useGlobalSettings,
+  useIsHydrated,
+  useIsLibraryOpen,
+  useIsSettingsOpen,
+  useIsInfoOpen,
+  useSetLibraryOpen,
+  useSetSettingsOpen,
+  useSetInfoOpen,
+} from '@/store/hooks';
 import { Sliders, Library } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/i18n';
@@ -15,36 +24,47 @@ import { useChatInitialization, useTauriEvents } from '@/features/chat';
 import TaskStatus from '@/components/ui/TaskStatus';
 import OllamaConnectionStatus from '@/components/ui/OllamaConnectionStatus';
 
-const Sidebar = dynamic(() => import('@/features/sidebar').then(m => m.Sidebar), {
-  ssr: false,
-  loading: () => <div className="w-72 border-e border-sidebar-border bg-zinc-50 dark:bg-zinc-900/50 animate-pulse" />,
-});
-
-const ChatWindow = dynamic(() => import('@/features/chat').then(m => m.ChatWindow), {
+const Sidebar = dynamic(() => import('@/features/sidebar').then((m) => m.Sidebar), {
   ssr: false,
   loading: () => (
-    <div className="flex-1 flex items-center justify-center bg-zinc-50/30 dark:bg-zinc-950">
-      <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+    <div className="border-sidebar-border w-72 animate-pulse border-e bg-zinc-50 dark:bg-zinc-900/50" />
+  ),
+});
+
+const ChatWindow = dynamic(() => import('@/features/chat').then((m) => m.ChatWindow), {
+  ssr: false,
+  loading: () => (
+    <div className="flex flex-1 items-center justify-center bg-zinc-50/30 dark:bg-zinc-950">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
     </div>
   ),
 });
 
-const InputArea = dynamic(() => import('@/features/chat').then(m => m.InputArea), {
+const InputArea = dynamic(() => import('@/features/chat').then((m) => m.InputArea), {
   ssr: false,
   loading: () => (
-    <div className="p-4 border-t border-sidebar-border bg-background animate-pulse">
-      <div className="h-12 bg-zinc-100 dark:bg-zinc-800 rounded-none" />
+    <div className="border-sidebar-border bg-background animate-pulse border-t p-4">
+      <div className="h-12 rounded-none bg-zinc-100 dark:bg-zinc-800" />
     </div>
   ),
 });
 
-const SettingsModal = dynamic(() => import('@/features/settings').then(m => m.SettingsModal), { ssr: false });
-const ModelLibrary = dynamic(() => import('@/features/library').then(m => m.ModelLibrary), { ssr: false });
-const InfoModal = dynamic(() => import('@/features/info').then(m => m.InfoModal), { ssr: false });
+const SettingsModal = dynamic(() => import('@/features/settings').then((m) => m.SettingsModal), {
+  ssr: false,
+});
+const ModelLibrary = dynamic(() => import('@/features/library').then((m) => m.ModelLibrary), {
+  ssr: false,
+});
+const InfoModal = dynamic(() => import('@/features/info').then((m) => m.InfoModal), { ssr: false });
 
 /** App header bar with title, connection status, and toolbar buttons. */
 const AppHeader = ({
-  isTauri, isMac, isRtl, onLibraryOpen, onSettingsOpen, appName,
+  isTauri,
+  isMac,
+  isRtl,
+  onLibraryOpen,
+  onSettingsOpen,
+  appName,
 }: {
   isTauri: boolean;
   isMac: boolean;
@@ -54,23 +74,41 @@ const AppHeader = ({
   appName: string;
 }) => (
   <header
-    data-tauri-drag-region={isTauri ? "true" : undefined}
+    data-tauri-drag-region={isTauri ? 'true' : undefined}
     className={cn(
-      "h-[73px] border-b border-sidebar-border flex items-center px-4 justify-between shrink-0 bg-background/50 backdrop-blur-md z-20 select-none",
-      isTauri && isMac && (isRtl ? "pe-20" : "ps-20")
+      'border-sidebar-border bg-background/50 z-20 flex h-[73px] shrink-0 items-center justify-between border-b px-4 backdrop-blur-md select-none',
+      isTauri && isMac && (isRtl ? 'pe-20' : 'ps-20')
     )}
   >
-    <div className="flex items-center gap-4 pointer-events-none">
-      <Image src="/favicon.ico" loading="eager" alt={appName} width={40} height={40} unoptimized className="w-10 h-10 object-contain" />
-      <div className="h-3 w-[1px] bg-sidebar-border" />
-      <div className="pointer-events-auto"><OllamaConnectionStatus /></div>
+    <div className="pointer-events-none flex items-center gap-4">
+      <Image
+        src="/favicon.ico"
+        loading="eager"
+        alt={appName}
+        width={40}
+        height={40}
+        unoptimized
+        className="h-10 w-10 object-contain"
+      />
+      <div className="bg-sidebar-border h-3 w-[1px]" />
+      <div className="pointer-events-auto">
+        <OllamaConnectionStatus />
+      </div>
     </div>
     <div className="flex items-center gap-2">
       <TaskStatus />
-      <button onClick={onLibraryOpen} className="w-10 h-10 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 rounded-none border border-transparent hover:border-sidebar-border" title={appName}>
+      <button
+        onClick={onLibraryOpen}
+        className="hover:border-sidebar-border flex h-10 w-10 items-center justify-center rounded-none border border-transparent text-zinc-500 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        title={appName}
+      >
         <Library size={18} />
       </button>
-      <button onClick={onSettingsOpen} className="w-10 h-10 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 rounded-none border border-transparent hover:border-sidebar-border" title={appName}>
+      <button
+        onClick={onSettingsOpen}
+        className="hover:border-sidebar-border flex h-10 w-10 items-center justify-center rounded-none border border-transparent text-zinc-500 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        title={appName}
+      >
         <Sliders size={18} />
       </button>
     </div>
@@ -98,29 +136,38 @@ const HomeClient = () => {
     if (isHydrated) initializeApp();
   }, [isHydrated, initializeApp]);
 
-  const isMac = useMemo(() => typeof window !== 'undefined' && navigator.userAgent.toUpperCase().includes('MAC'), []);
+  const isMac = useMemo(
+    () => typeof window !== 'undefined' && navigator.userAgent.toUpperCase().includes('MAC'),
+    []
+  );
   const isTauri = checkIsTauri();
 
   if (!mounted) return null;
 
   return (
-    <main className="flex h-screen bg-background overflow-hidden font-sans">
+    <main className="bg-background flex h-screen overflow-hidden font-sans">
       <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0 border-is border-sidebar-border">
+      <div className="border-is border-sidebar-border flex min-w-0 flex-1 flex-col">
         <AppHeader
-          isTauri={isTauri} isMac={isMac} isRtl={isRtl}
+          isTauri={isTauri}
+          isMac={isMac}
+          isRtl={isRtl}
           onLibraryOpen={() => setLibraryOpen(true)}
           onSettingsOpen={() => setSettingsOpen(true)}
           appName={t('common.appName')}
         />
-        <div className="flex-1 relative flex flex-col min-h-0">
+        <div className="relative flex min-h-0 flex-1 flex-col">
           <ChatWindow />
           <InputArea />
         </div>
       </div>
       <AnimatePresence>
-        {isSettingsOpen && <SettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />}
-        {isLibraryOpen && <ModelLibrary isOpen={isLibraryOpen} onClose={() => setLibraryOpen(false)} />}
+        {isSettingsOpen && (
+          <SettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
+        )}
+        {isLibraryOpen && (
+          <ModelLibrary isOpen={isLibraryOpen} onClose={() => setLibraryOpen(false)} />
+        )}
         {isInfoOpen && <InfoModal isOpen={isInfoOpen} onClose={() => setInfoOpen(false)} />}
       </AnimatePresence>
     </main>

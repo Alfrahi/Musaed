@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { Plus } from 'lucide-react';
 import { useLanguage } from '@/store/hooks';
@@ -11,11 +11,11 @@ const SidebarHeader = () => {
   const { t } = useTranslation(language);
 
   return (
-    <div className="p-4 flex flex-col gap-4">
+    <div className="flex flex-col gap-4 p-4">
       <div className="flex gap-2">
         <button
           onClick={createNewConversation}
-          className="flex-1 flex items-center justify-center gap-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 h-10 ps-4 pe-4 rounded-lg hover:opacity-90 transition-all font-bold text-xs uppercase tracking-widest shadow-sm active:scale-95"
+          className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-zinc-900 ps-4 pe-4 text-xs font-bold tracking-widest text-white uppercase shadow-sm transition-all hover:opacity-90 active:scale-95 dark:bg-zinc-100 dark:text-zinc-900"
         >
           <Plus size={16} />
           {t('sidebar.newChat')}

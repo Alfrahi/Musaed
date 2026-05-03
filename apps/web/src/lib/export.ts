@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { Conversation, stripRedactedThinkingBlocks } from '@musaed/contracts';
 import { dialog, fs, checkIsTauri } from './ipc';
@@ -32,14 +32,14 @@ export const exportToMarkdown = async (conversation: Conversation, context: Expo
 
   conversation.messages.forEach((msg) => {
     const role = msg.role === 'user' ? t('export.user') : t('export.assistant');
-    
+
     const cleanContent = stripRedactedThinkingBlocks(msg.content);
-    
+
     if (cleanContent) {
       markdown += `### ${role}\n\n${cleanContent}\n\n`;
-      
+
       if (msg.eval_count && msg.total_duration) {
-        const speed = (msg.eval_count / (msg.total_duration / 1e9));
+        const speed = msg.eval_count / (msg.total_duration / 1e9);
         const speedStr = formatNumber(speed, { maximumFractionDigits: 1 });
         markdown += `*${t('export.stats')}: ${formatNumber(msg.eval_count)} ${t('export.tokens')}, ${speedStr} ${t('export.ts')}*\n\n`;
       }
@@ -62,7 +62,7 @@ export const exportToMarkdown = async (conversation: Conversation, context: Expo
 
   const filePath = await dialog.save({
     filters: [{ name: 'Markdown', extensions: ['md'] }],
-    defaultPath: fileName
+    defaultPath: fileName,
   });
 
   if (filePath) {

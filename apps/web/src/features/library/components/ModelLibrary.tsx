@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useMemo, useCallback } from 'react';
 import { AlertCircle } from 'lucide-react';
@@ -33,10 +33,15 @@ const FEATURED_MODELS_LIST = [
 
 /** Featured models grid with virtualization. */
 const FeaturedGrid = ({
-  models, filteredFeatured, pullStatus, handlePull, translateOllamaStatus, language,
+  models,
+  filteredFeatured,
+  pullStatus,
+  handlePull,
+  translateOllamaStatus,
+  language,
 }: {
   models: { name: string }[];
-  filteredFeatured: (typeof FEATURED_MODELS_LIST[number] & { description: string })[];
+  filteredFeatured: ((typeof FEATURED_MODELS_LIST)[number] & { description: string })[];
   pullStatus: Record<string, { status: string }>;
   handlePull: (name: string) => void;
   translateOllamaStatus: (s: string) => string;
@@ -49,11 +54,21 @@ const FeaturedGrid = ({
     listClassName="grid grid-cols-1 md:grid-cols-2 gap-4 p-6"
     itemContent={(_idx, model) => (
       <ModelCard
-        key={model.name} name={model.name} description={model.description}
+        key={model.name}
+        name={model.name}
+        description={model.description}
         size={model.size * 1024 * 1024 * 1024}
-        isDownloaded={models.some(m => m.name.startsWith(model.name))}
-        pullStatus={pullStatus[model.name] ? { ...pullStatus[model.name], status: translateOllamaStatus(pullStatus[model.name].status) } : undefined}
-        onPull={handlePull} language={language}
+        isDownloaded={models.some((m) => m.name.startsWith(model.name))}
+        pullStatus={
+          pullStatus[model.name]
+            ? {
+                ...pullStatus[model.name],
+                status: translateOllamaStatus(pullStatus[model.name].status),
+              }
+            : undefined
+        }
+        onPull={handlePull}
+        language={language}
       />
     )}
   />
@@ -61,9 +76,19 @@ const FeaturedGrid = ({
 
 /** Installed models list with virtualization. */
 const InstalledList = ({
-  filteredInstalled, handleDelete, language,
+  filteredInstalled,
+  handleDelete,
+  language,
 }: {
-  filteredInstalled: { name: string; size?: number | null; details?: { parameter_size?: string | null; quantization_level?: string | null; family?: string | null } | null }[];
+  filteredInstalled: {
+    name: string;
+    size?: number | null;
+    details?: {
+      parameter_size?: string | null;
+      quantization_level?: string | null;
+      family?: string | null;
+    } | null;
+  }[];
   handleDelete: (name: string) => void;
   language: import('@musaed/contracts').Language;
 }) => (
@@ -71,10 +96,21 @@ const InstalledList = ({
     style={{ height: '100%' }}
     data={filteredInstalled}
     itemContent={(idx, model) => (
-      <div className={cn("ps-6 pe-6 pbe-4", idx === 0 && "pbs-6", idx === filteredInstalled.length - 1 && "pbe-12")}>
+      <div
+        className={cn(
+          'pbe-4 ps-6 pe-6',
+          idx === 0 && 'pbs-6',
+          idx === filteredInstalled.length - 1 && 'pbe-12'
+        )}
+      >
         <ModelCard
-          name={model.name} size={model.size} details={model.details || undefined}
-          isDownloaded={true} onDelete={handleDelete} language={language} variant="installed"
+          name={model.name}
+          size={model.size}
+          details={model.details || undefined}
+          isDownloaded={true}
+          onDelete={handleDelete}
+          language={language}
+          variant="installed"
         />
       </div>
     )}
@@ -83,19 +119,29 @@ const InstalledList = ({
 
 /** Connection warning banner. */
 const ConnectionWarning = ({ message }: { message: string }) => (
-  <div className="ms-6 me-6 mbs-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-3">
-    <AlertCircle size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />
+  <div className="mbs-4 ms-6 me-6 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
+    <AlertCircle size={18} className="shrink-0 text-amber-600 dark:text-amber-400" />
     <p className="text-xs font-medium text-amber-800 dark:text-amber-200">{message}</p>
   </div>
 );
 
 /** Footer with storage info and close button. */
-const LibraryFooter = ({ storageLabel, closeLabel, onClose }: { storageLabel: string; closeLabel: string; onClose: () => void }) => (
-  <div className="ps-6 pe-6 py-4 bg-zinc-50 dark:bg-zinc-900/80 border-bs border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-    <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">{storageLabel}</span>
+const LibraryFooter = ({
+  storageLabel,
+  closeLabel,
+  onClose,
+}: {
+  storageLabel: string;
+  closeLabel: string;
+  onClose: () => void;
+}) => (
+  <div className="border-bs flex items-center justify-between border-zinc-100 bg-zinc-50 py-4 ps-6 pe-6 dark:border-zinc-800 dark:bg-zinc-900/80">
+    <span className="text-[10px] font-bold tracking-widest text-zinc-400 uppercase">
+      {storageLabel}
+    </span>
     <button
       onClick={onClose}
-      className="h-10 ps-6 pe-6 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-lg text-xs font-bold uppercase tracking-widest active:scale-95 transition-all shadow-sm hover:opacity-90"
+      className="h-10 rounded-lg bg-zinc-900 ps-6 pe-6 text-xs font-bold tracking-widest text-white uppercase shadow-sm transition-all hover:opacity-90 active:scale-95 dark:bg-zinc-100 dark:text-zinc-900"
     >
       {closeLabel}
     </button>
@@ -114,49 +160,78 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
   const { t } = useTranslation(language);
   const { handlePull, translateOllamaStatus } = useModelPulling();
 
-  const featuredModels = useMemo(() =>
-    FEATURED_MODELS_LIST.map(m => ({ ...m, description: t(m.descriptionKey) })),
-  [t]);
+  const featuredModels = useMemo(
+    () => FEATURED_MODELS_LIST.map((m) => ({ ...m, description: t(m.descriptionKey) })),
+    [t]
+  );
 
-  const handleDelete = useCallback(async (name: string) => {
-    const confirmed = await dialog.ask(t('library.confirmDeleteNamed', { name }), {
-      title: t('library.deleteModel'), kind: 'warning'
-    });
-    if (confirmed) await deleteModel(name);
-  }, [deleteModel, t]);
+  const handleDelete = useCallback(
+    async (name: string) => {
+      const confirmed = await dialog.ask(t('library.confirmDeleteNamed', { name }), {
+        title: t('library.deleteModel'),
+        kind: 'warning',
+      });
+      if (confirmed) await deleteModel(name);
+    },
+    [deleteModel, t]
+  );
 
-  const filteredFeatured = useMemo(() => featuredModels.filter(m =>
-    m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  ), [featuredModels, searchQuery]);
+  const filteredFeatured = useMemo(
+    () =>
+      featuredModels.filter(
+        (m) =>
+          m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          m.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      ),
+    [featuredModels, searchQuery]
+  );
 
-  const filteredInstalled = useMemo(() => models.filter(m =>
-    m.name.toLowerCase().includes(searchQuery.toLowerCase())
-  ), [models, searchQuery]);
+  const filteredInstalled = useMemo(
+    () => models.filter((m) => m.name.toLowerCase().includes(searchQuery.toLowerCase())),
+    [models, searchQuery]
+  );
 
   return (
     <ModalLayout isOpen={isOpen} onClose={onClose} maxWidth="max-w-4xl" className="h-[85vh]">
       <LibrarySearchHeader
-        language={language} activeTab={activeTab} setActiveTab={setActiveTab}
-        searchQuery={searchQuery} setSearchQuery={setSearchQuery} isRefreshing={isRefreshing}
-        onRefresh={() => fetchModels(true)} onClose={onClose} installedCount={models.length}
+        language={language}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        isRefreshing={isRefreshing}
+        onRefresh={() => fetchModels(true)}
+        onClose={onClose}
+        installedCount={models.length}
         onPullAny={handlePull}
       />
 
       {!isOllamaConnected && <ConnectionWarning message={t('chat.connectionFailed')} />}
 
-      <div className="flex-1 bg-white dark:bg-zinc-950/20 overflow-hidden">
+      <div className="flex-1 overflow-hidden bg-white dark:bg-zinc-950/20">
         {activeTab === 'featured' ? (
           <FeaturedGrid
-            models={models} filteredFeatured={filteredFeatured} pullStatus={pullStatus}
-            handlePull={handlePull} translateOllamaStatus={translateOllamaStatus} language={language}
+            models={models}
+            filteredFeatured={filteredFeatured}
+            pullStatus={pullStatus}
+            handlePull={handlePull}
+            translateOllamaStatus={translateOllamaStatus}
+            language={language}
           />
         ) : (
-          <InstalledList filteredInstalled={filteredInstalled} handleDelete={handleDelete} language={language} />
+          <InstalledList
+            filteredInstalled={filteredInstalled}
+            handleDelete={handleDelete}
+            language={language}
+          />
         )}
       </div>
 
-      <LibraryFooter storageLabel={t('logs.logStorageInfo')} closeLabel={t('common.done')} onClose={onClose} />
+      <LibraryFooter
+        storageLabel={t('logs.logStorageInfo')}
+        closeLabel={t('common.done')}
+        onClose={onClose}
+      />
     </ModalLayout>
   );
 };

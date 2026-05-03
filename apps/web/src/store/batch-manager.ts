@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useStreamingStore } from './stores/streaming-store';
 import { useConversationStore } from './stores/conversation-store';

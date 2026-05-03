@@ -1,7 +1,13 @@
-"use client";
+'use client';
 
 import { useCallback, useState, useEffect, useMemo } from 'react';
-import { useConversations, useConversationIds, useSetConversations, useModels, useGlobalSettings } from '../../../store/hooks';
+import {
+  useConversations,
+  useConversationIds,
+  useSetConversations,
+  useModels,
+  useGlobalSettings,
+} from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 import { checkIsTauri, dialog, fs } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
@@ -41,7 +47,7 @@ const useExportJson = (conversations: Record<string, Conversation>) => {
     const data = {
       version: 1,
       conversations: Object.values(conversations),
-      exportedAt: Date.now()
+      exportedAt: Date.now(),
     };
 
     const fileName = `musaed_export_${new Date().toISOString().split('T')[0]}.json`;
@@ -60,7 +66,7 @@ const useExportJson = (conversations: Record<string, Conversation>) => {
 
     const filePath = await dialog.save({
       filters: [{ name: 'JSON', extensions: ['json'] }],
-      defaultPath: fileName
+      defaultPath: fileName,
     });
 
     if (filePath) {
@@ -80,7 +86,7 @@ const useExportMarkdownBundle = (
     const convs = Object.values(conversations);
     if (convs.length === 0) return;
 
-    toast.loading("Preparing bundle...", { duration: 1000 });
+    toast.loading('Preparing bundle...', { duration: 1000 });
 
     const safeTitle = `musaed_bundle_${new Date().toISOString().split('T')[0]}`;
     const fileName = `${safeTitle}.md`;
@@ -108,7 +114,7 @@ const useExportMarkdownBundle = (
 
     const filePath = await dialog.save({
       filters: [{ name: 'Markdown', extensions: ['md'] }],
-      defaultPath: fileName
+      defaultPath: fileName,
     });
 
     if (filePath) {
@@ -125,12 +131,17 @@ const validateAndSetConversations = (
   t: (key: string) => string
 ) => {
   try {
-    if (raw && typeof raw === 'object' && 'conversations' in raw && Array.isArray(raw.conversations)) {
+    if (
+      raw &&
+      typeof raw === 'object' &&
+      'conversations' in raw &&
+      Array.isArray(raw.conversations)
+    ) {
       const validated = raw.conversations.map((c: unknown) => ConversationSchema.parse(c));
       setConversations(validated);
       toast.success(t('settings.storage.importSuccess'));
     } else {
-      throw new Error("Invalid format");
+      throw new Error('Invalid format');
     }
   } catch {
     logger.error('Import failed: invalid JSON format');
@@ -180,7 +191,7 @@ const useImportJson = (
   const handleImportJson = useCallback(async () => {
     const confirmed = await dialog.ask(t('settings.storage.confirmImport'), {
       title: t('settings.storage.importData'),
-      kind: 'warning'
+      kind: 'warning',
     });
 
     if (!confirmed) return;
@@ -203,11 +214,7 @@ export function useStorageActions() {
   const globalSettings = useGlobalSettings();
   const { t, formatDate } = useTranslation(globalSettings.language);
 
-  const { historySize, modelsSize } = useSizeCalculations(
-    conversations,
-    conversationIds,
-    models
-  );
+  const { historySize, modelsSize } = useSizeCalculations(conversations, conversationIds, models);
   const handleExportJson = useExportJson(conversations);
   const handleExportMarkdownBundle = useExportMarkdownBundle(conversations, formatDate, t);
   const handleImportJson = useImportJson(setConversations, t);
@@ -217,6 +224,6 @@ export function useStorageActions() {
     modelsSize,
     handleExportJson,
     handleExportMarkdownBundle,
-    handleImportJson
+    handleImportJson,
   };
 }

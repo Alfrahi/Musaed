@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect } from 'react';
 import { z } from 'zod';
@@ -11,9 +11,15 @@ import { listen, ollamaApi } from '../../../lib/ipc';
 import { triggerAutoTitle } from './useAutoTitle';
 import {
   sanitizeError,
-  BackendErrorSchema, PullProgressSchema, PullErrorSchema,
+  BackendErrorSchema,
+  PullProgressSchema,
+  PullErrorSchema,
   OllamaTokenSchema,
-  Message, OllamaToken, BackendError, PullProgress, PullError
+  Message,
+  OllamaToken,
+  BackendError,
+  PullProgress,
+  PullError,
 } from '@musaed/contracts';
 import toast from 'react-hot-toast';
 import { logger } from '../../../lib/logger';
@@ -27,7 +33,7 @@ const handleToken = (payload: OllamaToken) => {
   const convId = Object.entries(state.activeStreams).find(([_, id]) => id === requestId)?.[0];
   if (!convId) return;
 
-  const token = payload.message?.content ?? "";
+  const token = payload.message?.content ?? '';
   const streamingStore = useStreamingStore.getState();
   const isFirstToken = !(convId in streamingStore.liveContent);
 
@@ -66,7 +72,9 @@ const handleError = (payload: BackendError) => {
   logger.error('Backend error event', { error: sanitized });
 
   if (sanitized.requestId) {
-    const convId = Object.entries(state.activeStreams).find(([_, id]) => id === sanitized.requestId)?.[0];
+    const convId = Object.entries(state.activeStreams).find(
+      ([_, id]) => id === sanitized.requestId
+    )?.[0];
     if (convId) {
       flushAndStop(convId);
       state.stopStream(convId);
@@ -84,35 +92,52 @@ const handleError = (payload: BackendError) => {
 };
 
 /** Create pull-progress event handler. */
-const createPullProgressHandler = (
-  updatePullStatus: (key: string, status: { status: string; progress?: number } | null) => void,
-  setModels: (models: { name: string; size?: number | null; digest?: string | null; details?: { format?: string | null; family?: string | null; parameter_size?: string | null; quantization_level?: string | null } | null }[]) => void,
-  isMountedRef: () => boolean,
-) => async (payload: PullProgress) => {
-  const modelKey = payload.name || 'current';
-  const progress = (payload.total && payload.completed != null)
-    ? Math.round((payload.completed / payload.total) * 100)
-    : undefined;
+const createPullProgressHandler =
+  (
+    updatePullStatus: (key: string, status: { status: string; progress?: number } | null) => void,
+    setModels: (
+      models: {
+        name: string;
+        size?: number | null;
+        digest?: string | null;
+        details?: {
+          format?: string | null;
+          family?: string | null;
+          parameter_size?: string | null;
+          quantization_level?: string | null;
+        } | null;
+      }[]
+    ) => void,
+    isMountedRef: () => boolean
+  ) =>
+  async (payload: PullProgress) => {
+    const modelKey = payload.name || 'current';
+    const progress =
+      payload.total && payload.completed != null
+        ? Math.round((payload.completed / payload.total) * 100)
+        : undefined;
 
-  updatePullStatus(modelKey, { status: payload.status, progress });
+    updatePullStatus(modelKey, { status: payload.status, progress });
 
-  if (payload.status === 'success') {
-    const data = await ollamaApi.getModels(useSettingsStore.getState().globalSettings.ollamaUrl);
-    if (data) setModels(data);
-    setTimeout(() => isMountedRef() && updatePullStatus(modelKey, null), 3000);
-  }
-};
+    if (payload.status === 'success') {
+      const data = await ollamaApi.getModels(useSettingsStore.getState().globalSettings.ollamaUrl);
+      if (data) setModels(data);
+      setTimeout(() => isMountedRef() && updatePullStatus(modelKey, null), 3000);
+    }
+  };
 
 /** Create pull-error event handler. */
-const createPullErrorHandler = (
-  updatePullStatus: (key: string, status: { status: string } | null) => void,
-  isMountedRef: () => boolean,
-) => (payload: PullError) => {
-  const modelKey = payload.name || 'current';
-  updatePullStatus(modelKey, { status: 'error' });
-  toast.error(payload.error || 'Model pull failed');
-  setTimeout(() => isMountedRef() && updatePullStatus(modelKey, null), 8000);
-};
+const createPullErrorHandler =
+  (
+    updatePullStatus: (key: string, status: { status: string } | null) => void,
+    isMountedRef: () => boolean
+  ) =>
+  (payload: PullError) => {
+    const modelKey = payload.name || 'current';
+    updatePullStatus(modelKey, { status: 'error' });
+    toast.error(payload.error || 'Model pull failed');
+    setTimeout(() => isMountedRef() && updatePullStatus(modelKey, null), 8000);
+  };
 
 /**
  * Hook to listen for native Tauri events from the Rust backend.
@@ -126,7 +151,11 @@ export function useTauriEvents() {
     let isMounted = true;
     const isMountedRef = () => isMounted;
 
-    const register = async <T>(event: string, schema: z.ZodType<T>, handler: (payload: T) => void) => {
+    const register = async <T>(
+      event: string,
+      schema: z.ZodType<T>,
+      handler: (payload: T) => void
+    ) => {
       const un = await listen<T>(event, (payload) => isMounted && handler(payload), schema);
       unlisteners.push(un);
     };
@@ -135,8 +164,16 @@ export function useTauriEvents() {
       try {
         await register('ollama-token', OllamaTokenSchema, handleToken);
         await register('ollama-error', BackendErrorSchema, handleError);
-        await register('pull-progress', PullProgressSchema, createPullProgressHandler(updatePullStatus, setModels, isMountedRef));
-        await register('pull-error', PullErrorSchema, createPullErrorHandler(updatePullStatus, isMountedRef));
+        await register(
+          'pull-progress',
+          PullProgressSchema,
+          createPullProgressHandler(updatePullStatus, setModels, isMountedRef)
+        );
+        await register(
+          'pull-error',
+          PullErrorSchema,
+          createPullErrorHandler(updatePullStatus, isMountedRef)
+        );
       } catch (err) {
         logger.error('IPC initialization failure', { error: err });
       }
@@ -147,7 +184,7 @@ export function useTauriEvents() {
       isMounted = false;
       stopAllBatching();
       persistConversationsNow();
-      unlisteners.forEach(un => un());
+      unlisteners.forEach((un) => un());
     };
   }, [updatePullStatus, setModels]);
 }

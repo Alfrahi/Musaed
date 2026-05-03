@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useCurrentConversationId, useGlobalSettings } from '../../../store/hooks';
@@ -45,22 +45,40 @@ export const useChatInput = () => {
     textareaRef.current?.focus();
   }, [input, images, files, currentConversationId, sendMessage, clearAttachments]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    const isModEnter = (e.metaKey || e.ctrlKey) && e.key === 'Enter';
-    const isPlainEnter = e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey;
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const isModEnter = (e.metaKey || e.ctrlKey) && e.key === 'Enter';
+      const isPlainEnter = e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey;
 
-    if (globalSettings.enterToSend) {
-      if (isPlainEnter) { e.preventDefault(); onSend(); }
-    } else if (isModEnter) {
-      e.preventDefault();
-      onSend();
-    }
-  }, [globalSettings.enterToSend, onSend]);
+      if (globalSettings.enterToSend) {
+        if (isPlainEnter) {
+          e.preventDefault();
+          onSend();
+        }
+      } else if (isModEnter) {
+        e.preventDefault();
+        onSend();
+      }
+    },
+    [globalSettings.enterToSend, onSend]
+  );
 
   return {
-    input, setInput, textareaRef, isStreaming, selectedModel,
-    images, files, onSend, handleKeyDown,
-    handleTauriImageUpload, handleTauriFileUpload,
-    removeImage, removeFile, t, currentConversationId, enterToSend: globalSettings.enterToSend,
+    input,
+    setInput,
+    textareaRef,
+    isStreaming,
+    selectedModel,
+    images,
+    files,
+    onSend,
+    handleKeyDown,
+    handleTauriImageUpload,
+    handleTauriFileUpload,
+    removeImage,
+    removeFile,
+    t,
+    currentConversationId,
+    enterToSend: globalSettings.enterToSend,
   };
 };

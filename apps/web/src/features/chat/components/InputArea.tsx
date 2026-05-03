@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useCallback } from 'react';
 import { Send, Square, ImageIcon, Paperclip } from 'lucide-react';
@@ -9,7 +9,10 @@ import { ModelSelector } from '@/features/library';
 
 /** Attach action buttons (image + file upload). */
 const AttachButtons = ({
-  onImage, onFile, imageLabel, fileLabel,
+  onImage,
+  onFile,
+  imageLabel,
+  fileLabel,
 }: {
   onImage: () => void;
   onFile: () => void;
@@ -20,7 +23,7 @@ const AttachButtons = ({
     <button
       type="button"
       onClick={onImage}
-      className="p-2 rounded-lg text-zinc-400 hover:text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+      className="hover:text-foreground rounded-lg p-2 text-zinc-400 transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800"
       title={imageLabel}
     >
       <ImageIcon size={14} />
@@ -28,7 +31,7 @@ const AttachButtons = ({
     <button
       type="button"
       onClick={onFile}
-      className="p-2 rounded-lg text-zinc-400 hover:text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+      className="hover:text-foreground rounded-lg p-2 text-zinc-400 transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800"
       title={fileLabel}
     >
       <Paperclip size={14} />
@@ -41,7 +44,7 @@ const AbortButton = ({ onClick, label }: { onClick: () => void; label: string })
   <button
     type="button"
     onClick={onClick}
-    className="h-8 ps-4 pe-4 flex items-center gap-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95"
+    className="flex h-8 items-center gap-2 rounded-lg bg-zinc-900 ps-4 pe-4 text-[10px] font-bold tracking-widest text-white uppercase transition-all active:scale-95 dark:bg-zinc-100 dark:text-zinc-900"
   >
     <Square size={10} fill="currentColor" />
     {label}
@@ -53,7 +56,7 @@ const SendButton = ({ disabled }: { disabled: boolean }) => (
   <button
     type="submit"
     disabled={disabled}
-    className="h-8 ps-4 pe-4 bg-blue-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all disabled:opacity-20 active:scale-95 flex items-center gap-2 shadow-sm"
+    className="flex h-8 items-center gap-2 rounded-lg bg-blue-600 ps-4 pe-4 text-[10px] font-bold tracking-widest text-white uppercase shadow-sm transition-all active:scale-95 disabled:opacity-20"
   >
     <Send size={10} className="mirror-rtl" />
   </button>
@@ -61,7 +64,10 @@ const SendButton = ({ disabled }: { disabled: boolean }) => (
 
 /** Left side of toolbar: model selector + attach buttons. */
 const ToolbarLeft = ({
-  onImage, onFile, imageLabel, fileLabel,
+  onImage,
+  onFile,
+  imageLabel,
+  fileLabel,
 }: {
   onImage: () => void;
   onFile: () => void;
@@ -70,14 +76,23 @@ const ToolbarLeft = ({
 }) => (
   <div className="flex items-center gap-1">
     <ModelSelector />
-    <div className="w-[1px] h-3 bg-sidebar-border ms-2 me-2" />
-    <AttachButtons onImage={onImage} onFile={onFile} imageLabel={imageLabel} fileLabel={fileLabel} />
+    <div className="bg-sidebar-border ms-2 me-2 h-3 w-[1px]" />
+    <AttachButtons
+      onImage={onImage}
+      onFile={onFile}
+      imageLabel={imageLabel}
+      fileLabel={fileLabel}
+    />
   </div>
 );
 
 /** Right side of toolbar: shortcut hint + action button. */
 const ToolbarRight = ({
-  isStreaming, disabled, onAbort, shortcutLabel, abortLabel,
+  isStreaming,
+  disabled,
+  onAbort,
+  shortcutLabel,
+  abortLabel,
 }: {
   isStreaming: boolean;
   disabled: boolean;
@@ -86,12 +101,14 @@ const ToolbarRight = ({
   abortLabel: string;
 }) => (
   <div className="flex items-center gap-3">
-    <span className="hidden sm:block text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono">
+    <span className="hidden font-mono text-[9px] font-bold tracking-widest text-zinc-400 uppercase sm:block">
       {shortcutLabel}
     </span>
-    {isStreaming
-      ? <AbortButton onClick={onAbort} label={abortLabel} />
-      : <SendButton disabled={disabled} />}
+    {isStreaming ? (
+      <AbortButton onClick={onAbort} label={abortLabel} />
+    ) : (
+      <SendButton disabled={disabled} />
+    )}
   </div>
 );
 
@@ -100,10 +117,22 @@ const ToolbarRight = ({
  */
 export const InputArea = () => {
   const {
-    input, setInput, textareaRef, isStreaming, selectedModel,
-    images, files, onSend, handleKeyDown,
-    handleTauriImageUpload, handleTauriFileUpload, removeImage, removeFile,
-    t, currentConversationId, enterToSend,
+    input,
+    setInput,
+    textareaRef,
+    isStreaming,
+    selectedModel,
+    images,
+    files,
+    onSend,
+    handleKeyDown,
+    handleTauriImageUpload,
+    handleTauriFileUpload,
+    removeImage,
+    removeFile,
+    t,
+    currentConversationId,
+    enterToSend,
   } = useChatInput();
 
   const handleAbort = useCallback(() => {
@@ -112,27 +141,40 @@ export const InputArea = () => {
 
   const shortcutLabel = isStreaming
     ? t('chat.shortcutStop')
-    : (enterToSend ? t('chat.shortcutSend') : t('chat.shortcutMultiLine'));
+    : enterToSend
+      ? t('chat.shortcutSend')
+      : t('chat.shortcutMultiLine');
 
   const canSend = selectedModel && (input.trim() || images.length > 0 || files.length > 0);
 
   return (
-    <div className="shrink-0 border-bs border-sidebar-border bg-background p-4">
-      <div className="max-w-4xl ms-auto me-auto space-y-3">
-        <AttachmentPreview images={images} files={files} onRemoveImage={removeImage} onRemoveFile={removeFile} />
+    <div className="border-bs border-sidebar-border bg-background shrink-0 p-4">
+      <div className="ms-auto me-auto max-w-4xl space-y-3">
+        <AttachmentPreview
+          images={images}
+          files={files}
+          onRemoveImage={removeImage}
+          onRemoveFile={removeFile}
+        />
 
-        <div className="border border-sidebar-border bg-zinc-50 dark:bg-zinc-950 p-1 rounded-lg focus-within:ring-1 focus-within:ring-blue-500/50 transition-all">
-          <form onSubmit={(e) => { e.preventDefault(); onSend(); }} className="flex flex-col">
+        <div className="border-sidebar-border rounded-lg border bg-zinc-50 p-1 transition-all focus-within:ring-1 focus-within:ring-blue-500/50 dark:bg-zinc-950">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSend();
+            }}
+            className="flex flex-col"
+          >
             <textarea
               ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={t('chat.askAnything')}
-              className="w-full bg-transparent border-none p-3 focus:ring-0 focus:outline-none outline-none resize-none min-h-[60px] max-h-48 text-[14px] placeholder:text-zinc-400 font-sans shadow-none"
+              className="max-h-48 min-h-[60px] w-full resize-none border-none bg-transparent p-3 font-sans text-[14px] shadow-none outline-none placeholder:text-zinc-400 focus:ring-0 focus:outline-none"
               rows={1}
             />
-            <div className="flex items-center justify-between ps-2 pe-2 pbe-2">
+            <div className="pbe-2 flex items-center justify-between ps-2 pe-2">
               <ToolbarLeft
                 onImage={handleTauriImageUpload}
                 onFile={handleTauriFileUpload}

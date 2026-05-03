@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { Languages } from 'lucide-react';
 import { useGlobalSettings, useLanguage } from '../../../store/hooks';
@@ -20,12 +20,12 @@ const LanguageSettings = () => {
         <Languages size={14} className="text-zinc-400" />
         <label>{t('settings.language')}</label>
       </div>
-      <div className="flex p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl w-full">
+      <div className="flex w-full rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
         {availableLanguages.map((lang) => (
-          <button 
+          <button
             key={lang}
             onClick={() => updateGlobalSettings({ language: lang })}
-            className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${globalSettings.language === lang ? 'bg-white dark:bg-zinc-700 text-blue-600 shadow-sm' : 'text-zinc-500'}`}
+            className={`flex-1 rounded-lg py-2 text-xs font-bold tracking-widest uppercase transition-all ${globalSettings.language === lang ? 'bg-white text-blue-600 shadow-sm dark:bg-zinc-700' : 'text-zinc-500'}`}
           >
             {t(`common.${lang}` as const)}
           </button>

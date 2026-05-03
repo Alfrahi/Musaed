@@ -1,9 +1,13 @@
-"use client";
+'use client';
 
 import { useState } from 'react';
 import { MessageSquare, Trash2, Download, Edit2 } from 'lucide-react';
 import { Conversation } from '@musaed/contracts';
-import { useCurrentConversationId, useSetCurrentConversationId, useLanguage } from '../../../store/hooks';
+import {
+  useCurrentConversationId,
+  useSetCurrentConversationId,
+  useLanguage,
+} from '../../../store/hooks';
 import { cn } from '../../../lib/utils';
 import { useSidebarActions } from '../hooks/useSidebarActions';
 import { useTranslation } from '../../../lib/i18n';
@@ -14,27 +18,35 @@ interface ConversationItemProps {
 
 /** Inline rename input for conversation title. */
 const RenameInput = ({
-  value, onChange, onBlur, onSubmit,
+  value,
+  onChange,
+  onBlur,
+  onSubmit,
 }: {
   value: string;
   onChange: (v: string) => void;
   onBlur: () => void;
   onSubmit: (e: React.FormEvent) => void;
 }) => (
-  <form onSubmit={onSubmit} className="flex-1 min-w-0 flex items-center">
+  <form onSubmit={onSubmit} className="flex min-w-0 flex-1 items-center">
     <input
       autoFocus
       value={value}
       onChange={(e) => onChange(e.target.value)}
       onBlur={onBlur}
-      className="w-full bg-white dark:bg-zinc-900 border border-primary px-1 py-0.5 text-[13px] outline-none rounded-none"
+      className="border-primary w-full rounded-none border bg-white px-1 py-0.5 text-[13px] outline-none dark:bg-zinc-900"
     />
   </form>
 );
 
 /** Hover action buttons for a conversation item. */
 const ItemActions = ({
-  onEdit, onExport, onDelete, editTitle, exportTitle, deleteTitle,
+  onEdit,
+  onExport,
+  onDelete,
+  editTitle,
+  exportTitle,
+  deleteTitle,
 }: {
   onEdit: () => void;
   onExport: () => void;
@@ -43,14 +55,26 @@ const ItemActions = ({
   exportTitle: string;
   deleteTitle: string;
 }) => (
-  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute end-2 bg-inherit ps-2">
-    <button onClick={onEdit} className="p-1 hover:text-foreground hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors" title={editTitle}>
+  <div className="absolute end-2 flex items-center gap-1 bg-inherit ps-2 opacity-0 transition-opacity group-hover:opacity-100">
+    <button
+      onClick={onEdit}
+      className="hover:text-foreground p-1 transition-colors hover:bg-zinc-300 dark:hover:bg-zinc-700"
+      title={editTitle}
+    >
       <Edit2 size={12} />
     </button>
-    <button onClick={onExport} className="p-1 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors" title={exportTitle}>
+    <button
+      onClick={onExport}
+      className="p-1 transition-colors hover:bg-blue-50 hover:text-blue-500 dark:hover:bg-blue-900/20"
+      title={exportTitle}
+    >
       <Download size={12} className="mirror-rtl" />
     </button>
-    <button onClick={onDelete} className="p-1 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title={deleteTitle}>
+    <button
+      onClick={onDelete}
+      className="p-1 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+      title={deleteTitle}
+    >
       <Trash2 size={12} />
     </button>
   </div>
@@ -77,13 +101,16 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
     <div
       onClick={() => setCurrentConversationId(conversation.id)}
       className={cn(
-        "group flex items-center gap-2.5 px-3 py-2 cursor-pointer text-[13px] border-s-2 transition-all relative",
+        'group relative flex cursor-pointer items-center gap-2.5 border-s-2 px-3 py-2 text-[13px] transition-all',
         isActive
-          ? "bg-zinc-200/50 dark:bg-zinc-800/50 border-primary text-foreground font-semibold"
-          : "border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800/30"
+          ? 'border-primary text-foreground bg-zinc-200/50 font-semibold dark:bg-zinc-800/50'
+          : 'border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800/30'
       )}
     >
-      <MessageSquare size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-zinc-400")} />
+      <MessageSquare
+        size={14}
+        className={cn('shrink-0', isActive ? 'text-primary' : 'text-zinc-400')}
+      />
 
       {editingId === conversation.id ? (
         <RenameInput
@@ -93,11 +120,14 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
           onSubmit={handleSubmitRename}
         />
       ) : (
-        <span className="truncate flex-1 py-0.5 tracking-tight">{conversation.title}</span>
+        <span className="flex-1 truncate py-0.5 tracking-tight">{conversation.title}</span>
       )}
 
       <ItemActions
-        onEdit={() => { setEditingId(conversation.id); setEditTitle(conversation.title); }}
+        onEdit={() => {
+          setEditingId(conversation.id);
+          setEditTitle(conversation.title);
+        }}
         onExport={() => handleExport(conversation)}
         onDelete={() => handleDeleteConversation(conversation.id)}
         editTitle={t('sidebar.renameChat')}

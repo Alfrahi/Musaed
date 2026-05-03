@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect } from 'react';
 import { useConversationActions } from '../features/chat';
@@ -6,7 +6,7 @@ import { useSetSettingsOpen, useSetLibraryOpen } from '../store/hooks';
 
 /**
  * Hook to register global keyboard shortcuts for primary application actions.
- * 
+ *
  * Actions:
  * - Cmd/Ctrl + N: New Chat
  * - Cmd/Ctrl + ,: Settings
@@ -34,7 +34,7 @@ export function useGlobalShortcuts() {
         e.preventDefault();
         setLibraryOpen(true);
       }
-      
+
       if (e.key === 'Escape') {
         setSettingsOpen(false);
         setLibraryOpen(false);

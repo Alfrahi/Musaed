@@ -3,10 +3,31 @@
  */
 
 const SUPPORTED_DIAGRAM_TYPES = [
-  'flowchart', 'graph', 'sequenceDiagram', 'classDiagram', 'stateDiagram', 'stateDiagram-v2',
-  'erDiagram', 'journey', 'gantt', 'pie', 'mindmap', 'timeline', 'gitGraph', 'requirementDiagram',
-  'architecture', 'block', 'c4Diagram', 'xyChart', 'sankey-beta', 'quadrantChart', 'radarChart',
-  'barChart', 'packetDiagram', 'blockDiagram', 'dependencyGraph'
+  'flowchart',
+  'graph',
+  'sequenceDiagram',
+  'classDiagram',
+  'stateDiagram',
+  'stateDiagram-v2',
+  'erDiagram',
+  'journey',
+  'gantt',
+  'pie',
+  'mindmap',
+  'timeline',
+  'gitGraph',
+  'requirementDiagram',
+  'architecture',
+  'block',
+  'c4Diagram',
+  'xyChart',
+  'sankey-beta',
+  'quadrantChart',
+  'radarChart',
+  'barChart',
+  'packetDiagram',
+  'blockDiagram',
+  'dependencyGraph',
 ] as const;
 
 /**
@@ -22,8 +43,8 @@ export function extractMermaidContent(content: string): string {
 
   if (match?.[1]) return match[1].trim();
 
-  const looksLikeMermaid = SUPPORTED_DIAGRAM_TYPES.some((type) =>
-    content.trim().startsWith(type) || content.includes(type)
+  const looksLikeMermaid = SUPPORTED_DIAGRAM_TYPES.some(
+    (type) => content.trim().startsWith(type) || content.includes(type)
   );
 
   return looksLikeMermaid ? content.trim() : '';
@@ -102,8 +123,14 @@ const rebuildRequirementLines = (processed: string): string => {
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed) { newLines.push(line); continue; }
-    if (trimmed.startsWith('description:')) { newLines.push(`        %% ${trimmed}`); continue; }
+    if (!trimmed) {
+      newLines.push(line);
+      continue;
+    }
+    if (trimmed.startsWith('description:')) {
+      newLines.push(`        %% ${trimmed}`);
+      continue;
+    }
     if (trimmed.match(/\w+\s*-->\s*\w+/)) {
       newLines.push('    ' + trimmed.replace(/(\w+)\s*-->\s*(\w+)/, '$1 - satisfies -> $2'));
       continue;
@@ -142,7 +169,11 @@ const fixSingleQuotes = (processed: string): string => {
 const fixErDiagram = (processed: string): string => {
   if (!processed.includes('erDiagram')) return processed;
   return processed.replace(/(\w+)\s*\{([^}]+)\}/g, (_, entity, attrs) => {
-    const formatted = attrs.trim().split('\n').map((l: string) => `        ${l.trim()}`).join('\n');
+    const formatted = attrs
+      .trim()
+      .split('\n')
+      .map((l: string) => `        ${l.trim()}`)
+      .join('\n');
     return `${entity} {\n${formatted}\n    }`;
   });
 };
@@ -155,8 +186,10 @@ const fixQuadrantChart = (processed: string): string => {
     /"([^"]+)"\s*:\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)/g,
     '"$1": [$2, $3]'
   );
-  if (!/x-axis/i.test(result)) result = result.replace(/^(quadrantChart\s*)/im, '$1\n  x-axis Low --> High\n');
-  if (!/y-axis/i.test(result)) result = result.replace(/^(quadrantChart\s*)/im, '$1\n  y-axis Low --> High\n');
+  if (!/x-axis/i.test(result))
+    result = result.replace(/^(quadrantChart\s*)/im, '$1\n  x-axis Low --> High\n');
+  if (!/y-axis/i.test(result))
+    result = result.replace(/^(quadrantChart\s*)/im, '$1\n  y-axis Low --> High\n');
   return result;
 };
 
@@ -165,8 +198,10 @@ const fixGantt = (processed: string): string => {
   if (!processed.includes('gantt')) return processed;
 
   let result = processed;
-  if (!/dateFormat/i.test(result)) result = result.replace(/^(gantt\b)/im, '$1\n  dateFormat YYYY-MM-DD');
-  if (!/axisFormat/i.test(result)) result = result.replace(/^(gantt\b)/im, '$1\n  axisFormat %Y-%m-%d');
+  if (!/dateFormat/i.test(result))
+    result = result.replace(/^(gantt\b)/im, '$1\n  dateFormat YYYY-MM-DD');
+  if (!/axisFormat/i.test(result))
+    result = result.replace(/^(gantt\b)/im, '$1\n  axisFormat %Y-%m-%d');
 
   result = result.replace(
     /^(\s*)([^:\n]+?)\s*:\s*(?![\d-]|after|crit|done|milestone|active)([^,\n]+?)(?:,\s*([^\n]+))?$/gm,

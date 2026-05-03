@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { Sun, Moon, Monitor, LucideIcon } from 'lucide-react';
 import { useGlobalSettings, useLanguage } from '../../../store/hooks';
@@ -25,16 +25,16 @@ const ThemeSettings = () => {
         <Monitor size={14} className="text-zinc-400" />
         <label>{t('settings.appearance')}</label>
       </div>
-      <div className="flex p-1 bg-zinc-100 dark:bg-zinc-800 rounded-none w-full">
+      <div className="flex w-full rounded-none bg-zinc-100 p-1 dark:bg-zinc-800">
         {themes.map(({ id, icon: Icon }) => (
-          <button 
+          <button
             key={id}
             onClick={() => updateGlobalSettings({ theme: id })}
             className={cn(
-              "flex-1 py-2 rounded-none text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
-              globalSettings.theme === id 
-                ? "bg-white dark:bg-zinc-700 text-blue-600 shadow-sm" 
-                : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+              'flex flex-1 items-center justify-center gap-2 rounded-none py-2 text-xs font-bold tracking-widest uppercase transition-all',
+              globalSettings.theme === id
+                ? 'bg-white text-blue-600 shadow-sm dark:bg-zinc-700'
+                : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
             )}
           >
             <Icon size={14} />

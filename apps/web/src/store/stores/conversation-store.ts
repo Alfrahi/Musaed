@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
@@ -25,8 +25,12 @@ const persistController = (() => {
       },
       removeItem: base.removeItem,
     },
-    pause: () => { paused = true; },
-    resume: () => { paused = false; },
+    pause: () => {
+      paused = true;
+    },
+    resume: () => {
+      paused = false;
+    },
   };
 })();
 
@@ -53,10 +57,10 @@ export const selectCurrentConversation = (state: ConversationState) =>
 
 export const selectFilteredConversations = (state: ConversationState) => {
   const { conversations, conversationIds, searchQuery } = state;
-  if (!searchQuery) return conversationIds.map(id => conversations[id]);
+  if (!searchQuery) return conversationIds.map((id) => conversations[id]);
   return conversationIds
-    .map(id => conversations[id])
-    .filter(conv => conv.title.toLowerCase().includes(searchQuery.toLowerCase()));
+    .map((id) => conversations[id])
+    .filter((conv) => conv.title.toLowerCase().includes(searchQuery.toLowerCase()));
 };
 
 export const selectIsStreaming = (conversationId: string) => (state: ConversationState) =>
@@ -71,7 +75,7 @@ export const selectLastMessage = (conversationId: string) => (state: Conversatio
 const withUpdatedConv = (
   state: ConversationState,
   conversationId: string,
-  updater: (conv: Conversation) => Conversation,
+  updater: (conv: Conversation) => Conversation
 ): Partial<ConversationState> => {
   const conv = state.conversations[conversationId];
   if (!conv) return state;
@@ -87,10 +91,11 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
       activeStreams: {},
       searchQuery: '',
 
-      setConversations: (convs) => set({
-        conversations: Object.fromEntries(convs.map(c => [c.id, c])),
-        conversationIds: convs.map(c => c.id)
-      }),
+      setConversations: (convs) =>
+        set({
+          conversations: Object.fromEntries(convs.map((c) => [c.id, c])),
+          conversationIds: convs.map((c) => c.id),
+        }),
 
       setCurrentConversationId: (id) => set({ currentConversationId: id }),
       setSearchQuery: (query) => set({ searchQuery: query }),
@@ -103,49 +108,57 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
         });
       },
 
-      stopStream: (conversationId) => set((state) => {
-        const { [conversationId]: _stream, ...remainingStreams } = state.activeStreams;
-        const hasMoreStreams = Object.keys(remainingStreams).length > 0;
-        setStreaming(hasMoreStreams);
-        if (!hasMoreStreams) {
-          persistController.resume();
-        }
-        return { activeStreams: remainingStreams };
-      }),
-
-      addMessage: (conversationId, message) => set((state) =>
-        withUpdatedConv(state, conversationId, (conv) => ({
-          ...conv, messages: [...conv.messages, message], updatedAt: Date.now()
-        }))
-      ),
-
-      addMessages: (conversationId, messages) => set((state) =>
-        withUpdatedConv(state, conversationId, (conv) => ({
-          ...conv, messages: [...conv.messages, ...messages], updatedAt: Date.now()
-        }))
-      ),
-
-      updateLastMessage: (conversationId, update, replace = false) => set((state) => {
-        const conv = state.conversations[conversationId];
-        if (!conv || conv.messages.length === 0) return state;
-
-        const messages = [...conv.messages];
-        const lastIdx = messages.length - 1;
-        messages[lastIdx] = {
-          ...messages[lastIdx],
-          ...update,
-          content: replace
-            ? (update.content ?? messages[lastIdx].content)
-            : (messages[lastIdx].content + (update.content ?? ''))
-        };
-
-        return {
-          conversations: {
-            ...state.conversations,
-            [conversationId]: { ...conv, messages, updatedAt: Date.now() }
+      stopStream: (conversationId) =>
+        set((state) => {
+          const { [conversationId]: _stream, ...remainingStreams } = state.activeStreams;
+          const hasMoreStreams = Object.keys(remainingStreams).length > 0;
+          setStreaming(hasMoreStreams);
+          if (!hasMoreStreams) {
+            persistController.resume();
           }
-        };
-      }),
+          return { activeStreams: remainingStreams };
+        }),
+
+      addMessage: (conversationId, message) =>
+        set((state) =>
+          withUpdatedConv(state, conversationId, (conv) => ({
+            ...conv,
+            messages: [...conv.messages, message],
+            updatedAt: Date.now(),
+          }))
+        ),
+
+      addMessages: (conversationId, messages) =>
+        set((state) =>
+          withUpdatedConv(state, conversationId, (conv) => ({
+            ...conv,
+            messages: [...conv.messages, ...messages],
+            updatedAt: Date.now(),
+          }))
+        ),
+
+      updateLastMessage: (conversationId, update, replace = false) =>
+        set((state) => {
+          const conv = state.conversations[conversationId];
+          if (!conv || conv.messages.length === 0) return state;
+
+          const messages = [...conv.messages];
+          const lastIdx = messages.length - 1;
+          messages[lastIdx] = {
+            ...messages[lastIdx],
+            ...update,
+            content: replace
+              ? (update.content ?? messages[lastIdx].content)
+              : messages[lastIdx].content + (update.content ?? ''),
+          };
+
+          return {
+            conversations: {
+              ...state.conversations,
+              [conversationId]: { ...conv, messages, updatedAt: Date.now() },
+            },
+          };
+        }),
 
       batchUpdate: (updater) => set(updater),
     }),
@@ -155,7 +168,7 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
       partialize: (state) => ({
         conversations: state.conversations,
         conversationIds: state.conversationIds,
-        currentConversationId: state.currentConversationId
+        currentConversationId: state.currentConversationId,
       }),
       onRehydrateStorage: () => () => setHydrated(true),
     }

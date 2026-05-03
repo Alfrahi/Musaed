@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useCallback, useRef } from 'react';
 import { Language } from '@musaed/contracts';
@@ -27,8 +27,8 @@ export function useAutoTitle() {
 
     if (!isDefaultTitle(conversation.title)) return;
 
-    const hasUser = conversation.messages.some(m => m.role === 'user');
-    const hasAssistant = conversation.messages.some(m => m.role === 'assistant');
+    const hasUser = conversation.messages.some((m) => m.role === 'user');
+    const hasAssistant = conversation.messages.some((m) => m.role === 'assistant');
     if (!hasUser || !hasAssistant) return;
 
     pendingRef.current.add(conversationId);
@@ -76,15 +76,19 @@ export async function triggerAutoTitle(conversationId: string): Promise<void> {
 
   if (!isDefaultTitle(conversation.title)) return;
 
-  const hasUser = conversation.messages.some(m => m.role === 'user');
-  const hasAssistant = conversation.messages.some(m => m.role === 'assistant');
+  const hasUser = conversation.messages.some((m) => m.role === 'user');
+  const hasAssistant = conversation.messages.some((m) => m.role === 'assistant');
   if (!hasUser || !hasAssistant) return;
 
   pendingAutoTitles.add(conversationId);
 
   try {
     const settings = useSettingsStore.getState().globalSettings;
-    const title = await generateConversationTitle(conversation, settings.ollamaUrl, settings.language);
+    const title = await generateConversationTitle(
+      conversation,
+      settings.ollamaUrl,
+      settings.language
+    );
 
     if (!title) return;
 
@@ -96,7 +100,11 @@ export async function triggerAutoTitle(conversationId: string): Promise<void> {
       return {
         conversations: {
           ...latest.conversations,
-          [conversationId]: { ...latest.conversations[conversationId], title, updatedAt: Date.now() },
+          [conversationId]: {
+            ...latest.conversations[conversationId],
+            title,
+            updatedAt: Date.now(),
+          },
         },
       };
     });

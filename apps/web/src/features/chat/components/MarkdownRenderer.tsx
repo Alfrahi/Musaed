@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
@@ -15,18 +15,15 @@ import CodeBlock from './CodeBlock';
 import { opener } from '../../../lib/ipc';
 import { useGlobalSettings } from '../../../store/hooks';
 
-const MermaidRenderer = dynamic(
-  () => import('./MermaidRenderer'),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-200 dark:border-zinc-800 animate-pulse">
-        <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-1/3 mb-2" />
-        <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-2/3" />
-      </div>
-    ),
-  }
-);
+const MermaidRenderer = dynamic(() => import('./MermaidRenderer'), {
+  ssr: false,
+  loading: () => (
+    <div className="animate-pulse rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
+      <div className="mb-2 h-4 w-1/3 rounded bg-zinc-200 dark:bg-zinc-700" />
+      <div className="h-4 w-2/3 rounded bg-zinc-200 dark:bg-zinc-700" />
+    </div>
+  ),
+});
 
 interface MarkdownRendererProps {
   /** Markdown content to render (may contain LaTeX) */
@@ -76,13 +73,16 @@ function resolveAllowedHref(href: string | undefined | null): string | null {
   if (!href?.trim()) return null;
 
   try {
-    const base = typeof window !== 'undefined' && window.location?.href
-      ? window.location.href
-      : 'https://invalid.invalid/';
+    const base =
+      typeof window !== 'undefined' && window.location?.href
+        ? window.location.href
+        : 'https://invalid.invalid/';
 
     const url = new URL(href, base);
     if (ALLOWED_LINK_PROTOCOLS.has(url.protocol)) return url.toString();
-  } catch { /* Invalid URL → treat as unsafe */ }
+  } catch {
+    /* Invalid URL → treat as unsafe */
+  }
 
   return null;
 }
@@ -109,9 +109,16 @@ const useRehypePlugins = (enableLatex: boolean): PluggableList =>
   useMemo(() => {
     const plugins: PluggableList = [rehypeHighlight];
     if (enableLatex) {
-      plugins.push([rehypeKatex, {
-        throwOnError: false, errorColor: '#ef4444', strict: false, output: 'html', trust: false,
-      }]);
+      plugins.push([
+        rehypeKatex,
+        {
+          throwOnError: false,
+          errorColor: '#ef4444',
+          strict: false,
+          output: 'html',
+          trust: false,
+        },
+      ]);
     }
     return plugins;
   }, [enableLatex]);
@@ -119,57 +126,70 @@ const useRehypePlugins = (enableLatex: boolean): PluggableList =>
 /** Markdown component renderers for custom styling and behavior. */
 const useMarkdownComponents = (
   enableMermaid: boolean,
-  handleLinkClick: (e: React.MouseEvent<HTMLAnchorElement>, href: string) => Promise<void>,
+  handleLinkClick: (e: React.MouseEvent<HTMLAnchorElement>, href: string) => Promise<void>
 ) =>
-  useMemo(() => ({
-    p: ({ children }: { children?: React.ReactNode }) => (
-      <div className="mbe-4 last:mbe-0 leading-relaxed" dir="auto">{children}</div>
-    ),
-    pre: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
-    ul: ({ children }: { children?: React.ReactNode }) => (
-      <ul className="list-disc ps-6 mbe-4 space-y-1">{children}</ul>
-    ),
-    ol: ({ children }: { children?: React.ReactNode }) => (
-      <ol className="list-decimal ps-6 mbe-4 space-y-1">{children}</ol>
-    ),
-    li: ({ children }: { children?: React.ReactNode }) => <li className="mbe-1">{children}</li>,
-    blockquote: ({ children }: { children?: React.ReactNode }) => (
-      <blockquote className="border-is-4 border-zinc-200 dark:border-zinc-800 ps-4 italic mbe-4 text-zinc-500">
-        {children}
-      </blockquote>
-    ),
-    a: ({ href, children, ...props }: React.ComponentPropsWithoutRef<'a'>) => {
-      const safeHref = resolveAllowedHref(href);
-      if (!safeHref) {
-        return <span className="text-zinc-500 cursor-not-allowed font-medium" title="Unsupported link">{children}</span>;
-      }
-      return (
-        <a
-          href={safeHref}
-          onClick={(e) => handleLinkClick(e, href || '')}
-          className="text-blue-500 hover:underline cursor-pointer font-medium transition-colors"
-          target="_blank"
-          rel="noopener noreferrer"
-          {...props}
-        >
+  useMemo(
+    () => ({
+      p: ({ children }: { children?: React.ReactNode }) => (
+        <div className="mbe-4 last:mbe-0 leading-relaxed" dir="auto">
           {children}
-        </a>
-      );
-    },
-    code: ({ className, children, ...props }: React.HTMLAttributes<HTMLElement>) => {
-      const match = /language-(\w+)/.exec(className || '');
-      const language = match ? match[1] : '';
-
-      if (enableMermaid && language === 'mermaid') return <MermaidRenderer content={String(children ?? '')} />;
-      if (match) return <CodeBlock language={language} value={children} />;
-
-      return (
-        <code className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-sm font-mono text-blue-600 dark:text-blue-400" {...props}>
+        </div>
+      ),
+      pre: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+      ul: ({ children }: { children?: React.ReactNode }) => (
+        <ul className="mbe-4 list-disc space-y-1 ps-6">{children}</ul>
+      ),
+      ol: ({ children }: { children?: React.ReactNode }) => (
+        <ol className="mbe-4 list-decimal space-y-1 ps-6">{children}</ol>
+      ),
+      li: ({ children }: { children?: React.ReactNode }) => <li className="mbe-1">{children}</li>,
+      blockquote: ({ children }: { children?: React.ReactNode }) => (
+        <blockquote className="border-is-4 mbe-4 border-zinc-200 ps-4 text-zinc-500 italic dark:border-zinc-800">
           {children}
-        </code>
-      );
-    },
-  }), [enableMermaid, handleLinkClick]);
+        </blockquote>
+      ),
+      a: ({ href, children, ...props }: React.ComponentPropsWithoutRef<'a'>) => {
+        const safeHref = resolveAllowedHref(href);
+        if (!safeHref) {
+          return (
+            <span className="cursor-not-allowed font-medium text-zinc-500" title="Unsupported link">
+              {children}
+            </span>
+          );
+        }
+        return (
+          <a
+            href={safeHref}
+            onClick={(e) => handleLinkClick(e, href || '')}
+            className="cursor-pointer font-medium text-blue-500 transition-colors hover:underline"
+            target="_blank"
+            rel="noopener noreferrer"
+            {...props}
+          >
+            {children}
+          </a>
+        );
+      },
+      code: ({ className, children, ...props }: React.HTMLAttributes<HTMLElement>) => {
+        const match = /language-(\w+)/.exec(className || '');
+        const language = match ? match[1] : '';
+
+        if (enableMermaid && language === 'mermaid')
+          return <MermaidRenderer content={String(children ?? '')} />;
+        if (match) return <CodeBlock language={language} value={children} />;
+
+        return (
+          <code
+            className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-sm text-blue-600 dark:bg-zinc-800 dark:text-blue-400"
+            {...props}
+          >
+            {children}
+          </code>
+        );
+      },
+    }),
+    [enableMermaid, handleLinkClick]
+  );
 
 const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
   const globalSettings = useGlobalSettings();
@@ -178,17 +198,27 @@ const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
   const remarkPlugins = useRemarkPlugins(globalSettings.enableLatex);
   const rehypePlugins = useRehypePlugins(globalSettings.enableLatex);
 
-  const handleLinkClick = useCallback(async (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    const safeHref = resolveAllowedHref(href);
-    if (!safeHref) { e.preventDefault(); return; }
-    e.preventDefault();
-    await opener.openUrl(safeHref);
-  }, []);
+  const handleLinkClick = useCallback(
+    async (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+      const safeHref = resolveAllowedHref(href);
+      if (!safeHref) {
+        e.preventDefault();
+        return;
+      }
+      e.preventDefault();
+      await opener.openUrl(safeHref);
+    },
+    []
+  );
 
   const components = useMarkdownComponents(globalSettings.enableMermaid, handleLinkClick);
 
   return (
-    <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins} components={components}>
+    <ReactMarkdown
+      remarkPlugins={remarkPlugins}
+      rehypePlugins={rehypePlugins}
+      components={components}
+    >
       {processedContent}
     </ReactMarkdown>
   );

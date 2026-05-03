@@ -1,7 +1,18 @@
-"use client";
+'use client';
 
 import React from 'react';
-import { CheckCircle2, Download, Loader2, Trash2, Zap, ShieldCheck, Eye, Code, BrainCircuit, HardDrive } from 'lucide-react';
+import {
+  CheckCircle2,
+  Download,
+  Loader2,
+  Trash2,
+  Zap,
+  ShieldCheck,
+  Eye,
+  Code,
+  BrainCircuit,
+  HardDrive,
+} from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { useTranslation } from '../../../lib/i18n';
 import { Language } from '@musaed/contracts';
@@ -44,7 +55,11 @@ const getHardwareFit = (paramSize: string | null | undefined) => {
 
 /** Compact row variant for the installed models list. */
 const InstalledModelCard = ({
-  name, details, displaySize, onDelete, language,
+  name,
+  details,
+  displaySize,
+  onDelete,
+  language,
 }: {
   name: string;
   displaySize: string | null;
@@ -58,19 +73,23 @@ const InstalledModelCard = ({
   const { isHeavy } = getHardwareFit(details?.parameter_size);
 
   return (
-    <div className="p-4 rounded-lg bg-white dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between group hover:border-zinc-300 dark:hover:border-zinc-700 transition-all">
+    <div className="group flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/50 dark:hover:border-zinc-700">
       <div className="flex items-center gap-4">
-        <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-500">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 dark:bg-zinc-800">
           <Zap size={18} />
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="font-bold text-sm">{name}</h3>
+            <h3 className="text-sm font-bold">{name}</h3>
             {details?.parameter_size && (
-              <span className={cn(
-                "px-1.5 py-0.5 text-[9px] font-black rounded-sm uppercase tracking-tighter",
-                isHeavy ? "bg-red-100 dark:bg-red-900/30 text-red-600" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
-              )}>
+              <span
+                className={cn(
+                  'rounded-sm px-1.5 py-0.5 text-[9px] font-black tracking-tighter uppercase',
+                  isHeavy
+                    ? 'bg-red-100 text-red-600 dark:bg-red-900/30'
+                    : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800'
+                )}
+              >
                 {details.parameter_size}
               </span>
             )}
@@ -79,14 +98,14 @@ const InstalledModelCard = ({
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <div className="px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-md text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+        <div className="flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 text-[10px] font-bold tracking-widest text-green-600 uppercase dark:bg-green-900/20 dark:text-green-400">
           <ShieldCheck size={12} />
           {t('common.ready')}
         </div>
         {onDelete && (
           <button
             onClick={() => onDelete(name)}
-            className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+            className="rounded-lg p-2 text-zinc-400 transition-all hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
           >
             <Trash2 size={18} />
           </button>
@@ -98,37 +117,46 @@ const InstalledModelCard = ({
 
 /** Size and quantization badges for installed row. */
 const InstalledModelMeta = ({
-  displaySize, details,
+  displaySize,
+  details,
 }: {
   displaySize: string | null;
   details?: ModelCardProps['details'];
 }) => (
-  <div className="flex items-center gap-3 mbs-1">
+  <div className="mbs-1 flex items-center gap-3">
     {displaySize && (
-      <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+      <span className="flex items-center gap-1 text-[10px] font-bold tracking-widest text-zinc-400 uppercase">
         <HardDrive size={10} />
         {displaySize}
       </span>
     )}
     {details?.quantization_level && (
-      <span className="text-[10px] font-mono text-zinc-400">
-        {details.quantization_level}
-      </span>
+      <span className="font-mono text-[10px] text-zinc-400">{details.quantization_level}</span>
     )}
   </div>
 );
 
 /** Capability badges (Vision, Code, Reasoning). */
-const CapabilityBadges = ({ isVision, isCode, isReasoning }: ReturnType<typeof getModelCapabilities>) => (
+const CapabilityBadges = ({
+  isVision,
+  isCode,
+  isReasoning,
+}: ReturnType<typeof getModelCapabilities>) => (
   <div className="flex gap-1">
     {isVision && (
-      <span title="Vision Capable"><Eye size={14} className="text-purple-500" /></span>
+      <span title="Vision Capable">
+        <Eye size={14} className="text-purple-500" />
+      </span>
     )}
     {isCode && (
-      <span title="Coding Specialized"><Code size={14} className="text-blue-500" /></span>
+      <span title="Coding Specialized">
+        <Code size={14} className="text-blue-500" />
+      </span>
     )}
     {isReasoning && (
-      <span title="Reasoning Model"><BrainCircuit size={14} className="text-amber-500" /></span>
+      <span title="Reasoning Model">
+        <BrainCircuit size={14} className="text-amber-500" />
+      </span>
     )}
   </div>
 );
@@ -137,14 +165,14 @@ const CapabilityBadges = ({ isVision, isCode, isReasoning }: ReturnType<typeof g
 const HardwareBadge = ({ isLight, isHeavy }: ReturnType<typeof getHardwareFit>) => {
   if (isLight) {
     return (
-      <span className="text-[9px] font-black px-1.5 py-0.5 bg-green-100 dark:bg-green-900/20 text-green-600 rounded-sm uppercase tracking-tighter">
+      <span className="rounded-sm bg-green-100 px-1.5 py-0.5 text-[9px] font-black tracking-tighter text-green-600 uppercase dark:bg-green-900/20">
         Fast / Low VRAM
       </span>
     );
   }
   if (isHeavy) {
     return (
-      <span className="text-[9px] font-black px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/20 text-orange-600 rounded-sm uppercase tracking-tighter">
+      <span className="rounded-sm bg-orange-100 px-1.5 py-0.5 text-[9px] font-black tracking-tighter text-orange-600 uppercase dark:bg-orange-900/20">
         High Resource
       </span>
     );
@@ -154,7 +182,11 @@ const HardwareBadge = ({ isLight, isHeavy }: ReturnType<typeof getHardwareFit>) 
 
 /** Download progress bar or pull button. */
 const PullControl = ({
-  name, isDownloaded, pullStatus, onPull, language,
+  name,
+  isDownloaded,
+  pullStatus,
+  onPull,
+  language,
 }: {
   name: string;
   isDownloaded: boolean;
@@ -173,13 +205,15 @@ const PullControl = ({
       onClick={() => onPull?.(name)}
       disabled={isDownloaded}
       className={cn(
-        "w-full h-10 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm",
+        'flex h-10 w-full items-center justify-center gap-2 rounded-lg text-[10px] font-bold tracking-widest uppercase shadow-sm transition-all',
         isDownloaded
-          ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 cursor-default"
-          : "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 active:scale-95 hover:opacity-90"
+          ? 'cursor-default bg-zinc-100 text-zinc-400 dark:bg-zinc-800'
+          : 'bg-zinc-900 text-white hover:opacity-90 active:scale-95 dark:bg-zinc-100 dark:text-zinc-900'
       )}
     >
-      {isDownloaded ? t('library.installed', { count: 1 }) : (
+      {isDownloaded ? (
+        t('library.installed', { count: 1 })
+      ) : (
         <>
           <Download size={14} className="mirror-rtl" />
           {t('library.pullModel')}
@@ -191,13 +225,14 @@ const PullControl = ({
 
 /** Progress bar during model pull. */
 const PullProgressBar = ({
-  pullStatus, formatNumber,
+  pullStatus,
+  formatNumber,
 }: {
   pullStatus: { status: string; progress?: number };
   formatNumber: (n: number) => string;
 }) => (
   <div className="space-y-2">
-    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+    <div className="flex items-center justify-between text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
       <span className="flex items-center gap-2">
         {pullStatus.status.toLowerCase().includes('success') ? (
           <CheckCircle2 size={12} className="text-green-500" />
@@ -206,10 +241,12 @@ const PullProgressBar = ({
         )}
         {pullStatus.status}
       </span>
-      {pullStatus.progress !== undefined && <span className="font-mono">{formatNumber(pullStatus.progress)}%</span>}
+      {pullStatus.progress !== undefined && (
+        <span className="font-mono">{formatNumber(pullStatus.progress)}%</span>
+      )}
     </div>
     {pullStatus.progress !== undefined && (
-      <div className="w-full h-1 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+      <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
         <div
           className="h-full bg-blue-500 transition-all duration-300"
           style={{ width: `${pullStatus.progress}%` }}
@@ -221,7 +258,14 @@ const PullProgressBar = ({
 
 /** Featured card variant for the model library grid. */
 const FeaturedModelCard = ({
-  name, description, isDownloaded, pullStatus, onPull, language, capabilities, hardwareFit,
+  name,
+  description,
+  isDownloaded,
+  pullStatus,
+  onPull,
+  language,
+  capabilities,
+  hardwareFit,
 }: {
   name: string;
   description?: string;
@@ -234,25 +278,39 @@ const FeaturedModelCard = ({
 }) => (
   <div
     className={cn(
-      "group p-5 rounded-lg border transition-all duration-300 flex flex-col justify-between h-full",
+      'group flex h-full flex-col justify-between rounded-lg border p-5 transition-all duration-300',
       isDownloaded
-        ? "bg-blue-50/30 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30"
-        : "bg-white dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 shadow-sm"
+        ? 'border-blue-100 bg-blue-50/30 dark:border-blue-900/30 dark:bg-blue-900/10'
+        : 'border-zinc-200 bg-white shadow-sm hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/50 dark:hover:border-zinc-700'
     )}
   >
-    <FeaturedModelHeader name={name} description={description} isDownloaded={isDownloaded} capabilities={capabilities} />
+    <FeaturedModelHeader
+      name={name}
+      description={description}
+      isDownloaded={isDownloaded}
+      capabilities={capabilities}
+    />
     <div className="mbs-6">
-      <div className="flex items-center gap-2 mbe-4">
+      <div className="mbe-4 flex items-center gap-2">
         <HardwareBadge {...hardwareFit} />
       </div>
-      <PullControl name={name} isDownloaded={isDownloaded} pullStatus={pullStatus} onPull={onPull} language={language} />
+      <PullControl
+        name={name}
+        isDownloaded={isDownloaded}
+        pullStatus={pullStatus}
+        onPull={onPull}
+        language={language}
+      />
     </div>
   </div>
 );
 
 /** Header section of the featured card: name, badges, description. */
 const FeaturedModelHeader = ({
-  name, description, isDownloaded, capabilities,
+  name,
+  description,
+  isDownloaded,
+  capabilities,
 }: {
   name: string;
   description?: string;
@@ -262,20 +320,20 @@ const FeaturedModelHeader = ({
   <div className="space-y-3">
     <div className="flex items-start justify-between">
       <div className="min-w-0">
-        <div className="flex items-center gap-2 flex-wrap mbe-1">
-          <h3 className="font-bold text-lg group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+        <div className="mbe-1 flex flex-wrap items-center gap-2">
+          <h3 className="truncate text-lg font-bold transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400">
             {name}
           </h3>
           <CapabilityBadges {...capabilities} />
         </div>
         {description && (
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mbs-1 leading-relaxed line-clamp-2">
+          <p className="mbs-1 line-clamp-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
             {description}
           </p>
         )}
       </div>
       {isDownloaded && (
-        <div className="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 p-1.5 rounded-lg shrink-0">
+        <div className="shrink-0 rounded-lg bg-green-100 p-1.5 text-green-600 dark:bg-green-900/30 dark:text-green-400">
           <CheckCircle2 size={16} />
         </div>
       )}
@@ -285,7 +343,16 @@ const FeaturedModelHeader = ({
 
 /** Main ModelCard — delegates to installed or featured variant. */
 const ModelCard = ({
-  name, description, size, details, isDownloaded, pullStatus, onPull, onDelete, language, variant = 'featured',
+  name,
+  description,
+  size,
+  details,
+  isDownloaded,
+  pullStatus,
+  onPull,
+  onDelete,
+  language,
+  variant = 'featured',
 }: ModelCardProps) => {
   const { formatFileSize } = useTranslation(language);
 

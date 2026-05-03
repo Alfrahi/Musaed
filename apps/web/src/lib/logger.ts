@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { checkIsTauri, store, logApi } from './ipc';
 import { sanitizeError } from '@musaed/contracts';
@@ -27,9 +27,10 @@ export const logger = {
 
     // Use the contract's sanitization logic to redact paths and URLs
     const sanitized = sanitizeError({ message, context });
-    const finalMessage = sanitized.message.length > MAX_LOG_MESSAGE_LENGTH 
-      ? sanitized.message.substring(0, MAX_LOG_MESSAGE_LENGTH) + "... [TRUNCATED]" 
-      : sanitized.message;
+    const finalMessage =
+      sanitized.message.length > MAX_LOG_MESSAGE_LENGTH
+        ? sanitized.message.substring(0, MAX_LOG_MESSAGE_LENGTH) + '... [TRUNCATED]'
+        : sanitized.message;
 
     if (!isProd) {
       const consoleMethod = level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log';
@@ -42,9 +43,9 @@ export const logger = {
       timestamp: new Date().toISOString(),
       context: context ? JSON.parse(JSON.stringify(context)) : undefined,
     };
-    
+
     const logString = JSON.stringify(entry);
-    
+
     if (checkIsTauri()) {
       try {
         const logStore = await store.load('logs.json', { autoSave: true });
@@ -64,9 +65,17 @@ export const logger = {
       }
     }
   },
-  
-  info: (message: string, context?: Record<string, unknown>) => { logger.log('info', message, context); },
-  warn: (message: string, context?: Record<string, unknown>) => { logger.log('warn', message, context); },
-  error: (message: string, context?: Record<string, unknown>) => { logger.log('error', message, context); },
-  debug: (message: string, context?: Record<string, unknown>) => { logger.log('debug', message, context); },
+
+  info: (message: string, context?: Record<string, unknown>) => {
+    logger.log('info', message, context);
+  },
+  warn: (message: string, context?: Record<string, unknown>) => {
+    logger.log('warn', message, context);
+  },
+  error: (message: string, context?: Record<string, unknown>) => {
+    logger.log('error', message, context);
+  },
+  debug: (message: string, context?: Record<string, unknown>) => {
+    logger.log('debug', message, context);
+  },
 };

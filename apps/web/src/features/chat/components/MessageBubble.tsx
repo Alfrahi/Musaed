@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React from 'react';
 import Image from 'next/image';
@@ -30,22 +30,26 @@ const MessageBubble = ({ message, labels, formatNumber }: MessageBubbleProps) =>
   const { copied, handleCopy, tps } = useMessageActions(message);
 
   return (
-    <div className={cn(
-      "w-full border-be border-sidebar-border transition-colors",
-      isUser ? "bg-background" : "bg-zinc-50 dark:bg-zinc-900/30"
-    )}>
-      <div className="max-w-4xl ms-auto me-auto ps-6 pe-6 py-8 flex gap-6">
+    <div
+      className={cn(
+        'border-be border-sidebar-border w-full transition-colors',
+        isUser ? 'bg-background' : 'bg-zinc-50 dark:bg-zinc-900/30'
+      )}
+    >
+      <div className="ms-auto me-auto flex max-w-4xl gap-6 py-8 ps-6 pe-6">
         <MessageAvatar isUser={isUser} />
 
-        <div className="flex-1 min-w-0 space-y-4">
+        <div className="min-w-0 flex-1 space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase text-zinc-400">
+            <span className="text-[10px] font-bold text-zinc-400 uppercase">
               {isUser ? labels.user : labels.assistant}
-              {!isUser && message.model && <span className="ms-3 text-zinc-500">{message.model}</span>}
+              {!isUser && message.model && (
+                <span className="ms-3 text-zinc-500">{message.model}</span>
+              )}
             </span>
             <button
               onClick={handleCopy}
-              className="text-zinc-400 hover:text-foreground p-1 transition-colors"
+              className="hover:text-foreground p-1 text-zinc-400 transition-colors"
               aria-label={labels.copy}
             >
               {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
@@ -62,22 +66,26 @@ const MessageBubble = ({ message, labels, formatNumber }: MessageBubbleProps) =>
                   width={384}
                   height={256}
                   unoptimized
-                  className="max-w-sm border border-sidebar-border shadow-sm"
+                  className="border-sidebar-border max-w-sm border shadow-sm"
                 />
               ))}
             </div>
           )}
 
-          <div className="text-[14px] leading-relaxed text-foreground antialiased selection:bg-primary/20">
+          <div className="text-foreground selection:bg-primary/20 text-[14px] leading-relaxed antialiased">
             <MessageContent message={message} isUser={isUser} />
           </div>
 
-          <MessageStats message={message} tps={tps} formatNumber={formatNumber} tokensLabel={labels.tokens} />
+          <MessageStats
+            message={message}
+            tps={tps}
+            formatNumber={formatNumber}
+            tokensLabel={labels.tokens}
+          />
         </div>
       </div>
     </div>
   );
 };
-
 
 export default React.memo(MessageBubble);

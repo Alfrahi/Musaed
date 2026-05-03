@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { checkIsTauri, dialog, fs } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
@@ -28,15 +28,31 @@ export function fileNameFromPath(path: string): string {
 export function mimeFromExtension(path: string): string {
   const ext = path.split('.').pop()?.toLowerCase() ?? '';
   const mimeMap: Record<string, string> = {
-    png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
-    gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml',
-    bmp: 'image/bmp', ico: 'image/x-icon',
-    pdf: 'application/pdf', txt: 'text/plain', md: 'text/markdown',
-    json: 'application/json', csv: 'text/csv',
-    py: 'text/x-python', js: 'text/javascript', ts: 'text/typescript',
-    rs: 'text/rust', go: 'text/x-go', java: 'text/x-java',
-    html: 'text/html', css: 'text/css', xml: 'text/xml',
-    yaml: 'text/yaml', yml: 'text/yaml', toml: 'text/toml',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    svg: 'image/svg+xml',
+    bmp: 'image/bmp',
+    ico: 'image/x-icon',
+    pdf: 'application/pdf',
+    txt: 'text/plain',
+    md: 'text/markdown',
+    json: 'application/json',
+    csv: 'text/csv',
+    py: 'text/x-python',
+    js: 'text/javascript',
+    ts: 'text/typescript',
+    rs: 'text/rust',
+    go: 'text/x-go',
+    java: 'text/x-java',
+    html: 'text/html',
+    css: 'text/css',
+    xml: 'text/xml',
+    yaml: 'text/yaml',
+    yml: 'text/yaml',
+    toml: 'text/toml',
   };
   return mimeMap[ext] || 'application/octet-stream';
 }

@@ -11,7 +11,17 @@ describe('Model Store', () => {
 
   it('sets models correctly', () => {
     const mockModels = [
-      { name: 'llama3', size: 100, digest: '1', details: { format: 'gguf', family: 'llama', parameter_size: '8b', quantization_level: 'q4_0' } }
+      {
+        name: 'llama3',
+        size: 100,
+        digest: '1',
+        details: {
+          format: 'gguf',
+          family: 'llama',
+          parameter_size: '8b',
+          quantization_level: 'q4_0',
+        },
+      },
     ];
     useModelStore.getState().setModels(mockModels as any);
     expect(useModelStore.getState().models).toEqual(mockModels);

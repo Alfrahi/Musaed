@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { StateStorage } from 'zustand/middleware';
 import { z } from 'zod';
@@ -37,7 +37,7 @@ const migrations: Record<number, (data: StorageData) => StorageData> = {
     if (data.conversations) {
       data.conversations = data.conversations.map((c) => ({
         ...c,
-        messages: c.messages.map((m) => ({ ...m, done: m.done ?? true }))
+        messages: c.messages.map((m) => ({ ...m, done: m.done ?? true })),
       }));
     }
     return data;
@@ -46,12 +46,16 @@ const migrations: Record<number, (data: StorageData) => StorageData> = {
 
 /**
  * Runs sequential migrations on stored data to maintain schema integrity.
- * 
+ *
  * @param {string} filename - The store filename.
  * @param {TauriStoreLike} appStore - The Tauri store instance.
  * @param {string} storageKey - The key within the store to migrate.
  */
-async function runMigrations(filename: string, appStore: TauriStoreLike, storageKey: string): Promise<void> {
+async function runMigrations(
+  filename: string,
+  appStore: TauriStoreLike,
+  storageKey: string
+): Promise<void> {
   try {
     const rawVersion = await appStore.get<number>(VERSION_KEY);
     const storedVersion = z.number().catch(0).parse(rawVersion);
@@ -64,7 +68,9 @@ async function runMigrations(filename: string, appStore: TauriStoreLike, storage
         return;
       }
 
-      let migratedData = (typeof rawData === 'string' ? JSON.parse(rawData) : rawData) as StorageData;
+      let migratedData = (
+        typeof rawData === 'string' ? JSON.parse(rawData) : rawData
+      ) as StorageData;
       let currentV = storedVersion;
 
       // Sequential application of migrations guarantees schema integrity
@@ -87,7 +93,7 @@ async function runMigrations(filename: string, appStore: TauriStoreLike, storage
 /**
  * Creates a Zustand-compatible storage engine that utilizes Tauri's secure storage plugin.
  * Falls back to localStorage in non-Tauri environments.
- * 
+ *
  * @param {string} filename - The target JSON file for the store.
  * @returns {StateStorage} A storage implementation for Zustand.
  */
@@ -95,7 +101,7 @@ export const createTauriStorage = (filename: string): StateStorage => ({
   getItem: async (name: string): Promise<string | null> => {
     if (!checkIsTauri()) return localStorage.getItem(name);
     try {
-      const appStore = await store.load(filename, { autoSave: true }) as TauriStoreLike | null;
+      const appStore = (await store.load(filename, { autoSave: true })) as TauriStoreLike | null;
       if (!appStore) return null;
       await runMigrations(filename, appStore, name);
       const value = await appStore.get<string>(name);
@@ -110,7 +116,7 @@ export const createTauriStorage = (filename: string): StateStorage => ({
       return;
     }
     try {
-      const appStore = await store.load(filename, { autoSave: true }) as TauriStoreLike | null;
+      const appStore = (await store.load(filename, { autoSave: true })) as TauriStoreLike | null;
       if (!appStore) return;
       await appStore.set(name, value);
       await appStore.save();
@@ -123,7 +129,7 @@ export const createTauriStorage = (filename: string): StateStorage => ({
       localStorage.removeItem(name);
       return;
     }
-    const appStore = await store.load(filename, { autoSave: true }) as TauriStoreLike | null;
+    const appStore = (await store.load(filename, { autoSave: true })) as TauriStoreLike | null;
     if (appStore) {
       await appStore.delete(name);
       await appStore.save();

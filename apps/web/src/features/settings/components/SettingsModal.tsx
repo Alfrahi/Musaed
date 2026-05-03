@@ -1,15 +1,7 @@
-"use client";
+'use client';
 
 import { useState, useMemo } from 'react';
-import {
-  X,
-  Settings2,
-  RotateCcw,
-  Cpu,
-  HardDrive,
-  Terminal,
-  Layout
-} from 'lucide-react';
+import { X, Settings2, RotateCcw, Cpu, HardDrive, Terminal, Layout } from 'lucide-react';
 import { useGlobalSettings } from '../../../store/hooks';
 import { useSettingsActions } from '../hooks/useSettingsActions';
 import LanguageSettings from './LanguageSettings';
@@ -33,28 +25,28 @@ interface SettingsModalProps {
 type SettingsTab = 'general' | 'appearance' | 'ai' | 'storage' | 'advanced';
 
 const renderGeneralTab = () => (
-  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-200">
+  <div className="animate-in fade-in slide-in-from-bottom-2 space-y-8 duration-200">
     <LanguageSettings />
     <InputSettings />
   </div>
 );
 
 const renderAppearanceTab = () => (
-  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-200">
+  <div className="animate-in fade-in slide-in-from-bottom-2 space-y-8 duration-200">
     <ThemeSettings />
     <MarkdownSettings />
   </div>
 );
 
 const renderAITab = () => (
-  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-200">
+  <div className="animate-in fade-in slide-in-from-bottom-2 space-y-8 duration-200">
     <OllamaSettings />
     <ModelParamsSettings />
   </div>
 );
 
 const renderStorageTab = () => (
-  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-200">
+  <div className="animate-in fade-in slide-in-from-bottom-2 space-y-8 duration-200">
     <StorageSettings />
   </div>
 );
@@ -65,12 +57,12 @@ interface RenderAdvancedTabProps {
 }
 
 const RenderAdvancedTab = ({ t, handleReset }: RenderAdvancedTabProps) => (
-  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-200">
+  <div className="animate-in fade-in slide-in-from-bottom-2 space-y-8 duration-200">
     <DiagnosticsSettings />
     <div className="pb-4">
       <button
         onClick={handleReset}
-        className="w-full flex items-center justify-center gap-2 py-3 border border-zinc-200 dark:border-zinc-800 rounded-lg text-[10px] font-bold uppercase tracking-widest text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all focus-visible:ring-2 focus-visible:ring-blue-500 outline-none active:scale-95"
+        className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 py-3 text-[10px] font-bold tracking-widest text-red-500 uppercase transition-all outline-none hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-blue-500 active:scale-95 dark:border-zinc-800 dark:hover:bg-red-900/10"
       >
         <RotateCcw size={14} aria-hidden="true" /> {t('settings.resetPreferences')}
       </button>
@@ -107,14 +99,14 @@ interface RenderModalHeaderProps {
 }
 
 const RenderModalHeader = ({ t, onClose }: RenderModalHeaderProps) => (
-  <div className="flex items-center justify-between p-4 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
+  <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 p-4 dark:border-zinc-800">
     <div className="flex items-center gap-2 font-semibold">
       <Settings2 size={18} className="text-blue-500" aria-hidden="true" />
       <span>{t('settings.title')}</span>
     </div>
     <button
       onClick={onClose}
-      className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all text-zinc-500"
+      className="rounded-lg p-2 text-zinc-500 transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800"
       aria-label={t('a11y.closeModal')}
     >
       <X size={20} />
@@ -129,8 +121,8 @@ interface RenderTabNavigationProps {
 }
 
 const RenderTabNavigation = ({ tabs, activeTab, setActiveTab }: RenderTabNavigationProps) => (
-  <aside className="w-48 border-ie border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/20 shrink-0 overflow-y-auto">
-    <nav className="p-2 space-y-1">
+  <aside className="border-ie w-48 shrink-0 overflow-y-auto border-zinc-100 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-900/20">
+    <nav className="space-y-1 p-2">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
@@ -139,10 +131,10 @@ const RenderTabNavigation = ({ tabs, activeTab, setActiveTab }: RenderTabNavigat
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 text-[11px] font-bold uppercase tracking-widest transition-all rounded-lg border-s-2",
+              'flex w-full items-center gap-3 rounded-lg border-s-2 px-3 py-2.5 text-[11px] font-bold tracking-widest uppercase transition-all',
               isActive
-                ? "bg-white dark:bg-zinc-800 border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm"
-                : "border-transparent text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
+                ? 'border-blue-500 bg-white text-blue-600 shadow-sm dark:bg-zinc-800 dark:text-blue-400'
+                : 'border-transparent text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100'
             )}
           >
             <Icon size={16} />
@@ -160,10 +152,10 @@ interface RenderModalFooterProps {
 }
 
 const RenderModalFooter = ({ t, onClose }: RenderModalFooterProps) => (
-  <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 border-t border-zinc-100 dark:border-zinc-800 flex justify-end shrink-0">
+  <div className="flex shrink-0 justify-end border-t border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
     <button
       onClick={onClose}
-      className="px-6 h-10 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-lg text-xs font-bold uppercase tracking-widest active:scale-95 transition-all shadow-sm hover:opacity-90"
+      className="h-10 rounded-lg bg-zinc-900 px-6 text-xs font-bold tracking-widest text-white uppercase shadow-sm transition-all hover:opacity-90 active:scale-95 dark:bg-zinc-100 dark:text-zinc-900"
     >
       {t('common.done')}
     </button>
@@ -179,28 +171,47 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
   const handleReset = async () => {
     const confirmed = await dialog.ask(t('settings.confirmReset'), {
       title: t('settings.resetPreferences'),
-      kind: 'warning'
+      kind: 'warning',
     });
 
     if (confirmed) resetGlobalSettings();
   };
 
-  const tabs = useMemo(() => [
-    { id: 'general' as const, label: t('settings.tabs.general' as TranslationKey), icon: Settings2 },
-    { id: 'appearance' as const, label: t('settings.tabs.appearance' as TranslationKey), icon: Layout },
-    { id: 'ai' as const, label: t('settings.tabs.ai' as TranslationKey), icon: Cpu },
-    { id: 'storage' as const, label: t('settings.tabs.storage' as TranslationKey), icon: HardDrive },
-    { id: 'advanced' as const, label: t('settings.tabs.advanced' as TranslationKey), icon: Terminal },
-  ], [t]);
+  const tabs = useMemo(
+    () => [
+      {
+        id: 'general' as const,
+        label: t('settings.tabs.general' as TranslationKey),
+        icon: Settings2,
+      },
+      {
+        id: 'appearance' as const,
+        label: t('settings.tabs.appearance' as TranslationKey),
+        icon: Layout,
+      },
+      { id: 'ai' as const, label: t('settings.tabs.ai' as TranslationKey), icon: Cpu },
+      {
+        id: 'storage' as const,
+        label: t('settings.tabs.storage' as TranslationKey),
+        icon: HardDrive,
+      },
+      {
+        id: 'advanced' as const,
+        label: t('settings.tabs.advanced' as TranslationKey),
+        icon: Terminal,
+      },
+    ],
+    [t]
+  );
 
   return (
     <ModalLayout isOpen={isOpen} onClose={onClose} maxWidth="max-w-3xl" className="h-[600px]">
       <RenderModalHeader t={t} onClose={onClose} />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
         <RenderTabNavigation tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
 
-        <main className="flex-1 overflow-y-auto p-8 bg-white dark:bg-zinc-950/20">
+        <main className="flex-1 overflow-y-auto bg-white p-8 dark:bg-zinc-950/20">
           <RenderContent activeTab={activeTab} t={t} handleReset={handleReset} />
         </main>
       </div>

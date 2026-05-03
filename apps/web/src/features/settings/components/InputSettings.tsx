@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { Keyboard } from 'lucide-react';
 import { useGlobalSettings, useLanguage } from '../../../store/hooks';
@@ -17,17 +17,17 @@ const InputSettings = () => {
         <Keyboard size={14} className="text-zinc-400" />
         <label>{t('settings.enterToSend')}</label>
       </div>
-      
-      <div className="flex items-start gap-4 p-4 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-700">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+
+      <div className="flex items-start gap-4 rounded-xl border border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
             {t('settings.enterToSendDescription')}
           </p>
         </div>
-        
+
         <button
           onClick={() => updateGlobalSettings({ enterToSend: !globalSettings.enterToSend })}
-          className={`shrink-0 w-10 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500/20 ltr ${
+          className={`ltr h-6 w-10 shrink-0 rounded-full p-1 transition-colors duration-200 ease-in-out focus:ring-2 focus:ring-blue-500/20 focus:outline-none ${
             globalSettings.enterToSend ? 'bg-blue-600' : 'bg-zinc-300 dark:bg-zinc-600'
           }`}
           role="switch"
@@ -35,7 +35,7 @@ const InputSettings = () => {
           dir="ltr"
         >
           <div
-            className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
+            className={`h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${
               globalSettings.enterToSend ? 'translate-x-4' : 'translate-x-0'
             }`}
           />

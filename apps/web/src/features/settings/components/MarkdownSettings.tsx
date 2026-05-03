@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { FileText, Cpu, Layout, LucideIcon } from 'lucide-react';
 import { useGlobalSettings, useLanguage } from '../../../store/hooks';
@@ -15,7 +15,9 @@ interface MarkdownToggle {
 
 /** Single toggle row with icon, label, description, and switch. */
 const ToggleRow = ({
-  toggle, isEnabled, onToggle,
+  toggle,
+  isEnabled,
+  onToggle,
 }: {
   toggle: MarkdownToggle;
   isEnabled: boolean;
@@ -25,17 +27,19 @@ const ToggleRow = ({
   const Icon = toggle.icon;
 
   return (
-    <div className="flex items-start gap-4 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-700">
-      <div className="p-2 bg-white dark:bg-zinc-700 rounded-lg shadow-sm">
+    <div className="flex items-start gap-4 rounded-xl border border-zinc-100 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
+      <div className="rounded-lg bg-white p-2 shadow-sm dark:bg-zinc-700">
         <Icon size={16} className="text-zinc-500" />
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-xs font-bold dark:text-zinc-200">{t(toggle.label)}</p>
-        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed">{t(toggle.description)}</p>
+        <p className="text-[10px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+          {t(toggle.description)}
+        </p>
       </div>
       <button
         onClick={onToggle}
-        className={`shrink-0 w-10 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500/20 ltr ${
+        className={`ltr h-6 w-10 shrink-0 rounded-full p-1 transition-colors duration-200 ease-in-out focus:ring-2 focus:ring-blue-500/20 focus:outline-none ${
           isEnabled ? 'bg-blue-600' : 'bg-zinc-300 dark:bg-zinc-600'
         }`}
         role="switch"
@@ -43,7 +47,7 @@ const ToggleRow = ({
         dir="ltr"
       >
         <div
-          className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
+          className={`h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${
             isEnabled ? 'translate-x-4' : 'translate-x-0'
           }`}
         />
@@ -53,8 +57,18 @@ const ToggleRow = ({
 };
 
 const TOGGLES: MarkdownToggle[] = [
-  { id: 'enableLatex', label: 'settings.markdown.enableLatex', icon: Cpu, description: 'settings.markdown.latexDescription' },
-  { id: 'enableMermaid', label: 'settings.markdown.enableMermaid', icon: Layout, description: 'settings.markdown.mermaidDescription' },
+  {
+    id: 'enableLatex',
+    label: 'settings.markdown.enableLatex',
+    icon: Cpu,
+    description: 'settings.markdown.latexDescription',
+  },
+  {
+    id: 'enableMermaid',
+    label: 'settings.markdown.enableMermaid',
+    icon: Layout,
+    description: 'settings.markdown.mermaidDescription',
+  },
 ];
 
 const MarkdownSettings = () => {
