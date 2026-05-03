@@ -6,6 +6,15 @@ use std::io::Write;
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager, Runtime};
 
+/// Strips newlines, carriage returns, and other C0 control characters to
+/// prevent log injection (e.g. forging additional log lines via user input).
+fn sanitize_log_entry(entry: &str) -> String {
+    entry
+        .chars()
+        .filter(|c| !c.is_control() || *c == '\t')
+        .collect()
+}
+
 /// Resolves the path to the application log file, creating directories if needed.
 fn get_log_path<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String> {
     let data_dir = app
@@ -19,12 +28,18 @@ fn get_log_path<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String> {
 }
 
 /// Appends a single log entry to the backend log file in a blocking task.
+/// Entries from the frontend are prefixed with `[FRONTEND]` to distinguish
+/// them from backend log lines and make cross-origin injection obvious.
 fn append_log_entry<R: Runtime>(app: AppHandle<R>, entry: String) {
+    // Sanitize to prevent log injection: strip \n, \r and control characters
+    let sanitized = sanitize_log_entry(&entry);
+    let prefixed = format!("[FRONTEND] {}", sanitized);
+
     let _ = tokio::task::spawn_blocking(move || {
         if let Ok(path) = get_log_path(&app) {
             if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(path) {
                 let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
-                let _ = writeln!(file, "[{}] {}", timestamp, entry);
+                let _ = writeln!(file, "[{}] {}", timestamp, prefixed);
             }
         }
     });

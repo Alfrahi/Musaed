@@ -322,11 +322,13 @@ async fn process_chat_stream<R: Runtime>(
     token_count: &mut u64,
 ) {
     let stream = response.bytes_stream();
+    // Cap line length at 1 MiB to prevent unbounded memory allocation from
+    // a malformed or malicious SSE stream (resource-exhaustion mitigation).
     let mut lines = FramedRead::new(
         tokio_util::io::StreamReader::new(
             stream.map(|res| res.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))),
         ),
-        LinesCodec::new(),
+        LinesCodec::new_with_max_length(1_048_576),
     );
 
     loop {
