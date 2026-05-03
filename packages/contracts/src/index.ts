@@ -139,21 +139,26 @@ export {
   stripRedactedThinkingBlocks,
 } from './redactedThinking';
 
+// Re-export the tagged-result type from the worker pool
+export type { StripResult } from './workerUtils';
+
 import { stripRedactedThinkingBlocks } from './redactedThinking';
+import type { StripResult } from './workerUtils';
 
 /**
- * Strips redacted thinking blocks from content using a Web Worker.
- * Falls back to synchronous implementation if the Web Worker fails.
+ * Strips redacted thinking blocks from content using the persistent
+ * Web Worker pool. Falls back to synchronous implementation if the
+ * pool is unavailable.
  * @param content The content to process.
- * @returns A promise that resolves with the processed content.
+ * @returns A tagged result with the processed content and the method used.
  */
-export async function stripRedactedThinkingBlocksAsync(content: string): Promise<string> {
+export async function stripRedactedThinkingBlocksAsync(content: string): Promise<StripResult> {
   try {
     const { stripRedactedThinkingBlocksWorker } = await import('./workerUtils');
     return await stripRedactedThinkingBlocksWorker(content);
   } catch (error) {
     console.warn('Web Worker failed, falling back to synchronous stripRedactedThinkingBlocks:', error);
-    return stripRedactedThinkingBlocks(content);
+    return { content: stripRedactedThinkingBlocks(content), method: 'sync' };
   }
 }
 

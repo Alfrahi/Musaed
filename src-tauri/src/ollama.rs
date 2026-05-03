@@ -420,6 +420,21 @@ pub async fn abort_chat(request_id: String) -> ApiResponse<()> {
 fn strip_thinking_blocks(content: &str) -> String {
     let mut result = content.to_string();
 
+    // Strip <redacted-thinking>...</redacted-thinking> blocks
+    // (must match the frontend's `stripRedactedThinkingBlocks` logic)
+    while let Some(start) = result.find("<redacted-thinking>") {
+        if let Some(end) = result[start + "<redacted-thinking>".len()..].find("</redacted-thinking>") {
+            result = format!(
+                "{}{}",
+                &result[..start],
+                &result[start + "<redacted-thinking>".len() + end + "</redacted-thinking>".len()..]
+            );
+        } else {
+            result = result[..start].to_string();
+            break;
+        }
+    }
+
     // Strip <lemma>...</lemma> blocks
     while let Some(start) = result.find("<lemma>") {
         if let Some(end) = result[start + "<lemma>".len()..].find("</lemma>") {
