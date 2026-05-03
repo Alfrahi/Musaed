@@ -6,7 +6,9 @@ import {
   ChatSettings,
   OllamaHealthIpc,
   OllamaModelSchema,
-  OllamaHealthIpcSchema
+  OllamaHealthIpcSchema,
+  ModelValidation,
+  ModelValidationSchema
 } from '@musaed/contracts';
 import toast from 'react-hot-toast';
 
@@ -22,6 +24,7 @@ export interface CommandMap {
   'check_ollama_health': { args: { baseUrl: string }, return: OllamaHealthIpc };
   'verify_ollama_service': { args: { baseUrl: string }, return: string };
   'generate_title': { args: { baseUrl: string, model: string, userMessage: string, assistantMessage: string, language: string }, return: string };
+  'validate_model': { args: { baseUrl: string, modelName: string }, return: ModelValidation };
   'append_to_log': { args: { entry: string }, return: void };
   'clear_logs': { args: Record<string, never>, return: void };
 }
@@ -37,6 +40,7 @@ const CommandReturnSchemas: { [K in keyof CommandMap]: z.ZodType<CommandMap[K]['
   'check_ollama_health': OllamaHealthIpcSchema,
   'verify_ollama_service': z.string(),
   'generate_title': z.string(),
+  'validate_model': ModelValidationSchema,
   'append_to_log': voidSchema,
   'clear_logs': voidSchema,
 };
@@ -102,6 +106,7 @@ async function callInternal<K extends keyof CommandMap>(
       if (!schema) return (response.data ?? (true as unknown)) as CommandMap[K]['return'];
       const result = schema.safeParse(response.data);
       if (!result.success) {
+        console.error(`[IPC] Zod validation failed for "${command}":`, result.error.flatten());
         return null;
       }
       return result.data;
@@ -127,6 +132,7 @@ export const ollamaApi = {
   pullModel: (baseUrl: string, name: string) => callInternal('pull_model', { baseUrl, name }),
   checkHealth: (baseUrl: string) => callInternal('check_ollama_health', { baseUrl }, { quiet: true }),
   verifyService: (baseUrl: string) => callInternal('verify_ollama_service', { baseUrl }),
+  validateModel: (baseUrl: string, modelName: string) => callInternal('validate_model', { baseUrl, modelName }),
 };
 
 /**
@@ -203,14 +209,7 @@ export const opener = {
 /**
  * Store plugin wrappers
  */
-export interface StoreOptions {
-  defaults?: Record<string, unknown>;
-  autoSave?: boolean | number;
-  serializeFnName?: string;
-  deserializeFnName?: string;
-  createNew?: boolean;
-  overrideDefaults?: boolean;
-}
+export type StoreOptions = Partial<import('@tauri-apps/plugin-store').StoreOptions>;
 
 export const store = {
   load: async (file: string, opts?: StoreOptions) =>

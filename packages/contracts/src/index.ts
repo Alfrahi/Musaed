@@ -47,7 +47,7 @@ export const sanitizeError = (error: unknown): BackendError => {
       code = errObj.code as BackendErrorCode;
     }
 
-    const rid = errObj.requestId || errObj.request_id;
+    const rid = errObj.requestId;
     if (typeof rid === 'string') {
       requestId = rid;
     }
@@ -110,11 +110,7 @@ export const OllamaTokenSchema = z.object({
   eval_count: z.number().nullish(),
   eval_duration: z.number().nullish(),
   requestId: z.string().nullish(),
-  request_id: z.string().nullish(),
-}).transform((data) => ({
-  ...data,
-  requestId: data.requestId || data.request_id
-}));
+});
 
 export type OllamaToken = z.infer<typeof OllamaTokenSchema>;
 
@@ -160,6 +156,14 @@ export async function stripRedactedThinkingBlocksAsync(content: string): Promise
     return stripRedactedThinkingBlocks(content);
   }
 }
+
+export const ModelValidationSchema = z.object({
+  isValid: z.boolean(),
+  modelName: z.string(),
+  details: OllamaModelDetailsSchema.nullish(),
+});
+
+export type ModelValidation = z.infer<typeof ModelValidationSchema>;
 
 export const OllamaHealthIpcSchema = z.object({
   isRunning: z.boolean(),
