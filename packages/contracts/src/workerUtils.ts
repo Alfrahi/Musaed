@@ -3,8 +3,8 @@
 // The worker blob is built from shared constants to prevent regex drift.
 
 import {
-  REDACTED_THINKING_REGEX_SOURCE,
-  stripRedactedThinkingBlocks,
+  THINKING_REGEX_SOURCE,
+  stripThinkingBlocks,
 } from './redactedThinking';
 
 // ── Public result type ──────────────────────────────────────────────
@@ -57,7 +57,7 @@ const inflight = new Map<number, { resolve: (value: unknown) => void; reject: (r
 /**
  * Builds the self-contained worker code blob.
  *
- * The regex pattern is injected from `REDACTED_THINKING_REGEX_SOURCE`
+ * The regex pattern is injected from `THINKING_REGEX_SOURCE`
  * so the worker always uses the same logic as the synchronous path —
  * no duplicated patterns.
  */
@@ -69,7 +69,7 @@ function buildWorkerCode(): string {
         let result;
         switch (type) {
           case 'stripRedactedThinkingBlocks':
-            result = payload.content.replace(new RegExp(${JSON.stringify(REDACTED_THINKING_REGEX_SOURCE)}, 'gi'), '').trim();
+            result = payload.content.replace(new RegExp(${JSON.stringify(THINKING_REGEX_SOURCE)}, 'gi'), '').trim();
             break;
           default:
             throw new Error('Unknown computation type: ' + type);
@@ -161,21 +161,21 @@ function drainQueue(): void {
 // ── Public API ──────────────────────────────────────────────────────
 
 /**
- * Strips redacted thinking blocks from content using the persistent
+ * Strips thinking blocks from content using the persistent
  * Web Worker pool. Falls back to the synchronous implementation if
  * the pool is unavailable.
  *
  * @param content The content to process.
  * @returns A tagged result indicating the processing method used.
  */
-export async function stripRedactedThinkingBlocksWorker(content: string): Promise<StripResult> {
+export async function stripThinkingBlocksWorker(content: string): Promise<StripResult> {
   ensurePool();
 
   const hasAvailableWorker = available.some(Boolean) && workers.length > 0;
 
   if (!hasAvailableWorker && pendingQueue.length >= POOL_SIZE) {
     // All workers busy and queue full — fall back to sync immediately.
-    return { content: stripRedactedThinkingBlocks(content), method: 'sync' };
+    return { content: stripThinkingBlocks(content), method: 'sync' };
   }
 
   try {
@@ -188,6 +188,6 @@ export async function stripRedactedThinkingBlocksWorker(content: string): Promis
     return { content: result as string, method: 'worker' };
   } catch {
     // Worker error — fall back to the identical synchronous path.
-    return { content: stripRedactedThinkingBlocks(content), method: 'sync' };
+    return { content: stripThinkingBlocks(content), method: 'sync' };
   }
 }

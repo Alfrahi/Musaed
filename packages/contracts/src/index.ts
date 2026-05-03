@@ -131,35 +131,46 @@ export const PullErrorSchema = z.object({
 
 export type PullError = z.infer<typeof PullErrorSchema>;
 
-// Re-export redacted-thinking utilities from the shared module (avoids circular deps with workerUtils)
+// Re-export thinking-tag utilities from the shared module (avoids circular deps with workerUtils)
 export {
   REDACTED_THINKING_TAG_START,
   REDACTED_THINKING_TAG_END,
+  THINK_TAG_START,
+  THINK_TAG_END,
+  THINKING_REGEX_SOURCE,
   REDACTED_THINKING_REGEX_SOURCE,
+  stripThinkingBlocks,
   stripRedactedThinkingBlocks,
+  findThinkingTags,
 } from './redactedThinking';
+export type { ThinkingTagMatch } from './redactedThinking';
 
 // Re-export the tagged-result type from the worker pool
 export type { StripResult } from './workerUtils';
 
-import { stripRedactedThinkingBlocks } from './redactedThinking';
+import { stripThinkingBlocks } from './redactedThinking';
 import type { StripResult } from './workerUtils';
 
 /**
- * Strips redacted thinking blocks from content using the persistent
+ * Strips thinking blocks from content using the persistent
  * Web Worker pool. Falls back to synchronous implementation if the
  * pool is unavailable.
  * @param content The content to process.
  * @returns A tagged result with the processed content and the method used.
  */
-export async function stripRedactedThinkingBlocksAsync(content: string): Promise<StripResult> {
+export async function stripThinkingBlocksAsync(content: string): Promise<StripResult> {
   try {
-    const { stripRedactedThinkingBlocksWorker } = await import('./workerUtils');
-    return await stripRedactedThinkingBlocksWorker(content);
+    const { stripThinkingBlocksWorker } = await import('./workerUtils');
+    return await stripThinkingBlocksWorker(content);
   } catch (error) {
-    console.warn('Web Worker failed, falling back to synchronous stripRedactedThinkingBlocks:', error);
-    return { content: stripRedactedThinkingBlocks(content), method: 'sync' };
+    console.warn('Web Worker failed, falling back to synchronous stripThinkingBlocks:', error);
+    return { content: stripThinkingBlocks(content), method: 'sync' };
   }
+}
+
+/** @deprecated Use stripThinkingBlocksAsync instead. */
+export async function stripRedactedThinkingBlocksAsync(content: string): Promise<StripResult> {
+  return stripThinkingBlocksAsync(content);
 }
 
 export const ModelValidationSchema = z.object({

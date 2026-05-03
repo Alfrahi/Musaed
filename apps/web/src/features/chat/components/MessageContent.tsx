@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Message, REDACTED_THINKING_TAG_END, REDACTED_THINKING_TAG_START } from '@musaed/contracts';
+import { Message, findThinkingTags } from '@musaed/contracts';
 import ThinkingBlock from './ThinkingBlock';
 
 const MarkdownRenderer = dynamic(
@@ -31,23 +31,21 @@ const MessageContent = ({ message, isUser }: { message: Message; isUser: boolean
     const content = message.content || '';
     if (isUser) return { thinking: '', main: content, isFinished: true, shouldCollapse: false };
 
-    const thinkStart = content.indexOf(REDACTED_THINKING_TAG_START);
-    if (thinkStart === -1) return { thinking: '', main: content, isFinished: true, shouldCollapse: false };
+    const match = findThinkingTags(content);
+    if (!match) return { thinking: '', main: content, isFinished: true, shouldCollapse: false };
 
-    const thinkEnd = content.indexOf(REDACTED_THINKING_TAG_END);
-    const isFinished = thinkEnd !== -1;
-    
-    const thinking = content.substring(
-      thinkStart + REDACTED_THINKING_TAG_START.length, 
-      isFinished ? thinkEnd : content.length
-    ).trim();
+    const isFinished = match.closeTagLength !== -1;
 
-    const before = content.substring(0, thinkStart).trim();
-    const after = isFinished ? content.substring(thinkEnd + REDACTED_THINKING_TAG_END.length).trim() : '';
-    
+    const thinking = content.substring(match.contentStart, match.contentEnd).trim();
+
+    const before = content.substring(0, match.tagStart).trim();
+    const after = isFinished
+      ? content.substring(match.contentEnd + match.closeTagLength).trim()
+      : '';
+
     // Join content outside thinking block, ensuring proper spacing
     const main = [before, after].filter(Boolean).join('\n\n');
-    
+
     return {
       thinking,
       main,
@@ -62,10 +60,10 @@ const MessageContent = ({ message, isUser }: { message: Message; isUser: boolean
   return (
     <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none break-words" dir="auto">
       {!isUser && (parsed.thinking || !parsed.isFinished) && (
-        <ThinkingBlock 
-          content={parsed.thinking} 
+        <ThinkingBlock
+          content={parsed.thinking}
           isStreaming={!parsed.isFinished}
-          isCollapsed={parsed.shouldCollapse} 
+          isCollapsed={parsed.shouldCollapse}
         />
       )}
 
@@ -74,10 +72,10 @@ const MessageContent = ({ message, isUser }: { message: Message; isUser: boolean
       ) : showLoading ? (
         <div className="flex gap-1.5 py-2" aria-hidden="true">
           {[0, 150, 300].map(delay => (
-            <div 
+            <div
               key={delay}
               style={{ animationDelay: `${-delay}ms` }}
-              className="w-1.5 h-1.5 bg-blue-500/50 rounded-full animate-bounce" 
+              className="w-1.5 h-1.5 bg-blue-500/50 rounded-full animate-bounce"
             />
           ))}
         </div>

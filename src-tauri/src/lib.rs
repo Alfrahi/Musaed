@@ -47,16 +47,16 @@ pub fn run() {
 
     builder
     .invoke_handler(tauri::generate_handler![
-        ollama::get_ollama_models,
-        ollama::chat_with_ollama,
-        ollama::abort_chat,
-        ollama::validate_model,
-        ollama::pull_model,
-        ollama::abort_pull,
-        ollama::delete_model,
-        ollama::verify_ollama_service,
-        ollama::check_ollama_health,
-        ollama::generate_title,
+        ollama::commands::chat_with_ollama,
+        ollama::commands::abort_chat,
+        ollama::commands::check_ollama_health,
+        ollama::models::get_ollama_models,
+        ollama::models::validate_model,
+        ollama::models::pull_model,
+        ollama::models::abort_pull,
+        ollama::models::delete_model,
+        ollama::models::verify_ollama_service,
+        ollama::title::generate_title,
         logging::append_to_log,
         logging::clear_logs,
     ])
