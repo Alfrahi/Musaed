@@ -4,7 +4,6 @@
 //! an active chat session or when probing server status.
 
 use crate::payloads::{ApiResponse, BackendError, ChatMessage, ChatOptions, OllamaHealth};
-use dashmap::mapref::entry::Entry;
 use scopeguard::defer;
 use serde_json::json;
 use std::sync::Arc;
@@ -14,8 +13,8 @@ use tokio::time;
 use tokio_util::sync::CancellationToken;
 
 use super::client::{
-    acquire_global_permit, invalid_ollama_base, ollama_endpoint, retry_with_backoff,
-    ABORT_HANDLES, CONCURRENT_SEMAPHORE, EVENT_OLLAMA_ERROR, HTTP_CLIENT,
+    acquire_global_permit, invalid_ollama_base, ollama_endpoint, request_cache_try_insert,
+    retry_with_backoff, ABORT_HANDLES, CONCURRENT_SEMAPHORE, EVENT_OLLAMA_ERROR, HTTP_CLIENT,
     INITIAL_REQUEST_TIMEOUT_SECS, MAX_TOTAL_IMAGE_SIZE_BYTES, REQUEST_CACHE,
     STREAM_ABSOLUTE_TIMEOUT_SECS,
 };
@@ -77,22 +76,17 @@ pub async fn chat_with_ollama<R: Runtime>(
         }
     };
 
-    // Atomic duplicate check
-    match REQUEST_CACHE.entry(request_id.clone()) {
-        Entry::Occupied(_) => {
-            log::warn!("Duplicate request detected: {}", request_id);
-            return ApiResponse {
-                success: false,
-                data: None,
-                error: Some(
-                    BackendError::new("DUPLICATE_REQUEST", "Request already in progress")
-                        .with_request_id(request_id),
-                ),
-            };
-        }
-        Entry::Vacant(e) => {
-            e.insert(Instant::now());
-        }
+    // Atomic duplicate check (bounded insert with LRU eviction)
+    if !request_cache_try_insert(request_id.clone()) {
+        log::warn!("Duplicate request detected: {}", request_id);
+        return ApiResponse {
+            success: false,
+            data: None,
+            error: Some(
+                BackendError::new("DUPLICATE_REQUEST", "Request already in progress")
+                    .with_request_id(request_id),
+            ),
+        };
     }
 
     let permit = match CONCURRENT_SEMAPHORE.acquire().await {

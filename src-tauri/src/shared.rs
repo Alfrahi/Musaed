@@ -32,6 +32,10 @@ pub const INITIAL_REQUEST_TIMEOUT_SECS: u64 = 300;
 pub const REQUEST_CACHE_TTL_SECS: u64 = STREAM_ABSOLUTE_TIMEOUT_SECS + 60;
 /// How often the background eviction task sweeps `REQUEST_CACHE` (seconds).
 pub const REQUEST_CACHE_EVICTION_INTERVAL_SECS: u64 = 120;
+/// Hard upper bound on the number of entries in [`REQUEST_CACHE`].
+/// Intentionally generous (4× the global concurrency limit) to never be hit
+/// during normal operation, but prevents unbounded growth if cleanup paths leak.
+pub const MAX_REQUEST_CACHE_SIZE: usize = MAX_CONCURRENT_REQUESTS * 4;
 
 // ====================== EVENT NAMES ======================
 
@@ -109,6 +113,50 @@ pub fn ollama_endpoint(base_url: &str, path: &str) -> Result<String, String> {
 
 // ====================== CACHE EVICTION ======================
 
+/// Evicts the single oldest entry from [`REQUEST_CACHE`], based on insertion timestamp.
+/// Returns `true` if an entry was evicted, `false` if the cache was empty.
+fn evict_oldest_request_entry() -> bool {
+    let oldest = REQUEST_CACHE
+        .iter()
+        .min_by_key(|e| *e.value())
+        .map(|e| e.key().clone());
+
+    match oldest {
+        Some(key) => {
+            REQUEST_CACHE.remove(&key);
+            log::warn!(
+                "Request cache at capacity ({}), evicted oldest entry: {}",
+                MAX_REQUEST_CACHE_SIZE,
+                key
+            );
+            true
+        }
+        None => false,
+    }
+}
+
+/// Attempts to insert a request ID into [`REQUEST_CACHE`].
+///
+/// Returns `true` if the insertion succeeded (new request), or `false` if the
+/// key was already present (duplicate request). If the cache is at
+/// [`MAX_REQUEST_CACHE_SIZE`], the oldest entry is evicted before insertion.
+pub fn request_cache_try_insert(request_id: String) -> bool {
+    use dashmap::mapref::entry::Entry;
+
+    // Pre-emptively evict if at capacity (before acquiring entry lock).
+    if REQUEST_CACHE.len() >= MAX_REQUEST_CACHE_SIZE {
+        evict_oldest_request_entry();
+    }
+
+    match REQUEST_CACHE.entry(request_id) {
+        Entry::Occupied(_) => false,
+        Entry::Vacant(e) => {
+            e.insert(Instant::now());
+            true
+        }
+    }
+}
+
 /// Removes all entries from `REQUEST_CACHE` whose age exceeds `REQUEST_CACHE_TTL_SECS`.
 /// Returns the number of entries evicted (useful for diagnostics / logging).
 pub fn evict_stale_requests() -> usize {
@@ -139,11 +187,19 @@ pub fn spawn_cache_eviction_task() {
         loop {
             interval.tick().await;
             let evicted = evict_stale_requests();
+            let len = REQUEST_CACHE.len();
             if evicted > 0 {
                 log::warn!(
-                    "Evicted {} stale request-cache entr{} (TTL={}s)",
+                    "Evicted {} stale request-cache entr{} (TTL={}s, remaining={})",
                     evicted,
                     if evicted == 1 { "y" } else { "ies" },
+                    REQUEST_CACHE_TTL_SECS,
+                    len,
+                );
+            } else if len > 0 {
+                log::debug!(
+                    "Request cache sweep: {} active entries (TTL={}s)",
+                    len,
                     REQUEST_CACHE_TTL_SECS,
                 );
             }
@@ -246,6 +302,7 @@ mod tests {
         assert!(FAST_TIMEOUT_SECS < DEFAULT_TIMEOUT_SECS);
         assert!(STREAM_IDLE_TIMEOUT_SECS < STREAM_ABSOLUTE_TIMEOUT_SECS);
         assert!(MAX_CONCURRENT_CHATS <= MAX_CONCURRENT_REQUESTS);
+        assert!(MAX_REQUEST_CACHE_SIZE >= MAX_CONCURRENT_REQUESTS);
         assert!(!EVENT_OLLAMA_TOKEN.is_empty());
         assert!(!EVENT_OLLAMA_ERROR.is_empty());
         assert!(!EVENT_PULL_PROGRESS.is_empty());
@@ -363,5 +420,60 @@ mod tests {
         // We expect failure since port 1 is not listening
         assert!(result.is_err());
         assert_eq!(calls.load(Ordering::SeqCst), 2); // initial + 1 retry
+    }
+
+    // ---- Bounded cache tests ----
+
+    #[test]
+    fn test_request_cache_try_insert_new_key() {
+        let key = "bounded-new".to_string();
+        assert!(request_cache_try_insert(key.clone()));
+        assert!(REQUEST_CACHE.get(&key).is_some());
+        REQUEST_CACHE.remove(&key);
+    }
+
+    #[test]
+    fn test_request_cache_try_insert_rejects_duplicate() {
+        let key = "bounded-dup".to_string();
+        assert!(request_cache_try_insert(key.clone()));
+        assert!(!request_cache_try_insert(key.clone()), "duplicate should be rejected");
+        REQUEST_CACHE.remove(&key);
+    }
+
+    #[test]
+    fn test_request_cache_size_bound_evicts_oldest() {
+        // Fill cache to capacity. The first entry should be evicted when one
+        // more is inserted.
+        let mut keys: Vec<String> = Vec::with_capacity(MAX_REQUEST_CACHE_SIZE + 1);
+        for i in 0..MAX_REQUEST_CACHE_SIZE {
+            let key = format!("capacity-{}", i);
+            assert!(request_cache_try_insert(key.clone()));
+            keys.push(key);
+        }
+
+        assert_eq!(
+            REQUEST_CACHE.len(),
+            MAX_REQUEST_CACHE_SIZE,
+            "cache should be at capacity"
+        );
+
+        // The first key is the oldest and should be evicted by the next insert.
+        let overflow_key = "capacity-overflow".to_string();
+        assert!(request_cache_try_insert(overflow_key.clone()));
+        assert!(
+            REQUEST_CACHE.get("capacity-0").is_none(),
+            "oldest entry should have been evicted"
+        );
+        assert!(
+            REQUEST_CACHE.get(&overflow_key).is_some(),
+            "new entry should be present"
+        );
+        assert_eq!(REQUEST_CACHE.len(), MAX_REQUEST_CACHE_SIZE);
+
+        // Cleanup
+        for key in &keys {
+            REQUEST_CACHE.remove(key);
+        }
+        REQUEST_CACHE.remove(&overflow_key);
     }
 }
