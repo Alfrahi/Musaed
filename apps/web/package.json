@@ -4,9 +4,9 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "dev": "next dev",
+    "dev": "pnpm build && tauri dev",
     "build": "next build",
-    "start": "next start",
+    "preview": "next export",
     "lint": "eslint --config ../../eslint.config.mjs .",
     "type-check": "tsc --noEmit",
     "test": "vitest",
