@@ -58,10 +58,83 @@ describe('Contracts: Error Handling', () => {
     expect(sanitized.message).toContain('[PATH REDACTED]');
   });
 
+  it('sanitizes Unix-style paths', () => {
+    const rawError = {
+      code: 'FILE_SYSTEM_ERROR',
+      message: 'Failed to access /home/user/project/src/secrets.txt',
+    };
+    const sanitized = sanitizeError(rawError);
+    expect(sanitized.message).toContain('[PATH REDACTED]');
+    expect(sanitized.message).not.toContain('/home/user');
+  });
+
   it('handles generic string errors', () => {
     const sanitized = sanitizeError('Something exploded');
     expect(sanitized.code).toBe(BackendErrorCode.Unknown);
     expect(sanitized.message).toBe('Something exploded');
+  });
+
+  it('redacts API keys and tokens', () => {
+    const rawError = {
+      message: 'Auth failed: api_key=abc123def456ghij789klm',
+    };
+    const sanitized = sanitizeError(rawError);
+    expect(sanitized.message).toContain('[REDACTED]');
+    expect(sanitized.message).not.toContain('abc123');
+  });
+
+  it('redacts private IP addresses', () => {
+    const rawError = {
+      message: 'Cannot connect to 192.168.1.100:8080',
+    };
+    const sanitized = sanitizeError(rawError);
+    expect(sanitized.message).toContain('[PRIVATE IP REDACTED]');
+    expect(sanitized.message).not.toContain('192.168');
+  });
+
+  it('preserves localhost for debugging', () => {
+    const rawError = {
+      message: 'Connected to http://localhost:11434',
+    };
+    const sanitized = sanitizeError(rawError);
+    expect(sanitized.message).toContain('localhost');
+  });
+
+  it('redacts external URLs', () => {
+    const rawError = {
+      message: 'Request to https://api.example.com/v1/users failed',
+    };
+    const sanitized = sanitizeError(rawError);
+    expect(sanitized.message).toContain('[URL REDACTED]');
+    expect(sanitized.message).not.toContain('api.example.com');
+  });
+
+  it('redacts database connection strings', () => {
+    const rawError = {
+      message: 'DB error: postgres://user:pass@localhost/db',
+    };
+    const sanitized = sanitizeError(rawError);
+    expect(sanitized.message).toContain('[CONNECTION STRING REDACTED]');
+    expect(sanitized.message).not.toContain('user:pass');
+  });
+
+  it('redacts stack trace file locations', () => {
+    const rawError = {
+      message: 'Error at File "/app/src/handlers/auth.ts", line 42, column 15',
+    };
+    const sanitized = sanitizeError(rawError);
+    expect(sanitized.message).toContain('[LOCATION REDACTED]');
+    expect(sanitized.message).not.toContain('auth.ts');
+  });
+
+  it('handles empty error messages gracefully', () => {
+    const sanitized = sanitizeError({ message: '' });
+    expect(sanitized.message).toBe('An error occurred. Please try again.');
+  });
+
+  it('normalizes whitespace in error messages', () => {
+    const sanitized = sanitizeError({ message: 'Error   with    extra    spaces' });
+    expect(sanitized.message).toBe('Error with extra spaces');
   });
 });
 

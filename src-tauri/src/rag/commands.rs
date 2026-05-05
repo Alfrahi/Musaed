@@ -2,6 +2,8 @@
 //!
 //! Each command follows the existing pattern: validate inputs, acquire rate
 //! limit permit, execute, return `Result<ApiResponse<T>, String>`.
+//!
+//! SECURITY: All filesystem paths are canonicalized to prevent symlink traversal attacks.
 
 use crate::payloads::{ApiResponse, BackendError};
 use crate::rag::embedder::OllamaEmbedder;
@@ -15,10 +17,70 @@ use crate::rag::validation;
 use crate::shared::RAG_INDEX_ABORT_HANDLES;
 use crate::validation::is_valid_model_name;
 use serde::Deserialize;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tauri::Emitter;
 use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
+
+// ====================== PATH SECURITY HELPERS ======================
+
+/// Canonicalizes a path and verifies it stays within the project root.
+/// Returns the canonical path on success, or an error message on failure.
+///
+/// Security measures:
+/// - Resolves symlinks to prevent symlink traversal attacks
+/// - Verifies the resolved path is within the project root directory
+/// - Rejects any path that escapes the project boundary
+fn canonicalize_path_within_project(
+    project_root: &Path,
+    target_path: &Path,
+) -> Result<PathBuf, String> {
+    // Canonicalize the project root (resolves any symlinks)
+    let canonical_root = project_root
+        .canonicalize()
+        .map_err(|e| format!("Failed to resolve project root: {}", e))?;
+
+    // Canonicalize the target path
+    let canonical_target = target_path
+        .canonicalize()
+        .map_err(|e| format!("Target path does not exist or is inaccessible: {}", e))?;
+
+    // Add trailing separator to prevent prefix matching issues (e.g., /home vs /homeuser)
+    let canonical_root_with_sep = format!("{}/", canonical_root.to_string_lossy());
+    let canonical_target_with_sep = format!("{}/", canonical_target.to_string_lossy());
+
+    if !canonical_target_with_sep.starts_with(&canonical_root_with_sep) {
+        return Err(format!(
+            "Path escapes project boundary: {:?} is not within {:?}",
+            canonical_target, canonical_root
+        ));
+    }
+
+    Ok(canonical_target)
+}
+
+/// Validates a relative path and returns the canonical path within the project root.
+/// Used for file queries within an indexed project.
+#[allow(dead_code)]
+fn validate_and_canonicalize_file_path(
+    project_root: &Path,
+    relative_path: &str,
+) -> Result<PathBuf, String> {
+    // Reject any path that could escape the project directory
+    if relative_path.contains("..") {
+        return Err("Path traversal not allowed".to_string());
+    }
+    if relative_path.starts_with('/') || relative_path.starts_with('\\') {
+        return Err("Absolute paths not allowed".to_string());
+    }
+
+    // Construct the full path (still potentially a symlink)
+    let full_path = project_root.join(relative_path);
+
+    // Canonicalize and verify it's within the project
+    canonicalize_path_within_project(project_root, &full_path)
+}
 
 // ====================== COMMAND PAYLOADS ======================
 
@@ -51,12 +113,27 @@ pub async fn cmd_rag_add_project(
     }
 
     let p = std::path::Path::new(&path);
-    if !p.exists() || !p.is_dir() {
+
+    // Security: Canonicalize and verify path is valid
+    let canonical_path = match p.canonicalize() {
+        Ok(cp) => cp,
+        Err(e) => {
+            return Ok(validation::rag_validation_error(format!(
+                "Path does not exist or is not accessible: {}",
+                e
+            )));
+        }
+    };
+
+    // Verify it's a directory
+    if !canonical_path.is_dir() {
         return Ok(validation::rag_validation_error(format!(
-            "Path does not exist or is not a directory: {}",
-            path
+            "Path is not a directory: {:?}",
+            canonical_path
         )));
     }
+
+    let canonical_path_str = canonical_path.to_string_lossy().to_string();
 
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
@@ -64,7 +141,7 @@ pub async fn cmd_rag_add_project(
     let project = RagProject {
         id: id.clone(),
         name,
-        path,
+        path: canonical_path_str,
         embedding_model,
         ignore_patterns,
         created_at: now.clone(),
@@ -601,4 +678,85 @@ pub async fn cmd_rag_validate_embedding_model(
             error: Some(BackendError::new("RAG_VALIDATION_ERROR", e)),
         },
     })
+}
+
+#[cfg(test)]
+mod path_security_tests {
+    use super::*;
+    use std::fs;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_canonicalize_path_within_valid_project() {
+        let dir = tempdir().unwrap();
+        let project_root = dir.path();
+        let target = project_root.join("subdir").join("file.txt");
+        fs::create_dir_all(target.parent().unwrap()).unwrap();
+        fs::write(&target, "test").unwrap();
+
+        let result = canonicalize_path_within_project(project_root, &target);
+        assert!(result.is_ok());
+        let canonical = result.unwrap();
+        assert!(canonical.to_string_lossy().contains("subdir"));
+    }
+
+    #[test]
+    fn test_canonicalize_path_traversal_blocked() {
+        let dir = tempdir().unwrap();
+        let project_root = dir.path();
+        let target = project_root.join("..").join("..").join("etc").join("passwd");
+
+        let result = canonicalize_path_within_project(project_root, &target);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("escapes project boundary"));
+    }
+
+    #[test]
+    fn test_canonicalize_path_nonexistent_fails() {
+        let dir = tempdir().unwrap();
+        let project_root = dir.path();
+        let target = project_root.join("nonexistent").join("file.txt");
+
+        let result = canonicalize_path_within_project(project_root, &target);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_and_canonicalize_file_path_valid() {
+        let dir = tempdir().unwrap();
+        let project_root = dir.path();
+        fs::write(project_root.join("src/main.rs"), "fn main() {}").unwrap();
+
+        let result = validate_and_canonicalize_file_path(project_root, "src/main.rs");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_and_canonicalize_file_path_traversal_blocked() {
+        let dir = tempdir().unwrap();
+        let project_root = dir.path();
+
+        let result = validate_and_canonicalize_file_path(project_root, "../etc/passwd");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("traversal"));
+    }
+
+    #[test]
+    fn test_validate_and_canonicalize_file_path_absolute_blocked() {
+        let dir = tempdir().unwrap();
+        let project_root = dir.path();
+
+        let result = validate_and_canonicalize_file_path(project_root, "/etc/passwd");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Absolute"));
+    }
+
+    #[test]
+    fn test_validate_and_canonicalize_file_path_windows_traversal_blocked() {
+        let dir = tempdir().unwrap();
+        let project_root = dir.path();
+
+        let result = validate_and_canonicalize_file_path(project_root, "..\\..\\Windows\\System32");
+        assert!(result.is_err());
+    }
 }

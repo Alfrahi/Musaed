@@ -27,7 +27,8 @@ export const BackendErrorSchema = z
 export type BackendError = z.infer<typeof BackendErrorSchema>;
 
 /**
- * Sanitizes errors by redacting sensitive system paths and URLs while ensuring type safety.
+ * Sanitizes errors by redacting sensitive system paths, URLs, and stack traces
+ * while ensuring type safety. Prevents information leakage from backend errors.
  */
 export const sanitizeError = (error: unknown): BackendError => {
   let message = 'An unknown error occurred';
@@ -55,18 +56,58 @@ export const sanitizeError = (error: unknown): BackendError => {
     }
   }
 
-  const pathRegex = /([a-zA-Z]:\\(?:[^\\\s]+\\)+|(?:\/[^/\s]+)+\/)/g;
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  // Step 1: Redact filesystem paths (Unix and Windows)
+  // Unix-style: /home/user/..., /root/..., /etc/...
+  const unixPathRegex =
+    /\/(?:home|root|etc|usr|var|opt|srv|tmp|mnt|proc|sys|dev|boot|lib|bin|sbin|Applications?|Users?)[^\s]*/gi;
+  message = message.replace(unixPathRegex, '[PATH REDACTED]');
 
-  message = message.replace(pathRegex, '[PATH REDACTED] ');
+  // Windows-style: C:\..., D:\..., etc.
+  const winPathRegex = /[A-Za-z]:\\(?:[^\\\s]+\\)*[^\\\s]*/g;
+  message = message.replace(winPathRegex, '[PATH REDACTED]');
 
-  if (!message.includes('localhost') && !message.includes('127.0.0.1')) {
-    message = message.replace(urlRegex, '[URL REDACTED]');
+  // Generic absolute paths
+  const genericPathRegex = /([a-zA-Z]:\\(?:[^\\\s]+\\)+|(?:\/[^/\s]+)+\/)/g;
+  message = message.replace(genericPathRegex, '[PATH REDACTED]');
+
+  // Step 2: Redact sensitive URLs while preserving localhost for debugging
+  const urlRegex = /(https?:\/\/(?!localhost|127\.0\.0\.1|::1)[^\s<>"{}|\\^`\[\]]+)/gi;
+  message = message.replace(urlRegex, '[URL REDACTED]');
+
+  // Step 3: Remove common sensitive patterns
+  const sensitivePatterns: Array<[RegExp, string]> = [
+    // API keys/tokens
+    [/(api[_-]?key|token|secret|password|passwd|pwd)[=:]\s*["']?[\w-]{8,}["']?/gi, '$1=[REDACTED]'],
+    // Private IPs (but keep localhost)
+    [
+      /\b(?:10\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])|192\.168)\.\d{1,3}\.\d{1,3}(?::\d+)?/g,
+      '[PRIVATE IP REDACTED]',
+    ],
+    // Database connection strings
+    [/(mongodb|postgres|mysql|redis):\/\/[^\s]+/gi, '[CONNECTION STRING REDACTED]'],
+    // Stack traces - remove file:line:col patterns
+    [/(?:File|at)\s+["'][^"']+["']:\d+:\d+/g, '[LOCATION REDACTED]'],
+    [
+      /(?:File|at)\s+["'][^"']+["'],?\s*line\s+\d+(?:,?\s*col(?:umn)?\s+\d+)?/gi,
+      '[LOCATION REDACTED]',
+    ],
+  ];
+
+  for (const [pattern, replacement] of sensitivePatterns) {
+    message = message.replace(pattern, replacement);
+  }
+
+  // Step 4: Normalize whitespace and trim
+  message = message.replace(/\s+/g, ' ').trim();
+
+  // Step 5: Fallback for completely empty messages
+  if (!message || message.length < 2) {
+    message = 'An error occurred. Please try again.';
   }
 
   return {
     code,
-    message: message.trim(),
+    message,
     requestId,
   };
 };

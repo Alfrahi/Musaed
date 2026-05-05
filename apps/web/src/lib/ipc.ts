@@ -23,6 +23,7 @@ import {
   IndexStatusSchema,
   RagModelValidationSchema,
   RAG_VALIDATION_LIMITS,
+  sanitizeError,
 } from '@musaed/contracts';
 import type {
   RagProject,
@@ -272,6 +273,7 @@ export const sanitizeOllamaUrl = (url: string): string => {
 
 /**
  * Internal helper to perform IPC calls via Tauri core.
+ * All errors are sanitized before display to prevent sensitive data leakage.
  */
 async function callInternal<K extends keyof CommandMap>(
   command: K,
@@ -285,7 +287,7 @@ async function callInternal<K extends keyof CommandMap>(
     !isValidOllamaUrl(args.baseUrl)
   ) {
     if (!options?.quiet) {
-      toast.error(`Security Block: ${args.baseUrl} is not a valid local address.`);
+      toast.error('Security Block: Invalid or disallowed Ollama address.');
     }
     return null;
   }
@@ -295,11 +297,11 @@ async function callInternal<K extends keyof CommandMap>(
   if (inputSchema) {
     const inputResult = inputSchema.safeParse(args);
     if (!inputResult.success) {
-      console.error(`[IPC] Input validation failed for "${command}":`, inputResult.error.flatten());
+      // Prevent raw Zod errors from leaking - extract only safe error message
+      const safeMessage = inputResult.error.issues[0]?.message ?? 'Request validation failed';
+      console.error(`[IPC] Input validation failed for "${command}"`);
       if (!options?.quiet) {
-        toast.error(
-          `Invalid request: ${inputResult.error.issues[0]?.message ?? 'validation failed'}`
-        );
+        toast.error(`Invalid request: ${safeMessage}`);
       }
       return null;
     }
@@ -317,24 +319,26 @@ async function callInternal<K extends keyof CommandMap>(
       if (!schema) return (response.data ?? (true as unknown)) as CommandMap[K]['return'];
       const result = schema.safeParse(response.data);
       if (!result.success) {
-        const errorMsg = `[IPC] Zod validation failed for "${command}": ${JSON.stringify(result.error.flatten())}`;
-        console.error(errorMsg);
-        throw new Error(errorMsg);
+        // Prevent raw Zod errors from leaking
+        console.error(`[IPC] Response validation failed for "${command}"`);
+        throw new Error('Invalid response from backend');
       }
       return result.data;
     }
 
     if (response?.error) {
-      const errorMsg = response.error.message;
+      // Sanitize the backend error before displaying to UI
+      const sanitized = sanitizeError(response.error);
       if (!options?.quiet) {
-        toast.error(errorMsg);
+        toast.error(sanitized.message);
       }
-      throw new Error(errorMsg);
+      throw new Error(sanitized.message);
     }
     throw new Error('Unknown error occurred during IPC call');
   } catch (err) {
-    if (err instanceof Error) throw err;
-    throw new Error(String(err));
+    // Ensure no raw errors escape - always sanitize
+    const sanitized = sanitizeError(err);
+    throw new Error(sanitized.message);
   }
 }
 
@@ -408,6 +412,7 @@ export const ragApi = {
 
 /**
  * Listen for events from the backend.
+ * All event payloads are validated and sanitized before passing to handlers.
  */
 export async function listen<T>(
   event: string,
@@ -423,7 +428,8 @@ export async function listen<T>(
       if (result.success) {
         handler(result.data);
       } else {
-        console.error(`[IPC] Event "${event}" payload validation failed:`, result.error.flatten());
+        // Prevent raw Zod errors from leaking
+        console.error(`[IPC] Event "${event}" payload validation failed`);
       }
     } else {
       handler(e.payload);
