@@ -44,6 +44,11 @@ pub const EVENT_OLLAMA_ERROR: &str = "ollama-error";
 pub const EVENT_PULL_PROGRESS: &str = "pull-progress";
 pub const EVENT_PULL_ERROR: &str = "pull-error";
 
+// RAG event names
+pub const EVENT_RAG_INDEX_PROGRESS: &str = "rag-index-progress";
+pub const EVENT_RAG_INDEX_COMPLETE: &str = "rag-index-complete";
+pub const EVENT_RAG_INDEX_ERROR: &str = "rag-index-error";
+
 // ====================== GLOBAL STATE ======================
 
 /// Map of request_id -> CancellationToken for aborting active chat streams.
@@ -52,6 +57,10 @@ pub static ABORT_HANDLES: LazyLock<DashMap<String, Arc<CancellationToken>>> =
 
 /// Map of model name -> CancellationToken for aborting active model pulls.
 pub static PULL_ABORT_HANDLES: LazyLock<DashMap<String, Arc<CancellationToken>>> =
+    LazyLock::new(DashMap::new);
+
+/// Map of project_id -> CancellationToken for aborting active RAG indexing.
+pub static RAG_INDEX_ABORT_HANDLES: LazyLock<DashMap<String, Arc<CancellationToken>>> =
     LazyLock::new(DashMap::new);
 
 /// Map of request_id -> Instant for deduplicating chat requests.

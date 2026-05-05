@@ -16,6 +16,21 @@ import {
   IpcChatOptionsSchema,
   LogEntrySchema,
   VALIDATION_LIMITS,
+  RagProjectSchema,
+  SearchResultSchema,
+  ProjectStatsSchema,
+  ChunkRecordSchema,
+  IndexStatusSchema,
+  RagModelValidationSchema,
+  RAG_VALIDATION_LIMITS,
+} from '@musaed/contracts';
+import type {
+  RagProject,
+  SearchResult,
+  ProjectStats,
+  ChunkRecord,
+  IndexStatus,
+  RagModelValidation,
 } from '@musaed/contracts';
 import toast from 'react-hot-toast';
 
@@ -49,6 +64,37 @@ export interface CommandMap {
   validate_model: { args: { baseUrl: string; modelName: string }; return: ModelValidation };
   append_to_log: { args: { entry: string }; return: void };
   clear_logs: { args: Record<string, never>; return: void };
+
+  // RAG commands
+  rag_add_project: {
+    args: { name: string; path: string; embeddingModel: string; ignorePatterns: string[] };
+    return: RagProject;
+  };
+  rag_remove_project: { args: { projectId: string }; return: boolean };
+  rag_update_project: {
+    args: { projectId: string; name?: string; ignorePatterns?: string[] };
+    return: RagProject;
+  };
+  rag_list_projects: { args: Record<string, never>; return: RagProject[] };
+  rag_get_project: { args: { projectId: string }; return: RagProject };
+  rag_index_project: {
+    args: { projectId: string; force?: boolean; baseUrl?: string };
+    return: boolean;
+  };
+  rag_abort_index: { args: { projectId: string }; return: boolean };
+  rag_reindex_project: { args: { projectId: string; baseUrl?: string }; return: boolean };
+  rag_get_index_status: { args: { projectId: string }; return: IndexStatus };
+  rag_search: {
+    args: { projectId: string; query: string; topK?: number; threshold?: number; baseUrl?: string };
+    return: SearchResult[];
+  };
+  rag_get_file_chunks: { args: { projectId: string; filePath: string }; return: ChunkRecord[] };
+  rag_get_project_stats: { args: { projectId: string }; return: ProjectStats };
+  rag_set_embedding_model: { args: { projectId: string; modelName: string }; return: boolean };
+  rag_validate_embedding_model: {
+    args: { baseUrl?: string; modelName: string };
+    return: RagModelValidation;
+  };
 }
 
 const voidSchema = z.preprocess((val) => (val === null ? undefined : val), z.void());
@@ -89,6 +135,67 @@ const CommandInputSchemas: {
   validate_model: z.object({ baseUrl: z.string(), modelName: ModelNameSchema }),
   append_to_log: z.object({ entry: LogEntrySchema }),
   clear_logs: undefined,
+
+  // RAG command input schemas
+  rag_add_project: z.object({
+    name: z.string().min(1).max(RAG_VALIDATION_LIMITS.MAX_PROJECT_NAME_LEN),
+    path: z.string().min(1).max(RAG_VALIDATION_LIMITS.MAX_PROJECT_PATH_LEN),
+    embeddingModel: ModelNameSchema,
+    ignorePatterns: z
+      .array(z.string().max(RAG_VALIDATION_LIMITS.MAX_IGNORE_PATTERN_LEN))
+      .max(RAG_VALIDATION_LIMITS.MAX_IGNORE_PATTERNS),
+  }),
+  rag_remove_project: z.object({ projectId: z.string().min(1) }),
+  rag_update_project: z.object({
+    projectId: z.string().min(1),
+    name: z.string().min(1).max(RAG_VALIDATION_LIMITS.MAX_PROJECT_NAME_LEN).optional(),
+    ignorePatterns: z
+      .array(z.string().max(RAG_VALIDATION_LIMITS.MAX_IGNORE_PATTERN_LEN))
+      .max(RAG_VALIDATION_LIMITS.MAX_IGNORE_PATTERNS)
+      .optional(),
+  }),
+  rag_list_projects: undefined,
+  rag_get_project: z.object({ projectId: z.string().min(1) }),
+  rag_index_project: z.object({
+    projectId: z.string().min(1),
+    force: z.boolean().optional(),
+    baseUrl: z.string().optional(),
+  }),
+  rag_abort_index: z.object({ projectId: z.string().min(1) }),
+  rag_reindex_project: z.object({
+    projectId: z.string().min(1),
+    baseUrl: z.string().optional(),
+  }),
+  rag_get_index_status: z.object({ projectId: z.string().min(1) }),
+  rag_search: z.object({
+    projectId: z.string().min(1),
+    query: z.string().min(1).max(RAG_VALIDATION_LIMITS.MAX_SEARCH_QUERY_LEN),
+    topK: z
+      .number()
+      .int()
+      .min(RAG_VALIDATION_LIMITS.MIN_TOP_K)
+      .max(RAG_VALIDATION_LIMITS.MAX_TOP_K)
+      .optional(),
+    threshold: z
+      .number()
+      .min(RAG_VALIDATION_LIMITS.MIN_THRESHOLD)
+      .max(RAG_VALIDATION_LIMITS.MAX_THRESHOLD)
+      .optional(),
+    baseUrl: z.string().optional(),
+  }),
+  rag_get_file_chunks: z.object({
+    projectId: z.string().min(1),
+    filePath: z.string().min(1).max(RAG_VALIDATION_LIMITS.MAX_PROJECT_PATH_LEN),
+  }),
+  rag_get_project_stats: z.object({ projectId: z.string().min(1) }),
+  rag_set_embedding_model: z.object({
+    projectId: z.string().min(1),
+    modelName: ModelNameSchema,
+  }),
+  rag_validate_embedding_model: z.object({
+    baseUrl: z.string(),
+    modelName: ModelNameSchema,
+  }),
 };
 
 const CommandReturnSchemas: {
@@ -105,6 +212,22 @@ const CommandReturnSchemas: {
   validate_model: ModelValidationSchema,
   append_to_log: voidSchema,
   clear_logs: voidSchema,
+
+  // RAG command return schemas
+  rag_add_project: RagProjectSchema,
+  rag_remove_project: z.boolean(),
+  rag_update_project: RagProjectSchema,
+  rag_list_projects: z.array(RagProjectSchema),
+  rag_get_project: RagProjectSchema,
+  rag_index_project: z.boolean(),
+  rag_abort_index: z.boolean(),
+  rag_reindex_project: z.boolean(),
+  rag_get_index_status: IndexStatusSchema,
+  rag_search: z.array(SearchResultSchema),
+  rag_get_file_chunks: z.array(ChunkRecordSchema),
+  rag_get_project_stats: ProjectStatsSchema,
+  rag_set_embedding_model: z.boolean(),
+  rag_validate_embedding_model: RagModelValidationSchema,
 };
 
 /**
@@ -244,6 +367,33 @@ export const titleApi = {
 export const logApi = {
   append: (entry: string) => callInternal('append_to_log', { entry }),
   clear: () => callInternal('clear_logs', {}),
+};
+
+/**
+ * RAG API
+ */
+export const ragApi = {
+  addProject: (args: CommandMap['rag_add_project']['args']) =>
+    callInternal('rag_add_project', args),
+  removeProject: (projectId: string) => callInternal('rag_remove_project', { projectId }),
+  updateProject: (args: CommandMap['rag_update_project']['args']) =>
+    callInternal('rag_update_project', args),
+  listProjects: () => callInternal('rag_list_projects', {}),
+  getProject: (projectId: string) => callInternal('rag_get_project', { projectId }),
+  indexProject: (projectId: string, force?: boolean, baseUrl?: string) =>
+    callInternal('rag_index_project', { projectId, force, baseUrl }),
+  abortIndex: (projectId: string) => callInternal('rag_abort_index', { projectId }),
+  reindexProject: (projectId: string, baseUrl?: string) =>
+    callInternal('rag_reindex_project', { projectId, baseUrl }),
+  getIndexStatus: (projectId: string) => callInternal('rag_get_index_status', { projectId }),
+  search: (args: CommandMap['rag_search']['args']) => callInternal('rag_search', args),
+  getFileChunks: (projectId: string, filePath: string) =>
+    callInternal('rag_get_file_chunks', { projectId, filePath }),
+  getProjectStats: (projectId: string) => callInternal('rag_get_project_stats', { projectId }),
+  setEmbeddingModel: (projectId: string, modelName: string) =>
+    callInternal('rag_set_embedding_model', { projectId, modelName }),
+  validateEmbeddingModel: (baseUrl: string | undefined, modelName: string) =>
+    callInternal('rag_validate_embedding_model', { baseUrl, modelName }),
 };
 
 /**

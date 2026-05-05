@@ -15,6 +15,7 @@ import SidebarSkeleton from './SidebarSkeleton';
 import SidebarInfo from './SidebarInfo';
 import { useSidebarActions } from '../hooks/useSidebarActions';
 import { useSidebarGrouping } from '../hooks/useSidebarGrouping';
+import { ProjectList } from '@/features/rag';
 
 /** Group header (Today, Yesterday, etc.) with optional clear-all button. */
 const GroupHeader = ({
@@ -106,6 +107,12 @@ const Sidebar = () => {
     <div className="bg-sidebar border-sidebar-border flex h-full w-60 flex-col border-e select-none">
       <SidebarHeader />
       <SearchInput />
+
+      <div className="px-2 py-1">
+        <ProjectList />
+      </div>
+
+      <div className="border-sidebar-border border-t" />
 
       <div className="flex-1 overflow-hidden">
         <Virtuoso

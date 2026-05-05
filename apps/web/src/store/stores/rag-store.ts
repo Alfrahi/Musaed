@@ -1,0 +1,121 @@
+'use client';
+
+import { createWithEqualityFn } from 'zustand/traditional';
+import { shallow } from 'zustand/shallow';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import type { RagProject, IndexProgress, SearchResult } from '@musaed/contracts';
+import { createTauriStorage } from '../../lib/tauri-storage';
+
+export interface RagState {
+  projects: Record<string, RagProject>;
+  projectIds: string[];
+  activeProjectId: string | null;
+  searchResults: SearchResult[];
+  isSearching: boolean;
+
+  // Actions
+  setProjects: (projects: RagProject[]) => void;
+  addProject: (project: RagProject) => void;
+  removeProject: (projectId: string) => void;
+  updateProject: (projectId: string, updates: Partial<RagProject>) => void;
+  setActiveProjectId: (id: string | null) => void;
+  setIndexProgress: (projectId: string, progress: IndexProgress | null) => void;
+  setSearchResults: (results: SearchResult[]) => void;
+  setIsSearching: (isSearching: boolean) => void;
+  reset: () => void;
+}
+
+const initialState = {
+  projects: {} as Record<string, RagProject>,
+  projectIds: [] as string[],
+  activeProjectId: null as string | null,
+  searchResults: [] as SearchResult[],
+  isSearching: false,
+};
+
+export const useRagStore = createWithEqualityFn<RagState>()(
+  persist(
+    (set) => ({
+      ...initialState,
+
+      setProjects: (projects: RagProject[]) =>
+        set((_state: RagState) => {
+          const projectsMap: Record<string, RagProject> = {};
+          const ids: string[] = [];
+          for (const p of projects) {
+            projectsMap[p.id] = p;
+            ids.push(p.id);
+          }
+          return { projects: projectsMap, projectIds: ids };
+        }),
+
+      addProject: (project: RagProject) =>
+        set((state: RagState) => ({
+          projects: { ...state.projects, [project.id]: project },
+          projectIds: [...state.projectIds, project.id],
+        })),
+
+      removeProject: (projectId: string) =>
+        set((state: RagState) => {
+          const { [projectId]: _, ...rest } = state.projects;
+          return {
+            projects: rest,
+            projectIds: state.projectIds.filter((id: string) => id !== projectId),
+            activeProjectId: state.activeProjectId === projectId ? null : state.activeProjectId,
+          };
+        }),
+
+      updateProject: (projectId: string, updates: Partial<RagProject>) =>
+        set((state: RagState) => {
+          const existing = state.projects[projectId];
+          if (!existing) return state;
+          return {
+            projects: {
+              ...state.projects,
+              [projectId]: { ...existing, ...updates },
+            },
+          };
+        }),
+
+      setActiveProjectId: (id: string | null) => set({ activeProjectId: id }),
+
+      setIndexProgress: (projectId: string, progress: IndexProgress | null) =>
+        set((state: RagState) => {
+          const existing = state.projects[projectId];
+          if (!existing) return state;
+          return {
+            projects: {
+              ...state.projects,
+              [projectId]: {
+                ...existing,
+                status: progress
+                  ? progress.phase === 'completed'
+                    ? 'ready'
+                    : progress.phase === 'failed'
+                      ? 'error'
+                      : 'indexing'
+                  : existing.status,
+              },
+            },
+          };
+        }),
+
+      setSearchResults: (results: SearchResult[]) => set({ searchResults: results }),
+
+      setIsSearching: (isSearching: boolean) => set({ isSearching }),
+
+      reset: () => set(initialState),
+    }),
+    {
+      name: 'rag-state',
+      storage: createJSONStorage(() => createTauriStorage('rag-state.json')),
+      // Only persist these fields — search results and indexing progress are ephemeral
+      partialize: (state: RagState) => ({
+        projects: state.projects,
+        projectIds: state.projectIds,
+        activeProjectId: state.activeProjectId,
+      }),
+    }
+  ),
+  shallow
+);

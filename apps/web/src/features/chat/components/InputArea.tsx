@@ -6,6 +6,7 @@ import { useChatInput } from '../hooks/useChatInput';
 import { abortStreaming } from '../hooks/useConversationActions';
 import AttachmentPreview from './AttachmentPreview';
 import { ModelSelector } from '@/features/library';
+import { RagContextBadge } from '@/features/rag';
 
 /** Attach action buttons (image + file upload). */
 const AttachButtons = ({
@@ -156,6 +157,8 @@ export const InputArea = () => {
           onRemoveImage={removeImage}
           onRemoveFile={removeFile}
         />
+
+        <RagContextBadge />
 
         <div className="border-sidebar-border rounded-lg border bg-zinc-50 p-1 transition-all focus-within:ring-1 focus-within:ring-blue-500/50 dark:bg-zinc-950">
           <form

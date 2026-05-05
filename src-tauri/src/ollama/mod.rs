@@ -29,8 +29,6 @@ pub use title::generate_title;
 
 // ---- Internal helpers (used by tests within this module) ----
 #[cfg(test)]
-use streaming::process_chat_stream;
-#[cfg(test)]
 use title::strip_thinking_blocks;
 
 // ==================== TESTS ====================

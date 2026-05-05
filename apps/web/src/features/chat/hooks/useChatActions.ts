@@ -9,15 +9,17 @@ import {
   useSelectedModel,
   useGlobalSettings,
   useSetUIError,
+  useActiveRagProject,
 } from '../../../store/hooks';
 import { Message } from '@musaed/contracts';
 import { useTranslation } from '../../../lib/i18n';
-import { chatApi } from '../../../lib/ipc';
+import { chatApi, ragApi } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
 import { flushAndStop } from '../../../store/batch-manager';
 import { useConversationActions } from './useConversationActions';
 import { FileAttachment } from './useAttachmentUtils';
+import { buildRagSystemContext } from '@/features/rag';
 
 /** Build prompt with file context injected. */
 function buildPromptWithContext(
@@ -46,16 +48,36 @@ const buildApiMessages = (
   currentConv: { messages: Message[] },
   fullPrompt: string,
   images: string[],
-  t: (key: string, values?: Record<string, string | number | boolean>) => string
-) => [
-  { role: 'system' as const, content: '' },
-  ...currentConv.messages.map((m) => ({
-    role: m.role,
-    content:
-      m.role === 'user' ? getUserMessageContent(m.content ?? '', !!m.images?.length, t) : m.content,
-  })),
-  { role: 'user' as const, content: getUserMessageContent(fullPrompt, images.length > 0, t) },
-];
+  t: (key: string, values?: Record<string, string | number | boolean>) => string,
+  systemPrompt: string,
+  ragContext?: string
+) => {
+  // Merge RAG context with user's system prompt
+  let combinedSystem = systemPrompt;
+  if (ragContext) {
+    combinedSystem = combinedSystem ? `${ragContext}\n\n${combinedSystem}` : ragContext;
+  }
+
+  const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
+
+  // Only add system message if there's actual content
+  if (combinedSystem) {
+    messages.push({ role: 'system', content: combinedSystem });
+  }
+
+  messages.push(
+    ...currentConv.messages.map((m) => ({
+      role: m.role as 'system' | 'user' | 'assistant',
+      content:
+        m.role === 'user'
+          ? getUserMessageContent(m.content ?? '', !!m.images?.length, t)
+          : m.content,
+    }))
+  );
+  messages.push({ role: 'user', content: getUserMessageContent(fullPrompt, images.length > 0, t) });
+
+  return messages;
+};
 
 /** Handle streaming errors — log, update message, notify user. */
 const handleStreamError = (
@@ -83,6 +105,43 @@ const handleStreamError = (
   toast.error(msg);
 };
 
+interface RagSourceRef {
+  filePath: string;
+  startLine: number;
+  endLine: number;
+  language?: string;
+}
+
+/** Build RAG context for the chat query if an active project is set. */
+async function fetchRagContext(
+  query: string,
+  activeRagProject: { id: string; path: string } | null,
+  ollamaUrl: string
+): Promise<{ context: string; sources: RagSourceRef[] } | undefined> {
+  if (!activeRagProject) return undefined;
+  try {
+    const results = await ragApi.search({
+      projectId: activeRagProject.id,
+      query,
+      topK: 10,
+      baseUrl: ollamaUrl,
+    });
+    if (results && results.length > 0) {
+      const context = buildRagSystemContext(results, activeRagProject.path);
+      const sources: RagSourceRef[] = results.map((r) => ({
+        filePath: r.filePath,
+        startLine: r.startLine,
+        endLine: r.endLine,
+        language: r.language ?? undefined,
+      }));
+      return { context, sources };
+    }
+  } catch (err) {
+    logger.warn('RAG search failed, continuing without context:', { error: String(err) });
+  }
+  return undefined;
+}
+
 /**
  * Sends a message to Ollama with proper error handling and streaming setup.
  */
@@ -94,6 +153,7 @@ export const useChatActions = () => {
   const selectedModel = useSelectedModel();
   const globalSettings = useGlobalSettings();
   const setError = useSetUIError();
+  const activeRagProject = useActiveRagProject();
 
   const { initiateStreaming, stopStreaming } = useConversationActions();
   const { t } = useTranslation(globalSettings.language);
@@ -116,6 +176,13 @@ export const useChatActions = () => {
       initiateStreaming(currentConversationId, requestId);
 
       const fullPrompt = buildPromptWithContext(trimmedInput, files, t);
+      const ragResult = await fetchRagContext(
+        trimmedInput,
+        activeRagProject,
+        globalSettings.ollamaUrl
+      );
+      const ragContext = ragResult?.context;
+      const ragSources = ragResult?.sources;
 
       const userMsg: Message = {
         id: crypto.randomUUID(),
@@ -132,6 +199,7 @@ export const useChatActions = () => {
         timestamp: Date.now(),
         model: selectedModel,
         requestId,
+        ragSources,
       };
       addMessages(currentConversationId, [userMsg, assistantMsg]);
 
@@ -140,7 +208,14 @@ export const useChatActions = () => {
         const success = await chatApi.chat({
           baseUrl: ollamaUrl,
           model: selectedModel,
-          messages: buildApiMessages(currentConv, fullPrompt, images, t),
+          messages: buildApiMessages(
+            currentConv,
+            fullPrompt,
+            images,
+            t,
+            globalSettings.systemPrompt,
+            ragContext
+          ),
           requestId,
           options: {
             temperature: params.temperature,
@@ -175,6 +250,7 @@ export const useChatActions = () => {
       initiateStreaming,
       stopStreaming,
       setError,
+      activeRagProject,
     ]
   );
 

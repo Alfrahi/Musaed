@@ -1,0 +1,241 @@
+'use client';
+
+import { useState } from 'react';
+import { X, FolderOpen, Loader2 } from 'lucide-react';
+import { dialog } from '@/lib/ipc';
+import { useRagProjects as useRagProjectsHook } from '../hooks/useRagProjects';
+import { useModels } from '@/store/hooks';
+
+interface AddProjectDialogProps {
+  onClose: () => void;
+  onAdded: () => void;
+}
+
+function filterEmbeddingModels(models: { name: string }[]) {
+  return models.filter(
+    (m) =>
+      m.name.toLowerCase().includes('embed') ||
+      m.name.toLowerCase().includes('e5') ||
+      m.name.toLowerCase().includes('bge')
+  );
+}
+
+function useFormState() {
+  const [name, setName] = useState('');
+  const [path, setPath] = useState('');
+  const [embeddingModel, setEmbeddingModel] = useState('nomic-embed-text-v2-moe');
+  const [ignorePatterns, setIgnorePatterns] = useState('node_modules\ndist\n.git');
+  const [isAdding, setIsAdding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return {
+    name,
+    setName,
+    path,
+    setPath,
+    embeddingModel,
+    setEmbeddingModel,
+    ignorePatterns,
+    setIgnorePatterns,
+    isAdding,
+    setIsAdding,
+    error,
+    setError,
+  };
+}
+
+async function browseFolder(
+  setPath: (p: string) => void,
+  setName: (n: string) => void,
+  name: string
+) {
+  const selected = await dialog.open({ directory: true, multiple: false });
+  if (selected && typeof selected === 'string') {
+    setPath(selected);
+    if (!name) {
+      const folderName = selected.split('/').pop() || selected.split('\\').pop() || '';
+      setName(folderName);
+    }
+  }
+}
+
+function useHandleAdd(
+  form: ReturnType<typeof useFormState>,
+  addNewProject: (data: {
+    name: string;
+    path: string;
+    embeddingModel: string;
+    ignorePatterns: string[];
+  }) => Promise<unknown>,
+  onAdded: () => void
+) {
+  return async () => {
+    if (!form.name.trim() || !form.path.trim() || !form.embeddingModel.trim()) {
+      form.setError('Please fill in all required fields');
+      return;
+    }
+
+    form.setIsAdding(true);
+    form.setError(null);
+
+    try {
+      const patterns = form.ignorePatterns
+        .split('\n')
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0);
+      const result = await addNewProject({
+        name: form.name.trim(),
+        path: form.path.trim(),
+        embeddingModel: form.embeddingModel.trim(),
+        ignorePatterns: patterns,
+      });
+      if (result) onAdded();
+    } catch (e) {
+      form.setError(e instanceof Error ? e.message : 'Failed to add project');
+    } finally {
+      form.setIsAdding(false);
+    }
+  };
+}
+
+export const AddProjectDialog = ({ onClose, onAdded }: AddProjectDialogProps) => {
+  const form = useFormState();
+  const { addNewProject } = useRagProjectsHook();
+  const models = useModels();
+  const embeddingModels = filterEmbeddingModels(models);
+  const handleAdd = useHandleAdd(form, addNewProject, onAdded);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-background border-border w-full max-w-md space-y-4 rounded-lg border p-6 shadow-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Add RAG Project</h2>
+          <button onClick={onClose} className="hover:bg-accent rounded p-1">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <p className="text-muted-foreground text-sm">
+          Add a local project folder to index. All files will be processed locally — no data leaves
+          your machine.
+        </p>
+
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Project Name</label>
+          <input
+            type="text"
+            value={form.name}
+            onChange={(e) => form.setName(e.target.value)}
+            placeholder="My Project"
+            className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Project Folder</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={form.path}
+              onChange={(e) => form.setPath(e.target.value)}
+              placeholder="/path/to/project"
+              className="border-input bg-background flex-1 rounded-md border px-3 py-2 text-sm"
+            />
+            <button
+              onClick={() => browseFolder(form.setPath, form.setName, form.name)}
+              className="border-input bg-background hover:bg-accent flex items-center gap-1 rounded-md border px-3 py-2 text-sm"
+            >
+              <FolderOpen className="h-4 w-4" />
+              Browse
+            </button>
+          </div>
+        </div>
+
+        <EmbeddingModelSelect
+          value={form.embeddingModel}
+          onChange={form.setEmbeddingModel}
+          models={embeddingModels}
+        />
+
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Ignore Patterns</label>
+          <textarea
+            value={form.ignorePatterns}
+            onChange={(e) => form.setIgnorePatterns(e.target.value)}
+            rows={3}
+            placeholder="node_modules&#10;dist&#10;.git"
+            className="border-input bg-background w-full rounded-md border px-3 py-2 font-mono text-sm"
+          />
+          <p className="text-muted-foreground text-xs">
+            One pattern per line. These are added to the default ignore list.
+          </p>
+        </div>
+
+        {form.error && <p className="text-sm text-red-500">{form.error}</p>}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            onClick={onClose}
+            className="border-input bg-background hover:bg-accent rounded-md border px-4 py-2 text-sm"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleAdd}
+            disabled={form.isAdding}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 rounded-md px-4 py-2 text-sm disabled:opacity-50"
+          >
+            {form.isAdding && <Loader2 className="h-4 w-4 animate-spin" />}
+            Add Project
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const EmbeddingModelSelect = ({
+  value,
+  onChange,
+  models,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  models: { name: string }[];
+}) => {
+  return (
+    <div className="space-y-1">
+      <label className="text-sm font-medium">Embedding Model</label>
+      {models.length > 0 ? (
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+        >
+          {models.map((m) => (
+            <option key={m.name} value={m.name}>
+              {m.name}
+            </option>
+          ))}
+          <option value="nomic-embed-text-v2-moe">nomic-embed-text-v2-moe (default)</option>
+        </select>
+      ) : (
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="nomic-embed-text-v2-moe"
+          className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+        />
+      )}
+      <p className="text-muted-foreground text-xs">
+        Ollama embedding model. Install with: ollama pull nomic-embed-text-v2-moe
+      </p>
+    </div>
+  );
+};

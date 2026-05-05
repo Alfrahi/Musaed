@@ -1,10 +1,13 @@
 use tauri::Manager;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 pub mod logger;
 pub mod logging;
 pub mod ollama;
 pub mod ollama_url;
 pub mod payloads;
+pub mod rag;
 pub mod shared;
 pub mod validation;
 
@@ -47,6 +50,21 @@ pub fn run() {
 
         shared::spawn_cache_eviction_task();
 
+        // Initialize RAG store
+        let app_data_dir = app
+            .path()
+            .app_data_dir()
+            .expect("Failed to resolve app data directory");
+        let rag_dir = app_data_dir.join("musaed").join("rag");
+        std::fs::create_dir_all(&rag_dir).expect("Failed to create RAG data directory");
+        let db_path = rag_dir.join("rag.sqlite3");
+
+        let rag_store = rag::store::RagStore::open(&db_path)
+            .expect("Failed to initialize RAG store");
+        app.manage(Arc::new(Mutex::new(rag_store)));
+
+        log::info!("RAG store initialized at {:?}", db_path);
+
         Ok(())
     });
 
@@ -64,6 +82,20 @@ pub fn run() {
             ollama::title::generate_title,
             logging::append_to_log,
             logging::clear_logs,
+            rag::commands::rag_add_project,
+            rag::commands::rag_remove_project,
+            rag::commands::rag_update_project,
+            rag::commands::rag_list_projects,
+            rag::commands::rag_get_project,
+            rag::commands::rag_index_project,
+            rag::commands::rag_abort_index,
+            rag::commands::rag_reindex_project,
+            rag::commands::rag_get_index_status,
+            rag::commands::rag_search,
+            rag::commands::rag_get_file_chunks,
+            rag::commands::rag_get_project_stats,
+            rag::commands::rag_set_embedding_model,
+            rag::commands::rag_validate_embedding_model,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

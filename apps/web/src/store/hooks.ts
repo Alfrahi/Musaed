@@ -5,7 +5,15 @@ import { useUIStore } from './stores/ui-store';
 import { useSettingsStore } from './stores/settings-store';
 import { useModelStore } from './stores/model-store';
 import { useStreamingStore, selectLiveContent } from './stores/streaming-store';
-import type { Conversation, Message, ChatSettings, OllamaModel } from '@musaed/contracts';
+import { useRagStore } from './stores/rag-store';
+import type {
+  Conversation,
+  Message,
+  ChatSettings,
+  OllamaModel,
+  RagProject,
+  SearchResult,
+} from '@musaed/contracts';
 import type { ConversationState } from './stores/conversation-store';
 
 // ---------------------------------------------------------------------------
@@ -264,4 +272,71 @@ export function useLiveContent(conversationId: string): string | null {
 
 export function useIsLiveStreaming(conversationId: string): boolean {
   return useStreamingStore((s) => conversationId in s.liveContent);
+}
+
+// ---------------------------------------------------------------------------
+// useRagStore selectors
+// ---------------------------------------------------------------------------
+
+export function useRagProjects(): Record<string, RagProject> {
+  return useRagStore((s) => s.projects);
+}
+
+export function useRagProjectIds(): string[] {
+  return useRagStore((s) => s.projectIds);
+}
+
+export function useActiveRagProjectId(): string | null {
+  return useRagStore((s) => s.activeProjectId);
+}
+
+export function useActiveRagProject(): RagProject | null {
+  return useRagStore((s) => {
+    const id = s.activeProjectId;
+    return id ? (s.projects[id] ?? null) : null;
+  });
+}
+
+export function useRagSearchResults(): SearchResult[] {
+  return useRagStore((s) => s.searchResults);
+}
+
+export function useIsRagSearching(): boolean {
+  return useRagStore((s) => s.isSearching);
+}
+
+// RAG setter hooks
+export function useSetRagProjects(): (projects: RagProject[]) => void {
+  return useRagStore((s) => s.setProjects);
+}
+
+export function useAddRagProject(): (project: RagProject) => void {
+  return useRagStore((s) => s.addProject);
+}
+
+export function useRemoveRagProject(): (projectId: string) => void {
+  return useRagStore((s) => s.removeProject);
+}
+
+export function useUpdateRagProject(): (projectId: string, updates: Partial<RagProject>) => void {
+  return useRagStore((s) => s.updateProject);
+}
+
+export function useSetActiveRagProjectId(): (id: string | null) => void {
+  return useRagStore((s) => s.setActiveProjectId);
+}
+
+export function useSetRagIndexProgress(): (
+  projectId: string,
+  progress: import('@musaed/contracts').IndexProgress | null
+) => void {
+  return useRagStore((s) => s.setIndexProgress);
+}
+
+export function useSetRagSearchResults(): (results: SearchResult[]) => void {
+  return useRagStore((s) => s.setSearchResults);
+}
+
+export function useSetIsRagSearching(): (isSearching: boolean) => void {
+  return useRagStore((s) => s.setIsSearching);
 }

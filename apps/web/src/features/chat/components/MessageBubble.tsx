@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { Message } from '@musaed/contracts';
 import { cn } from '../../../lib/utils';
 import MessageContent from './MessageContent';
@@ -22,12 +22,21 @@ interface MessageBubbleProps {
   formatNumber: (num: number, options?: Intl.NumberFormatOptions) => string;
 }
 
+interface SourceReference {
+  filePath: string;
+  startLine: number;
+  endLine: number;
+  language?: string;
+}
+
 /**
  * Renders a single message bubble in the chat window.
  */
 const MessageBubble = ({ message, labels, formatNumber }: MessageBubbleProps) => {
   const isUser = message.role === 'user';
   const { copied, handleCopy, tps } = useMessageActions(message);
+  const sourceReferences = (message.ragSources ?? []) as SourceReference[];
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div
@@ -75,6 +84,49 @@ const MessageBubble = ({ message, labels, formatNumber }: MessageBubbleProps) =>
           <div className="text-foreground selection:bg-primary/20 text-[14px] leading-relaxed antialiased">
             <MessageContent message={message} isUser={isUser} />
           </div>
+
+          {/* RAG Source References */}
+          {sourceReferences.length > 0 && (
+            <div className="mt-4 border-t pt-4">
+              <button
+                className="text-muted-foreground hover:text-foreground flex items-center gap-2 text-xs font-medium"
+                onClick={() => setIsExpanded(!isExpanded)}
+              >
+                <FileText className="h-3 w-3" />
+                {isExpanded ? (
+                  <ChevronUp className="h-3 w-3" />
+                ) : (
+                  <ChevronDown className="h-3 w-3" />
+                )}
+                {sourceReferences.length} source file{sourceReferences.length !== 1 ? 's' : ''}{' '}
+                referenced
+              </button>
+
+              {isExpanded && (
+                <div className="mt-2 space-y-2 text-xs">
+                  {sourceReferences.map((source, index) => (
+                    <div
+                      key={index}
+                      className="bg-secondary/50 flex items-start gap-2 rounded-md p-2"
+                    >
+                      <FileText className="text-muted-foreground mt-0.5 h-3 w-3 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium">
+                          {source.filePath}
+                          <span className="text-muted-foreground ms-1 font-normal">
+                            (lines {source.startLine}–{source.endLine})
+                          </span>
+                        </p>
+                        {source.language && (
+                          <p className="text-muted-foreground">Language: {source.language}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <MessageStats
             message={message}

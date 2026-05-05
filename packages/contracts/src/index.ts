@@ -300,6 +300,16 @@ export const MessageSchema = z.object({
   eval_count: z.number().optional(),
   eval_duration: z.number().optional(),
   total_duration: z.number().optional(),
+  ragSources: z
+    .array(
+      z.object({
+        filePath: z.string(),
+        startLine: z.number(),
+        endLine: z.number(),
+        language: z.string().optional(),
+      })
+    )
+    .optional(),
 });
 
 export type Message = z.infer<typeof MessageSchema>;
@@ -358,3 +368,125 @@ export const DEFAULT_SETTINGS: ChatSettings = {
   enableMermaid: true,
   density: 1.0,
 };
+
+// ====================== RAG TYPES ======================
+
+export const ProjectStatusSchema = z.enum(['idle', 'indexing', 'ready', 'error']);
+export type ProjectStatus = z.infer<typeof ProjectStatusSchema>;
+
+export const IndexPhaseSchema = z.enum([
+  'discoveringFiles',
+  'diffingFiles',
+  'deletingStale',
+  'readingFiles',
+  'chunkingFiles',
+  'embeddingChunks',
+  'storingChunks',
+  'completed',
+  'failed',
+]);
+export type IndexPhase = z.infer<typeof IndexPhaseSchema>;
+
+export const RagProjectSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  path: z.string(),
+  embeddingModel: z.string(),
+  ignorePatterns: z.array(z.string()),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  indexedAt: z.string().nullable(),
+  fileCount: z.number(),
+  chunkCount: z.number(),
+  totalBytes: z.number(),
+  status: ProjectStatusSchema,
+});
+export type RagProject = z.infer<typeof RagProjectSchema>;
+
+export const IndexProgressSchema = z.object({
+  projectId: z.string(),
+  phase: IndexPhaseSchema,
+  current: z.number(),
+  total: z.number(),
+  message: z.string(),
+});
+export type IndexProgress = z.infer<typeof IndexProgressSchema>;
+
+export const SearchResultSchema = z.object({
+  chunkId: z.number(),
+  content: z.string(),
+  chunkType: z.string(),
+  language: z.string().nullable(),
+  startLine: z.number(),
+  endLine: z.number(),
+  filePath: z.string(),
+  score: z.number(),
+  metadata: z.record(z.string(), z.unknown()),
+});
+export type SearchResult = z.infer<typeof SearchResultSchema>;
+
+export const ProjectStatsSchema = z.object({
+  fileCount: z.number(),
+  chunkCount: z.number(),
+  totalBytes: z.number(),
+  embeddingDimension: z.number(),
+  indexSizeBytes: z.number(),
+  lastIndexed: z.string().nullable(),
+});
+export type ProjectStats = z.infer<typeof ProjectStatsSchema>;
+
+export const ChunkRecordSchema = z.object({
+  id: z.number(),
+  chunkIndex: z.number(),
+  content: z.string(),
+  chunkType: z.string(),
+  language: z.string().nullable(),
+  startLine: z.number(),
+  endLine: z.number(),
+  metadata: z.record(z.string(), z.unknown()),
+});
+export type ChunkRecord = z.infer<typeof ChunkRecordSchema>;
+
+export const IndexCompleteSchema = z.object({
+  projectId: z.string(),
+  indexedAt: z.string(),
+  fileCount: z.number(),
+  chunkCount: z.number(),
+  totalBytes: z.number(),
+});
+export type IndexComplete = z.infer<typeof IndexCompleteSchema>;
+
+export const IndexErrorSchema = z.object({
+  projectId: z.string(),
+  message: z.string(),
+});
+export type IndexError = z.infer<typeof IndexErrorSchema>;
+
+export const IndexStatusSchema = z.object({
+  projectId: z.string(),
+  isIndexing: z.boolean(),
+  progress: IndexProgressSchema.nullable(),
+});
+export type IndexStatus = z.infer<typeof IndexStatusSchema>;
+
+export const RagModelValidationSchema = z.object({
+  isValid: z.boolean(),
+  modelName: z.string(),
+  embeddingDimension: z.number().nullable(),
+  error: z.string().nullable(),
+});
+export type RagModelValidation = z.infer<typeof RagModelValidationSchema>;
+
+// RAG-specific validation limits
+export const RAG_VALIDATION_LIMITS = {
+  MAX_PROJECT_NAME_LEN: 256,
+  MAX_PROJECT_PATH_LEN: 4096,
+  MAX_IGNORE_PATTERNS: 100,
+  MAX_IGNORE_PATTERN_LEN: 512,
+  MAX_SEARCH_QUERY_LEN: 10 * 1024, // 10 KiB
+  MAX_TOP_K: 50,
+  MIN_TOP_K: 1,
+  MAX_THRESHOLD: 1.0,
+  MIN_THRESHOLD: 0.0,
+  MAX_FILE_CHUNKS_QUERY: 100,
+} as const;

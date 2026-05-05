@@ -43,6 +43,37 @@ log = { version = "0.4", features = ["std"] }
 # Utilities
 chrono = { version = "0.4", features = ["serde"] }
 
+# RAG — Vector store
+rusqlite = { version = "0.32", features = ["bundled"] }
+sqlite-vec = "0.1"
+
+# RAG — File traversal (ripgrep's ignore crate)
+ignore = "0.4"
+
+# RAG — AST-aware code chunking
+tree-sitter = "0.24"
+tree-sitter-rust = "0.23"
+tree-sitter-typescript = "0.23"
+tree-sitter-python = "0.23"
+tree-sitter-java = "0.23"
+tree-sitter-go = "0.23"
+tree-sitter-c = "0.23"
+tree-sitter-cpp = "0.23"
+tree-sitter-json = "0.24"
+tree-sitter-yaml = "0.7"
+
+# RAG — Language detection for BM25
+whatlang = "0.16"
+
+# RAG — Hashing for content deduplication
+xxhash-rust = { version = "0.8", features = ["xxh3"] }
+
+# RAG — UUID for project/chunk IDs
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# RAG — Directory traversal fallback
+walkdir = "2"
+
 # Desktop only
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2.0"
