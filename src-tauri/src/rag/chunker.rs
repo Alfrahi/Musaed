@@ -87,7 +87,14 @@ impl Chunker for CodeChunker {
                 parser.set_language(&lang).ok();
 
                 match parser.parse(content, None) {
-                    Some(tree) => chunk_ast(&tree, content, lang_name),
+                    Some(tree) => {
+                        let chunks = chunk_ast(&tree, content, lang_name);
+                        if chunks.is_empty() && !content.trim().is_empty() {
+                            TextChunker.chunk(content, file_path)
+                        } else {
+                            chunks
+                        }
+                    }
                     None => TextChunker.chunk(content, file_path),
                 }
             }
@@ -138,7 +145,11 @@ fn chunk_ast(tree: &Tree, source: &str, language: &str) -> Vec<RawChunk> {
             | "type_alias_declaration"
             | "interface_declaration"
             | "impl_definition"
-            | "declaration" => {
+            | "declaration"
+            | "export_statement"
+            | "export_declaration"
+            | "lexical_declaration"
+            | "variable_declaration" => {
                 let text = node_text(child, source);
 
                 // Extract name and enclosing entity
@@ -171,7 +182,7 @@ fn chunk_ast(tree: &Tree, source: &str, language: &str) -> Vec<RawChunk> {
             // Other top-level items (const, static, etc.) — group small ones together
             _ => {
                 let text = node_text(child, source);
-                if !text.is_empty() && text.len() >= MIN_CHUNK_CHARS {
+                if !text.is_empty() {
                     let start = child.start_position().row + 1;
                     let end = child.end_position().row + 1;
 
