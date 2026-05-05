@@ -20,9 +20,13 @@ export function useRagProjects() {
   const updateProject = useUpdateRagProject();
 
   const loadProjects = useCallback(async () => {
-    const result = await ragApi.listProjects();
-    if (result) {
-      setProjects(result);
+    try {
+      const result = await ragApi.listProjects();
+      if (result) {
+        setProjects(result);
+      }
+    } catch (err) {
+      console.error('Failed to load projects:', err);
     }
   }, [setProjects]);
 

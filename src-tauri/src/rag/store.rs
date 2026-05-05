@@ -18,8 +18,6 @@ const DEFAULT_EMBEDDING_DIMENSION: usize = 768;
 /// Shorter vectors are zero-padded to this length.
 const MAX_EMBEDDING_DIMENSION: usize = 4096;
 
-/// Number of rows per batched SQLite insert transaction.
-const INSERT_BATCH_SIZE: usize = 1000;
 
 // ====================== SCHEMA ======================
 
@@ -672,15 +670,15 @@ impl RagStore {
             JOIN files f ON f.id = c.file_id
             WHERE v.embedding MATCH ?1
               AND c.project_id = ?2
+              AND k = ?3
             ORDER BY v.distance
-            LIMIT ?3
         "#;
 
         let mut stmt = conn.prepare(sql).map_err(|e| format!("Failed to prepare search: {}", e))?;
 
         let results = stmt
             .query_map(
-                rusqlite::params![query_bytes, project_id, top_k as i64],
+                rusqlite::params![query_bytes, project_id, top_k],
                 |row| {
                     let metadata_str: String = row.get(6)?;
                     let distance: f32 = row.get(8)?;
@@ -977,14 +975,16 @@ mod tests {
         let chunk_id = store.insert_chunk(&chunk).unwrap();
         assert!(chunk_id > 0);
 
-        // Insert a dummy embedding (768-dim, all zeros for testing)
-        let embedding = vec![0.0f32; 768];
+        // Insert a dummy embedding (768-dim, non-zero for testing)
+        let mut embedding = vec![0.0f32; 768];
+        embedding[0] = 1.0;
         store.insert_embedding(chunk_id, &embedding).unwrap();
 
-        // Search with a zero vector query
-        let query = vec![0.0f32; 768];
+        // Search with the same vector query
+        let mut query = vec![0.0f32; 768];
+        query[0] = 1.0;
         let results = store.search_similar("p1", &query, 10, 0.0).unwrap();
-        // With zero vectors, distance should be 0 (perfect match)
+        // With identical vectors, distance should be 0 (perfect match)
         assert!(!results.is_empty());
         assert_eq!(results[0].file_path, "src/main.rs");
     }

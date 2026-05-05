@@ -28,7 +28,10 @@
     }
   },
   "sidebar": {
+    "chats": "Chats",
+    "projects": "Projects",
     "newChat": "New Chat",
+    "newProject": "New Project",
     "searchChats": "Search chats...",
     "recentChats": "Recent Chats",
     "searchResults": "Search Results",

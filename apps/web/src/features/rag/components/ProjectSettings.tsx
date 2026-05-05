@@ -47,22 +47,8 @@ const EmbeddingModelSelect = ({ value, onChange, models }: EmbeddingModelSelectP
   </div>
 );
 
-const ProjectSettingsForm = ({ onClose }: { onClose: () => void }) => {
-  const { updateProjectById } = useRagProjects();
-  const activeProject = useActiveRagProject();
-  const [name, setName] = useState(activeProject?.name ?? '');
-  const [ignorePatterns, setIgnorePatterns] = useState('');
-  const [embeddingModel, setEmbeddingModel] = useState(activeProject?.embeddingModel ?? '');
-  const [isSaving, setIsSaving] = useState(false);
+const useEmbeddingModels = () => {
   const [embeddingModels, setEmbeddingModels] = useState<{ name: string }[]>([]);
-
-  useEffect(() => {
-    if (activeProject) {
-      setName(activeProject.name);
-      setEmbeddingModel(activeProject.embeddingModel);
-      setIgnorePatterns(activeProject.ignorePatterns.join('\n'));
-    }
-  }, [activeProject]);
 
   useEffect(() => {
     const fetchModels = async () => {
@@ -76,6 +62,55 @@ const ProjectSettingsForm = ({ onClose }: { onClose: () => void }) => {
     };
     fetchModels();
   }, []);
+
+  return embeddingModels;
+};
+
+const ProjectSettingsActions = ({
+  onClose,
+  onSave,
+  isSaving,
+}: {
+  onClose: () => void;
+  onSave: () => void;
+  isSaving: boolean;
+}) => (
+  <div className="flex justify-end gap-2 border-t pt-2">
+    <button
+      type="button"
+      className="hover:bg-accent rounded-md border px-4 py-2 text-sm"
+      onClick={onClose}
+    >
+      Cancel
+    </button>
+    <button
+      type="button"
+      className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm disabled:opacity-50"
+      onClick={onSave}
+      disabled={isSaving}
+    >
+      {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+      Save
+    </button>
+  </div>
+);
+
+const ProjectSettingsForm = ({ onClose }: { onClose: () => void }) => {
+  const { updateProjectById } = useRagProjects();
+  const activeProject = useActiveRagProject();
+  const [name, setName] = useState(activeProject?.name ?? '');
+  const [ignorePatterns, setIgnorePatterns] = useState('');
+  const [embeddingModel, setEmbeddingModel] = useState(activeProject?.embeddingModel ?? '');
+  const [isSaving, setIsSaving] = useState(false);
+  const embeddingModels = useEmbeddingModels();
+
+  useEffect(() => {
+    if (activeProject) {
+      setName(activeProject.name);
+      setEmbeddingModel(activeProject.embeddingModel);
+      setIgnorePatterns(activeProject.ignorePatterns.join('\n'));
+    }
+  }, [activeProject]);
 
   const handleSave = async () => {
     if (!activeProject?.id) return;
@@ -135,24 +170,7 @@ const ProjectSettingsForm = ({ onClose }: { onClose: () => void }) => {
         />
         <p className="text-muted-foreground text-xs">One pattern per line.</p>
       </div>
-      <div className="flex justify-end gap-2 border-t pt-2">
-        <button
-          type="button"
-          className="hover:bg-accent rounded-md border px-4 py-2 text-sm"
-          onClick={onClose}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm disabled:opacity-50"
-          onClick={handleSave}
-          disabled={isSaving}
-        >
-          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Save
-        </button>
-      </div>
+      <ProjectSettingsActions onClose={onClose} onSave={handleSave} isSaving={isSaving} />
     </div>
   );
 };

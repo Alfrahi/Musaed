@@ -427,7 +427,7 @@ mod tests {
                         .send()
                         .await;
                     // If the actual request somehow succeeds, return it; otherwise return the error
-                    drop(count);
+                    let _ = count;
                     res.map(|_| "should not happen")
                 }
             },

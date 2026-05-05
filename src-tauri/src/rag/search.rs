@@ -14,7 +14,7 @@ use tokio::sync::Mutex;
 const DEFAULT_TOP_K: usize = 10;
 
 /// Default minimum cosine similarity threshold.
-const DEFAULT_THRESHOLD: f32 = 0.5;
+const DEFAULT_THRESHOLD: f32 = 0.1;
 
 /// Weight for vector similarity in hybrid scoring.
 const VECTOR_WEIGHT: f32 = 0.6;
@@ -40,6 +40,14 @@ impl RagSearchEngine {
         let top_k = top_k.unwrap_or(DEFAULT_TOP_K);
         let threshold = threshold.unwrap_or(DEFAULT_THRESHOLD);
 
+        log::debug!(
+            "RAG Search: project={}, query='{}', model={}, threshold={}",
+            project_id,
+            query,
+            embedding_model,
+            threshold
+        );
+
         // Embed the query
         let embedder = OllamaEmbedder::new(base_url, embedding_model);
         let query_embedding = embedder.embed_query(query).await?;
@@ -48,10 +56,19 @@ impl RagSearchEngine {
         let s = store.lock().await;
         let candidates = s.search_similar(project_id, &query_embedding, top_k * 2, threshold)?;
         
+        log::debug!("RAG Search: found {} vector candidates", candidates.len());
+        
         // If no candidates, return early
         if candidates.is_empty() {
+            log::info!("RAG Search: no candidates found for query '{}'", query);
             return Ok(vec![]);
         }
+
+        log::info!(
+            "RAG Search: found {} candidates for query '{}'",
+            candidates.len(),
+            query
+        );
         
         // Prepare documents for BM25
         let documents: Vec<(usize, String)> = candidates

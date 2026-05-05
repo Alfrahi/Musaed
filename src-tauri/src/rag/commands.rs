@@ -24,61 +24,37 @@ use tokio_util::sync::CancellationToken;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AddProjectArgs {
-    pub name: String,
-    pub path: String,
-    pub embedding_model: String,
-    pub ignore_patterns: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct UpdateProjectArgs {
     pub project_id: String,
     pub name: Option<String>,
     pub ignore_patterns: Option<Vec<String>>,
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SearchArgs {
-    pub project_id: String,
-    pub query: String,
-    pub top_k: Option<usize>,
-    pub threshold: Option<f32>,
-    pub base_url: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct IndexProjectArgs {
-    pub project_id: String,
-    pub force: Option<bool>,
-    pub base_url: Option<String>,
-}
-
 // ====================== PROJECT MANAGEMENT COMMANDS ======================
 
 #[tauri::command]
 pub async fn rag_add_project(
-    args: AddProjectArgs,
+    name: String,
+    path: String,
+    embedding_model: String,
+    ignore_patterns: Vec<String>,
     state: tauri::State<'_, Arc<Mutex<RagStore>>>,
     _app_handle: tauri::AppHandle,
 ) -> Result<ApiResponse<RagProject>, String> {
     if let Err(e) = validation::validate_add_project(
-        &args.name,
-        &args.path,
-        &args.embedding_model,
-        &args.ignore_patterns,
+        &name,
+        &path,
+        &embedding_model,
+        &ignore_patterns,
     ) {
         return Ok(validation::rag_validation_error(e));
     }
 
-    let path = std::path::Path::new(&args.path);
-    if !path.exists() || !path.is_dir() {
+    let p = std::path::Path::new(&path);
+    if !p.exists() || !p.is_dir() {
         return Ok(validation::rag_validation_error(format!(
             "Path does not exist or is not a directory: {}",
-            args.path
+            path
         )));
     }
 
@@ -87,10 +63,10 @@ pub async fn rag_add_project(
 
     let project = RagProject {
         id: id.clone(),
-        name: args.name,
-        path: args.path,
-        embedding_model: args.embedding_model,
-        ignore_patterns: args.ignore_patterns,
+        name,
+        path,
+        embedding_model,
+        ignore_patterns,
         created_at: now.clone(),
         updated_at: now,
         indexed_at: None,
@@ -146,10 +122,12 @@ pub async fn rag_remove_project(
 
 #[tauri::command]
 pub async fn rag_update_project(
-    args: UpdateProjectArgs,
+    project_id: String,
+    name: Option<String>,
+    ignore_patterns: Option<Vec<String>>,
     state: tauri::State<'_, Arc<Mutex<RagStore>>>,
 ) -> Result<ApiResponse<RagProject>, String> {
-    if let Err(e) = validation::validate_project_id(&args.project_id) {
+    if let Err(e) = validation::validate_project_id(&project_id) {
         return Ok(validation::rag_validation_error(e));
     }
 
@@ -157,9 +135,9 @@ pub async fn rag_update_project(
     let s = store.lock().await;
 
     if let Err(e) = s.update_project_metadata(
-        &args.project_id,
-        args.name.as_deref(),
-        args.ignore_patterns.as_deref(),
+        &project_id,
+        name.as_deref(),
+        ignore_patterns.as_deref(),
     ) {
         return Ok(ApiResponse {
             success: false,
@@ -168,7 +146,7 @@ pub async fn rag_update_project(
         });
     }
 
-    Ok(match s.get_project(&args.project_id) {
+    Ok(match s.get_project(&project_id) {
         Ok(Some(project)) => ApiResponse {
             success: true,
             data: Some(project),
@@ -243,11 +221,13 @@ pub async fn rag_get_project(
 
 #[tauri::command]
 pub async fn rag_index_project(
-    args: IndexProjectArgs,
+    project_id: String,
+    force: Option<bool>,
+    base_url: Option<String>,
     state: tauri::State<'_, Arc<Mutex<RagStore>>>,
     app_handle: tauri::AppHandle,
 ) -> Result<ApiResponse<bool>, String> {
-    if let Err(e) = validation::validate_project_id(&args.project_id) {
+    if let Err(e) = validation::validate_project_id(&project_id) {
         return Ok(validation::rag_validation_error(e));
     }
 
@@ -255,7 +235,7 @@ pub async fn rag_index_project(
 
     let project = {
         let s = store.lock().await;
-        match s.get_project(&args.project_id) {
+        match s.get_project(&project_id) {
             Ok(Some(p)) => p,
             Ok(None) => {
                 return Ok(ApiResponse {
@@ -274,7 +254,7 @@ pub async fn rag_index_project(
         }
     };
 
-    if RAG_INDEX_ABORT_HANDLES.contains_key(&args.project_id) {
+    if RAG_INDEX_ABORT_HANDLES.contains_key(&project_id) {
         return Ok(ApiResponse {
             success: false,
             data: None,
@@ -286,15 +266,14 @@ pub async fn rag_index_project(
     }
 
     let cancel_token = Arc::new(CancellationToken::new());
-    RAG_INDEX_ABORT_HANDLES.insert(args.project_id.clone(), cancel_token.clone());
+    RAG_INDEX_ABORT_HANDLES.insert(project_id.clone(), cancel_token.clone());
 
-    let project_id = args.project_id;
+    let project_id_for_spawn = project_id.clone();
     let project_path = project.path.clone();
     let embedding_model = project.embedding_model.clone();
     let ignore_patterns = project.ignore_patterns.clone();
-    let force = args.force.unwrap_or(false);
-    let base_url = args
-        .base_url
+    let force_val = force.unwrap_or(false);
+    let base_url_val = base_url
         .unwrap_or_else(|| "http://localhost:11434".to_string());
 
     let store_clone = store.clone();
@@ -305,12 +284,12 @@ pub async fn rag_index_project(
     tauri::async_runtime::spawn(async move {
         let result = indexing::index_project(
             store_clone.clone(),
-            &project_id,
+            &project_id_for_spawn,
             &project_path,
             &embedding_model,
-            &base_url,
+            &base_url_val,
             &ignore_patterns,
-            force,
+            force_val,
             cancel_token,
             app_handle_for_index,
         )
@@ -378,11 +357,9 @@ pub async fn rag_reindex_project(
     app_handle: tauri::AppHandle,
 ) -> Result<ApiResponse<bool>, String> {
     rag_index_project(
-        IndexProjectArgs {
-            project_id,
-            force: Some(true),
-            base_url,
-        },
+        project_id,
+        Some(true),
+        base_url,
         state,
         app_handle,
     )
@@ -415,15 +392,19 @@ pub async fn rag_get_index_status(
 
 #[tauri::command]
 pub async fn rag_search(
-    args: SearchArgs,
+    project_id: String,
+    query: String,
+    top_k: Option<usize>,
+    threshold: Option<f32>,
+    base_url: Option<String>,
     state: tauri::State<'_, Arc<Mutex<RagStore>>>,
     _app_handle: tauri::AppHandle,
 ) -> Result<ApiResponse<Vec<crate::rag::types::SearchResult>>, String> {
     if let Err(e) = validation::validate_search(
-        &args.project_id,
-        &args.query,
-        args.top_k,
-        args.threshold,
+        &project_id,
+        &query,
+        top_k,
+        threshold,
     ) {
         return Ok(validation::rag_validation_error(e));
     }
@@ -432,7 +413,7 @@ pub async fn rag_search(
 
     let project = {
         let s = store.lock().await;
-        match s.get_project(&args.project_id) {
+        match s.get_project(&project_id) {
             Ok(Some(p)) => p,
             Ok(None) => {
                 return Ok(ApiResponse {
@@ -451,18 +432,17 @@ pub async fn rag_search(
         }
     };
 
-    let base_url = args
-        .base_url
+    let base_url_val = base_url
         .unwrap_or_else(|| "http://localhost:11434".to_string());
 
     Ok(match RagSearchEngine::search(
         store.clone(),
-        &args.project_id,
-        &args.query,
-        &base_url,
+        &project_id,
+        &query,
+        &base_url_val,
         &project.embedding_model,
-        args.top_k,
-        args.threshold,
+        top_k,
+        threshold,
     )
     .await
     {

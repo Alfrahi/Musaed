@@ -17,32 +17,35 @@ export function useRagFileBrowser() {
   const ollamaUrl = useOllamaUrl();
 
   // Fetch all unique file paths for a project by searching with a broad query
-  const fetchIndexedFiles = useCallback(async (projectId: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      // Use a broad search to discover all indexed files
-      const results = await ragApi.search({
-        projectId,
-        query: '*',
-        topK: 1000,
-        baseUrl: ollamaUrl,
-      });
+  const fetchIndexedFiles = useCallback(
+    async (projectId: string) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        // Use a broad search to discover all indexed files
+        const results = await ragApi.search({
+          projectId,
+          query: '*',
+          topK: 1000,
+          baseUrl: ollamaUrl,
+        });
 
-      if (results && results.length > 0) {
-        // Extract unique file paths from search results
-        const uniqueFiles = Array.from(new Set(results.map((result) => result.filePath)));
-        setFiles(uniqueFiles);
-      } else {
-        setFiles([]);
+        if (results && results.length > 0) {
+          // Extract unique file paths from search results
+          const uniqueFiles = Array.from(new Set(results.map((result) => result.filePath)));
+          setFiles(uniqueFiles);
+        } else {
+          setFiles([]);
+        }
+      } catch (err) {
+        setError('Failed to fetch indexed files.');
+        console.error('Error fetching indexed files:', err);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      setError('Failed to fetch indexed files.');
-      console.error('Error fetching indexed files:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    [ollamaUrl]
+  );
 
   // Fetch chunks for a specific file
   const fetchFileChunks = useCallback(async (projectId: string, filePath: string) => {

@@ -314,20 +314,24 @@ async function callInternal<K extends keyof CommandMap>(
       if (!schema) return (response.data ?? (true as unknown)) as CommandMap[K]['return'];
       const result = schema.safeParse(response.data);
       if (!result.success) {
-        console.error(`[IPC] Zod validation failed for "${command}":`, result.error.flatten());
-        return null;
+        const errorMsg = `[IPC] Zod validation failed for "${command}": ${JSON.stringify(result.error.flatten())}`;
+        console.error(errorMsg);
+        throw new Error(errorMsg);
       }
       return result.data;
     }
 
     if (response?.error) {
+      const errorMsg = response.error.message;
       if (!options?.quiet) {
-        toast.error(response.error.message);
+        toast.error(errorMsg);
       }
+      throw new Error(errorMsg);
     }
-    return null;
-  } catch (_err) {
-    return null;
+    throw new Error('Unknown error occurred during IPC call');
+  } catch (err) {
+    if (err instanceof Error) throw err;
+    throw new Error(String(err));
   }
 }
 

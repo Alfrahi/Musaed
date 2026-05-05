@@ -1,0 +1,19 @@
+[[permission]]
+identifier = "allow-rag-commands"
+description = "Enables RAG project management, indexing, and search commands."
+commands.allow = [
+    "rag_add_project",
+    "rag_remove_project",
+    "rag_update_project",
+    "rag_list_projects",
+    "rag_get_project",
+    "rag_index_project",
+    "rag_abort_index",
+    "rag_reindex_project",
+    "rag_get_index_status",
+    "rag_search",
+    "rag_get_file_chunks",
+    "rag_get_project_stats",
+    "rag_set_embedding_model",
+    "rag_validate_embedding_model"
+]

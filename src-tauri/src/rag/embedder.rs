@@ -25,7 +25,6 @@ struct EmbedRequest {
 
 #[derive(Debug, Deserialize)]
 struct EmbedResponse {
-    model: String,
     embeddings: Vec<Vec<f32>>,
     #[allow(dead_code)]
     total_duration: Option<u64>,
@@ -56,12 +55,32 @@ impl OllamaEmbedder {
 
     /// Embed a single text (for query embedding).
     pub async fn embed_query(&self, text: &str) -> Result<Vec<f32>, String> {
-        let results = self.embed_batch(vec![text.to_string()]).await?;
+        let input = if self.model.to_lowercase().contains("nomic") {
+            format!("search_query: {}", text)
+        } else {
+            text.to_string()
+        };
+        let results = self.embed_batch_internal(vec![input]).await?;
         results.into_iter().next().ok_or_else(|| "No embedding returned".to_string())
     }
 
     /// Embed a batch of texts (for indexing).
     pub async fn embed_batch(&self, texts: Vec<String>) -> Result<Vec<Vec<f32>>, String> {
+        if texts.is_empty() {
+            return Ok(vec![]);
+        }
+        
+        let inputs = if self.model.to_lowercase().contains("nomic") {
+            texts.into_iter().map(|t| format!("search_document: {}", t)).collect()
+        } else {
+            texts
+        };
+
+        self.embed_batch_internal(inputs).await
+    }
+
+    /// Internal helper for embedding after prefixing.
+    async fn embed_batch_internal(&self, texts: Vec<String>) -> Result<Vec<Vec<f32>>, String> {
         if texts.is_empty() {
             return Ok(vec![]);
         }

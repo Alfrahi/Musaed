@@ -142,6 +142,37 @@ async function fetchRagContext(
   return undefined;
 }
 
+/** Helper to prepare the messages and parameters for the chat API. */
+const prepareChatPayload = (
+  currentConv: { messages: Message[] },
+  fullPrompt: string,
+  images: string[],
+  t: (key: string, values?: Record<string, string | number | boolean>) => string,
+  settings: ReturnType<typeof useGlobalSettings>,
+  ragContext?: string
+) => {
+  const { ollamaUrl, ...params } = settings;
+  return {
+    baseUrl: ollamaUrl,
+    messages: buildApiMessages(
+      currentConv,
+      fullPrompt,
+      images,
+      t,
+      settings.systemPrompt,
+      ragContext
+    ),
+    options: {
+      temperature: params.temperature,
+      num_predict: params.num_predict,
+      num_ctx: params.num_ctx,
+      top_k: params.top_k,
+      top_p: params.top_p,
+      stop: params.stop,
+    },
+  };
+};
+
 /**
  * Sends a message to Ollama with proper error handling and streaming setup.
  */
@@ -204,27 +235,19 @@ export const useChatActions = () => {
       addMessages(currentConversationId, [userMsg, assistantMsg]);
 
       try {
-        const { ollamaUrl, ...params } = globalSettings;
+        const payload = prepareChatPayload(
+          currentConv,
+          fullPrompt,
+          images,
+          t,
+          globalSettings,
+          ragContext
+        );
+
         const success = await chatApi.chat({
-          baseUrl: ollamaUrl,
+          ...payload,
           model: selectedModel,
-          messages: buildApiMessages(
-            currentConv,
-            fullPrompt,
-            images,
-            t,
-            globalSettings.systemPrompt,
-            ragContext
-          ),
           requestId,
-          options: {
-            temperature: params.temperature,
-            num_predict: params.num_predict,
-            num_ctx: params.num_ctx,
-            top_k: params.top_k,
-            top_p: params.top_p,
-            stop: params.stop,
-          },
         });
         if (success !== true) throw new Error(t('chat.connectionFailed'));
       } catch (err) {

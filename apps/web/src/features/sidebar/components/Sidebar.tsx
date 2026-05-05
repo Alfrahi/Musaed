@@ -1,6 +1,7 @@
 'use client';
 
-import { Eraser } from 'lucide-react';
+import { useState } from 'react';
+import { Eraser, MessageSquare, Briefcase, Plus } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import { useSearchQuery, useIsHydrated, useLanguage } from '@/store/hooks';
 import {
@@ -8,6 +9,8 @@ import {
   selectFilteredConversations,
 } from '@/store/stores/conversation-store';
 import { useTranslation } from '@/lib/i18n';
+import { ProjectList, AddProjectDialog } from '@/features/rag';
+import { useConversationActions } from '@/features/chat';
 import SearchInput from './SearchInput';
 import ConversationItem from './ConversationItem';
 import SidebarHeader from './SidebarHeader';
@@ -15,7 +18,6 @@ import SidebarSkeleton from './SidebarSkeleton';
 import SidebarInfo from './SidebarInfo';
 import { useSidebarActions } from '../hooks/useSidebarActions';
 import { useSidebarGrouping } from '../hooks/useSidebarGrouping';
-import { ProjectList } from '@/features/rag';
 
 /** Group header (Today, Yesterday, etc.) with optional clear-all button. */
 const GroupHeader = ({
@@ -81,6 +83,10 @@ const SidebarItemContent = ({
 };
 
 const Sidebar = () => {
+  const [activeTab, setActiveTab] = useState<'chats' | 'projects'>('chats');
+  const [showAddProject, setShowAddProject] = useState(false);
+  const { createNewConversation } = useConversationActions();
+
   const filteredConversations = useConversationStore(selectFilteredConversations);
   const searchQuery = useSearchQuery();
   const language = useLanguage();
@@ -103,37 +109,79 @@ const Sidebar = () => {
     );
   }
 
+  const handleCreateNew = () => {
+    if (activeTab === 'chats') {
+      createNewConversation();
+    } else {
+      setShowAddProject(true);
+    }
+  };
+
   return (
     <div className="bg-sidebar border-sidebar-border flex h-full w-60 flex-col border-e select-none">
-      <SidebarHeader />
-      <SearchInput />
+      <SidebarHeader activeTab={activeTab} onCreateNew={handleCreateNew} />
 
-      <div className="px-2 py-1">
-        <ProjectList />
+      <div className="mb-4 flex gap-1 px-4">
+        <button
+          onClick={() => setActiveTab('chats')}
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-[10px] font-bold tracking-wider uppercase transition-all ${
+            activeTab === 'chats'
+              ? 'bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
+              : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900'
+          }`}
+        >
+          <MessageSquare size={12} />
+          {t('sidebar.chats')}
+        </button>
+        <button
+          onClick={() => setActiveTab('projects')}
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-[10px] font-bold tracking-wider uppercase transition-all ${
+            activeTab === 'projects'
+              ? 'bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
+              : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900'
+          }`}
+        >
+          <Briefcase size={12} />
+          {t('sidebar.projects')}
+        </button>
       </div>
 
-      <div className="border-sidebar-border border-t" />
-
-      <div className="flex-1 overflow-hidden">
-        <Virtuoso
-          style={{ height: '100%' }}
-          data={virtualItems}
-          itemContent={(_index, item) => (
-            <SidebarItemContent
-              item={item}
-              searchQuery={searchQuery}
-              filteredConversations={filteredConversations}
-              handleClearAll={handleClearAll}
-              t={t}
+      {activeTab === 'chats' ? (
+        <>
+          <SearchInput />
+          <div className="flex-1 overflow-hidden">
+            <Virtuoso
+              style={{ height: '100%' }}
+              data={virtualItems}
+              itemContent={(_index, item) => (
+                <SidebarItemContent
+                  item={item}
+                  searchQuery={searchQuery}
+                  filteredConversations={filteredConversations}
+                  handleClearAll={handleClearAll}
+                  t={t}
+                />
+              )}
+              endReached={() => {
+                if (virtualItems.length < filteredConversations.length) loadMore();
+              }}
+              overscan={200}
+              increaseViewportBy={200}
             />
-          )}
-          endReached={() => {
-            if (virtualItems.length < filteredConversations.length) loadMore();
-          }}
-          overscan={200}
-          increaseViewportBy={200}
+          </div>
+        </>
+      ) : (
+        <div className="flex-1 overflow-y-auto px-2">
+          <ProjectList hideHeaderAction />
+        </div>
+      )}
+
+      {showAddProject && (
+        <AddProjectDialog
+          onClose={() => setShowAddProject(false)}
+          onAdded={() => setShowAddProject(false)}
         />
-      </div>
+      )}
 
       <SidebarInfo />
     </div>

@@ -54,6 +54,7 @@ export default tseslint.config(
       // Next.js
       ...nextPlugin.configs.recommended.rules,
       ...nextPlugin.configs['core-web-vitals'].rules,
+      '@next/next/no-html-link-for-pages': ['error', 'apps/web/src/app'],
 
       // React
       ...reactPlugin.configs.recommended.rules,

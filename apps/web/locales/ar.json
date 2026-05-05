@@ -28,7 +28,10 @@
     }
   },
   "sidebar": {
+    "chats": "المحادثات",
+    "projects": "المشاريع",
     "newChat": "محادثة جديدة",
+    "newProject": "مشروع جديد",
     "searchChats": "البحث في المحادثات...",
     "recentChats": "المحادثات الأخيرة",
     "searchResults": "نتائج البحث",

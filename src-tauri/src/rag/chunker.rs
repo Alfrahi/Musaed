@@ -649,7 +649,7 @@ fn find_sentence_break(text: &str) -> usize {
         if (c == '.' || c == '!' || c == '?') && i > MIN_CHUNK_CHARS {
             // Check if followed by whitespace or end of string
             let after = &text[i + c.len_utf8()..];
-            if after.is_empty() || after.starts_with(char::is_whitespace) {
+            if !after.is_empty() && after.starts_with(char::is_whitespace) {
                 return i + c.len_utf8();
             }
         }
@@ -657,14 +657,14 @@ fn find_sentence_break(text: &str) -> usize {
 
     // Fallback: find last newline
     if let Some(pos) = text.rfind('\n') {
-        if pos > MIN_CHUNK_CHARS {
+        if pos > MIN_CHUNK_CHARS && pos < text.len() - 1 {
             return pos + 1;
         }
     }
 
     // Fallback: find last space
     if let Some(pos) = text.rfind(' ') {
-        if pos > MIN_CHUNK_CHARS {
+        if pos > MIN_CHUNK_CHARS && pos < text.len() - 1 {
             return pos + 1;
         }
     }

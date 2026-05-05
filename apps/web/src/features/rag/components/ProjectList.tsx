@@ -8,7 +8,7 @@ import { ProjectCard } from './ProjectCard';
 import { AddProjectDialog } from './AddProjectDialog';
 import { useState, useEffect } from 'react';
 
-export const ProjectList = () => {
+export const ProjectList = ({ hideHeaderAction = false }: { hideHeaderAction?: boolean }) => {
   const { projects, projectIds, removeProjectById } = useRagProjectsHook();
   const { startIndexing, abortIndexing, startIndexEventListeners } = useRagIndexing();
   const activeProjectId = useActiveRagProjectId();
@@ -38,18 +38,20 @@ export const ProjectList = () => {
 
   return (
     <div className="space-y-1">
-      <div className="flex items-center justify-between px-2 py-1">
-        <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-          RAG Projects
-        </span>
-        <button
-          onClick={() => setShowAddDialog(true)}
-          className="hover:bg-accent text-muted-foreground hover:text-foreground rounded p-1 transition-colors"
-          title="Add project"
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </button>
-      </div>
+      {!hideHeaderAction && (
+        <div className="flex items-center justify-between px-2 py-1">
+          <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+            RAG Projects
+          </span>
+          <button
+            onClick={() => setShowAddDialog(true)}
+            className="hover:bg-accent text-muted-foreground hover:text-foreground rounded p-1 transition-colors"
+            title="Add project"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
 
       {projectIds.length === 0 ? (
         <p className="text-muted-foreground px-2 text-xs italic">No projects added yet</p>
