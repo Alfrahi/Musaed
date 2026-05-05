@@ -19,7 +19,7 @@ pub const MAX_FILE_PATH_LEN: usize = 4096;
 
 // ====================== VALIDATORS ======================
 
-/// Validates the input for `rag_add_project`.
+/// Validates the input for `cmd_rag_add_project`.
 pub fn validate_add_project(
     name: &str,
     path: &str,
@@ -66,7 +66,7 @@ pub fn validate_add_project(
     Ok(())
 }
 
-/// Validates the input for `rag_search`.
+/// Validates the input for `cmd_rag_search`.
 pub fn validate_search(
     project_id: &str,
     query: &str,

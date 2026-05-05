@@ -1,7 +1,7 @@
 //! Title generation helpers.
 //!
 //! Contains [`strip_thinking_blocks`] for cleaning model output and the
-//! [`generate_title`] Tauri command that produces a short conversation title.
+//! [`cmd_ollama_generate_title`] Tauri command that produces a short conversation title.
 
 use crate::payloads::{ApiResponse, BackendError};
 use crate::validation::{
@@ -84,7 +84,7 @@ pub(crate) fn strip_thinking_blocks(content: &str) -> String {
 /// Ollama with `stream: false`. Uses a system prompt that instructs the model
 /// to return only a concise title.
 #[tauri::command]
-pub async fn generate_title(
+pub async fn cmd_ollama_generate_title(
     base_url: String,
     model: String,
     user_message: String,

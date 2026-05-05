@@ -27,7 +27,7 @@ use super::streaming::process_chat_stream;
 // ==================== CHAT ====================
 
 #[tauri::command]
-pub async fn chat_with_ollama<R: Runtime>(
+pub async fn cmd_ollama_chat<R: Runtime>(
     app: AppHandle<R>,
     base_url: String,
     model: String,
@@ -267,7 +267,7 @@ pub async fn chat_with_ollama<R: Runtime>(
 // ==================== ABORT CHAT ====================
 
 #[tauri::command]
-pub async fn abort_chat(request_id: String) -> ApiResponse<()> {
+pub async fn cmd_ollama_abort_chat(request_id: String) -> ApiResponse<()> {
     log::info!("Aborting chat request: {}", request_id);
 
     if !is_valid_request_id(&request_id) {
@@ -296,7 +296,7 @@ pub async fn abort_chat(request_id: String) -> ApiResponse<()> {
 // ==================== HEALTH CHECK ====================
 
 #[tauri::command]
-pub async fn check_ollama_health(base_url: String) -> ApiResponse<OllamaHealth> {
+pub async fn cmd_ollama_check_health(base_url: String) -> ApiResponse<OllamaHealth> {
     log::info!("Checking Ollama health: {}", base_url);
     let start = std::time::Instant::now();
 
@@ -389,5 +389,5 @@ pub async fn check_ollama_health(base_url: String) -> ApiResponse<OllamaHealth> 
     }
 }
 
-// Re-export FAST_HTTP_CLIENT used by check_ollama_health
+// Re-export FAST_HTTP_CLIENT used by cmd_ollama_check_health
 use super::client::FAST_HTTP_CLIENT;

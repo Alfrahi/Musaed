@@ -1,12 +1,12 @@
 //! Model listing, validation, pulling, deletion, and service verification.
 //!
 //! Contains the following Tauri commands:
-//! - [`get_ollama_models`] — list installed models
-//! - [`validate_model`] — check if a model exists on the server
-//! - [`pull_model`] — stream-download a model from the registry
-//! - [`abort_pull`] — cancel an in-progress pull
-//! - [`delete_model`] — remove a model from the server
-//! - [`verify_ollama_service`] — confirm a URL points to an Ollama instance
+//! - [`cmd_ollama_get_models`] — list installed models
+//! - [`cmd_ollama_validate_model`] — check if a model exists on the server
+//! - [`cmd_ollama_pull_model`] — stream-download a model from the registry
+//! - [`cmd_ollama_abort_pull`] — cancel an in-progress pull
+//! - [`cmd_ollama_delete_model`] — remove a model from the server
+//! - [`cmd_ollama_verify_service`] — confirm a URL points to an Ollama instance
 
 use crate::payloads::{
     ApiResponse, BackendError, ModelValidation, OllamaModel, PullProgress, PullStreamError,
@@ -30,7 +30,7 @@ use super::client::{
 // ==================== MODEL LISTING ====================
 
 #[tauri::command]
-pub async fn get_ollama_models(base_url: String) -> ApiResponse<Vec<OllamaModel>> {
+pub async fn cmd_ollama_get_models(base_url: String) -> ApiResponse<Vec<OllamaModel>> {
     log::info!("Fetching Ollama models from: {}", base_url);
     let start = std::time::Instant::now();
 
@@ -107,7 +107,7 @@ pub async fn get_ollama_models(base_url: String) -> ApiResponse<Vec<OllamaModel>
 // ==================== MODEL VALIDATION ====================
 
 #[tauri::command]
-pub async fn validate_model(base_url: String, model_name: String) -> ApiResponse<ModelValidation> {
+pub async fn cmd_ollama_validate_model(base_url: String, model_name: String) -> ApiResponse<ModelValidation> {
     log::info!("Validating model: {}", model_name);
 
     if !is_valid_model_name(&model_name) {
@@ -208,7 +208,7 @@ pub async fn validate_model(base_url: String, model_name: String) -> ApiResponse
 // ==================== MODEL PULLING ====================
 
 #[tauri::command]
-pub async fn pull_model<R: Runtime>(
+pub async fn cmd_ollama_pull_model<R: Runtime>(
     app: AppHandle<R>,
     base_url: String,
     name: String,
@@ -405,7 +405,7 @@ pub async fn pull_model<R: Runtime>(
 }
 
 #[tauri::command]
-pub async fn abort_pull(name: String) -> ApiResponse<()> {
+pub async fn cmd_ollama_abort_pull(name: String) -> ApiResponse<()> {
     log::info!("Aborting model pull: {}", name);
 
     if !is_valid_model_name(&name) {
@@ -429,7 +429,7 @@ pub async fn abort_pull(name: String) -> ApiResponse<()> {
 // ==================== MODEL DELETION ====================
 
 #[tauri::command]
-pub async fn delete_model(base_url: String, name: String) -> ApiResponse<bool> {
+pub async fn cmd_ollama_delete_model(base_url: String, name: String) -> ApiResponse<bool> {
     log::info!("Deleting model: {}", name);
 
     if !is_valid_model_name(&name) {
@@ -498,7 +498,7 @@ pub async fn delete_model(base_url: String, name: String) -> ApiResponse<bool> {
 /// Verifies that the given base URL actually points to an Ollama instance
 /// by requesting `/` and checking the `Server` response header.
 #[tauri::command]
-pub async fn verify_ollama_service(base_url: String) -> ApiResponse<String> {
+pub async fn cmd_ollama_verify_service(base_url: String) -> ApiResponse<String> {
     log::info!("Verifying Ollama service at: {}", base_url);
 
     let _global_permit = match acquire_global_permit().await {

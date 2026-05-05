@@ -2,6 +2,6 @@
 identifier = "allow-logging-commands"
 description = "Enables commands for system logging and diagnostics."
 commands.allow = [
-    "append_to_log",
-    "clear_logs"
+    "cmd_logs_append",
+    "cmd_logs_clear"
 ]

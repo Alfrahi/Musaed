@@ -35,8 +35,8 @@ import type {
 import toast from 'react-hot-toast';
 
 export interface CommandMap {
-  get_ollama_models: { args: { baseUrl: string }; return: OllamaModel[] };
-  chat_with_ollama: {
+  cmd_ollama_get_models: { args: { baseUrl: string }; return: OllamaModel[] };
+  cmd_ollama_chat: {
     args: {
       baseUrl: string;
       model: string;
@@ -46,12 +46,12 @@ export interface CommandMap {
     };
     return: boolean;
   };
-  abort_chat: { args: { requestId: string }; return: void };
-  delete_model: { args: { baseUrl: string; name: string }; return: boolean };
-  pull_model: { args: { baseUrl: string; name: string }; return: void };
-  check_ollama_health: { args: { baseUrl: string }; return: OllamaHealthIpc };
-  verify_ollama_service: { args: { baseUrl: string }; return: string };
-  generate_title: {
+  cmd_ollama_abort_chat: { args: { requestId: string }; return: void };
+  cmd_ollama_delete_model: { args: { baseUrl: string; name: string }; return: boolean };
+  cmd_ollama_pull_model: { args: { baseUrl: string; name: string }; return: void };
+  cmd_ollama_check_health: { args: { baseUrl: string }; return: OllamaHealthIpc };
+  cmd_ollama_verify_service: { args: { baseUrl: string }; return: string };
+  cmd_ollama_generate_title: {
     args: {
       baseUrl: string;
       model: string;
@@ -61,37 +61,40 @@ export interface CommandMap {
     };
     return: string;
   };
-  validate_model: { args: { baseUrl: string; modelName: string }; return: ModelValidation };
-  append_to_log: { args: { entry: string }; return: void };
-  clear_logs: { args: Record<string, never>; return: void };
+  cmd_ollama_validate_model: {
+    args: { baseUrl: string; modelName: string };
+    return: ModelValidation;
+  };
+  cmd_logs_append: { args: { entry: string }; return: void };
+  cmd_logs_clear: { args: Record<string, never>; return: void };
 
   // RAG commands
-  rag_add_project: {
+  cmd_rag_add_project: {
     args: { name: string; path: string; embeddingModel: string; ignorePatterns: string[] };
     return: RagProject;
   };
-  rag_remove_project: { args: { projectId: string }; return: boolean };
-  rag_update_project: {
+  cmd_rag_remove_project: { args: { projectId: string }; return: boolean };
+  cmd_rag_update_project: {
     args: { projectId: string; name?: string; ignorePatterns?: string[] };
     return: RagProject;
   };
-  rag_list_projects: { args: Record<string, never>; return: RagProject[] };
-  rag_get_project: { args: { projectId: string }; return: RagProject };
-  rag_index_project: {
+  cmd_rag_list_projects: { args: Record<string, never>; return: RagProject[] };
+  cmd_rag_get_project: { args: { projectId: string }; return: RagProject };
+  cmd_rag_index_project: {
     args: { projectId: string; force?: boolean; baseUrl?: string };
     return: boolean;
   };
-  rag_abort_index: { args: { projectId: string }; return: boolean };
-  rag_reindex_project: { args: { projectId: string; baseUrl?: string }; return: boolean };
-  rag_get_index_status: { args: { projectId: string }; return: IndexStatus };
-  rag_search: {
+  cmd_rag_abort_index: { args: { projectId: string }; return: boolean };
+  cmd_rag_reindex_project: { args: { projectId: string; baseUrl?: string }; return: boolean };
+  cmd_rag_get_index_status: { args: { projectId: string }; return: IndexStatus };
+  cmd_rag_search: {
     args: { projectId: string; query: string; topK?: number; threshold?: number; baseUrl?: string };
     return: SearchResult[];
   };
-  rag_get_file_chunks: { args: { projectId: string; filePath: string }; return: ChunkRecord[] };
-  rag_get_project_stats: { args: { projectId: string }; return: ProjectStats };
-  rag_set_embedding_model: { args: { projectId: string; modelName: string }; return: boolean };
-  rag_validate_embedding_model: {
+  cmd_rag_get_file_chunks: { args: { projectId: string; filePath: string }; return: ChunkRecord[] };
+  cmd_cmd_rag_get_project_stats: { args: { projectId: string }; return: ProjectStats };
+  cmd_rag_set_embedding_model: { args: { projectId: string; modelName: string }; return: boolean };
+  cmd_rag_validate_embedding_model: {
     args: { baseUrl?: string; modelName: string };
     return: RagModelValidation;
   };
@@ -106,8 +109,8 @@ const voidSchema = z.preprocess((val) => (val === null ? undefined : val), z.voi
 const CommandInputSchemas: {
   [K in keyof CommandMap]: z.ZodType<CommandMap[K]['args']> | undefined;
 } = {
-  get_ollama_models: undefined,
-  chat_with_ollama: z.object({
+  cmd_ollama_get_models: undefined,
+  cmd_ollama_chat: z.object({
     baseUrl: z.string(),
     model: ModelNameSchema,
     messages: z
@@ -116,12 +119,12 @@ const CommandInputSchemas: {
     options: IpcChatOptionsSchema,
     requestId: RequestIdSchema,
   }),
-  abort_chat: z.object({ requestId: RequestIdSchema }),
-  delete_model: z.object({ baseUrl: z.string(), name: ModelNameSchema }),
-  pull_model: z.object({ baseUrl: z.string(), name: ModelNameSchema }),
-  check_ollama_health: undefined,
-  verify_ollama_service: undefined,
-  generate_title: z.object({
+  cmd_ollama_abort_chat: z.object({ requestId: RequestIdSchema }),
+  cmd_ollama_delete_model: z.object({ baseUrl: z.string(), name: ModelNameSchema }),
+  cmd_ollama_pull_model: z.object({ baseUrl: z.string(), name: ModelNameSchema }),
+  cmd_ollama_check_health: undefined,
+  cmd_ollama_verify_service: undefined,
+  cmd_ollama_generate_title: z.object({
     baseUrl: z.string(),
     model: ModelNameSchema,
     userMessage: z
@@ -132,12 +135,12 @@ const CommandInputSchemas: {
       .max(VALIDATION_LIMITS.MAX_TITLE_INPUT_LEN, 'assistantMessage exceeds size limit'),
     language: LanguageSchema,
   }),
-  validate_model: z.object({ baseUrl: z.string(), modelName: ModelNameSchema }),
-  append_to_log: z.object({ entry: LogEntrySchema }),
-  clear_logs: undefined,
+  cmd_ollama_validate_model: z.object({ baseUrl: z.string(), modelName: ModelNameSchema }),
+  cmd_logs_append: z.object({ entry: LogEntrySchema }),
+  cmd_logs_clear: undefined,
 
   // RAG command input schemas
-  rag_add_project: z.object({
+  cmd_rag_add_project: z.object({
     name: z.string().min(1).max(RAG_VALIDATION_LIMITS.MAX_PROJECT_NAME_LEN),
     path: z.string().min(1).max(RAG_VALIDATION_LIMITS.MAX_PROJECT_PATH_LEN),
     embeddingModel: ModelNameSchema,
@@ -145,8 +148,8 @@ const CommandInputSchemas: {
       .array(z.string().max(RAG_VALIDATION_LIMITS.MAX_IGNORE_PATTERN_LEN))
       .max(RAG_VALIDATION_LIMITS.MAX_IGNORE_PATTERNS),
   }),
-  rag_remove_project: z.object({ projectId: z.string().min(1) }),
-  rag_update_project: z.object({
+  cmd_rag_remove_project: z.object({ projectId: z.string().min(1) }),
+  cmd_rag_update_project: z.object({
     projectId: z.string().min(1),
     name: z.string().min(1).max(RAG_VALIDATION_LIMITS.MAX_PROJECT_NAME_LEN).optional(),
     ignorePatterns: z
@@ -154,20 +157,20 @@ const CommandInputSchemas: {
       .max(RAG_VALIDATION_LIMITS.MAX_IGNORE_PATTERNS)
       .optional(),
   }),
-  rag_list_projects: undefined,
-  rag_get_project: z.object({ projectId: z.string().min(1) }),
-  rag_index_project: z.object({
+  cmd_rag_list_projects: undefined,
+  cmd_rag_get_project: z.object({ projectId: z.string().min(1) }),
+  cmd_rag_index_project: z.object({
     projectId: z.string().min(1),
     force: z.boolean().optional(),
     baseUrl: z.string().optional(),
   }),
-  rag_abort_index: z.object({ projectId: z.string().min(1) }),
-  rag_reindex_project: z.object({
+  cmd_rag_abort_index: z.object({ projectId: z.string().min(1) }),
+  cmd_rag_reindex_project: z.object({
     projectId: z.string().min(1),
     baseUrl: z.string().optional(),
   }),
-  rag_get_index_status: z.object({ projectId: z.string().min(1) }),
-  rag_search: z.object({
+  cmd_rag_get_index_status: z.object({ projectId: z.string().min(1) }),
+  cmd_rag_search: z.object({
     projectId: z.string().min(1),
     query: z.string().min(1).max(RAG_VALIDATION_LIMITS.MAX_SEARCH_QUERY_LEN),
     topK: z
@@ -183,16 +186,16 @@ const CommandInputSchemas: {
       .optional(),
     baseUrl: z.string().optional(),
   }),
-  rag_get_file_chunks: z.object({
+  cmd_rag_get_file_chunks: z.object({
     projectId: z.string().min(1),
     filePath: z.string().min(1).max(RAG_VALIDATION_LIMITS.MAX_PROJECT_PATH_LEN),
   }),
-  rag_get_project_stats: z.object({ projectId: z.string().min(1) }),
-  rag_set_embedding_model: z.object({
+  cmd_cmd_rag_get_project_stats: z.object({ projectId: z.string().min(1) }),
+  cmd_rag_set_embedding_model: z.object({
     projectId: z.string().min(1),
     modelName: ModelNameSchema,
   }),
-  rag_validate_embedding_model: z.object({
+  cmd_rag_validate_embedding_model: z.object({
     baseUrl: z.string(),
     modelName: ModelNameSchema,
   }),
@@ -201,33 +204,33 @@ const CommandInputSchemas: {
 const CommandReturnSchemas: {
   [K in keyof CommandMap]: z.ZodType<CommandMap[K]['return']> | undefined;
 } = {
-  get_ollama_models: z.array(OllamaModelSchema),
-  chat_with_ollama: z.boolean(),
-  abort_chat: voidSchema,
-  delete_model: z.boolean(),
-  pull_model: voidSchema,
-  check_ollama_health: OllamaHealthIpcSchema,
-  verify_ollama_service: z.string(),
-  generate_title: z.string(),
-  validate_model: ModelValidationSchema,
-  append_to_log: voidSchema,
-  clear_logs: voidSchema,
+  cmd_ollama_get_models: z.array(OllamaModelSchema),
+  cmd_ollama_chat: z.boolean(),
+  cmd_ollama_abort_chat: voidSchema,
+  cmd_ollama_delete_model: z.boolean(),
+  cmd_ollama_pull_model: voidSchema,
+  cmd_ollama_check_health: OllamaHealthIpcSchema,
+  cmd_ollama_verify_service: z.string(),
+  cmd_ollama_generate_title: z.string(),
+  cmd_ollama_validate_model: ModelValidationSchema,
+  cmd_logs_append: voidSchema,
+  cmd_logs_clear: voidSchema,
 
   // RAG command return schemas
-  rag_add_project: RagProjectSchema,
-  rag_remove_project: z.boolean(),
-  rag_update_project: RagProjectSchema,
-  rag_list_projects: z.array(RagProjectSchema),
-  rag_get_project: RagProjectSchema,
-  rag_index_project: z.boolean(),
-  rag_abort_index: z.boolean(),
-  rag_reindex_project: z.boolean(),
-  rag_get_index_status: IndexStatusSchema,
-  rag_search: z.array(SearchResultSchema),
-  rag_get_file_chunks: z.array(ChunkRecordSchema),
-  rag_get_project_stats: ProjectStatsSchema,
-  rag_set_embedding_model: z.boolean(),
-  rag_validate_embedding_model: RagModelValidationSchema,
+  cmd_rag_add_project: RagProjectSchema,
+  cmd_rag_remove_project: z.boolean(),
+  cmd_rag_update_project: RagProjectSchema,
+  cmd_rag_list_projects: z.array(RagProjectSchema),
+  cmd_rag_get_project: RagProjectSchema,
+  cmd_rag_index_project: z.boolean(),
+  cmd_rag_abort_index: z.boolean(),
+  cmd_rag_reindex_project: z.boolean(),
+  cmd_rag_get_index_status: IndexStatusSchema,
+  cmd_rag_search: z.array(SearchResultSchema),
+  cmd_rag_get_file_chunks: z.array(ChunkRecordSchema),
+  cmd_cmd_rag_get_project_stats: ProjectStatsSchema,
+  cmd_rag_set_embedding_model: z.boolean(),
+  cmd_rag_validate_embedding_model: RagModelValidationSchema,
 };
 
 /**
@@ -339,65 +342,68 @@ async function callInternal<K extends keyof CommandMap>(
  * Ollama Engine API
  */
 export const ollamaApi = {
-  getModels: (baseUrl: string) => callInternal('get_ollama_models', { baseUrl }),
-  deleteModel: (baseUrl: string, name: string) => callInternal('delete_model', { baseUrl, name }),
-  pullModel: (baseUrl: string, name: string) => callInternal('pull_model', { baseUrl, name }),
+  getModels: (baseUrl: string) => callInternal('cmd_ollama_get_models', { baseUrl }),
+  deleteModel: (baseUrl: string, name: string) =>
+    callInternal('cmd_ollama_delete_model', { baseUrl, name }),
+  pullModel: (baseUrl: string, name: string) =>
+    callInternal('cmd_ollama_pull_model', { baseUrl, name }),
   checkHealth: (baseUrl: string) =>
-    callInternal('check_ollama_health', { baseUrl }, { quiet: true }),
-  verifyService: (baseUrl: string) => callInternal('verify_ollama_service', { baseUrl }),
+    callInternal('cmd_ollama_check_health', { baseUrl }, { quiet: true }),
+  verifyService: (baseUrl: string) => callInternal('cmd_ollama_verify_service', { baseUrl }),
   validateModel: (baseUrl: string, modelName: string) =>
-    callInternal('validate_model', { baseUrl, modelName }),
+    callInternal('cmd_ollama_validate_model', { baseUrl, modelName }),
 };
 
 /**
  * Chat & Interaction API
  */
 export const chatApi = {
-  chat: (args: CommandMap['chat_with_ollama']['args']) => callInternal('chat_with_ollama', args),
-  abort: (requestId: string) => callInternal('abort_chat', { requestId }),
+  chat: (args: CommandMap['cmd_ollama_chat']['args']) => callInternal('cmd_ollama_chat', args),
+  abort: (requestId: string) => callInternal('cmd_ollama_abort_chat', { requestId }),
 };
 
 /**
  * Title Generation API
  */
 export const titleApi = {
-  generate: (args: CommandMap['generate_title']['args']) =>
-    callInternal('generate_title', args, { quiet: true }),
+  generate: (args: CommandMap['cmd_ollama_generate_title']['args']) =>
+    callInternal('cmd_ollama_generate_title', args, { quiet: true }),
 };
 
 /**
  * Logging & Diagnostics API
  */
 export const logApi = {
-  append: (entry: string) => callInternal('append_to_log', { entry }),
-  clear: () => callInternal('clear_logs', {}),
+  append: (entry: string) => callInternal('cmd_logs_append', { entry }),
+  clear: () => callInternal('cmd_logs_clear', {}),
 };
 
 /**
  * RAG API
  */
 export const ragApi = {
-  addProject: (args: CommandMap['rag_add_project']['args']) =>
-    callInternal('rag_add_project', args),
-  removeProject: (projectId: string) => callInternal('rag_remove_project', { projectId }),
-  updateProject: (args: CommandMap['rag_update_project']['args']) =>
-    callInternal('rag_update_project', args),
-  listProjects: () => callInternal('rag_list_projects', {}),
-  getProject: (projectId: string) => callInternal('rag_get_project', { projectId }),
+  addProject: (args: CommandMap['cmd_rag_add_project']['args']) =>
+    callInternal('cmd_rag_add_project', args),
+  removeProject: (projectId: string) => callInternal('cmd_rag_remove_project', { projectId }),
+  updateProject: (args: CommandMap['cmd_rag_update_project']['args']) =>
+    callInternal('cmd_rag_update_project', args),
+  listProjects: () => callInternal('cmd_rag_list_projects', {}),
+  getProject: (projectId: string) => callInternal('cmd_rag_get_project', { projectId }),
   indexProject: (projectId: string, force?: boolean, baseUrl?: string) =>
-    callInternal('rag_index_project', { projectId, force, baseUrl }),
-  abortIndex: (projectId: string) => callInternal('rag_abort_index', { projectId }),
+    callInternal('cmd_rag_index_project', { projectId, force, baseUrl }),
+  abortIndex: (projectId: string) => callInternal('cmd_rag_abort_index', { projectId }),
   reindexProject: (projectId: string, baseUrl?: string) =>
-    callInternal('rag_reindex_project', { projectId, baseUrl }),
-  getIndexStatus: (projectId: string) => callInternal('rag_get_index_status', { projectId }),
-  search: (args: CommandMap['rag_search']['args']) => callInternal('rag_search', args),
+    callInternal('cmd_rag_reindex_project', { projectId, baseUrl }),
+  getIndexStatus: (projectId: string) => callInternal('cmd_rag_get_index_status', { projectId }),
+  search: (args: CommandMap['cmd_rag_search']['args']) => callInternal('cmd_rag_search', args),
   getFileChunks: (projectId: string, filePath: string) =>
-    callInternal('rag_get_file_chunks', { projectId, filePath }),
-  getProjectStats: (projectId: string) => callInternal('rag_get_project_stats', { projectId }),
+    callInternal('cmd_rag_get_file_chunks', { projectId, filePath }),
+  getProjectStats: (projectId: string) =>
+    callInternal('cmd_cmd_rag_get_project_stats', { projectId }),
   setEmbeddingModel: (projectId: string, modelName: string) =>
-    callInternal('rag_set_embedding_model', { projectId, modelName }),
+    callInternal('cmd_rag_set_embedding_model', { projectId, modelName }),
   validateEmbeddingModel: (baseUrl: string | undefined, modelName: string) =>
-    callInternal('rag_validate_embedding_model', { baseUrl, modelName }),
+    callInternal('cmd_rag_validate_embedding_model', { baseUrl, modelName }),
 };
 
 /**

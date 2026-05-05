@@ -16,7 +16,7 @@ describe('IPC Bridge', () => {
     const mockModels = [{ name: 'test-model', size: 100, digest: '123', details: {} }];
 
     mockIPC((cmd) => {
-      if (cmd === 'get_ollama_models') {
+      if (cmd === 'cmd_ollama_get_models') {
         return { success: true, data: mockModels };
       }
     });
@@ -27,7 +27,7 @@ describe('IPC Bridge', () => {
 
   it('handles backend errors gracefully', async () => {
     mockIPC((cmd) => {
-      if (cmd === 'get_ollama_models') {
+      if (cmd === 'cmd_ollama_get_models') {
         return {
           success: false,
           error: { code: BackendErrorCode.OllamaUnavailable, message: 'Ollama is down' },

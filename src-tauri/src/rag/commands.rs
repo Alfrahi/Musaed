@@ -33,7 +33,7 @@ pub struct UpdateProjectArgs {
 // ====================== PROJECT MANAGEMENT COMMANDS ======================
 
 #[tauri::command]
-pub async fn rag_add_project(
+pub async fn cmd_rag_add_project(
     name: String,
     path: String,
     embedding_model: String,
@@ -95,7 +95,7 @@ pub async fn rag_add_project(
 }
 
 #[tauri::command]
-pub async fn rag_remove_project(
+pub async fn cmd_rag_remove_project(
     project_id: String,
     state: tauri::State<'_, Arc<Mutex<RagStore>>>,
 ) -> Result<ApiResponse<bool>, String> {
@@ -121,7 +121,7 @@ pub async fn rag_remove_project(
 }
 
 #[tauri::command]
-pub async fn rag_update_project(
+pub async fn cmd_rag_update_project(
     project_id: String,
     name: Option<String>,
     ignore_patterns: Option<Vec<String>>,
@@ -166,7 +166,7 @@ pub async fn rag_update_project(
 }
 
 #[tauri::command]
-pub async fn rag_list_projects(
+pub async fn cmd_rag_list_projects(
     state: tauri::State<'_, Arc<Mutex<RagStore>>>,
 ) -> Result<ApiResponse<Vec<RagProject>>, String> {
     let store = state.inner();
@@ -187,7 +187,7 @@ pub async fn rag_list_projects(
 }
 
 #[tauri::command]
-pub async fn rag_get_project(
+pub async fn cmd_rag_get_project(
     project_id: String,
     state: tauri::State<'_, Arc<Mutex<RagStore>>>,
 ) -> Result<ApiResponse<RagProject>, String> {
@@ -220,7 +220,7 @@ pub async fn rag_get_project(
 // ====================== INDEXING COMMANDS ======================
 
 #[tauri::command]
-pub async fn rag_index_project(
+pub async fn cmd_rag_index_project(
     project_id: String,
     force: Option<bool>,
     base_url: Option<String>,
@@ -326,7 +326,7 @@ pub async fn rag_index_project(
 }
 
 #[tauri::command]
-pub async fn rag_abort_index(
+pub async fn cmd_rag_abort_index(
     project_id: String,
 ) -> Result<ApiResponse<bool>, String> {
     if let Err(e) = validation::validate_project_id(&project_id) {
@@ -350,13 +350,13 @@ pub async fn rag_abort_index(
 }
 
 #[tauri::command]
-pub async fn rag_reindex_project(
+pub async fn cmd_rag_reindex_project(
     project_id: String,
     base_url: Option<String>,
     state: tauri::State<'_, Arc<Mutex<RagStore>>>,
     app_handle: tauri::AppHandle,
 ) -> Result<ApiResponse<bool>, String> {
-    rag_index_project(
+    cmd_rag_index_project(
         project_id,
         Some(true),
         base_url,
@@ -367,7 +367,7 @@ pub async fn rag_reindex_project(
 }
 
 #[tauri::command]
-pub async fn rag_get_index_status(
+pub async fn cmd_rag_get_index_status(
     project_id: String,
 ) -> Result<ApiResponse<IndexStatus>, String> {
     if let Err(e) = validation::validate_project_id(&project_id) {
@@ -391,7 +391,7 @@ pub async fn rag_get_index_status(
 // ====================== SEARCH COMMANDS ======================
 
 #[tauri::command]
-pub async fn rag_search(
+pub async fn cmd_rag_search(
     project_id: String,
     query: String,
     top_k: Option<usize>,
@@ -454,13 +454,13 @@ pub async fn rag_search(
         Err(e) => ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new("RAG_SEARCH_ERROR", e)),
+            error: Some(BackendError::new("cmd_rag_search_ERROR", e)),
         },
     })
 }
 
 #[tauri::command]
-pub async fn rag_get_file_chunks(
+pub async fn cmd_rag_get_file_chunks(
     project_id: String,
     file_path: String,
     state: tauri::State<'_, Arc<Mutex<RagStore>>>,
@@ -512,7 +512,7 @@ pub async fn rag_get_file_chunks(
 }
 
 #[tauri::command]
-pub async fn rag_get_project_stats(
+pub async fn cmd_cmd_rag_get_project_stats(
     project_id: String,
     state: tauri::State<'_, Arc<Mutex<RagStore>>>,
 ) -> Result<ApiResponse<ProjectStats>, String> {
@@ -540,7 +540,7 @@ pub async fn rag_get_project_stats(
 // ====================== EMBEDDING MODEL COMMANDS ======================
 
 #[tauri::command]
-pub async fn rag_set_embedding_model(
+pub async fn cmd_rag_set_embedding_model(
     project_id: String,
     model_name: String,
     state: tauri::State<'_, Arc<Mutex<RagStore>>>,
@@ -574,7 +574,7 @@ pub async fn rag_set_embedding_model(
 }
 
 #[tauri::command]
-pub async fn rag_validate_embedding_model(
+pub async fn cmd_rag_validate_embedding_model(
     base_url: Option<String>,
     model_name: String,
     _app_handle: tauri::AppHandle,

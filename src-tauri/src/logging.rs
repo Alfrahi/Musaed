@@ -38,7 +38,7 @@ fn append_log_entry(entry: String) {
 }
 
 #[tauri::command]
-pub async fn append_to_log(entry: String) -> ApiResponse<()> {
+pub async fn cmd_logs_append(entry: String) -> ApiResponse<()> {
     if entry.len() > MAX_LOG_ENTRY_LEN {
         return validation_error(
             "INVALID_INPUT",
@@ -58,7 +58,7 @@ pub async fn append_to_log(entry: String) -> ApiResponse<()> {
 }
 
 #[tauri::command]
-pub async fn clear_logs<R: Runtime>(app: AppHandle<R>) -> ApiResponse<()> {
+pub async fn cmd_logs_clear<R: Runtime>(app: AppHandle<R>) -> ApiResponse<()> {
     log::info!("Clearing logs");
     // Flush pending writes before truncating the file.
     ChannelLogger::global().flush();

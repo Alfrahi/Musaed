@@ -8,7 +8,7 @@ fn mock_base_url(server: &mockito::ServerGuard) -> String {
     server.url().trim_end_matches('/').to_string()
 }
 
-// ==================== get_ollama_models ====================
+// ==================== cmd_ollama_get_models ====================
 
 #[tokio::test]
 async fn get_models_success() {
@@ -39,7 +39,7 @@ async fn get_models_success() {
         .create_async()
         .await;
 
-    let result: ApiResponse<Vec<OllamaModel>> = musaed_lib::ollama::get_ollama_models(url).await;
+    let result: ApiResponse<Vec<OllamaModel>> = musaed_lib::ollama::cmd_ollama_get_models(url).await;
 
     mock.assert_async().await;
     assert!(result.success);
@@ -61,7 +61,7 @@ async fn get_models_empty_list() {
         .create_async()
         .await;
 
-    let result: ApiResponse<Vec<OllamaModel>> = musaed_lib::ollama::get_ollama_models(url).await;
+    let result: ApiResponse<Vec<OllamaModel>> = musaed_lib::ollama::cmd_ollama_get_models(url).await;
 
     mock.assert_async().await;
     assert!(result.success);
@@ -71,7 +71,7 @@ async fn get_models_empty_list() {
 #[tokio::test]
 async fn get_models_invalid_url() {
     let result: ApiResponse<Vec<OllamaModel>> =
-        musaed_lib::ollama::get_ollama_models("http://8.8.8.8:11434".to_string()).await;
+        musaed_lib::ollama::cmd_ollama_get_models("http://8.8.8.8:11434".to_string()).await;
 
     assert!(!result.success);
     assert!(result.error.is_some());
@@ -91,16 +91,16 @@ async fn get_models_server_error() {
 
     // The command will try to parse the 500 response body as JSON.
     // reqwest doesn't treat 500 as an error, so it'll try to deserialize and fail.
-    let result: ApiResponse<Vec<OllamaModel>> = musaed_lib::ollama::get_ollama_models(url).await;
+    let result: ApiResponse<Vec<OllamaModel>> = musaed_lib::ollama::cmd_ollama_get_models(url).await;
 
     mock.assert_async().await;
     assert!(!result.success);
 }
 
-// ==================== validate_model ====================
+// ==================== cmd_ollama_validate_model ====================
 
 #[tokio::test]
-async fn validate_model_success() {
+async fn cmd_ollama_validate_model_success() {
     let mut server = mockito::Server::new_async().await;
     let url = mock_base_url(&server);
 
@@ -122,7 +122,7 @@ async fn validate_model_success() {
         .await;
 
     let result: ApiResponse<ModelValidation> =
-        musaed_lib::ollama::validate_model(url, "llama3".to_string()).await;
+        musaed_lib::ollama::cmd_ollama_validate_model(url, "llama3".to_string()).await;
 
     mock.assert_async().await;
     assert!(result.success);
@@ -133,7 +133,7 @@ async fn validate_model_success() {
 }
 
 #[tokio::test]
-async fn validate_model_not_found() {
+async fn cmd_ollama_validate_model_not_found() {
     let mut server = mockito::Server::new_async().await;
     let url = mock_base_url(&server);
 
@@ -144,7 +144,7 @@ async fn validate_model_not_found() {
         .await;
 
     let result: ApiResponse<ModelValidation> =
-        musaed_lib::ollama::validate_model(url, "nonexistent".to_string()).await;
+        musaed_lib::ollama::cmd_ollama_validate_model(url, "nonexistent".to_string()).await;
 
     mock.assert_async().await;
     assert!(!result.success);
@@ -152,10 +152,10 @@ async fn validate_model_not_found() {
     assert!(!validation.is_valid);
 }
 
-// ==================== delete_model ====================
+// ==================== cmd_ollama_delete_model ====================
 
 #[tokio::test]
-async fn delete_model_success() {
+async fn cmd_ollama_delete_model_success() {
     let mut server = mockito::Server::new_async().await;
     let url = mock_base_url(&server);
 
@@ -166,7 +166,7 @@ async fn delete_model_success() {
         .await;
 
     let result: ApiResponse<bool> =
-        musaed_lib::ollama::delete_model(url, "llama3".to_string()).await;
+        musaed_lib::ollama::cmd_ollama_delete_model(url, "llama3".to_string()).await;
 
     mock.assert_async().await;
     assert!(result.success);
@@ -174,7 +174,7 @@ async fn delete_model_success() {
 }
 
 #[tokio::test]
-async fn delete_model_not_found() {
+async fn cmd_ollama_delete_model_not_found() {
     let mut server = mockito::Server::new_async().await;
     let url = mock_base_url(&server);
 
@@ -185,14 +185,14 @@ async fn delete_model_not_found() {
         .await;
 
     let result: ApiResponse<bool> =
-        musaed_lib::ollama::delete_model(url, "missing-model".to_string()).await;
+        musaed_lib::ollama::cmd_ollama_delete_model(url, "missing-model".to_string()).await;
 
     mock.assert_async().await;
     assert!(!result.success);
     assert_eq!(result.data, Some(false));
 }
 
-// ==================== verify_ollama_service ====================
+// ==================== cmd_ollama_verify_service ====================
 
 #[tokio::test]
 async fn verify_service_detects_ollama() {
@@ -206,7 +206,7 @@ async fn verify_service_detects_ollama() {
         .create_async()
         .await;
 
-    let result: ApiResponse<String> = musaed_lib::ollama::verify_ollama_service(url).await;
+    let result: ApiResponse<String> = musaed_lib::ollama::cmd_ollama_verify_service(url).await;
 
     mock.assert_async().await;
     assert!(result.success);
@@ -225,14 +225,14 @@ async fn verify_service_rejects_non_ollama() {
         .create_async()
         .await;
 
-    let result: ApiResponse<String> = musaed_lib::ollama::verify_ollama_service(url).await;
+    let result: ApiResponse<String> = musaed_lib::ollama::cmd_ollama_verify_service(url).await;
 
     mock.assert_async().await;
     assert!(!result.success);
     assert_eq!(result.error.unwrap().code, "NOT_OLLAMA");
 }
 
-// ==================== check_ollama_health ====================
+// ==================== cmd_ollama_check_health ====================
 
 #[tokio::test]
 async fn health_check_healthy() {
@@ -247,7 +247,7 @@ async fn health_check_healthy() {
         .create_async()
         .await;
 
-    let result: ApiResponse<OllamaHealth> = musaed_lib::ollama::check_ollama_health(url).await;
+    let result: ApiResponse<OllamaHealth> = musaed_lib::ollama::cmd_ollama_check_health(url).await;
 
     mock.assert_async().await;
     assert!(result.success);
@@ -263,30 +263,30 @@ async fn health_check_connection_refused() {
     // Instead, use localhost with a high random port.
     let url = "http://127.0.0.1:1".to_string();
 
-    let result: ApiResponse<OllamaHealth> = musaed_lib::ollama::check_ollama_health(url).await;
+    let result: ApiResponse<OllamaHealth> = musaed_lib::ollama::cmd_ollama_check_health(url).await;
 
     assert!(!result.success);
     let health = result.data.unwrap();
     assert!(!health.is_running);
 }
 
-// ==================== abort_chat ====================
+// ==================== cmd_ollama_abort_chat ====================
 
 #[tokio::test]
-async fn abort_chat_nonexistent_returns_success() {
+async fn cmd_ollama_abort_chat_nonexistent_returns_success() {
     let result: ApiResponse<()> =
-        musaed_lib::ollama::abort_chat("nonexistent-request".to_string()).await;
+        musaed_lib::ollama::cmd_ollama_abort_chat("nonexistent-request".to_string()).await;
 
-    // abort_chat always returns success, even if no active chat was found
+    // cmd_ollama_abort_chat always returns success, even if no active chat was found
     assert!(result.success);
 }
 
-// ==================== abort_pull ====================
+// ==================== cmd_ollama_abort_pull ====================
 
 #[tokio::test]
-async fn abort_pull_nonexistent_returns_success() {
+async fn cmd_ollama_abort_pull_nonexistent_returns_success() {
     let result: ApiResponse<()> =
-        musaed_lib::ollama::abort_pull("nonexistent-model".to_string()).await;
+        musaed_lib::ollama::cmd_ollama_abort_pull("nonexistent-model".to_string()).await;
 
     assert!(result.success);
 }

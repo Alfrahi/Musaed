@@ -21,11 +21,11 @@ pub mod types;
 
 // ---- Public re-exports: every Tauri command is available as `ollama::<name>` ----
 
-pub use commands::{abort_chat, chat_with_ollama, check_ollama_health};
+pub use commands::{cmd_ollama_abort_chat, cmd_ollama_chat, cmd_ollama_check_health};
 pub use models::{
-    abort_pull, delete_model, get_ollama_models, pull_model, validate_model, verify_ollama_service,
+    cmd_ollama_abort_pull, cmd_ollama_delete_model, cmd_ollama_get_models, cmd_ollama_pull_model, cmd_ollama_validate_model, cmd_ollama_verify_service,
 };
-pub use title::generate_title;
+pub use title::cmd_ollama_generate_title;
 
 // ---- Internal helpers (used by tests within this module) ----
 #[cfg(test)]
@@ -124,7 +124,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn abort_pull_cancels_token() {
+    async fn cmd_ollama_abort_pull_cancels_token() {
         let model_name = "test-model".to_string();
         let token = Arc::new(CancellationToken::new());
         PULL_ABORT_HANDLES.insert(model_name.clone(), token.clone());
@@ -139,8 +139,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn abort_pull_handles_nonexistent_model() {
-        let result = models::abort_pull("nonexistent".to_string()).await;
+    async fn cmd_ollama_abort_pull_handles_nonexistent_model() {
+        let result = models::cmd_ollama_abort_pull("nonexistent".to_string()).await;
         assert!(result.success);
     }
 
