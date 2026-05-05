@@ -1,5 +1,14 @@
 export { default as SettingsModal } from './components/SettingsModal';
 export { default as LogViewer } from './components/LogViewer';
+export { default as ThemeSettings } from './components/ThemeSettings';
+export { default as MarkdownSettings } from './components/MarkdownSettings';
+export { default as ModelParamsSettings } from './components/ModelParamsSettings';
+export { default as OllamaSettings } from './components/OllamaSettings';
+export { default as StorageSettings } from './components/StorageSettings';
+export { default as DiagnosticsSettings } from './components/DiagnosticsSettings';
+export { default as InputSettings } from './components/InputSettings';
+export { default as LanguageSettings } from './components/LanguageSettings';
 export { useSettingsActions } from './hooks/useSettingsActions';
 export { useLogActions } from './hooks/useLogActions';
+export { useStorageActions } from './hooks/useStorageActions';
 export { useStorageCleanup } from './hooks/useStorageCleanup';

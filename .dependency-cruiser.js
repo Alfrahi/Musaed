@@ -38,7 +38,7 @@ module.exports = {
     moduleSystems: ['es6', 'cjs'],
     tsPreCompilationDeps: true,
     tsConfig: {
-      fileName: 'tsconfig.json'
+      fileName: 'apps/web/tsconfig.json'
     },
     enhancedResolveOptions: {
       exportsFields: ["exports"],

@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "pnpm --filter web dev",
     "devUrl": "http://localhost:3000",
-    "beforeBuildCommand": "pnpm --filter web prod:build",
+    "beforeBuildCommand": "pnpm --filter web build",
     "frontendDist": "../apps/web/out"
   },
   "app": {
