@@ -1,10 +1,32 @@
-echo "🛡️ Running Musaed Pre-commit Guard..."
+#!/usr/bin/env sh
 
-# 1. Run lint-staged (Fixes simple issues, enforces logical props & any)
+echo "🛡 Musaed v3 Pre-commit Guard"
+
+set -e
+
+# ── 1. Lint + Auto-fix ─────────────────────────────────────
+echo "🔧 Running lint-staged..."
 pnpm exec lint-staged
 
-# 2. Run Architecture Check (Enforces domain boundaries)
+# ── 2. Architecture Boundary Check ────────────────────────
+echo "🧱 Checking architecture boundaries..."
 pnpm arch-check
 
-# 3. Run Type Check (Final safety net)
+# ── 3. Type Safety ────────────────────────────────────────
+echo "🔒 Running TypeScript check..."
 pnpm type-check
+
+# ── 4. i18n Compliance ────────────────────────────────────
+echo "🌐 Checking i18n compliance..."
+pnpm --filter web i18n:check
+
+# ── 5. No TODOs/FIXMEs in source ──────────────────────────
+echo "📝 Checking for TODOs/FIXMEs..."
+if grep -rE "\bTODO\b|\bFIXME\b|\bHACK\b" apps/web/src --include="*.ts" --include="*.tsx" --exclude-dir={test,tests}; then
+  echo "❌ Found TODO/FIXME comments. Please resolve them before committing."
+  exit 1
+else
+  echo "✅ No TODO/FIXME comments found"
+fi
+
+echo "🎉 All Musaed v3 pre-commit checks passed!"

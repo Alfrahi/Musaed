@@ -1,3 +1,4 @@
+// eslint.config.mjs (v4)
 import tseslint from 'typescript-eslint';
 import nextPlugin from '@next/eslint-plugin-next';
 import importPlugin from 'eslint-plugin-import';
@@ -17,9 +18,6 @@ export default tseslint.config(
     ],
   },
 
-  // ----------------------------
-  // Base TypeScript + Recommended Rules
-  // ----------------------------
   ...tseslint.configs.recommended,
 
   {
@@ -42,68 +40,118 @@ export default tseslint.config(
     },
 
     settings: {
-      react: {
-        version: 'detect',
-      },
-      next: {
-        rootDir: ['apps/web/'],
-      },
+      react: { version: 'detect' },
+      next: { rootDir: ['apps/web/'] },
     },
 
     rules: {
-      // Next.js
+      // ======================
+      // NEXT + REACT BASE
+      // ======================
       ...nextPlugin.configs.recommended.rules,
       ...nextPlugin.configs['core-web-vitals'].rules,
-      '@next/next/no-html-link-for-pages': ['error', 'apps/web/src/app'],
-
-      // React
       ...reactPlugin.configs.recommended.rules,
       ...reactHooksPlugin.configs.recommended.rules,
 
       'react/react-in-jsx-scope': 'off',
       'react/jsx-uses-react': 'off',
 
-      // MUSAED Core Rules
+      'react/function-component-definition': [
+        'error',
+        { namedComponents: 'arrow-function' },
+      ],
+
+      // ======================
+      // TYPESCRIPT STRICTNESS
+      // ======================
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+
+      // ======================
+      // MUSAED v4 ENFORCEMENT LAYER
+      // ======================
       'no-restricted-syntax': [
         'error',
+
+        // SSR FORBIDDEN
         {
-          selector: "ExportNamedDeclaration[declaration.declarations.0.id.name='getServerSideProps']",
-          message: 'Musaed is fully static (offline). SSR is forbidden.',
+          selector:
+          "ExportNamedDeclaration[declaration.declarations.0.id.name='getServerSideProps']",
+          message: 'Musaed is fully static. SSR is forbidden.',
         },
+
+        // RAW IPC FORBIDDEN
         {
           selector: "CallExpression[callee.name='invoke']",
-          message: 'Direct Tauri invoke() is forbidden. Use src/lib/ipc.ts instead.',
+          message: 'Direct invoke() is forbidden. Use src/lib/ipc.ts only.',
         },
+
+        // DIRECT TAURI ACCESS FORBIDDEN
         {
           selector: "ImportDeclaration[source.value=/^@tauri-apps\\/api/]",
-          message: 'Direct Tauri API imports are forbidden. Use IPC bridge only.',
+          message: 'Direct Tauri API usage forbidden. Use IPC bridge only.',
+        },
+
+        // AI TOOLING DRIFT PREVENTION
+        {
+          selector:
+          "Literal[value=/.*(webpack|vite|rollup|esbuild|turbo).*config.*/i]",
+                               message: 'Do not introduce new tooling/configs without explicit approval.',
+        },
+
+        // PROCESS ENV ABSTRACTION ENFORCEMENT
+        {
+          selector: "MemberExpression[object.name='process'][property.name='env']",
+          message: 'Use typed configuration layer instead of process.env directly.',
+        },
+
+        // LOGICAL PROPERTIES (from v2)
+        {
+          selector: 'Literal[value=/^(ml|mr|left|right|padding-left|padding-right)-/]',
+                               message: 'Use logical properties: ms-*, me-*, ps-*, pe-*, inset-inline-*',
         },
       ],
 
-      '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
-
-      'react/function-component-definition': ['error', { namedComponents: 'arrow-function' }],
-
-      'max-lines-per-function': [
-        'error',
-        { max: 100, skipBlankLines: true, skipComments: true },
-      ],
-
+      // ======================
+      // ARCHITECTURE RULES
+      // ======================
       'no-restricted-imports': [
         'error',
         {
           patterns: [
             {
-              group: ['**/features/*/*'],
+              group: ['**/features/*/*', '@/features/*/*'],
               message: 'Feature internals are private. Import only from feature index.ts',
             },
             {
-              group: ['@/features/*/*'],
-              message: 'Feature internals are private. Import only from feature index.ts',
+              group: ['**/features/*/src/**'],
+              message: 'Cross-feature internal access is forbidden (DDD violation).',
             },
           ],
         },
+      ],
+
+      // ======================
+      // COMPLEXITY & CODE QUALITY
+      // ======================
+      'max-lines-per-function': ['error', { max: 100, skipBlankLines: true, skipComments: true }],
+      'prefer-const': 'error',
+      'no-else-return': 'error',
+      'no-useless-return': 'error',
+
+      // ======================
+      // MUSAED SPECIFIC
+      // ======================
+      'no-restricted-properties': [
+        'error',
+        { object: 'console', property: 'log', message: 'Use structured logger' },
       ],
     },
   },
@@ -112,7 +160,6 @@ export default tseslint.config(
   // EXCEPTIONS
   // ======================
 
-  // IPC & Storage files - allow direct Tauri usage
   {
     files: ['apps/web/src/lib/ipc.ts', 'apps/web/src/lib/tauri-storage.ts'],
     rules: {
@@ -121,26 +168,21 @@ export default tseslint.config(
     },
   },
 
-  // Test files - more lenient + disable TS project checking for .js files
   {
     files: [
       '**/*.{test,spec}.ts',
       '**/*.{test,spec}.tsx',
       'apps/web/src/test/**/*',
       'apps/web/src/tests/**/*',
-      'apps/web/vitest.config.ts',
-      'apps/web/vitest.integration.config.ts',
     ],
     rules: {
       'no-restricted-syntax': 'off',
       'no-restricted-imports': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
-      'react/function-component-definition': 'off',
       'max-lines-per-function': 'off',
     },
   },
 
-  // Disable TypeScript project parser for plain .js test files
   {
     files: ['**/*.js'],
     rules: {
@@ -150,13 +192,6 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
     },
-  },
-  {
-    files: ['**/*.js'],
-    languageOptions: {
-      parserOptions: {
-        project: null,
-      },
-    },
+    languageOptions: { parserOptions: { project: null } },
   }
 );

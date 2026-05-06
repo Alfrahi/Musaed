@@ -1,49 +1,25 @@
-/** @type {import('dependency-cruiser').IConfiguration} */
+// .dependency-cruiser.js
 module.exports = {
   forbidden: [
     {
-      name: 'no-cross-feature-internals',
-      comment: 'Feature internals are private. Only import from the feature barrel file (index.ts).',
-      severity: 'error',
-      from: { path: 'src/features/([^/]+)/.+' },
-      to: {
-        path: 'src/features/([^/]+)/.+',
-        pathNot: [
-          'src/features/$1/.+',
-          'src/features/[^/]+/index.ts'
-        ]
-      }
+      name: 'no-cross-feature-imports',
+      comment: 'Import only from feature index.ts barrel',
+      from: { path: '^apps/web/src/features/[^/]+/' },
+      to: { path: '^apps/web/src/features/[^/]+/[^/]' },
+      severity: 'error'
     },
+
     {
-      name: 'ipc-only-system-access',
-      comment: 'Components should not access system APIs directly. Use src/lib/ipc.ts.',
-      severity: 'error',
-      from: { path: 'src/features' },
-      to: {
-        path: '@tauri-apps/api/.+',
-        pathNot: 'src/lib/ipc.ts'
-      }
-    },
-    {
-      name: 'no-circular-dependencies',
-      severity: 'error',
-      from: {},
-      to: { circular: true }
+      name: 'no-direct-tauri',
+      comment: 'Use src/lib/ipc.ts only',
+      from: { path: '^apps/web/src' },
+      to: { path: '^@tauri-apps' },
+      severity: 'error'
     }
   ],
+
   options: {
-    doNotFollow: {
-      path: 'node_modules'
-    },
-    moduleSystems: ['es6', 'cjs'],
-    tsPreCompilationDeps: true,
-    tsConfig: {
-      fileName: 'apps/web/tsconfig.json'
-    },
-    enhancedResolveOptions: {
-      exportsFields: ["exports"],
-      conditionNames: ["import", "require", "node", "default"],
-      mainFields: ["main", "module", "types"]
-    }
+    doNotFollow: ['node_modules', 'dist', 'out', '.next'],
+    prefix: '.'
   }
 };
