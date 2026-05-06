@@ -81,10 +81,9 @@ export class OllamaConnectionManager {
         const health: OllamaHealth = { is_running: true, responseTimeMs };
         this.setState(ConnectionState.CONNECTED, health);
         return health;
-      } else {
-        this.setState(ConnectionState.ERROR);
-        return null;
       }
+      this.setState(ConnectionState.ERROR);
+      return null;
     } catch {
       this.setState(ConnectionState.DISCONNECTED);
       return null;

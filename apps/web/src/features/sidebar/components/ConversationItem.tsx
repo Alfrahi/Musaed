@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { MessageSquare, Trash2, Download, Edit2 } from 'lucide-react';
-import { Conversation } from '@musaed/contracts';
 import {
   useCurrentConversationId,
   useSetCurrentConversationId,
@@ -11,9 +10,10 @@ import {
 import { cn } from '../../../lib/utils';
 import { useSidebarActions } from '../hooks/useSidebarActions';
 import { useTranslation } from '../../../lib/i18n';
+import type { ConversationMetadata } from '../../../store/stores/conversation-store';
 
 interface ConversationItemProps {
-  conversation: Conversation;
+  conversation: ConversationMetadata;
 }
 
 /** Inline rename input for conversation title. */

@@ -1,23 +1,29 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useConversationStore, useModelStore, useSettingsStore } from '../../../store';
+import {
+  useConversationStore,
+  useModelStore,
+  useSettingsStore,
+  useStreamingStore,
+  useMessageStore,
+} from '../../../store';
 import { useSetConversations, useBatchUpdate } from '../../../store/hooks';
 import { chatApi } from '../../../lib/ipc';
 import { useTranslation } from '../../../lib/i18n';
 import { stopBatching } from '../../../store/batch-manager';
-import type { Conversation } from '@musaed/contracts';
+import type { ConversationMetadata } from '../../../store/stores/conversation-store';
 
 /**
  * Abort active streaming for a conversation.
  */
 export function abortStreaming(conversationId: string): void {
-  const state = useConversationStore.getState();
-  const requestId = state.activeStreams[conversationId];
+  const streamingState = useStreamingStore.getState();
+  const requestId = streamingState.activeStreams[conversationId];
 
   if (requestId) chatApi.abort(requestId);
   stopBatching(conversationId);
-  state.stopStream(conversationId);
+  streamingState.stopStream(conversationId);
 }
 
 /** Create a new conversation with current model and settings. */
@@ -33,10 +39,9 @@ const createConversation = (
   const settingsState = useSettingsStore.getState();
 
   const id = crypto.randomUUID();
-  const newConv: Conversation = {
+  const newConv: ConversationMetadata = {
     id,
     title: t('sidebar.newChat'),
-    messages: [],
     model: modelState.selectedModel,
     settings: settingsState.globalSettings,
     createdAt: Date.now(),
@@ -77,6 +82,9 @@ export const useConversationActions = () => {
         conversationIds: remainingIds,
         currentConversationId: newCurrentId,
       }));
+
+      // Clean up messages
+      useMessageStore.getState().clearMessages(id);
     },
     [batchUpdate]
   );
@@ -95,20 +103,22 @@ export const useConversationActions = () => {
   );
 
   const clearAllConversations = useCallback(() => {
-    Object.keys(useConversationStore.getState().activeStreams).forEach(abortStreaming);
+    Object.keys(useStreamingStore.getState().activeStreams).forEach(abortStreaming);
     batchUpdate(() => ({
       conversations: {},
       conversationIds: [],
       currentConversationId: null,
     }));
+    // Clear all messages
+    useMessageStore.setState({ messages: {} });
   }, [batchUpdate]);
 
   const initiateStreaming = useCallback((conversationId: string, requestId: string) => {
-    useConversationStore.getState().startStream(conversationId, requestId);
+    useStreamingStore.getState().startStream(conversationId, requestId);
   }, []);
 
   const stopStreaming = useCallback((conversationId: string) => {
-    useConversationStore.getState().stopStream(conversationId);
+    useStreamingStore.getState().stopStream(conversationId);
   }, []);
 
   return {

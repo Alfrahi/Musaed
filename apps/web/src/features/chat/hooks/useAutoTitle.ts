@@ -3,6 +3,7 @@
 import { useCallback, useRef } from 'react';
 import { Language } from '@musaed/contracts';
 import { useConversationStore } from '../../../store/stores/conversation-store';
+import { useMessageStore } from '../../../store/stores/message-store';
 import { useSettingsStore } from '../../../store/stores/settings-store';
 import { generateConversationTitle, isDefaultTitle } from '../utils/title-generator';
 import { logger } from '../../../lib/logger';
@@ -27,8 +28,9 @@ export function useAutoTitle() {
 
     if (!isDefaultTitle(conversation.title)) return;
 
-    const hasUser = conversation.messages.some((m) => m.role === 'user');
-    const hasAssistant = conversation.messages.some((m) => m.role === 'assistant');
+    const messages = useMessageStore.getState().messages[conversationId] || [];
+    const hasUser = messages.some((m) => m.role === 'user');
+    const hasAssistant = messages.some((m) => m.role === 'assistant');
     if (!hasUser || !hasAssistant) return;
 
     pendingRef.current.add(conversationId);
@@ -37,7 +39,7 @@ export function useAutoTitle() {
       const ollamaUrl = useSettingsStore.getState().globalSettings.ollamaUrl;
       const lang = useSettingsStore.getState().globalSettings.language as Language;
 
-      const title = await generateConversationTitle(conversation, ollamaUrl, lang);
+      const title = await generateConversationTitle(conversation, messages, ollamaUrl, lang);
       if (!title) return;
 
       // Re-check that the conversation still has the default title before updating
@@ -45,12 +47,7 @@ export function useAutoTitle() {
       const currentConv = currentState.conversations[conversationId];
       if (!currentConv || !isDefaultTitle(currentConv.title)) return;
 
-      useConversationStore.getState().batchUpdate(() => ({
-        conversations: {
-          ...currentState.conversations,
-          [conversationId]: { ...currentConv, title, updatedAt: Date.now() },
-        },
-      }));
+      useConversationStore.getState().updateConversation(conversationId, { title });
 
       logger.info('Auto-generated conversation title', { conversationId, title });
     } catch (err) {
@@ -76,8 +73,9 @@ export async function triggerAutoTitle(conversationId: string): Promise<void> {
 
   if (!isDefaultTitle(conversation.title)) return;
 
-  const hasUser = conversation.messages.some((m) => m.role === 'user');
-  const hasAssistant = conversation.messages.some((m) => m.role === 'assistant');
+  const messages = useMessageStore.getState().messages[conversationId] || [];
+  const hasUser = messages.some((m) => m.role === 'user');
+  const hasAssistant = messages.some((m) => m.role === 'assistant');
   if (!hasUser || !hasAssistant) return;
 
   pendingAutoTitles.add(conversationId);
@@ -86,6 +84,7 @@ export async function triggerAutoTitle(conversationId: string): Promise<void> {
     const settings = useSettingsStore.getState().globalSettings;
     const title = await generateConversationTitle(
       conversation,
+      messages,
       settings.ollamaUrl,
       settings.language
     );
@@ -95,19 +94,7 @@ export async function triggerAutoTitle(conversationId: string): Promise<void> {
     const current = useConversationStore.getState().conversations[conversationId];
     if (!current || !isDefaultTitle(current.title)) return;
 
-    useConversationStore.getState().batchUpdate(() => {
-      const latest = useConversationStore.getState();
-      return {
-        conversations: {
-          ...latest.conversations,
-          [conversationId]: {
-            ...latest.conversations[conversationId],
-            title,
-            updatedAt: Date.now(),
-          },
-        },
-      };
-    });
+    useConversationStore.getState().updateConversation(conversationId, { title });
 
     logger.info('Auto-generated conversation title', { conversationId, title });
   } catch (err) {

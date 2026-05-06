@@ -5,18 +5,11 @@ import { z } from 'zod';
 import { checkIsTauri, store } from './ipc';
 import { logger } from './logger';
 
-// Sync this version with breaking schema changes; prevents data corruption across client updates
-const CURRENT_STORE_VERSION = 2;
-const VERSION_KEY = '__musaed_store_v2_version';
+export type MigrationFn = (data: unknown) => unknown;
+export type Migrations = Record<number, MigrationFn>;
 
 interface StorageData {
-  conversations?: Array<{
-    messages: Array<{
-      done?: boolean;
-      [key: string]: unknown;
-    }>;
-    [key: string]: unknown;
-  }>;
+  conversations?: Record<string, unknown> | Array<unknown>;
   [key: string]: unknown;
 }
 
@@ -30,40 +23,25 @@ interface TauriStoreLike {
   delete: (key: string) => Promise<boolean>;
 }
 
-const migrations: Record<number, (data: StorageData) => StorageData> = {
-  1: (data) => data,
-  2: (data) => {
-    // Migration 2 ensures all existing messages have the 'done' property for consistent streaming UI state
-    if (data.conversations) {
-      data.conversations = data.conversations.map((c) => ({
-        ...c,
-        messages: c.messages.map((m) => ({ ...m, done: m.done ?? true })),
-      }));
-    }
-    return data;
-  },
-};
-
 /**
  * Runs sequential migrations on stored data to maintain schema integrity.
- *
- * @param {string} filename - The store filename.
- * @param {TauriStoreLike} appStore - The Tauri store instance.
- * @param {string} storageKey - The key within the store to migrate.
  */
 async function runMigrations(
   filename: string,
   appStore: TauriStoreLike,
-  storageKey: string
+  storageKey: string,
+  currentVersion: number,
+  migrations?: Migrations
 ): Promise<void> {
   try {
-    const rawVersion = await appStore.get<number>(VERSION_KEY);
+    const versionKey = `__musaed_store_version_${filename}`;
+    const rawVersion = await appStore.get<number>(versionKey);
     const storedVersion = z.number().catch(0).parse(rawVersion);
 
-    if (storedVersion < CURRENT_STORE_VERSION) {
+    if (storedVersion < currentVersion) {
       const rawData = await appStore.get<string>(storageKey);
       if (!rawData) {
-        await appStore.set(VERSION_KEY, CURRENT_STORE_VERSION);
+        await appStore.set(versionKey, currentVersion);
         await appStore.save();
         return;
       }
@@ -74,15 +52,17 @@ async function runMigrations(
       let currentV = storedVersion;
 
       // Sequential application of migrations guarantees schema integrity
-      while (currentV < CURRENT_STORE_VERSION) {
-        currentV++;
-        if (migrations[currentV]) {
-          migratedData = migrations[currentV](migratedData);
+      if (migrations) {
+        while (currentV < currentVersion) {
+          currentV++;
+          if (migrations[currentV]) {
+            migratedData = migrations[currentV](migratedData) as StorageData;
+          }
         }
       }
 
       await appStore.set(storageKey, JSON.stringify(migratedData));
-      await appStore.set(VERSION_KEY, CURRENT_STORE_VERSION);
+      await appStore.set(versionKey, currentVersion);
       await appStore.save();
     }
   } catch (err) {
@@ -94,16 +74,22 @@ async function runMigrations(
  * Creates a Zustand-compatible storage engine that utilizes Tauri's secure storage plugin.
  * Falls back to localStorage in non-Tauri environments.
  *
- * @param {string} filename - The target JSON file for the store.
- * @returns {StateStorage} A storage implementation for Zustand.
+ * @param filename - The target JSON file for the store.
+ * @param version - The current version of the store schema.
+ * @param migrations - A record of migration functions.
+ * @returns A storage implementation for Zustand.
  */
-export const createTauriStorage = (filename: string): StateStorage => ({
+export const createTauriStorage = (
+  filename: string,
+  version: number = 1,
+  migrations?: Migrations
+): StateStorage => ({
   getItem: async (name: string): Promise<string | null> => {
     if (!checkIsTauri()) return localStorage.getItem(name);
     try {
       const appStore = (await store.load(filename, { autoSave: true })) as TauriStoreLike | null;
       if (!appStore) return null;
-      await runMigrations(filename, appStore, name);
+      await runMigrations(filename, appStore, name, version, migrations);
       const value = await appStore.get<string>(name);
       return value !== undefined && value !== null ? value : null;
     } catch (_err) {

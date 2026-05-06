@@ -2,8 +2,7 @@
 
 import { useEffect } from 'react';
 import { z } from 'zod';
-import { useConversationStore, useSettingsStore } from '../../../store';
-import { useStreamingStore } from '../../../store/stores/streaming-store';
+import { useSettingsStore, useStreamingStore } from '../../../store';
 import { startBatching, flushAndStop, stopAllBatching } from '../../../store/batch-manager';
 import { persistConversationsNow } from '../../../store/stores/conversation-store';
 import { useUpdatePullStatus, useSetModels } from '../../../store/hooks';
@@ -26,15 +25,16 @@ import { logger } from '../../../lib/logger';
 
 /** Handle incoming Ollama token events (streaming responses). */
 const handleToken = (payload: OllamaToken) => {
-  const state = useConversationStore.getState();
+  const streamingStore = useStreamingStore.getState();
   const requestId = payload.requestId;
   if (!requestId) return;
 
-  const convId = Object.entries(state.activeStreams).find(([_, id]) => id === requestId)?.[0];
+  const convId = Object.entries(streamingStore.activeStreams).find(
+    ([_, id]) => id === requestId
+  )?.[0];
   if (!convId) return;
 
   const token = payload.message?.content ?? '';
-  const streamingStore = useStreamingStore.getState();
   const isFirstToken = !(convId in streamingStore.liveContent);
 
   // Accumulate token in the lightweight streaming buffer
@@ -57,7 +57,7 @@ const handleToken = (payload: OllamaToken) => {
   // On stream completion, flush remaining content immediately and stop
   if (payload.done) {
     flushAndStop(convId);
-    state.stopStream(convId);
+    streamingStore.stopStream(convId);
 
     // Auto-generate title for conversations that still have the default title
     triggerAutoTitle(convId);
@@ -67,17 +67,17 @@ const handleToken = (payload: OllamaToken) => {
 /** Handle backend error events. */
 const handleError = (payload: BackendError) => {
   const sanitized = sanitizeError(payload);
-  const state = useConversationStore.getState();
+  const streamingStore = useStreamingStore.getState();
 
   logger.error('Backend error event', { error: sanitized });
 
   if (sanitized.requestId) {
-    const convId = Object.entries(state.activeStreams).find(
+    const convId = Object.entries(streamingStore.activeStreams).find(
       ([_, id]) => id === sanitized.requestId
     )?.[0];
     if (convId) {
       flushAndStop(convId);
-      state.stopStream(convId);
+      streamingStore.stopStream(convId);
       toast.error(sanitized.message);
       return;
     }
@@ -85,9 +85,9 @@ const handleError = (payload: BackendError) => {
 
   toast.error(sanitized.message);
   // Flush all active streams on unattributed errors
-  Object.keys(state.activeStreams).forEach((id) => {
+  Object.keys(streamingStore.activeStreams).forEach((id) => {
     flushAndStop(id);
-    state.stopStream(id);
+    streamingStore.stopStream(id);
   });
 };
 

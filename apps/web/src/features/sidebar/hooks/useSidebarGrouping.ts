@@ -1,14 +1,15 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import { Conversation, Language } from '@musaed/contracts';
+import { Language } from '@musaed/contracts';
+import { ConversationMetadata } from '@/store/stores/conversation-store';
 
 export type TimeGroup = 'search' | 'today' | 'yesterday' | 'lastWeek' | 'older';
 
 export interface SidebarItem {
   type: 'header' | 'conversation';
   group?: TimeGroup;
-  data?: Conversation;
+  data?: ConversationMetadata;
   id: string;
 }
 
@@ -16,7 +17,7 @@ export interface SidebarItem {
  * Hook to group and filter conversations for display in the sidebar.
  * Supports incremental loading of conversations.
  *
- * @param {Record<string, Conversation>} conversations - Map of conversation IDs to objects.
+ * @param {Record<string, ConversationMetadata>} conversations - Map of conversation IDs to objects.
  * @param {string[]} conversationIds - Ordered list of conversation IDs.
  * @param {string} searchQuery - The user's current search term.
  * @param {Language} language - The active application language.
@@ -25,7 +26,7 @@ export interface SidebarItem {
  * @returns {[SidebarItem[], () => void]} A tuple containing the flattened list of headers and conversation items, and a function to load more conversations.
  */
 export function useSidebarGrouping(
-  conversations: Record<string, Conversation>,
+  conversations: Record<string, ConversationMetadata>,
   conversationIds: string[],
   searchQuery: string,
   _language: Language,
@@ -39,11 +40,8 @@ export function useSidebarGrouping(
     const convList = conversationIds.map((id) => conversations[id]).filter(Boolean);
     const query = searchQuery.toLowerCase();
 
-    return convList.filter(
-      (conv) =>
-        conv.title.toLowerCase().includes(query) ||
-        conv.messages.some((msg) => msg.content.toLowerCase().includes(query))
-    );
+    // Now we only search in titles because messages are not available in ConversationMetadata
+    return convList.filter((conv) => conv.title.toLowerCase().includes(query));
   }, [conversations, conversationIds, searchQuery]);
 
   // Load more conversations.
@@ -72,7 +70,7 @@ export function useSidebarGrouping(
     const yesterday = today - 86400000;
     const lastWeek = today - 86400000 * 7;
 
-    const groups: Record<TimeGroup, Conversation[]> = loadedConversations.reduce(
+    const groups: Record<TimeGroup, ConversationMetadata[]> = loadedConversations.reduce(
       (acc, conv) => {
         let groupKey: TimeGroup = 'older';
         if (conv.updatedAt >= today) groupKey = 'today';
@@ -84,7 +82,7 @@ export function useSidebarGrouping(
       },
       { today: [], yesterday: [], lastWeek: [], older: [], search: [] } as Record<
         TimeGroup,
-        Conversation[]
+        ConversationMetadata[]
       >
     );
 

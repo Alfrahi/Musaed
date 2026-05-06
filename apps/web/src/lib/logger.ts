@@ -2,6 +2,7 @@
 
 import { checkIsTauri, store, logApi } from './ipc';
 import { sanitizeError } from '@musaed/contracts';
+import { config } from './config';
 
 type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
@@ -12,7 +13,6 @@ interface LogEntry {
   context?: Record<string, unknown>;
 }
 
-const isProd = process.env.NODE_ENV === 'production';
 const MAX_LOG_MESSAGE_LENGTH = 2048;
 
 /**
@@ -23,7 +23,7 @@ export const logger = {
    * Logs a message with a specific severity level.
    */
   log: async (level: LogLevel, message: string, context?: Record<string, unknown>) => {
-    if (isProd && level === 'debug') return;
+    if (config.isProd && level === 'debug') return;
 
     // Use the contract's sanitization logic to redact paths and URLs
     const sanitized = sanitizeError({ message, context });
@@ -32,7 +32,7 @@ export const logger = {
         ? sanitized.message.substring(0, MAX_LOG_MESSAGE_LENGTH) + '... [TRUNCATED]'
         : sanitized.message;
 
-    if (!isProd) {
+    if (!config.isProd) {
       const consoleMethod = level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log';
       console[consoleMethod](`[${level.toUpperCase()}] ${finalMessage}`, context || '');
     }
@@ -57,7 +57,7 @@ export const logger = {
         }
         await logApi.append(logString);
       } catch (err) {
-        if (!isProd) {
+        if (!config.isProd) {
           console.error('[logger] Tauri log persistence failed', err);
         } else {
           console.error('[logger] persistence failed');

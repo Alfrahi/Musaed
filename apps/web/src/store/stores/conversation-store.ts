@@ -3,83 +3,90 @@
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Conversation, Message } from '@musaed/contracts';
-import { createTauriStorage } from '../../lib/tauri-storage';
-import { setStreaming, setHydrated } from '../actions';
+import { Conversation } from '@musaed/contracts';
+import { createTauriStorage, Migrations } from '../../lib/tauri-storage';
+import { setHydrated } from '../actions';
+
+const CONVERSATION_STORE_VERSION = 3;
+
+interface StoredConversation {
+  id: string;
+  messages?: Array<{ done?: boolean; [key: string]: unknown }>;
+  [key: string]: unknown;
+}
 
 /**
- * Wraps createTauriStorage with pause/resume control so that disk writes
- * are skipped entirely while streaming is active. When streaming ends the
- * persist middleware naturally writes the full, up-to-date state.
+ * Strips messages from conversations for migration to version 3.
+ * Messages are now handled by useMessageStore for better performance.
  */
-const persistController = (() => {
-  const base = createTauriStorage('conversation-state-v2.json');
-  let paused = false;
+const migrations: Migrations = {
+  2: (data: unknown) => {
+    const storageData = data as { conversations?: Record<string, StoredConversation> };
+    if (storageData.conversations && typeof storageData.conversations === 'object') {
+      const convs = storageData.conversations;
+      Object.keys(convs).forEach((id) => {
+        if (convs[id].messages) {
+          convs[id].messages = convs[id].messages.map((m) => ({
+            ...m,
+            done: m.done ?? true,
+          }));
+        }
+      });
+    }
+    return storageData;
+  },
+  3: (data: unknown) => {
+    const storageData = data as { conversations?: Record<string, StoredConversation> };
+    // Strip messages from stored conversations to reduce bloat
+    if (storageData.conversations && typeof storageData.conversations === 'object') {
+      const convs = storageData.conversations;
+      Object.keys(convs).forEach((id) => {
+        if (convs[id].messages) {
+          delete convs[id].messages;
+        }
+      });
+    }
+    return storageData;
+  },
+};
 
-  return {
-    storage: {
-      getItem: base.getItem,
-      setItem: (name: string, value: string) => {
-        if (paused) return;
-        void base.setItem(name, value);
-      },
-      removeItem: base.removeItem,
-    },
-    pause: () => {
-      paused = true;
-    },
-    resume: () => {
-      paused = false;
-    },
-  };
-})();
+/**
+ * Wraps createTauriStorage for the conversation store.
+ * Disk writes are direct as streaming state is now in useStreamingStore.
+ */
+const storage = createTauriStorage(
+  'conversation-state-v2.json',
+  CONVERSATION_STORE_VERSION,
+  migrations
+);
+
+export type ConversationMetadata = Omit<Conversation, 'messages'>;
 
 export interface ConversationState {
-  conversations: Record<string, Conversation>;
+  conversations: Record<string, ConversationMetadata>;
   conversationIds: string[];
   currentConversationId: string | null;
-  activeStreams: Record<string, string>;
   searchQuery: string;
-  setConversations: (conversations: Conversation[]) => void;
+
+  // Actions
+  setConversations: (conversations: ConversationMetadata[]) => void;
   setCurrentConversationId: (id: string | null) => void;
   setSearchQuery: (searchQuery: string) => void;
-  addMessage: (conversationId: string, message: Message) => void;
-  addMessages: (conversationId: string, messages: Message[]) => void;
-  updateLastMessage: (conversationId: string, update: Partial<Message>, replace?: boolean) => void;
-  startStream: (conversationId: string, requestId: string) => void;
-  stopStream: (conversationId: string) => void;
+  addConversation: (conversation: ConversationMetadata) => void;
+  updateConversation: (id: string, updates: Partial<ConversationMetadata>) => void;
+  removeConversation: (id: string) => void;
   batchUpdate: (updater: (state: ConversationState) => Partial<ConversationState>) => void;
 }
 
-// Selectors for the conversation store
+// Selectors
 export const selectCurrentConversation = (state: ConversationState) =>
   state.currentConversationId ? state.conversations[state.currentConversationId] : null;
 
 export const selectFilteredConversations = (state: ConversationState) => {
   const { conversations, conversationIds, searchQuery } = state;
-  if (!searchQuery) return conversationIds.map((id) => conversations[id]);
-  return conversationIds
-    .map((id) => conversations[id])
-    .filter((conv) => conv.title.toLowerCase().includes(searchQuery.toLowerCase()));
-};
-
-export const selectIsStreaming = (conversationId: string) => (state: ConversationState) =>
-  !!state.activeStreams[conversationId];
-
-export const selectLastMessage = (conversationId: string) => (state: ConversationState) => {
-  const conv = state.conversations[conversationId];
-  return conv?.messages[conv.messages.length - 1] || null;
-};
-
-/** Helper to update a conversation in state. */
-const withUpdatedConv = (
-  state: ConversationState,
-  conversationId: string,
-  updater: (conv: Conversation) => Conversation
-): Partial<ConversationState> => {
-  const conv = state.conversations[conversationId];
-  if (!conv) return state;
-  return { conversations: { ...state.conversations, [conversationId]: updater(conv) } };
+  const list = conversationIds.map((id) => conversations[id]).filter(Boolean);
+  if (!searchQuery) return list;
+  return list.filter((conv) => conv.title.toLowerCase().includes(searchQuery.toLowerCase()));
 };
 
 export const useConversationStore = createWithEqualityFn<ConversationState>()(
@@ -88,7 +95,6 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
       conversations: {},
       conversationIds: [],
       currentConversationId: null,
-      activeStreams: {},
       searchQuery: '',
 
       setConversations: (convs) =>
@@ -100,63 +106,32 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
       setCurrentConversationId: (id) => set({ currentConversationId: id }),
       setSearchQuery: (query) => set({ searchQuery: query }),
 
-      startStream: (conversationId, requestId) => {
-        persistController.pause();
-        return set((state) => {
-          setStreaming(true);
-          return { activeStreams: { ...state.activeStreams, [conversationId]: String(requestId) } };
-        });
-      },
+      addConversation: (conv) =>
+        set((state) => ({
+          conversations: { ...state.conversations, [conv.id]: conv },
+          conversationIds: [conv.id, ...state.conversationIds],
+        })),
 
-      stopStream: (conversationId) =>
+      updateConversation: (id, updates) =>
         set((state) => {
-          const { [conversationId]: _stream, ...remainingStreams } = state.activeStreams;
-          const hasMoreStreams = Object.keys(remainingStreams).length > 0;
-          setStreaming(hasMoreStreams);
-          if (!hasMoreStreams) {
-            persistController.resume();
-          }
-          return { activeStreams: remainingStreams };
-        }),
-
-      addMessage: (conversationId, message) =>
-        set((state) =>
-          withUpdatedConv(state, conversationId, (conv) => ({
-            ...conv,
-            messages: [...conv.messages, message],
-            updatedAt: Date.now(),
-          }))
-        ),
-
-      addMessages: (conversationId, messages) =>
-        set((state) =>
-          withUpdatedConv(state, conversationId, (conv) => ({
-            ...conv,
-            messages: [...conv.messages, ...messages],
-            updatedAt: Date.now(),
-          }))
-        ),
-
-      updateLastMessage: (conversationId, update, replace = false) =>
-        set((state) => {
-          const conv = state.conversations[conversationId];
-          if (!conv || conv.messages.length === 0) return state;
-
-          const messages = [...conv.messages];
-          const lastIdx = messages.length - 1;
-          messages[lastIdx] = {
-            ...messages[lastIdx],
-            ...update,
-            content: replace
-              ? (update.content ?? messages[lastIdx].content)
-              : messages[lastIdx].content + (update.content ?? ''),
-          };
-
+          const conv = state.conversations[id];
+          if (!conv) return state;
           return {
             conversations: {
               ...state.conversations,
-              [conversationId]: { ...conv, messages, updatedAt: Date.now() },
+              [id]: { ...conv, ...updates, updatedAt: Date.now() },
             },
+          };
+        }),
+
+      removeConversation: (id) =>
+        set((state) => {
+          const { [id]: _, ...remaining } = state.conversations;
+          return {
+            conversations: remaining,
+            conversationIds: state.conversationIds.filter((cid) => cid !== id),
+            currentConversationId:
+              state.currentConversationId === id ? null : state.currentConversationId,
           };
         }),
 
@@ -164,7 +139,7 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
     }),
     {
       name: 'musaed-conversation-storage-v2',
-      storage: createJSONStorage(() => persistController.storage),
+      storage: createJSONStorage(() => storage),
       partialize: (state) => ({
         conversations: state.conversations,
         conversationIds: state.conversationIds,
@@ -176,8 +151,7 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
   shallow
 );
 
-/** Resume persistence (if paused) and trigger a full state persist to disk. */
+/** Trigger a full state persist to disk. */
 export function persistConversationsNow(): void {
-  persistController.resume();
   useConversationStore.setState({});
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { config } from '@/lib/config';
 
 /**
  * Prevents standard web behaviors that break the desktop native illusion.
@@ -14,7 +15,7 @@ export function useNativeUX() {
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
       // Allow context menu only in development for debugging
-      if (process.env.NODE_ENV === 'production') {
+      if (config.isProd) {
         e.preventDefault();
       }
     };

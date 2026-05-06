@@ -1,7 +1,7 @@
 'use client';
 
 import { useStreamingStore } from './stores/streaming-store';
-import { useConversationStore } from './stores/conversation-store';
+import { useMessageStore } from './stores/message-store';
 
 const BATCH_INTERVAL_MS = 500;
 const timers: Record<string, ReturnType<typeof setInterval>> = {};
@@ -24,7 +24,7 @@ function flush(conversationId: string): void {
   const result = useStreamingStore.getState().flushToConversation(conversationId);
   if (!result) return;
 
-  useConversationStore.getState().updateLastMessage(conversationId, {
+  useMessageStore.getState().updateLastMessage(conversationId, {
     content: result.content,
     ...result.metrics,
   });

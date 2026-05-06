@@ -12,23 +12,26 @@ import { useTranslation } from '../../../lib/i18n';
 import { checkIsTauri, dialog, fs } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
-import { ConversationSchema, OllamaModel } from '@musaed/contracts';
+import { ConversationSchema, OllamaModel, Message } from '@musaed/contracts';
 import { z } from 'zod';
+import { useMessageStore } from '../../../store/stores/message-store';
+import { ConversationMetadata } from '../../../store/stores/conversation-store';
 
-type Conversation = z.infer<typeof ConversationSchema>;
+// Unused type removed
 
 const useSizeCalculations = (
-  conversations: Record<string, Conversation>,
+  conversations: Record<string, ConversationMetadata>,
   conversationIds: string[],
+  messages: Record<string, Message[]>,
   models: OllamaModel[]
 ) => {
   const [historySize, setHistorySize] = useState<number | null>(null);
   const [modelsSize, setModelsSize] = useState<number | null>(null);
 
   const memoizedHistorySize = useMemo(() => {
-    const json = JSON.stringify({ conversations, conversationIds });
+    const json = JSON.stringify({ conversations, conversationIds, messages });
     return new Blob([json]).size;
-  }, [conversations, conversationIds]);
+  }, [conversations, conversationIds, messages]);
 
   const memoizedModelsSize = useMemo(() => {
     return models.reduce((acc, m) => acc + (m.size || 0), 0);
@@ -42,11 +45,17 @@ const useSizeCalculations = (
   return { historySize, modelsSize };
 };
 
-const useExportJson = (conversations: Record<string, Conversation>) => {
+const useExportJson = (
+  conversations: Record<string, ConversationMetadata>,
+  messages: Record<string, Message[]>
+) => {
   const handleExportJson = useCallback(async () => {
     const data = {
       version: 1,
-      conversations: Object.values(conversations),
+      conversations: Object.values(conversations).map((c) => ({
+        ...c,
+        messages: messages[c.id] || [],
+      })),
       exportedAt: Date.now(),
     };
 
@@ -72,13 +81,14 @@ const useExportJson = (conversations: Record<string, Conversation>) => {
     if (filePath) {
       await fs.writeTextFile(filePath, jsonString);
     }
-  }, [conversations]);
+  }, [conversations, messages]);
 
   return handleExportJson;
 };
 
 const useExportMarkdownBundle = (
-  conversations: Record<string, Conversation>,
+  conversations: Record<string, ConversationMetadata>,
+  messages: Record<string, Message[]>,
   formatDate: (date: number | Date) => string,
   t: (key: string) => string
 ) => {
@@ -95,7 +105,8 @@ const useExportMarkdownBundle = (
 
     for (const conv of convs) {
       fullMarkdown += `## ${conv.title}\n**Model:** ${conv.model}\n**Date:** ${formatDate(conv.createdAt)}\n\n`;
-      conv.messages.forEach((msg: { role: string; content: string }) => {
+      const convMessages = messages[conv.id] || [];
+      convMessages.forEach((msg) => {
         fullMarkdown += `### ${msg.role === 'user' ? t('export.user') : t('export.assistant')}\n${msg.content}\n\n`;
       });
       fullMarkdown += `\n---\n\n`;
@@ -120,14 +131,15 @@ const useExportMarkdownBundle = (
     if (filePath) {
       await fs.writeTextFile(filePath, fullMarkdown);
     }
-  }, [conversations, formatDate, t]);
+  }, [conversations, messages, formatDate, t]);
 
   return handleExportMarkdownBundle;
 };
 
 const validateAndSetConversations = (
   raw: unknown,
-  setConversations: (conversations: Conversation[]) => void,
+  setConversations: (conversations: ConversationMetadata[]) => void,
+  setMessages: (conversationId: string, messages: Message[]) => void,
   t: (key: string) => string
 ) => {
   try {
@@ -138,19 +150,28 @@ const validateAndSetConversations = (
       Array.isArray(raw.conversations)
     ) {
       const validated = raw.conversations.map((c: unknown) => ConversationSchema.parse(c));
-      setConversations(validated);
+
+      // Separate metadata and messages
+      const metadata = validated.map(({ messages: _, ...m }) => m as ConversationMetadata);
+      setConversations(metadata);
+
+      validated.forEach((c) => {
+        setMessages(c.id, c.messages);
+      });
+
       toast.success(t('settings.storage.importSuccess'));
     } else {
       throw new Error('Invalid format');
     }
-  } catch {
-    logger.error('Import failed: invalid JSON format');
+  } catch (err) {
+    logger.error('Import failed', { error: err });
     toast.error(t('settings.storage.importError'));
   }
 };
 
 const handleTauriImport = async (
-  setConversations: (conversations: Conversation[]) => void,
+  setConversations: (conversations: ConversationMetadata[]) => void,
+  setMessages: (conversationId: string, messages: Message[]) => void,
   t: (key: string) => string
 ) => {
   const selected = await dialog.open({
@@ -161,11 +182,12 @@ const handleTauriImport = async (
   const content = await fs.readTextFile(selected);
   if (content === null) return;
   const raw = JSON.parse(content);
-  validateAndSetConversations(raw, setConversations, t);
+  validateAndSetConversations(raw, setConversations, setMessages, t);
 };
 
 const handleWebImport = (
-  setConversations: (conversations: Conversation[]) => void,
+  setConversations: (conversations: ConversationMetadata[]) => void,
+  setMessages: (conversationId: string, messages: Message[]) => void,
   t: (key: string) => string
 ) => {
   const input = document.createElement('input');
@@ -177,7 +199,7 @@ const handleWebImport = (
     const reader = new FileReader();
     reader.onload = async (event) => {
       const raw = JSON.parse(event.target?.result as string);
-      validateAndSetConversations(raw, setConversations, t);
+      validateAndSetConversations(raw, setConversations, setMessages, t);
     };
     reader.readAsText(file);
   };
@@ -185,7 +207,8 @@ const handleWebImport = (
 };
 
 const useImportJson = (
-  setConversations: (conversations: Conversation[]) => void,
+  setConversations: (conversations: ConversationMetadata[]) => void,
+  setMessages: (conversationId: string, messages: Message[]) => void,
   t: (key: string) => string
 ) => {
   const handleImportJson = useCallback(async () => {
@@ -197,11 +220,11 @@ const useImportJson = (
     if (!confirmed) return;
 
     if (checkIsTauri()) {
-      await handleTauriImport(setConversations, t);
+      await handleTauriImport(setConversations, setMessages, t);
     } else {
-      handleWebImport(setConversations, t);
+      handleWebImport(setConversations, setMessages, t);
     }
-  }, [setConversations, t]);
+  }, [setConversations, setMessages, t]);
 
   return handleImportJson;
 };
@@ -210,14 +233,26 @@ export function useStorageActions() {
   const conversations = useConversations();
   const conversationIds = useConversationIds();
   const setConversations = useSetConversations();
+  const messages = useMessageStore((s) => s.messages);
+  const setMessages = useMessageStore((s) => s.setMessages);
   const models = useModels();
   const globalSettings = useGlobalSettings();
   const { t, formatDate } = useTranslation(globalSettings.language);
 
-  const { historySize, modelsSize } = useSizeCalculations(conversations, conversationIds, models);
-  const handleExportJson = useExportJson(conversations);
-  const handleExportMarkdownBundle = useExportMarkdownBundle(conversations, formatDate, t);
-  const handleImportJson = useImportJson(setConversations, t);
+  const { historySize, modelsSize } = useSizeCalculations(
+    conversations,
+    conversationIds,
+    messages,
+    models
+  );
+  const handleExportJson = useExportJson(conversations, messages);
+  const handleExportMarkdownBundle = useExportMarkdownBundle(
+    conversations,
+    messages,
+    formatDate,
+    t
+  );
+  const handleImportJson = useImportJson(setConversations, setMessages, t);
 
   return {
     historySize,

@@ -8,6 +8,7 @@ import {
   useIsHydrated,
   useActiveStreams,
   useCurrentConversationId,
+  useMessages,
 } from '../../../store/hooks';
 import {
   useConversationStore,
@@ -61,6 +62,7 @@ const ScrollButton = ({ onClick, label }: { onClick: () => void; label: string }
 const ChatWindow = () => {
   const currentConversation = useConversationStore(selectCurrentConversation);
   const currentConversationId = useCurrentConversationId();
+  const storedMessages = useMessages(currentConversationId || '');
   const activeStreams = useActiveStreams();
   const globalSettings = useGlobalSettings();
   const isHydrated = useIsHydrated();
@@ -77,16 +79,15 @@ const ChatWindow = () => {
 
   // Build the messages list: replace last message content with live buffer during streaming
   const messages: Message[] = useMemo(() => {
-    const msgs = currentConversation?.messages;
-    if (!msgs || msgs.length === 0) return [];
+    if (!storedMessages || storedMessages.length === 0) return [];
 
-    if (!isStreaming || !liveContent) return msgs;
+    if (!isStreaming || !liveContent) return storedMessages;
 
-    const lastIdx = msgs.length - 1;
-    return msgs.map((msg, i) =>
+    const lastIdx = storedMessages.length - 1;
+    return storedMessages.map((msg, i) =>
       i === lastIdx ? { ...msg, content: msg.content + liveContent } : msg
     );
-  }, [currentConversation?.messages, isStreaming, liveContent]);
+  }, [storedMessages, isStreaming, liveContent]);
 
   const lastMsgCount = messages.length;
 

@@ -1,8 +1,9 @@
 'use client';
 
-import { stripRedactedThinkingBlocks, Conversation, Language } from '@musaed/contracts';
+import { stripRedactedThinkingBlocks, Language, Message } from '@musaed/contracts';
 import { titleApi } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
+import type { ConversationMetadata } from '../../../store/stores/conversation-store';
 
 /** Maximum characters to send for each message when generating a title. */
 const MAX_MESSAGE_LENGTH = 500;
@@ -43,12 +44,11 @@ function truncate(text: string, maxLength: number): string {
  * Silently fails and returns null on any error so the UI is never disrupted.
  */
 export async function generateConversationTitle(
-  conversation: Conversation,
+  conversation: ConversationMetadata,
+  messages: Message[],
   ollamaUrl: string,
   language: Language
 ): Promise<string | null> {
-  const messages = conversation.messages;
-
   const userMessage = messages.find((m) => m.role === 'user');
   const assistantMessage = messages.find((m) => m.role === 'assistant');
 

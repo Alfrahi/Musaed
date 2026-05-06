@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Eraser, MessageSquare, Briefcase, Plus } from 'lucide-react';
+import { Eraser, MessageSquare, Briefcase } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import { useSearchQuery, useIsHydrated, useLanguage } from '@/store/hooks';
 import {
   useConversationStore,
   selectFilteredConversations,
+  ConversationMetadata,
 } from '@/store/stores/conversation-store';
 import { useTranslation } from '@/lib/i18n';
 import { ProjectList, AddProjectDialog } from '@/features/rag';
@@ -55,7 +56,7 @@ const SidebarItemContent = ({
 }: {
   item: import('../hooks/useSidebarGrouping').SidebarItem;
   searchQuery: string;
-  filteredConversations: import('@musaed/contracts').Conversation[];
+  filteredConversations: ConversationMetadata[];
   handleClearAll: () => void;
   t: (key: string) => string;
 }) => {

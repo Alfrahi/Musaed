@@ -5,9 +5,10 @@ import { useLanguage } from '@/store/hooks';
 import { useTranslation } from '@/lib/i18n';
 import { dialog } from '@/lib/ipc';
 import { exportToMarkdown } from '@/lib/export';
-import { Conversation } from '@musaed/contracts';
 import { useConversationActions } from '@/features/chat';
 import { logger } from '@/lib/logger';
+import { useMessageStore } from '@/store/stores/message-store';
+import type { ConversationMetadata } from '@/store/stores/conversation-store';
 
 export function useSidebarActions() {
   const language = useLanguage();
@@ -53,12 +54,13 @@ export function useSidebarActions() {
   );
 
   const handleExport = useCallback(
-    (conversation: Conversation) => {
+    (conversation: ConversationMetadata) => {
       logger.info('Exporting conversation to Markdown', {
         id: conversation.id,
         title: conversation.title,
       });
-      exportToMarkdown(conversation, { t, formatDate, formatNumber });
+      const messages = useMessageStore.getState().messages[conversation.id] || [];
+      exportToMarkdown({ ...conversation, messages }, { t, formatDate, formatNumber });
     },
     [t, formatDate, formatNumber]
   );

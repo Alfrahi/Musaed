@@ -7,6 +7,7 @@ import {
   useSetConversations,
   useChatRetentionDays,
 } from '../../../store/hooks';
+import { useMessageStore } from '../../../store/stores/message-store';
 import { logger } from '../../../lib/logger';
 
 export function useStorageCleanup() {
@@ -28,7 +29,16 @@ export function useStorageCleanup() {
 
     if (removedCount > 0) {
       logger.info('Auto-cleanup executed', { removedCount, retentionDays: days });
+
+      // Identify removed IDs to clean up their messages
+      const validIds = new Set(validConvs.map((c) => c.id));
+      const removedIds = conversationIds.filter((id) => !validIds.has(id));
+
       setConversations(validConvs);
+
+      // Clean up orphaned messages
+      const messageStore = useMessageStore.getState();
+      removedIds.forEach((id) => messageStore.clearMessages(id));
     }
   }, [conversations, conversationIds, setConversations, chatRetentionDays]);
 

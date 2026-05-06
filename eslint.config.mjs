@@ -180,6 +180,7 @@ export default tseslint.config(
       'no-restricted-imports': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       'max-lines-per-function': 'off',
+      'no-restricted-properties': 'off',
     },
   },
 

@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useCurrentConversationId, useGlobalSettings } from '../../../store/hooks';
-import { useConversationStore, selectIsStreaming } from '../../../store/stores/conversation-store';
-import { useModelStore, selectSelectedModel } from '../../../store/stores/model-store';
+import {
+  useCurrentConversationId,
+  useGlobalSettings,
+  useIsLiveStreaming,
+  useSelectedModel,
+} from '../../../store/hooks';
 import { useChatActions } from './useChatActions';
 import { useAttachmentManager } from './useAttachmentManager';
 import { useTranslation } from '../../../lib/i18n';
@@ -13,9 +16,9 @@ export const useChatInput = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const currentConversationId = useCurrentConversationId();
-  const isStreaming = useConversationStore(selectIsStreaming(currentConversationId || ''));
+  const isStreaming = useIsLiveStreaming(currentConversationId || '');
   const globalSettings = useGlobalSettings();
-  const selectedModel = useModelStore(selectSelectedModel);
+  const selectedModel = useSelectedModel();
 
   const { sendMessage } = useChatActions();
   const { t } = useTranslation(globalSettings.language);

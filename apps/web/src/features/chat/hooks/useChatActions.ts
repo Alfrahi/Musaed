@@ -20,6 +20,7 @@ import { flushAndStop } from '../../../store/batch-manager';
 import { useConversationActions } from './useConversationActions';
 import { FileAttachment } from './useAttachmentUtils';
 import { buildRagSystemContext } from '@/features/rag';
+import { useMessageStore } from '../../../store/stores/message-store';
 
 /** Build prompt with file context injected. */
 function buildPromptWithContext(
@@ -45,7 +46,7 @@ function getUserMessageContent(
 
 /** Build the messages array for the Ollama API request. */
 const buildApiMessages = (
-  currentConv: { messages: Message[] },
+  messages: Message[],
   fullPrompt: string,
   images: string[],
   t: (key: string, values?: Record<string, string | number | boolean>) => string,
@@ -58,15 +59,15 @@ const buildApiMessages = (
     combinedSystem = combinedSystem ? `${ragContext}\n\n${combinedSystem}` : ragContext;
   }
 
-  const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
+  const apiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
 
   // Only add system message if there's actual content
   if (combinedSystem) {
-    messages.push({ role: 'system', content: combinedSystem });
+    apiMessages.push({ role: 'system', content: combinedSystem });
   }
 
-  messages.push(
-    ...currentConv.messages.map((m) => ({
+  apiMessages.push(
+    ...messages.map((m) => ({
       role: m.role as 'system' | 'user' | 'assistant',
       content:
         m.role === 'user'
@@ -74,9 +75,12 @@ const buildApiMessages = (
           : m.content,
     }))
   );
-  messages.push({ role: 'user', content: getUserMessageContent(fullPrompt, images.length > 0, t) });
+  apiMessages.push({
+    role: 'user',
+    content: getUserMessageContent(fullPrompt, images.length > 0, t),
+  });
 
-  return messages;
+  return apiMessages;
 };
 
 /** Handle streaming errors — log, update message, notify user. */
@@ -144,7 +148,7 @@ async function fetchRagContext(
 
 /** Helper to prepare the messages and parameters for the chat API. */
 const prepareChatPayload = (
-  currentConv: { messages: Message[] },
+  messages: Message[],
   fullPrompt: string,
   images: string[],
   t: (key: string, values?: Record<string, string | number | boolean>) => string,
@@ -154,14 +158,7 @@ const prepareChatPayload = (
   const { ollamaUrl, ...params } = settings;
   return {
     baseUrl: ollamaUrl,
-    messages: buildApiMessages(
-      currentConv,
-      fullPrompt,
-      images,
-      t,
-      settings.systemPrompt,
-      ragContext
-    ),
+    messages: buildApiMessages(messages, fullPrompt, images, t, settings.systemPrompt, ragContext),
     options: {
       temperature: params.temperature,
       num_predict: params.num_predict,
@@ -235,8 +232,9 @@ export const useChatActions = () => {
       addMessages(currentConversationId, [userMsg, assistantMsg]);
 
       try {
+        const messages = useMessageStore.getState().messages[currentConversationId] || [];
         const payload = prepareChatPayload(
-          currentConv,
+          messages,
           fullPrompt,
           images,
           t,

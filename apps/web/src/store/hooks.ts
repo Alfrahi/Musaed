@@ -1,26 +1,30 @@
 'use client';
 
 import { useConversationStore } from './stores/conversation-store';
+import { useMessageStore } from './stores/message-store';
 import { useUIStore } from './stores/ui-store';
 import { useSettingsStore } from './stores/settings-store';
 import { useModelStore } from './stores/model-store';
-import { useStreamingStore, selectLiveContent } from './stores/streaming-store';
+import {
+  useStreamingStore,
+  selectLiveContent,
+  selectIsLiveStreaming,
+} from './stores/streaming-store';
 import { useRagStore } from './stores/rag-store';
 import type {
-  Conversation,
   Message,
   ChatSettings,
   OllamaModel,
   RagProject,
   SearchResult,
 } from '@musaed/contracts';
-import type { ConversationState } from './stores/conversation-store';
+import type { ConversationState, ConversationMetadata } from './stores/conversation-store';
 
 // ---------------------------------------------------------------------------
 // useConversationStore selectors
 // ---------------------------------------------------------------------------
 
-export function useConversations(): Record<string, Conversation> {
+export function useConversations(): Record<string, ConversationMetadata> {
   return useConversationStore((s) => s.conversations);
 }
 
@@ -32,16 +36,12 @@ export function useCurrentConversationId(): string | null {
   return useConversationStore((s) => s.currentConversationId);
 }
 
-export function useActiveStreams(): Record<string, string> {
-  return useConversationStore((s) => s.activeStreams);
-}
-
 export function useSearchQuery(): string {
   return useConversationStore((s) => s.searchQuery);
 }
 
 // Setter-only hooks (stable references, no re-render risk)
-export function useSetConversations(): (conversations: Conversation[]) => void {
+export function useSetConversations(): (conversations: ConversationMetadata[]) => void {
   return useConversationStore((s) => s.setConversations);
 }
 
@@ -53,12 +53,41 @@ export function useSetSearchQuery(): (searchQuery: string) => void {
   return useConversationStore((s) => s.setSearchQuery);
 }
 
+export function useAddConversation(): (conv: ConversationMetadata) => void {
+  return useConversationStore((s) => s.addConversation);
+}
+
+export function useUpdateConversation(): (
+  id: string,
+  updates: Partial<ConversationMetadata>
+) => void {
+  return useConversationStore((s) => s.updateConversation);
+}
+
+export function useRemoveConversation(): (id: string) => void {
+  return useConversationStore((s) => s.removeConversation);
+}
+
+export function useBatchUpdate(): (
+  updater: (state: ConversationState) => Partial<ConversationState>
+) => void {
+  return useConversationStore((s) => s.batchUpdate);
+}
+
+// ---------------------------------------------------------------------------
+// useMessageStore selectors
+// ---------------------------------------------------------------------------
+
+export function useMessages(conversationId: string): Message[] {
+  return useMessageStore((s) => s.messages[conversationId] ?? []);
+}
+
 export function useAddMessage(): (conversationId: string, message: Message) => void {
-  return useConversationStore((s) => s.addMessage);
+  return useMessageStore((s) => s.addMessage);
 }
 
 export function useAddMessages(): (conversationId: string, messages: Message[]) => void {
-  return useConversationStore((s) => s.addMessages);
+  return useMessageStore((s) => s.addMessages);
 }
 
 export function useUpdateLastMessage(): (
@@ -66,21 +95,11 @@ export function useUpdateLastMessage(): (
   update: Partial<Message>,
   replace?: boolean
 ) => void {
-  return useConversationStore((s) => s.updateLastMessage);
+  return useMessageStore((s) => s.updateLastMessage);
 }
 
-export function useStartStream(): (conversationId: string, requestId: string) => void {
-  return useConversationStore((s) => s.startStream);
-}
-
-export function useStopStream(): (conversationId: string) => void {
-  return useConversationStore((s) => s.stopStream);
-}
-
-export function useBatchUpdate(): (
-  updater: (state: ConversationState) => Partial<ConversationState>
-) => void {
-  return useConversationStore((s) => s.batchUpdate);
+export function useClearMessages(): (conversationId: string) => void {
+  return useMessageStore((s) => s.clearMessages);
 }
 
 // ---------------------------------------------------------------------------
@@ -271,7 +290,19 @@ export function useLiveContent(conversationId: string): string | null {
 }
 
 export function useIsLiveStreaming(conversationId: string): boolean {
-  return useStreamingStore((s) => conversationId in s.liveContent);
+  return useStreamingStore(selectIsLiveStreaming(conversationId));
+}
+
+export function useActiveStreams(): Record<string, string> {
+  return useStreamingStore((s) => s.activeStreams);
+}
+
+export function useStartStream(): (conversationId: string, requestId: string) => void {
+  return useStreamingStore((s) => s.startStream);
+}
+
+export function useStopStream(): (conversationId: string) => void {
+  return useStreamingStore((s) => s.stopStream);
 }
 
 // ---------------------------------------------------------------------------

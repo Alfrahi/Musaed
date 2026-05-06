@@ -6,6 +6,8 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { RagProject, IndexProgress, SearchResult } from '@musaed/contracts';
 import { createTauriStorage } from '../../lib/tauri-storage';
 
+const RAG_STORE_VERSION = 1;
+
 export interface RagState {
   projects: Record<string, RagProject>;
   projectIds: string[];
@@ -108,7 +110,7 @@ export const useRagStore = createWithEqualityFn<RagState>()(
     }),
     {
       name: 'rag-state',
-      storage: createJSONStorage(() => createTauriStorage('rag-state.json')),
+      storage: createJSONStorage(() => createTauriStorage('rag-state.json', RAG_STORE_VERSION)),
       // Only persist these fields — search results and indexing progress are ephemeral
       partialize: (state: RagState) => ({
         projects: state.projects,
