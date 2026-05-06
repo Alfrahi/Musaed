@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
 import { useSearchQuery, useSetSearchQuery, useLanguage } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
@@ -9,6 +10,30 @@ const SearchInput = () => {
   const setSearchQuery = useSetSearchQuery();
   const language = useLanguage();
   const { t } = useTranslation(language);
+
+  // Local state for debounced input
+  const [inputValue, setInputValue] = useState(searchQuery);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync input when searchQuery changes externally (e.g., cleared by another component)
+  useEffect(() => {
+    setInputValue(searchQuery);
+  }, [searchQuery]);
+
+  // Debounce updates to the store
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      setSearchQuery(inputValue);
+    }, 300);
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [inputValue, setSearchQuery]);
 
   return (
     <div className="group mbe-4 relative ps-4 pe-4" role="search">
@@ -20,8 +45,8 @@ const SearchInput = () => {
       <input
         type="text"
         placeholder={t('sidebar.searchChats')}
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
         className="w-full rounded-none border-none bg-zinc-200/50 py-2 ps-9 pe-3 text-xs transition-all outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-blue-500/50 dark:bg-zinc-800/50 dark:placeholder:text-zinc-500"
         aria-label={t('sidebar.searchChats')}
       />

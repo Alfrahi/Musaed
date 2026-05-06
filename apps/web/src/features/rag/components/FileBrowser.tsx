@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRagFileBrowser } from '../hooks/useRagFileBrowser';
 import { useActiveRagProject, useLanguage } from '../../../store/hooks';
 import { Loader2, Folder, File, RefreshCw } from 'lucide-react';
@@ -75,23 +75,20 @@ const TreeNodes = ({
 const FileBrowser = ({ onFileSelect }: FileBrowserProps) => {
   const activeProject = useActiveRagProject();
   const { files, isLoading, errorMessage, fetchIndexedFiles, buildFileTree } = useRagFileBrowser();
-  const [fileTree, setFileTree] = useState<FileNode[]>([]);
   const language = useLanguage();
   const { t } = useTranslation(language);
+
+  // Memoize file tree to avoid unnecessary rebuilds when files array reference changes
+  const fileTree = useMemo(() => {
+    if (files.length === 0) return [];
+    return buildFileTree(files);
+  }, [files, buildFileTree]);
 
   useEffect(() => {
     if (activeProject?.id) {
       fetchIndexedFiles(activeProject.id);
     }
   }, [activeProject?.id, fetchIndexedFiles]);
-
-  useEffect(() => {
-    if (files.length > 0) {
-      setFileTree(buildFileTree(files));
-    } else {
-      setFileTree([]);
-    }
-  }, [files, buildFileTree]);
 
   const handleRefresh = () => {
     if (activeProject?.id) {

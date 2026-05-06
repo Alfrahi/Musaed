@@ -1,7 +1,7 @@
 //! RAG feature module — public API.
 
 export { ProjectList } from './components/ProjectList';
-export { ProjectCard } from './components/ProjectCard';
+export { default as ProjectCard } from './components/ProjectCard';
 export { AddProjectDialog } from './components/AddProjectDialog';
 export { IndexingProgress } from './components/IndexingProgress';
 export { RagContextBadge } from './components/RagContextBadge';

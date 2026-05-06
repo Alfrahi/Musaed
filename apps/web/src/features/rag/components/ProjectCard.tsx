@@ -1,10 +1,10 @@
 'use client';
 
+import { memo, useState, useEffect } from 'react';
 import { FolderOpen, Trash2, RefreshCw, Database, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { IndexingProgress } from './IndexingProgress';
 import type { RagProject, IndexProgress as IndexProgressType } from '@musaed/contracts';
-import { useState, useEffect } from 'react';
 import { listen } from '@/lib/ipc';
 import { IndexProgressSchema } from '@musaed/contracts';
 import { truncateFilePath, formatFileSize } from '../utils/project-helpers';
@@ -42,7 +42,7 @@ function useProjectIndexProgress(projectId: string) {
   return indexProgress;
 }
 
-export const ProjectCard = ({
+const ProjectCard = ({
   project,
   isActive,
   onSelect,
@@ -59,7 +59,7 @@ export const ProjectCard = ({
   return (
     <div
       className={cn(
-        'group flex cursor-pointer flex-col rounded-md px-2 py-1.5 transition-colors',
+        'group mb-0.5 flex cursor-pointer flex-col rounded-md px-2 py-1.5 transition-colors',
         isActive ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50 text-foreground'
       )}
       onClick={onSelect}
@@ -81,6 +81,8 @@ export const ProjectCard = ({
     </div>
   );
 };
+
+export default memo(ProjectCard);
 
 const ProjectHeader = ({
   project,

@@ -1,10 +1,11 @@
 'use client';
 
 import { Plus } from 'lucide-react';
+import { Virtuoso } from 'react-virtuoso';
 import { useRagProjects as useRagProjectsHook } from '../hooks/useRagProjects';
 import { useRagIndexing } from '../hooks/useRagIndexing';
 import { useActiveRagProjectId, useSetActiveRagProjectId, useLanguage } from '@/store/hooks';
-import { ProjectCard } from './ProjectCard';
+import ProjectCard from './ProjectCard';
 import { AddProjectDialog } from './AddProjectDialog';
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/lib/i18n';
@@ -40,9 +41,9 @@ export const ProjectList = ({ hideHeaderAction = false }: { hideHeaderAction?: b
   };
 
   return (
-    <div className="space-y-1">
+    <div className="flex h-full flex-col">
       {!hideHeaderAction && (
-        <div className="flex items-center justify-between px-2 py-1">
+        <div className="flex shrink-0 items-center justify-between px-2 py-1">
           <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
             {t('rag.title')}
           </span>
@@ -59,23 +60,28 @@ export const ProjectList = ({ hideHeaderAction = false }: { hideHeaderAction?: b
       {projectIds.length === 0 ? (
         <p className="text-muted-foreground px-2 text-xs italic">{t('rag.noProjects')}</p>
       ) : (
-        <div className="space-y-0.5">
-          {projectIds.map((id: string) => {
-            const project = projects[id];
-            if (!project) return null;
-            return (
-              <ProjectCard
-                key={id}
-                project={project}
-                isActive={activeProjectId === id}
-                onSelect={() => setActiveProjectId(activeProjectId === id ? null : id)}
-                onIndex={() => handleIndex(id)}
-                onReindex={() => handleReindex(id)}
-                onAbort={() => abortIndexing(id)}
-                onRemove={() => handleRemove(id)}
-              />
-            );
-          })}
+        <div className="min-h-0 flex-1">
+          <Virtuoso
+            style={{ height: '100%' }}
+            data={projectIds}
+            itemContent={(index, id) => {
+              const project = projects[id];
+              if (!project) return null;
+              return (
+                <ProjectCard
+                  key={id}
+                  project={project}
+                  isActive={activeProjectId === id}
+                  onSelect={() => setActiveProjectId(activeProjectId === id ? null : id)}
+                  onIndex={() => handleIndex(id)}
+                  onReindex={() => handleReindex(id)}
+                  onAbort={() => abortIndexing(id)}
+                  onRemove={() => handleRemove(id)}
+                />
+              );
+            }}
+            overscan={20}
+          />
         </div>
       )}
 
