@@ -40,13 +40,13 @@ pub(crate) fn strip_thinking_blocks(content: &str) -> String {
         }
     }
 
-    // Strip <thinkigne...</thinkigne> blocks (DeepSeek-R1 reasoning format)
-    while let Some(start) = result.find("<thinkigne") {
-        if let Some(end) = result[start + "<thinkigne".len()..].find("</thinkigne") {
+    // Strip <thinkigne>...</thinkigne> blocks (DeepSeek-R1 reasoning format)
+    while let Some(start) = result.find("<thinkigne>") {
+        if let Some(end) = result[start + "<thinkigne>".len()..].find("</thinkigne>") {
             result = format!(
                 "{}{}",
                 &result[..start],
-                &result[start + "<thinkigne".len() + end + "</thinkigne".len()..]
+                &result[start + "<thinkigne>".len() + end + "</thinkigne>".len()..]
             );
         } else {
             result = result[..start].to_string();

@@ -42,9 +42,12 @@ mod tests {
         ABORT_HANDLES, MAX_TOTAL_IMAGE_SIZE_BYTES, PULL_ABORT_HANDLES, REQUEST_CACHE,
     };
     use dashmap::mapref::entry::Entry;
-    use std::sync::Arc;
+    use std::sync::{Arc, Mutex, LazyLock};
     use std::time::Instant;
     use tokio_util::sync::CancellationToken;
+
+    // Mutex to serialize access to REQUEST_CACHE in unit tests.
+    static TEST_REQUEST_CACHE_MUTEX: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
     fn make_messages_with_images(image_sizes: Vec<usize>) -> Vec<ChatMessage> {
         image_sizes
@@ -72,7 +75,9 @@ mod tests {
 
     #[test]
     fn image_size_check_exceeds_limit() {
-        let messages = make_messages_with_images(vec![MAX_TOTAL_IMAGE_SIZE_BYTES]);
+        // Use a base64 length that exceeds the threshold: raw limit * 4/3 + some overhead
+        let oversized = MAX_TOTAL_IMAGE_SIZE_BYTES * 2;
+        let messages = make_messages_with_images(vec![oversized]);
         let total_b64_len: usize = messages
             .iter()
             .filter_map(|m| m.images.as_ref())
@@ -84,6 +89,7 @@ mod tests {
 
     #[tokio::test]
     async fn duplicate_request_detected() {
+        let _guard = TEST_REQUEST_CACHE_MUTEX.lock().unwrap();
         let req_id = "test-dup-req".to_string();
         REQUEST_CACHE.insert(req_id.clone(), Instant::now());
 

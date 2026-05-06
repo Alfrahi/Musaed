@@ -683,6 +683,8 @@ mod path_security_tests {
     fn test_validate_and_canonicalize_file_path_valid() {
         let dir = tempdir().unwrap();
         let project_root = dir.path();
+        // Ensure the parent directory exists
+        fs::create_dir_all(project_root.join("src")).unwrap();
         fs::write(project_root.join("src/main.rs"), "fn main() {}").unwrap();
 
         let result = validate_and_canonicalize_file_path(project_root, "src/main.rs");

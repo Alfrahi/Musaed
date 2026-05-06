@@ -22,21 +22,17 @@ fn sanitize_log_entry(entry: &str) -> String {
     // Remove: all other C0 controls including \n, \r, \0, \x01-\x08, \x0b-\x0c, \x0e-\x1f
     let sanitized: String = without_ansi
         .chars()
-        .filter(|c| {
-            // Preserve tab
-            if *c == '\t' {
-                return true;
+        .map(|c| {
+            // Keep newline and carriage return as whitespace (will be collapsed)
+            if c == '\t' || c == '\n' || c == '\r' {
+                return c;
             }
-            // Preserve printable ASCII and extended Unicode
-            if c.is_ascii_graphic() || *c == ' ' {
-                return true;
+            // Convert other C0 control characters to space to preserve word boundaries
+            if c.is_control() {
+                return ' ';
             }
-            // Allow valid Unicode whitespace (but not control chars)
-            if c.is_whitespace() && !c.is_control() {
-                return true;
-            }
-            // Block everything else (all C0 controls except tab)
-            false
+            // Preserve all other characters (printable ASCII, Unicode, spaces, etc.)
+            c
         })
         .collect();
 
@@ -63,12 +59,11 @@ fn strip_ansi_escapes(input: &str) -> String {
     while i < bytes.len() {
         // Check for CSI sequence: ESC [ ...
         if bytes[i] == 0x1b && i + 1 < bytes.len() && bytes[i + 1] == b'[' {
-            // Find the end of the escape sequence
+            // Find the end of the escape sequence: CSI ends with a byte in 0x40-0x7E
             let mut j = i + 2;
             while j < bytes.len() {
-                let c = bytes[j] as char;
-                // CSI sequences end with a letter from 0x40-0x7E
-                if c.is_ascii_graphic() {
+                let b = bytes[j];
+                if (0x40..=0x7E).contains(&b) {
                     j += 1;
                     break;
                 }
@@ -220,7 +215,7 @@ mod tests {
     fn test_sanitize_log_entry_preserves_tabs() {
         let input = "Col1\tCol2\tCol3";
         let result = sanitize_log_entry(input);
-        assert!(result.contains('\t'));
+        // Tabs are collapsed to spaces for log readability
         assert_eq!(result, "Col1 Col2 Col3");
     }
 
@@ -268,9 +263,10 @@ mod tests {
     fn test_sanitize_log_entry_log_injection_prevention() {
         let input = "Normal message\n[2024-01-01 00:00:00] [INJECTED] Fake log entry";
         let result = sanitize_log_entry(input);
-        assert!(!result.contains("[INJECTED]"));
-        assert!(!result.contains("Fake log entry"));
-        assert_eq!(result, "Normal message [2024-01-01 00:00:00] INJECTED Fake log entry");
+        // Newlines are converted to spaces, preventing multi-line log injection
+        assert!(!result.contains('\n'));
+        // The content remains intact as a single line; brackets are preserved
+        assert_eq!(result, "Normal message [2024-01-01 00:00:00] [INJECTED] Fake log entry");
     }
 
     #[test]

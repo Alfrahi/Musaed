@@ -272,6 +272,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{Mutex, LazyLock};
+
+    // Mutex to serialize access to REQUEST_CACHE in unit tests, avoiding
+    // deadlocks when tests run in parallel.
+    static TEST_REQUEST_CACHE_MUTEX: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
     #[test]
     fn test_invalid_ollama_base_returns_error_response() {
@@ -348,6 +353,7 @@ mod tests {
 
     #[test]
     fn test_evict_stale_requests_removes_expired() {
+        let _guard = TEST_REQUEST_CACHE_MUTEX.lock().unwrap();
         // Insert an entry, wait briefly, then evict with a very short TTL.
         // The entry should be removed because it's older than 1ms.
         REQUEST_CACHE.insert("stale-req".to_string(), Instant::now());
@@ -371,12 +377,14 @@ mod tests {
 
     #[test]
     fn test_evict_stale_requests_empty_cache() {
+        let _guard = TEST_REQUEST_CACHE_MUTEX.lock().unwrap();
         let evicted = evict_older_than(Duration::from_secs(0));
         assert_eq!(evicted, 0);
     }
 
     #[test]
     fn test_evict_stale_requests_all_fresh() {
+        let _guard = TEST_REQUEST_CACHE_MUTEX.lock().unwrap();
         REQUEST_CACHE.insert("r1".to_string(), Instant::now());
         REQUEST_CACHE.insert("r2".to_string(), Instant::now());
 
@@ -391,6 +399,7 @@ mod tests {
 
     #[test]
     fn test_evict_stale_requests_all_stale() {
+        let _guard = TEST_REQUEST_CACHE_MUTEX.lock().unwrap();
         REQUEST_CACHE.insert("s1".to_string(), Instant::now());
         REQUEST_CACHE.insert("s2".to_string(), Instant::now());
 
@@ -444,6 +453,7 @@ mod tests {
 
     #[test]
     fn test_request_cache_try_insert_new_key() {
+        let _guard = TEST_REQUEST_CACHE_MUTEX.lock().unwrap();
         let key = "bounded-new".to_string();
         assert!(request_cache_try_insert(key.clone()));
         assert!(REQUEST_CACHE.get(&key).is_some());
@@ -452,6 +462,7 @@ mod tests {
 
     #[test]
     fn test_request_cache_try_insert_rejects_duplicate() {
+        let _guard = TEST_REQUEST_CACHE_MUTEX.lock().unwrap();
         let key = "bounded-dup".to_string();
         assert!(request_cache_try_insert(key.clone()));
         assert!(
@@ -463,6 +474,7 @@ mod tests {
 
     #[test]
     fn test_request_cache_size_bound_evicts_oldest() {
+        let _guard = TEST_REQUEST_CACHE_MUTEX.lock().unwrap();
         // Fill cache to capacity. The first entry should be evicted when one
         // more is inserted.
         let mut keys: Vec<String> = Vec::with_capacity(MAX_REQUEST_CACHE_SIZE + 1);
