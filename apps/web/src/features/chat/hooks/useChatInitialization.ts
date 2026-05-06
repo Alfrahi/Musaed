@@ -3,9 +3,10 @@
 import { useCallback } from 'react';
 import { useUIStore, useConversationStore, useSettingsStore, useModelStore } from '@/store';
 import { useSetInitialized, useSetUIError } from '@/store/hooks';
-import { useModelActions } from '@/features/library';
+import { useModelActions } from '@/lib/useModelActions';
 import { useConversationActions } from './useConversationActions';
-import { useSettingsActions, useStorageCleanup } from '@/features/settings';
+import { useSettingsActions } from '@/lib/useSettingsActions';
+import { useStorageCleanup } from '@/lib/useStorageCleanup';
 import { logger } from '@/lib/logger';
 import { getSystemLanguage } from '@/lib/i18n';
 

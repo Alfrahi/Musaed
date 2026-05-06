@@ -19,7 +19,7 @@ import toast from 'react-hot-toast';
 import { flushAndStop } from '../../../store/batch-manager';
 import { useConversationActions } from './useConversationActions';
 import { FileAttachment } from './useAttachmentUtils';
-import { buildRagSystemContext } from '@/features/rag';
+import { buildRagSystemContext } from '@/lib/rag/context';
 import { useMessageStore } from '../../../store/stores/message-store';
 
 /** Build prompt with file context injected. */

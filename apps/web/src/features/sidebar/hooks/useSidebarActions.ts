@@ -5,7 +5,7 @@ import { useLanguage } from '@/store/hooks';
 import { useTranslation } from '@/lib/i18n';
 import { dialog } from '@/lib/ipc';
 import { exportToMarkdown } from '@/lib/export';
-import { useConversationActions } from '@/features/chat';
+import { useConversationActions } from '@/lib/useConversationActions';
 import { logger } from '@/lib/logger';
 import { useMessageStore } from '@/store/stores/message-store';
 import type { ConversationMetadata } from '@/store/stores/conversation-store';

@@ -10,8 +10,8 @@ import {
   ConversationMetadata,
 } from '@/store/stores/conversation-store';
 import { useTranslation } from '@/lib/i18n';
-import { ProjectList, AddProjectDialog } from '@/features/rag';
-import { useConversationActions } from '@/features/chat';
+import { ProjectList, AddProjectDialog } from '@/components/rag';
+import { useConversationActions } from '@/lib/useConversationActions';
 import SearchInput from './SearchInput';
 import ConversationItem from './ConversationItem';
 import SidebarHeader from './SidebarHeader';
