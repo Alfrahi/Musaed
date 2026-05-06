@@ -223,6 +223,51 @@ impl RagStore {
         Ok(())
     }
 
+    /// Creates a new project from raw parameters, handling ID generation,
+    /// timestamping, path canonicalization, and assembly. This moves business
+    /// logic out of Tauri commands to satisfy the "thin adapter" rule.
+    pub async fn create_project_with_params(
+        &self,
+        name: &str,
+        path: &str,
+        embedding_model: &str,
+        ignore_patterns: &[String],
+    ) -> Result<RagProject, String> {
+        // Resolve and validate the project path
+        let p = Path::new(path);
+        let canonical_path = p.canonicalize()
+            .map_err(|e| format!("Path does not exist or is not accessible: {}", e))?;
+        if !canonical_path.is_dir() {
+            return Err(format!("Path is not a directory: {:?}", canonical_path));
+        }
+        let canonical_path_str = canonical_path.to_string_lossy().to_string();
+
+        // Generate ID and timestamps
+        let id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+
+        // Assemble project struct
+        let project = RagProject {
+            id: id.clone(),
+            name: name.to_string(),
+            path: canonical_path_str,
+            embedding_model: embedding_model.to_string(),
+            ignore_patterns: ignore_patterns.to_vec(),
+            created_at: now.clone(),
+            updated_at: now,
+            indexed_at: None,
+            file_count: 0,
+            chunk_count: 0,
+            total_bytes: 0,
+            status: ProjectStatus::Idle,
+        };
+
+        // Persist to database
+        self.create_project(&project)?;
+
+        Ok(project)
+    }
+
     pub fn get_project(&self, id: &str) -> Result<Option<RagProject>, String> {
         let conn = self.conn.lock().map_err(|e| e.to_string())?;
         let mut stmt = conn

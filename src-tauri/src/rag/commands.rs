@@ -112,63 +112,21 @@ pub async fn cmd_rag_add_project(
         return Ok(validation::rag_validation_error(e));
     }
 
-    let p = std::path::Path::new(&path);
-
-    // Security: Canonicalize and verify path is valid
-    let canonical_path = match p.canonicalize() {
-        Ok(cp) => cp,
-        Err(e) => {
-            return Ok(validation::rag_validation_error(format!(
-                "Path does not exist or is not accessible: {}",
-                e
-            )));
-        }
-    };
-
-    // Verify it's a directory
-    if !canonical_path.is_dir() {
-        return Ok(validation::rag_validation_error(format!(
-            "Path is not a directory: {:?}",
-            canonical_path
-        )));
-    }
-
-    let canonical_path_str = canonical_path.to_string_lossy().to_string();
-
-    let id = uuid::Uuid::new_v4().to_string();
-    let now = chrono::Utc::now().to_rfc3339();
-
-    let project = RagProject {
-        id: id.clone(),
-        name,
-        path: canonical_path_str,
-        embedding_model,
-        ignore_patterns,
-        created_at: now.clone(),
-        updated_at: now,
-        indexed_at: None,
-        file_count: 0,
-        chunk_count: 0,
-        total_bytes: 0,
-        status: crate::rag::types::ProjectStatus::Idle,
-    };
-
     let store = state.inner();
     let s = store.lock().await;
 
-    if let Err(e) = s.create_project(&project) {
-        return Ok(ApiResponse {
+    match s.create_project_with_params(&name, &path, &embedding_model, &ignore_patterns).await {
+        Ok(project) => Ok(ApiResponse {
+            success: true,
+            data: Some(project),
+            error: None,
+        }),
+        Err(e) => Ok(ApiResponse {
             success: false,
             data: None,
             error: Some(BackendError::new("RAG_CREATE_ERROR", e)),
-        });
+        }),
     }
-
-    Ok(ApiResponse {
-        success: true,
-        data: Some(project),
-        error: None,
-    })
 }
 
 #[tauri::command]

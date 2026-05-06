@@ -15,6 +15,7 @@ pub mod client;
 pub mod commands;
 pub mod error;
 pub mod models;
+pub mod service;
 pub mod streaming;
 pub mod title;
 pub mod types;
