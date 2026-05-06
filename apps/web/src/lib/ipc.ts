@@ -347,12 +347,12 @@ async function callInternal<K extends keyof CommandMap>(
     }
 
     if (response?.error) {
-      // Sanitize the backend error before displaying to UI
+      // Sanitize the backend error before displaying to UI and return null to indicate failure
       const sanitized = sanitizeError(response.error);
       if (!options?.quiet) {
         toast.error(sanitized.message);
       }
-      throw new Error(sanitized.message);
+      return null;
     }
     throw new Error('Unknown error occurred during IPC call');
   } catch (err) {

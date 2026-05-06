@@ -56,7 +56,15 @@ export const sanitizeError = (error: unknown): BackendError => {
     }
   }
 
-  // Step 1: Redact filesystem paths (Unix and Windows)
+  // Step 1: Redact sensitive URLs while preserving localhost for debugging
+  const urlRegex = /(https?:\/\/(?!localhost|127\.0\.0\.1|::1)[^\s<>"{}|\\^`\[\]]+)/gi;
+  message = message.replace(urlRegex, '[URL REDACTED]');
+
+  // Step 2: Redact database connection strings before path redaction
+  const dbRegex = /(mongodb|postgres|mysql|redis):\/\/[^\s]+/gi;
+  message = message.replace(dbRegex, '[CONNECTION STRING REDACTED]');
+
+  // Step 3: Redact filesystem paths (Unix and Windows)
   // Unix-style: /home/user/..., /root/..., /etc/...
   const unixPathRegex =
     /\/(?:home|root|etc|usr|var|opt|srv|tmp|mnt|proc|sys|dev|boot|lib|bin|sbin|Applications?|Users?)[^\s]*/gi;
@@ -70,11 +78,7 @@ export const sanitizeError = (error: unknown): BackendError => {
   const genericPathRegex = /([a-zA-Z]:\\(?:[^\\\s]+\\)+|(?:\/[^/\s]+)+\/)/g;
   message = message.replace(genericPathRegex, '[PATH REDACTED]');
 
-  // Step 2: Redact sensitive URLs while preserving localhost for debugging
-  const urlRegex = /(https?:\/\/(?!localhost|127\.0\.0\.1|::1)[^\s<>"{}|\\^`\[\]]+)/gi;
-  message = message.replace(urlRegex, '[URL REDACTED]');
-
-  // Step 3: Remove common sensitive patterns
+  // Step 4: Remove remaining sensitive patterns (API keys, private IPs, stack traces)
   const sensitivePatterns: Array<[RegExp, string]> = [
     // API keys/tokens
     [/(api[_-]?key|token|secret|password|passwd|pwd)[=:]\s*["']?[\w-]{8,}["']?/gi, '$1=[REDACTED]'],
@@ -83,8 +87,6 @@ export const sanitizeError = (error: unknown): BackendError => {
       /\b(?:10\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])|192\.168)\.\d{1,3}\.\d{1,3}(?::\d+)?/g,
       '[PRIVATE IP REDACTED]',
     ],
-    // Database connection strings
-    [/(mongodb|postgres|mysql|redis):\/\/[^\s]+/gi, '[CONNECTION STRING REDACTED]'],
     // Stack traces - remove file:line:col patterns
     [/(?:File|at)\s+["'][^"']+["']:\d+:\d+/g, '[LOCATION REDACTED]'],
     [
@@ -97,10 +99,10 @@ export const sanitizeError = (error: unknown): BackendError => {
     message = message.replace(pattern, replacement);
   }
 
-  // Step 4: Normalize whitespace and trim
+  // Step 5: Normalize whitespace and trim
   message = message.replace(/\s+/g, ' ').trim();
 
-  // Step 5: Fallback for completely empty messages
+  // Step 6: Fallback for completely empty messages
   if (!message || message.length < 2) {
     message = 'An error occurred. Please try again.';
   }
