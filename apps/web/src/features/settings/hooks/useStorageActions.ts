@@ -13,11 +13,8 @@ import { checkIsTauri, dialog, fs } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
 import { ConversationSchema, OllamaModel, Message } from '@musaed/contracts';
-import { z } from 'zod';
 import { useMessageStore } from '../../../store/stores/message-store';
 import { ConversationMetadata } from '../../../store/stores/conversation-store';
-
-// Unused type removed
 
 const useSizeCalculations = (
   conversations: Record<string, ConversationMetadata>,

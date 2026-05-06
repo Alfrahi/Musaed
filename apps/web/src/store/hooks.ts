@@ -123,7 +123,7 @@ export function useIsOllamaConnected(): boolean {
 }
 
 export function useUIError(): string | null {
-  return useUIStore((s) => s.error);
+  return useUIStore((s) => s.errorMessage);
 }
 
 export function useIsSettingsOpen(): boolean {
@@ -156,7 +156,7 @@ export function useSetOllamaConnected(): (v: boolean) => void {
 }
 
 export function useSetUIError(): (v: string | null) => void {
-  return useUIStore((s) => s.setError);
+  return useUIStore((s) => s.setErrorMessage);
 }
 
 export function useSetSettingsOpen(): (v: boolean) => void {

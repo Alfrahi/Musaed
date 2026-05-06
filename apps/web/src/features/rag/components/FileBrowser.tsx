@@ -74,7 +74,7 @@ const TreeNodes = ({
 
 const FileBrowser = ({ onFileSelect }: FileBrowserProps) => {
   const activeProject = useActiveRagProject();
-  const { files, isLoading, error, fetchIndexedFiles, buildFileTree } = useRagFileBrowser();
+  const { files, isLoading, errorMessage, fetchIndexedFiles, buildFileTree } = useRagFileBrowser();
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
   const language = useLanguage();
   const { t } = useTranslation(language);
@@ -107,10 +107,10 @@ const FileBrowser = ({ onFileSelect }: FileBrowserProps) => {
     );
   }
 
-  if (error) {
+  if (errorMessage) {
     return (
       <div className="text-destructive p-4 text-sm">
-        <p>{error}</p>
+        <p>{errorMessage}</p>
         <button
           type="button"
           className="hover:bg-accent mt-2 inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm"

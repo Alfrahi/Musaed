@@ -13,14 +13,14 @@ interface FileNode {
 export function useRagFileBrowser() {
   const [files, setFiles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const ollamaUrl = useOllamaUrl();
 
   // Fetch all unique file paths for a project by searching with a broad query
   const fetchIndexedFiles = useCallback(
     async (projectId: string) => {
       setIsLoading(true);
-      setError(null);
+      setErrorMessage(null);
       try {
         // Use a broad search to discover all indexed files
         const results = await ragApi.search({
@@ -38,7 +38,7 @@ export function useRagFileBrowser() {
           setFiles([]);
         }
       } catch (err) {
-        setError('Failed to fetch indexed files.');
+        setErrorMessage('Failed to fetch indexed files.');
         console.error('Error fetching indexed files:', err);
       } finally {
         setIsLoading(false);
@@ -93,7 +93,7 @@ export function useRagFileBrowser() {
   return {
     files,
     isLoading,
-    error,
+    errorMessage,
     fetchIndexedFiles,
     fetchFileChunks,
     buildFileTree,

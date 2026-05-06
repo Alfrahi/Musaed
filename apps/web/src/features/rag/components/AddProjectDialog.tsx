@@ -27,7 +27,7 @@ function useFormState() {
   const [embeddingModel, setEmbeddingModel] = useState('nomic-embed-text-v2-moe');
   const [ignorePatterns, setIgnorePatterns] = useState('node_modules\ndist\n.git');
   const [isAdding, setIsAdding] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   return {
     name,
     setName,
@@ -39,8 +39,8 @@ function useFormState() {
     setIgnorePatterns,
     isAdding,
     setIsAdding,
-    error,
-    setError,
+    errorMessage,
+    setErrorMessage,
   };
 }
 
@@ -72,12 +72,12 @@ function useHandleAdd(
 ) {
   return async () => {
     if (!form.name.trim() || !form.path.trim() || !form.embeddingModel.trim()) {
-      form.setError(t('rag.requiredFieldsError'));
+      form.setErrorMessage(t('rag.requiredFieldsError'));
       return;
     }
 
     form.setIsAdding(true);
-    form.setError(null);
+    form.setErrorMessage(null);
 
     try {
       const patterns = form.ignorePatterns
@@ -92,7 +92,7 @@ function useHandleAdd(
       });
       if (result) onAdded();
     } catch (e) {
-      form.setError(e instanceof Error ? e.message : t('rag.failedToUpdateProject'));
+      form.setErrorMessage(e instanceof Error ? e.message : t('rag.failedToUpdateProject'));
     } finally {
       form.setIsAdding(false);
     }
@@ -176,7 +176,7 @@ export const AddProjectDialog = ({ onClose, onAdded }: AddProjectDialogProps) =>
           <p className="text-muted-foreground text-xs">{t('rag.ignorePatternsDescription')}</p>
         </div>
 
-        {form.error && <p className="text-sm text-red-500">{form.error}</p>}
+        {form.errorMessage && <p className="text-sm text-red-500">{form.errorMessage}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <button

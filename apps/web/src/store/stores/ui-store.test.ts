@@ -6,7 +6,7 @@ describe('UI Store', () => {
     useUIStore.setState({
       isStreaming: false,
       isInitialized: false,
-      error: null,
+      errorMessage: null,
       isSettingsOpen: false,
     });
   });
@@ -17,11 +17,11 @@ describe('UI Store', () => {
   });
 
   it('sets and clears errors', () => {
-    useUIStore.getState().setError('Failed to fetch');
-    expect(useUIStore.getState().error).toBe('Failed to fetch');
+    useUIStore.getState().setErrorMessage('Failed to fetch');
+    expect(useUIStore.getState().errorMessage).toBe('Failed to fetch');
 
-    useUIStore.getState().setError(null);
-    expect(useUIStore.getState().error).toBeNull();
+    useUIStore.getState().setErrorMessage(null);
+    expect(useUIStore.getState().errorMessage).toBeNull();
   });
 
   it('toggles settings modal', () => {

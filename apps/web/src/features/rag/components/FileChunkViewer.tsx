@@ -58,20 +58,20 @@ const FileChunkViewer = ({ filePath }: FileChunkViewerProps) => {
   const { fetchFileChunks } = useRagFileBrowser();
   const [chunks, setChunks] = useState<ChunkRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!activeProject?.id || !filePath) return;
 
     setIsLoading(true);
-    setError(null);
+    setErrorMessage(null);
 
     fetchFileChunks(activeProject.id, filePath)
       .then((data) => {
         setChunks(data || []);
       })
       .catch((err: unknown) => {
-        setError('Failed to fetch file chunks.');
+        setErrorMessage('Failed to fetch file chunks.');
         console.error('Error fetching file chunks:', err);
       })
       .finally(() => {
@@ -87,11 +87,11 @@ const FileChunkViewer = ({ filePath }: FileChunkViewerProps) => {
     );
   }
 
-  if (error) {
+  if (errorMessage) {
     return (
       <div className="text-destructive flex items-center gap-2 p-4 text-sm">
         <AlertCircle className="h-4 w-4" />
-        <p>{error}</p>
+        <p>{errorMessage}</p>
       </div>
     );
   }

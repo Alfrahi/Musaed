@@ -35,6 +35,10 @@ import type {
 } from '@musaed/contracts';
 import toast from 'react-hot-toast';
 
+/**
+ * Maps all supported Tauri command names to their argument and return types.
+ * This type is used to ensure type-safe IPC calls.
+ */
 export interface CommandMap {
   cmd_ollama_get_models: { args: { baseUrl: string }; return: OllamaModel[] };
   cmd_ollama_chat: {
@@ -104,8 +108,8 @@ export interface CommandMap {
 const voidSchema = z.preprocess((val) => (val === null ? undefined : val), z.void());
 
 /**
- * Input validation schemas for each command's args.
- * Undefined entries mean the args are trivially valid (e.g. empty object).
+ * Maps command names to Zod schemas that validate the input arguments.
+ * Entries are undefined when no validation is needed (e.g., empty object args).
  */
 const CommandInputSchemas: {
   [K in keyof CommandMap]: z.ZodType<CommandMap[K]['args']> | undefined;
@@ -202,6 +206,10 @@ const CommandInputSchemas: {
   }),
 };
 
+/**
+ * Maps command names to Zod schemas that validate the return values.
+ * Entries are undefined when no validation is needed (e.g., void).
+ */
 const CommandReturnSchemas: {
   [K in keyof CommandMap]: z.ZodType<CommandMap[K]['return']> | undefined;
 } = {
@@ -235,7 +243,8 @@ const CommandReturnSchemas: {
 };
 
 /**
- * Checks if the current environment is Tauri.
+ * Checks if the current runtime environment is a Tauri desktop application.
+ * @returns true if running inside Tauri, false otherwise (e.g., browser dev mode)
  */
 export const checkIsTauri = (): boolean =>
   typeof window !== 'undefined' &&
@@ -243,7 +252,10 @@ export const checkIsTauri = (): boolean =>
 
 /**
  * Validates that the provided URL is a safe local-only target.
+ * Only allows localhost, loopback, private IP ranges, and .local hostnames.
  * Strips any path, query, or fragment to prevent SSRF via path injection.
+ * @param url - The URL to validate (full URL string)
+ * @returns true if the URL is a permitted local address, false otherwise
  */
 export const isValidOllamaUrl = (url: string): boolean => {
   try {
@@ -260,7 +272,10 @@ export const isValidOllamaUrl = (url: string): boolean => {
 
 /**
  * Sanitizes a user-supplied Ollama URL by stripping path, query, and fragment.
- * Returns only scheme + host + port.
+ * Returns only scheme + host + port to prevent injection attacks.
+ * If URL parsing fails, returns the original string unchanged.
+ * @param url - The URL to sanitize
+ * @returns A sanitized URL string containing only protocol, host, and optional port
  */
 export const sanitizeOllamaUrl = (url: string): string => {
   try {
@@ -272,8 +287,13 @@ export const sanitizeOllamaUrl = (url: string): string => {
 };
 
 /**
- * Internal helper to perform IPC calls via Tauri core.
- * All errors are sanitized before display to prevent sensitive data leakage.
+ * Internal helper to perform typed IPC calls via Tauri.
+ * Handles input/output validation, URL security checks, and error sanitization.
+ * @param command - The command key from CommandMap
+ * @param args - The arguments object for the command
+ * @param options - Optional flags (e.g., quiet suppresses toast errors)
+ * @returns The validated return value from the Rust backend, or null if call was blocked
+ * @throws {Error} If the backend returns an error or validation fails
  */
 async function callInternal<K extends keyof CommandMap>(
   command: K,
@@ -343,76 +363,218 @@ async function callInternal<K extends keyof CommandMap>(
 }
 
 /**
- * Ollama Engine API
+ * Ollama Engine API - manages Ollama server interactions.
+ * - getModels: fetches list of installed models
+ * - deleteModel: removes a model from the server
+ * - pullModel: downloads a model (async, void return)
+ * - checkHealth: checks if Ollama is running (quiet, no toast)
+ * - verifyService: performs a simple ping to verify Ollama responds
+ * - validateModel: checks if a model name is valid and available
  */
 export const ollamaApi = {
+  /**
+   * Fetches the list of installed models from the Ollama server.
+   * @param baseUrl - The Ollama server URL (e.g., http://localhost:11434)
+   * @returns Array of model info or null if call failed/blocked
+   */
   getModels: (baseUrl: string) => callInternal('cmd_ollama_get_models', { baseUrl }),
+  /**
+   * Deletes a model from the Ollama server.
+   * @param baseUrl - The Ollama server URL
+   * @param name - Name of the model to delete
+   * @returns true if deletion succeeded, false otherwise
+   */
   deleteModel: (baseUrl: string, name: string) =>
     callInternal('cmd_ollama_delete_model', { baseUrl, name }),
+  /**
+   * Starts pulling (downloading) a model. This is an async operation on the backend.
+   * @param baseUrl - The Ollama server URL
+   * @param name - Name of the model to pull
+   */
   pullModel: (baseUrl: string, name: string) =>
     callInternal('cmd_ollama_pull_model', { baseUrl, name }),
+  /**
+   * Checks the health of the Ollama server (quiet mode, no toast on failure).
+   * @param baseUrl - The Ollama server URL
+   * @returns Health data including version and response time, or null if unhealthy/blocked
+   */
   checkHealth: (baseUrl: string) =>
     callInternal('cmd_ollama_check_health', { baseUrl }, { quiet: true }),
+  /**
+   * Verifies that the Ollama service is reachable and responsive.
+   * @param baseUrl - The Ollama server URL
+   * @returns A status string (typically "ok") or empty on failure
+   */
   verifyService: (baseUrl: string) => callInternal('cmd_ollama_verify_service', { baseUrl }),
+  /**
+   * Validates that a model exists and is ready for use.
+   * @param baseUrl - The Ollama server URL
+   * @param modelName - The model name to validate
+   * @returns Validation result with status and optional error message
+   */
   validateModel: (baseUrl: string, modelName: string) =>
     callInternal('cmd_ollama_validate_model', { baseUrl, modelName }),
 };
 
 /**
- * Chat & Interaction API
+ * Chat & Interaction API - handles streaming chat and abort control.
+ * - chat: initiates a streaming chat request (stream handled separately)
+ * - abort: cancels an ongoing chat by requestId
  */
 export const chatApi = {
+  /**
+   * Initiates a chat completion. Returns immediately with boolean; streaming handled via events.
+   * @param args - Chat arguments including messages, model, options, and requestId
+   * @returns true if request was accepted, false if blocked/validation failed
+   */
   chat: (args: CommandMap['cmd_ollama_chat']['args']) => callInternal('cmd_ollama_chat', args),
+  /**
+   * Aborts an in-progress chat request.
+   * @param requestId - The request identifier returned from the chat call
+   */
   abort: (requestId: string) => callInternal('cmd_ollama_abort_chat', { requestId }),
 };
 
 /**
- * Title Generation API
+ * Title Generation API - generates chat titles from conversation snippets.
  */
 export const titleApi = {
+  /**
+   * Generates a concise title for a chat session based on the first user/assistant exchange.
+   * Runs in quiet mode (no toast errors).
+   * @param args - Contains baseUrl, model, userMessage, assistantMessage, and language
+   * @returns Generated title string, or empty on failure
+   */
   generate: (args: CommandMap['cmd_ollama_generate_title']['args']) =>
     callInternal('cmd_ollama_generate_title', args, { quiet: true }),
 };
 
 /**
- * Logging & Diagnostics API
+ * Logging & Diagnostics API - writes to the application log stream.
  */
 export const logApi = {
+  /**
+   * Appends a log entry to the persistent log stream.
+   * @param entry - Log message string (will be validated/truncated per limits)
+   */
   append: (entry: string) => callInternal('cmd_logs_append', { entry }),
+  /**
+   * Clears all log entries.
+   */
   clear: () => callInternal('cmd_logs_clear', {}),
 };
 
 /**
- * RAG API
+ * RAG (Retrieval-Augmented Generation) API - manages project indexing and semantic search.
  */
 export const ragApi = {
+  /**
+   * Creates a new RAG project by registering a folder path and embedding model.
+   * @param args - { name, path, embeddingModel, ignorePatterns[] }
+   * @returns The created RagProject object or null on failure
+   */
   addProject: (args: CommandMap['cmd_rag_add_project']['args']) =>
     callInternal('cmd_rag_add_project', args),
+  /**
+   * Removes a RAG project (does not delete files on disk).
+   * @param projectId - The unique project identifier
+   * @returns true if removal succeeded, false otherwise
+   */
   removeProject: (projectId: string) => callInternal('cmd_rag_remove_project', { projectId }),
+  /**
+   * Updates an existing project's name or ignore patterns.
+   * @param args - { projectId, name?, ignorePatterns? }
+   * @returns The updated RagProject object or null on failure
+   */
   updateProject: (args: CommandMap['cmd_rag_update_project']['args']) =>
     callInternal('cmd_rag_update_project', args),
+  /**
+   * Lists all registered RAG projects.
+   * @returns Array of RagProject objects
+   */
   listProjects: () => callInternal('cmd_rag_list_projects', {}),
+  /**
+   * Fetches a single project by ID.
+   * @param projectId - The project identifier
+   * @returns The RagProject object or null if not found
+   */
   getProject: (projectId: string) => callInternal('cmd_rag_get_project', { projectId }),
+  /**
+   * Triggers indexing of all files in a project.
+   * @param projectId - The project identifier
+   * @param force - If true, reindexes already indexed files
+   * @param baseUrl - Optional Ollama base URL for embedding
+   * @returns true if indexing started, false otherwise
+   */
   indexProject: (projectId: string, force?: boolean, baseUrl?: string) =>
     callInternal('cmd_rag_index_project', { projectId, force, baseUrl }),
+  /**
+   * Aborts an ongoing indexing operation.
+   * @param projectId - The project identifier
+   * @returns true if abort was signaled, false otherwise
+   */
   abortIndex: (projectId: string) => callInternal('cmd_rag_abort_index', { projectId }),
+  /**
+   * Reindexes a project (shortcut for abort + index).
+   * @param projectId - The project identifier
+   * @param baseUrl - Optional Ollama base URL for embedding
+   * @returns true if reindexing started, false otherwise
+   */
   reindexProject: (projectId: string, baseUrl?: string) =>
     callInternal('cmd_rag_reindex_project', { projectId, baseUrl }),
+  /**
+   * Gets the current indexing status for a project.
+   * @param projectId - The project identifier
+   * @returns IndexStatus object with progress and state
+   */
   getIndexStatus: (projectId: string) => callInternal('cmd_rag_get_index_status', { projectId }),
+  /**
+   * Performs a semantic search over indexed content.
+   * @param args - { projectId, query, topK?, threshold?, baseUrl? }
+   * @returns Array of SearchResult with matched chunks and scores
+   */
   search: (args: CommandMap['cmd_rag_search']['args']) => callInternal('cmd_rag_search', args),
+  /**
+   * Fetches all chunk records for a specific file within a project.
+   * @param projectId - The project identifier
+   * @param filePath - Absolute path to the file
+   * @returns Array of ChunkRecord objects
+   */
   getFileChunks: (projectId: string, filePath: string) =>
     callInternal('cmd_rag_get_file_chunks', { projectId, filePath }),
+  /**
+   * Gets aggregate statistics for a project (file count, chunk count, size, etc.).
+   * @param projectId - The project identifier
+   * @returns ProjectStats object or null on failure
+   */
   getProjectStats: (projectId: string) =>
     callInternal('cmd_cmd_rag_get_project_stats', { projectId }),
+  /**
+   * Changes the embedding model used by a project.
+   * @param projectId - The project identifier
+   * @param modelName - Name of the embedding model to switch to
+   * @returns true if model was updated successfully, false otherwise
+   */
   setEmbeddingModel: (projectId: string, modelName: string) =>
     callInternal('cmd_rag_set_embedding_model', { projectId, modelName }),
+  /**
+   * Validates that an embedding model is available and acceptable.
+   * @param baseUrl - Optional Ollama base URL (uses default if omitted)
+   * @param modelName - The embedding model name to validate
+   * @returns RagModelValidation with status and optional message
+   */
   validateEmbeddingModel: (baseUrl: string | undefined, modelName: string) =>
     callInternal('cmd_rag_validate_embedding_model', { baseUrl, modelName }),
 };
 
 /**
- * Listen for events from the backend.
- * All event payloads are validated and sanitized before passing to handlers.
+ * Subscribes to a Tauri event from the backend.
+ * If a Zod schema is provided, payloads are validated before being passed to the handler.
+ * Invalid payloads are logged and discarded.
+ * @param event - The event name string
+ * @param handler - Callback function to process validated event payloads
+ * @param schema - Optional Zod schema for payload validation
+ * @returns A function that unsubscribes from the event when called
  */
 export async function listen<T>(
   event: string,
@@ -438,7 +600,10 @@ export async function listen<T>(
 }
 
 /**
- * Dialog plugin wrappers
+ * Wrapper around Tauri's dialog plugin with browser fallbacks.
+ * - `ask`: Shows a confirmation dialog; uses window.confirm in browser.
+ * - `save`: Shows a file save dialog; returns null in browser.
+ * - `open`: Shows a file/folder open dialog; returns null in browser.
  */
 export const dialog = {
   ask: async (msg: string, opts: { title?: string; kind?: 'info' | 'warning' | 'error' }) =>
@@ -459,7 +624,8 @@ export const dialog = {
 };
 
 /**
- * Opener plugin wrappers
+ * Wrapper around Tauri's opener plugin.
+ * - `openUrl`: Opens a URL in the default browser; uses window.open in browser (may be blocked).
  */
 export const opener = {
   openUrl: async (url: string) =>
@@ -469,7 +635,9 @@ export const opener = {
 };
 
 /**
- * Store plugin wrappers
+ * Wrapper around Tauri's store plugin for persistent key-value storage.
+ * - `load`: Loads a store file; returns null in browser.
+ * Provides a simple key-value store interface backed by a JSON file.
  */
 export type StoreOptions = Partial<import('@tauri-apps/plugin-store').StoreOptions>;
 
@@ -484,7 +652,11 @@ export const store = {
 };
 
 /**
- * Filesystem plugin wrappers
+ * Wrapper around Tauri's filesystem plugin.
+ * - `writeTextFile`: Writes a text file to the local filesystem.
+ * - `readTextFile`: Reads a text file and returns its contents as a string.
+ * - `readFile`: Reads a binary file and returns a Uint8Array.
+ * All methods are no-ops (return null/undefined) when running in a browser.
  */
 export const fs = {
   writeTextFile: async (path: string, content: string) =>

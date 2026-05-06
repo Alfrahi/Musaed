@@ -8,7 +8,7 @@ interface UIState {
   isInitialized: boolean;
   isHydrated: boolean;
   isOllamaConnected: boolean;
-  error: string | null;
+  errorMessage: string | null;
   isSettingsOpen: boolean;
   isLibraryOpen: boolean;
   isInfoOpen: boolean;
@@ -16,7 +16,7 @@ interface UIState {
   setInitialized: (isInitialized: boolean) => void;
   setHydrated: (isHydrated: boolean) => void;
   setOllamaConnected: (isConnected: boolean) => void;
-  setError: (error: string | null) => void;
+  setErrorMessage: (errorMessage: string | null) => void;
   setSettingsOpen: (isSettingsOpen: boolean) => void;
   setLibraryOpen: (isLibraryOpen: boolean) => void;
   setInfoOpen: (isInfoOpen: boolean) => void;
@@ -26,7 +26,7 @@ interface UIState {
 export const selectIsAnyModalOpen = (state: UIState) =>
   state.isSettingsOpen || state.isLibraryOpen || state.isInfoOpen;
 
-export const selectHasError = (state: UIState) => !!state.error;
+export const selectHasError = (state: UIState) => !!state.errorMessage;
 
 export const useUIStore = createWithEqualityFn<UIState>()(
   (set) => ({
@@ -34,7 +34,7 @@ export const useUIStore = createWithEqualityFn<UIState>()(
     isInitialized: false,
     isHydrated: false,
     isOllamaConnected: false,
-    error: null,
+    errorMessage: null,
     isSettingsOpen: false,
     isLibraryOpen: false,
     isInfoOpen: false,
@@ -42,7 +42,7 @@ export const useUIStore = createWithEqualityFn<UIState>()(
     setInitialized: (isInitialized) => set({ isInitialized }),
     setHydrated: (isHydrated) => set({ isHydrated }),
     setOllamaConnected: (isOllamaConnected) => set({ isOllamaConnected }),
-    setError: (error) => set({ error }),
+    setErrorMessage: (errorMessage) => set({ errorMessage }),
     setSettingsOpen: (isSettingsOpen) => set({ isSettingsOpen }),
     setLibraryOpen: (isLibraryOpen) => set({ isLibraryOpen }),
     setInfoOpen: (isInfoOpen) => set({ isInfoOpen }),
