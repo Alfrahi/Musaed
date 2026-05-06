@@ -3,9 +3,13 @@
 import { useState } from 'react';
 import { FileBrowser } from './FileBrowser';
 import { FileChunkViewer } from './FileChunkViewer';
+import { useLanguage } from '@/store/hooks';
+import { useTranslation } from '@/lib/i18n';
 
 const RagExplorer = () => {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const language = useLanguage();
+  const { t } = useTranslation(language);
 
   return (
     <div className="flex h-full">
@@ -17,7 +21,7 @@ const RagExplorer = () => {
           <FileChunkViewer filePath={selectedFile} />
         ) : (
           <div className="text-muted-foreground flex h-full items-center justify-center">
-            <p>Select a file to view its chunks</p>
+            <p>{t('rag.selectFileToViewChunks')}</p>
           </div>
         )}
       </div>

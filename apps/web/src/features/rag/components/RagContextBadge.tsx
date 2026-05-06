@@ -1,11 +1,14 @@
 'use client';
 
 import { FolderOpen, X } from 'lucide-react';
-import { useActiveRagProject, useSetActiveRagProjectId } from '@/store/hooks';
+import { useActiveRagProject, useSetActiveRagProjectId, useLanguage } from '@/store/hooks';
+import { useTranslation } from '@/lib/i18n';
 
 export const RagContextBadge = () => {
   const activeProject = useActiveRagProject();
   const setActiveProjectId = useSetActiveRagProjectId();
+  const language = useLanguage();
+  const { t } = useTranslation(language);
 
   if (!activeProject) return null;
 
@@ -16,7 +19,7 @@ export const RagContextBadge = () => {
       <button
         onClick={() => setActiveProjectId(null)}
         className="hover:bg-accent text-muted-foreground hover:text-foreground rounded p-0.5"
-        title="Deactivate RAG context"
+        title={t('rag.deactivateRag')}
       >
         <X className="h-2.5 w-2.5" />
       </button>

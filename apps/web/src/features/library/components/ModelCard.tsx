@@ -141,20 +141,21 @@ const CapabilityBadges = ({
   isVision,
   isCode,
   isReasoning,
-}: ReturnType<typeof getModelCapabilities>) => (
+  t,
+}: ReturnType<typeof getModelCapabilities> & { t: (k: string) => string }) => (
   <div className="flex gap-1">
     {isVision && (
-      <span title="Vision Capable">
+      <span title={t('library.visionCapable')}>
         <Eye size={14} className="text-purple-500" />
       </span>
     )}
     {isCode && (
-      <span title="Coding Specialized">
+      <span title={t('library.codingSpecialized')}>
         <Code size={14} className="text-blue-500" />
       </span>
     )}
     {isReasoning && (
-      <span title="Reasoning Model">
+      <span title={t('library.reasoningModel')}>
         <BrainCircuit size={14} className="text-amber-500" />
       </span>
     )}
@@ -162,18 +163,22 @@ const CapabilityBadges = ({
 );
 
 /** Hardware fit badge (Fast / High Resource). */
-const HardwareBadge = ({ isLight, isHeavy }: ReturnType<typeof getHardwareFit>) => {
+const HardwareBadge = ({
+  isLight,
+  isHeavy,
+  t,
+}: ReturnType<typeof getHardwareFit> & { t: (k: string) => string }) => {
   if (isLight) {
     return (
       <span className="rounded-sm bg-green-100 px-1.5 py-0.5 text-[9px] font-black tracking-tighter text-green-600 uppercase dark:bg-green-900/20">
-        Fast / Low VRAM
+        {t('library.fastLowVram')}
       </span>
     );
   }
   if (isHeavy) {
     return (
       <span className="rounded-sm bg-orange-100 px-1.5 py-0.5 text-[9px] font-black tracking-tighter text-orange-600 uppercase dark:bg-orange-900/20">
-        High Resource
+        {t('library.highResource')}
       </span>
     );
   }
@@ -275,35 +280,39 @@ const FeaturedModelCard = ({
   language: Language;
   capabilities: ReturnType<typeof getModelCapabilities>;
   hardwareFit: ReturnType<typeof getHardwareFit>;
-}) => (
-  <div
-    className={cn(
-      'group flex h-full flex-col justify-between rounded-lg border p-5 transition-all duration-300',
-      isDownloaded
-        ? 'border-blue-100 bg-blue-50/30 dark:border-blue-900/30 dark:bg-blue-900/10'
-        : 'border-zinc-200 bg-white shadow-sm hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/50 dark:hover:border-zinc-700'
-    )}
-  >
-    <FeaturedModelHeader
-      name={name}
-      description={description}
-      isDownloaded={isDownloaded}
-      capabilities={capabilities}
-    />
-    <div className="mbs-6">
-      <div className="mbe-4 flex items-center gap-2">
-        <HardwareBadge {...hardwareFit} />
-      </div>
-      <PullControl
+}) => {
+  const { t } = useTranslation(language);
+  return (
+    <div
+      className={cn(
+        'group flex h-full flex-col justify-between rounded-lg border p-5 transition-all duration-300',
+        isDownloaded
+          ? 'border-blue-100 bg-blue-50/30 dark:border-blue-900/30 dark:bg-blue-900/10'
+          : 'border-zinc-200 bg-white shadow-sm hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/50 dark:hover:border-zinc-700'
+      )}
+    >
+      <FeaturedModelHeader
         name={name}
+        description={description}
         isDownloaded={isDownloaded}
-        pullStatus={pullStatus}
-        onPull={onPull}
-        language={language}
+        capabilities={capabilities}
+        t={t}
       />
+      <div className="mbs-6">
+        <div className="mbe-4 flex items-center gap-2">
+          <HardwareBadge {...hardwareFit} t={t} />
+        </div>
+        <PullControl
+          name={name}
+          isDownloaded={isDownloaded}
+          pullStatus={pullStatus}
+          onPull={onPull}
+          language={language}
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /** Header section of the featured card: name, badges, description. */
 const FeaturedModelHeader = ({
@@ -311,11 +320,13 @@ const FeaturedModelHeader = ({
   description,
   isDownloaded,
   capabilities,
+  t,
 }: {
   name: string;
   description?: string;
   isDownloaded: boolean;
   capabilities: ReturnType<typeof getModelCapabilities>;
+  t: (k: string) => string;
 }) => (
   <div className="space-y-3">
     <div className="flex items-start justify-between">
@@ -324,7 +335,7 @@ const FeaturedModelHeader = ({
           <h3 className="truncate text-lg font-bold transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400">
             {name}
           </h3>
-          <CapabilityBadges {...capabilities} />
+          <CapabilityBadges {...capabilities} t={t} />
         </div>
         {description && (
           <p className="mbs-1 line-clamp-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">

@@ -19,6 +19,7 @@
     "preview": "Preview",
     "code": "Code",
     "text": "Text",
+    "comingSoon": "Coming soon",
     "units": {
       "b": "B",
       "kb": "KB",
@@ -142,6 +143,40 @@
       }
     }
   },
+  "rag": {
+    "title": "RAG Projects",
+    "addProject": "Add RAG Project",
+    "addProjectDescription": "Add a local project folder to index. All files will be processed locally — no data leaves your machine.",
+    "projectName": "Project Name",
+    "projectFolder": "Project Folder",
+    "embeddingModel": "Embedding Model",
+    "ignorePatterns": "Ignore Patterns",
+    "ignorePatternsDescription": "One pattern per line. These are added to the default ignore list.",
+    "browse": "Browse",
+    "addProjectAction": "Add Project",
+    "noProjects": "No projects added yet",
+    "indexed": "Indexed",
+    "error": "Error",
+    "chunks": "{count, plural, =0 {No chunks} one {1 chunk} other {# chunks}}",
+    "indexProject": "Index project",
+    "reindexProject": "Re-index project",
+    "cancelIndexing": "Cancel indexing",
+    "removeProject": "Remove project",
+    "projectSettings": "Project Settings",
+    "projectUpdated": "Project updated",
+    "embeddingModelUpdated": "Embedding model updated — project will be reindexed.",
+    "failedToUpdateProject": "Failed to update project",
+    "noActiveProject": "No active project selected.",
+    "selectFileToViewChunks": "Select a file to view its chunks",
+    "indexedFiles": "Indexed Files",
+    "noFilesIndexed": "No files indexed.",
+    "embeddingModelNote": "Ollama embedding model. Install with: ollama pull {model}",
+    "requiredFieldsError": "Please fill in all required fields",
+    "deactivateRag": "Deactivate RAG context",
+    "defaultEmbeddingModel": "{model} (default)",
+    "indexing": "Indexing",
+    "cancel": "Cancel"
+  },
   "library": {
     "title": "Library",
     "modelManager": "Model Manager",
@@ -160,6 +195,11 @@
     "browseLibrary": "Browse Library",
     "noModelsFound": "No models found",
     "refreshModels": "Refresh models",
+    "visionCapable": "Vision Capable",
+    "codingSpecialized": "Coding Specialized",
+    "reasoningModel": "Reasoning Model",
+    "fastLowVram": "Fast / Low VRAM",
+    "highResource": "High Resource",
     "status": {
       "starting": "Starting...",
       "pullingManifest": "Pulling manifest...",
@@ -208,7 +248,15 @@
     "failedToFetchModels": "Failed to fetch models from Ollama",
     "initializationFailed": "Failed to initialize application",
     "fileTooLarge": "File exceeds the 10MB production limit",
-    "rateLimited": "Too many requests. Please wait a moment."
+    "rateLimited": "Too many requests. Please wait a moment.",
+    "networkError": "Network Connection Error",
+    "checkConnection": "Please check your internet connection and try again.",
+    "ollamaError": "Ollama Connection Error",
+    "startOllama": "Please ensure Ollama is running and accessible.",
+    "unknownError": "An unknown error occurred.",
+    "downloadOllama": "Download Ollama",
+    "report": "Report Issues",
+    "unsupportedLink": "Unsupported link"
   },
   "a11y": {
     "closeModal": "Close modal",
@@ -223,7 +271,8 @@
     "thinkingSection": "AI thought process section",
     "copyCode": "Copy code to clipboard",
     "searchLibrary": "Search model library",
-    "codeBlock": "{language} code block"
+    "codeBlock": "{language} code block",
+    "mermaidDiagram": "Rendered Mermaid diagram"
   },
   "info": {
     "openInfo": "Open application information",

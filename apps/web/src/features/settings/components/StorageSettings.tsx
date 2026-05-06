@@ -20,11 +20,13 @@ const ExportActions = ({
   onExportMarkdown,
   onImportJson,
   labels,
+  comingSoon,
 }: {
   onExportJson: () => void;
   onExportMarkdown: () => void;
   onImportJson: () => void;
   labels: { exportJson: string; importData: string; exportMarkdown: string };
+  comingSoon: string;
 }) => (
   <div className="pbs-2 flex flex-col gap-2">
     <div className="flex gap-2">
@@ -39,7 +41,7 @@ const ExportActions = ({
         disabled
         onClick={onImportJson}
         className="flex flex-1 cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-zinc-100 py-2 text-xs font-bold tracking-widest uppercase opacity-40 grayscale transition-all dark:bg-zinc-800"
-        title="Coming soon"
+        title={comingSoon}
       >
         <Upload size={14} />
         {labels.importData}
@@ -105,7 +107,7 @@ const StorageSettings = () => {
         <select
           value={globalSettings.chatRetentionDays}
           onChange={(e) => updateGlobalSettings({ chatRetentionDays: parseInt(e.target.value) })}
-          className="w-full cursor-pointer appearance-none rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs transition-all outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
+          className="w-full cursor-pointer appearance-none rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs transition-all outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-200 dark:bg-zinc-800"
         >
           {retentionOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -124,6 +126,7 @@ const StorageSettings = () => {
           importData: t('settings.storage.importData'),
           exportMarkdown: t('settings.storage.exportMarkdown'),
         }}
+        comingSoon={t('common.comingSoon')}
       />
     </div>
   );

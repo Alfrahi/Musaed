@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRagFileBrowser } from '../hooks/useRagFileBrowser';
-import { useActiveRagProject } from '../../../store/hooks';
+import { useActiveRagProject, useLanguage } from '../../../store/hooks';
 import { Loader2, Folder, File, RefreshCw } from 'lucide-react';
 import { cn } from '../../../lib/utils';
+import { useTranslation } from '@/lib/i18n';
 
 interface FileBrowserProps {
   onFileSelect?: (filePath: string) => void;
@@ -75,6 +76,8 @@ const FileBrowser = ({ onFileSelect }: FileBrowserProps) => {
   const activeProject = useActiveRagProject();
   const { files, isLoading, error, fetchIndexedFiles, buildFileTree } = useRagFileBrowser();
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
+  const language = useLanguage();
+  const { t } = useTranslation(language);
 
   useEffect(() => {
     if (activeProject?.id) {
@@ -114,7 +117,7 @@ const FileBrowser = ({ onFileSelect }: FileBrowserProps) => {
           onClick={handleRefresh}
         >
           <RefreshCw className="h-4 w-4" />
-          Retry
+          {t('common.retry')}
         </button>
       </div>
     );
@@ -123,7 +126,7 @@ const FileBrowser = ({ onFileSelect }: FileBrowserProps) => {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b p-2">
-        <h3 className="text-sm font-medium">Indexed Files</h3>
+        <h3 className="text-sm font-medium">{t('rag.indexedFiles')}</h3>
         <button type="button" className="hover:bg-accent rounded-md p-1" onClick={handleRefresh}>
           <RefreshCw className="h-4 w-4" />
         </button>
@@ -134,7 +137,7 @@ const FileBrowser = ({ onFileSelect }: FileBrowserProps) => {
             <TreeNodes nodes={fileTree} onFileSelect={onFileSelect} />
           </div>
         ) : (
-          <p className="text-muted-foreground p-2 text-sm">No files indexed.</p>
+          <p className="text-muted-foreground p-2 text-sm">{t('rag.noFilesIndexed')}</p>
         )}
       </div>
     </div>

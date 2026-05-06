@@ -19,6 +19,7 @@
     "preview": "معاينة",
     "code": "كود",
     "text": "نص",
+    "comingSoon": "قريباً",
     "units": {
       "b": "بايت",
       "kb": "ك.ب",
@@ -142,6 +143,40 @@
       }
     }
   },
+  "rag": {
+    "title": "مشاريع RAG",
+    "addProject": "إضافة مشروع RAG",
+    "addProjectDescription": "أضف مجلد مشروع محلي لفهرسته. ستتم معالجة جميع الملفات محلياً - لا تخرج أي بيانات من جهازك.",
+    "projectName": "اسم المشروع",
+    "projectFolder": "مجلد المشروع",
+    "embeddingModel": "نموذج التضمين",
+    "ignorePatterns": "أنماط التجاهل",
+    "ignorePatternsDescription": "نمط واحد لكل سطر. تضاف هذه إلى قائمة التجاهل الافتراضية.",
+    "browse": "تصفح",
+    "addProjectAction": "إضافة المشروع",
+    "noProjects": "لم يتم إضافة مشاريع بعد",
+    "indexed": "مفهرس",
+    "error": "خطأ",
+    "chunks": "{count, plural, =0 {لا توجد أجزاء} one {جزء واحد} two {جزئين} few {# أجزاء} many {# جزءاً} other {# جزء}}",
+    "indexProject": "فهرسة المشروع",
+    "reindexProject": "إعادة فهرسة المشروع",
+    "cancelIndexing": "إلغاء الفهرسة",
+    "removeProject": "إزالة المشروع",
+    "projectSettings": "إعدادات المشروع",
+    "projectUpdated": "تم تحديث المشروع",
+    "embeddingModelUpdated": "تم تحديث نموذج التضمين - ستتم إعادة فهرسة المشروع.",
+    "failedToUpdateProject": "فشل في تحديث المشروع",
+    "noActiveProject": "لا يوجد مشروع نشط مختار.",
+    "selectFileToViewChunks": "اختر ملفاً لعرض أجزائه",
+    "indexedFiles": "الملفات المفهرسة",
+    "noFilesIndexed": "لا توجد ملفات مفهرسة.",
+    "embeddingModelNote": "نموذج تضمين Ollama. قم بتثبيته باستخدام: ollama pull {model}",
+    "requiredFieldsError": "يرجى ملء جميع الحقول المطلوبة",
+    "deactivateRag": "تعطيل سياق RAG",
+    "defaultEmbeddingModel": "{model} (افتراضي)",
+    "indexing": "فهرسة",
+    "cancel": "إلغاء"
+  },
   "library": {
     "title": "المكتبة",
     "modelManager": "مدير النماذج",
@@ -160,6 +195,11 @@
     "browseLibrary": "تصفح المكتبة",
     "noModelsFound": "لم يتم العثور على نماذج",
     "refreshModels": "تحديث النماذج",
+    "visionCapable": "قادر على الرؤية",
+    "codingSpecialized": "متخصص في البرمجة",
+    "reasoningModel": "نموذج تفكير",
+    "fastLowVram": "سريع / استهلاك منخفض للذاكرة",
+    "highResource": "يتطلب موارد عالية",
     "status": {
       "starting": "جاري البدء...",
       "pullingManifest": "جاري سحب الملف التعريفي...",
@@ -208,7 +248,15 @@
     "failedToFetchModels": "فشل في جلب النماذج من Ollama",
     "initializationFailed": "فشل في تهيئة التطبيق",
     "fileTooLarge": "الملف يتجاوز الحد المسموح به للإنتاج (10 ميجابايت)",
-    "rateLimited": "طلبات كثيرة جداً. يرجى الانتظار للحظة."
+    "rateLimited": "طلبات كثيرة جداً. يرجى الانتظار للحظة.",
+    "networkError": "خطأ في اتصال الشبكة",
+    "checkConnection": "يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.",
+    "ollamaError": "خطأ في الاتصال بـ Ollama",
+    "startOllama": "يرجى التأكد من أن Ollama يعمل ويمكن الوصول إليه.",
+    "unknownError": "حدث خطأ غير معروف.",
+    "downloadOllama": "تحميل Ollama",
+    "report": "إبلاغ عن مشكلة",
+    "unsupportedLink": "رابط غير مدعوم"
   },
   "a11y": {
     "closeModal": "إغلاق النافذة",
@@ -223,7 +271,8 @@
     "thinkingSection": "قسم عملية تفكير الذكاء الاصطناعي",
     "copyCode": "نسخ الكود للحافظة",
     "searchLibrary": "البحث في مكتبة النماذج",
-    "codeBlock": "كتلة برمجية بلغة {language}"
+    "codeBlock": "كتلة برمجية بلغة {language}",
+    "mermaidDiagram": "رسم Mermaid البياني المعروض"
   },
   "info": {
     "openInfo": "فتح معلومات التطبيق",

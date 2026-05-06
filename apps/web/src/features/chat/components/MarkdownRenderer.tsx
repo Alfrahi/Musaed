@@ -14,6 +14,7 @@ import 'katex/dist/katex.min.css';
 import CodeBlock from './CodeBlock';
 import { opener } from '../../../lib/ipc';
 import { useGlobalSettings } from '../../../store/hooks';
+import { useTranslation } from '../../../lib/i18n';
 
 const MermaidRenderer = dynamic(() => import('./MermaidRenderer'), {
   ssr: false,
@@ -126,7 +127,8 @@ const useRehypePlugins = (enableLatex: boolean): PluggableList =>
 /** Markdown component renderers for custom styling and behavior. */
 const useMarkdownComponents = (
   enableMermaid: boolean,
-  handleLinkClick: (e: React.MouseEvent<HTMLAnchorElement>, href: string) => Promise<void>
+  handleLinkClick: (e: React.MouseEvent<HTMLAnchorElement>, href: string) => Promise<void>,
+  t: (k: string) => string
 ) =>
   useMemo(
     () => ({
@@ -152,7 +154,10 @@ const useMarkdownComponents = (
         const safeHref = resolveAllowedHref(href);
         if (!safeHref) {
           return (
-            <span className="cursor-not-allowed font-medium text-zinc-500" title="Unsupported link">
+            <span
+              className="cursor-not-allowed font-medium text-zinc-500"
+              title={t('error.unsupportedLink')}
+            >
               {children}
             </span>
           );
@@ -188,11 +193,12 @@ const useMarkdownComponents = (
         );
       },
     }),
-    [enableMermaid, handleLinkClick]
+    [enableMermaid, handleLinkClick, t]
   );
 
 const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
   const globalSettings = useGlobalSettings();
+  const { t } = useTranslation(globalSettings.language);
 
   const processedContent = useProcessedContent(content, globalSettings.enableLatex);
   const remarkPlugins = useRemarkPlugins(globalSettings.enableLatex);
@@ -211,7 +217,7 @@ const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
     []
   );
 
-  const components = useMarkdownComponents(globalSettings.enableMermaid, handleLinkClick);
+  const components = useMarkdownComponents(globalSettings.enableMermaid, handleLinkClick, t);
 
   return (
     <ReactMarkdown

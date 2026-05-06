@@ -55,7 +55,7 @@ class ErrorBoundary extends Component<Props, State> {
           description: t('error.checkConnection'),
           actions: [
             {
-              label: t('common.refresh'),
+              label: t('error.refresh'),
               onClick: () => window.location.reload(),
               primary: true,
             },
@@ -69,7 +69,7 @@ class ErrorBoundary extends Component<Props, State> {
           description: t('error.startOllama'),
           actions: [
             {
-              label: 'Download Ollama',
+              label: t('error.downloadOllama'),
               onClick: () => opener.openUrl('https://ollama.ai'),
               primary: true,
             },
@@ -93,7 +93,7 @@ class ErrorBoundary extends Component<Props, State> {
               primary: true,
             },
             {
-              label: 'Report',
+              label: t('error.report'),
               onClick: () => opener.openUrl('https://github.com/Alfrahi/Musaed/issues'),
               primary: false,
             },

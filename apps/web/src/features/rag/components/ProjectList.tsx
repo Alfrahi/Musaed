@@ -3,16 +3,19 @@
 import { Plus } from 'lucide-react';
 import { useRagProjects as useRagProjectsHook } from '../hooks/useRagProjects';
 import { useRagIndexing } from '../hooks/useRagIndexing';
-import { useActiveRagProjectId, useSetActiveRagProjectId } from '@/store/hooks';
+import { useActiveRagProjectId, useSetActiveRagProjectId, useLanguage } from '@/store/hooks';
 import { ProjectCard } from './ProjectCard';
 import { AddProjectDialog } from './AddProjectDialog';
 import { useState, useEffect } from 'react';
+import { useTranslation } from '@/lib/i18n';
 
 export const ProjectList = ({ hideHeaderAction = false }: { hideHeaderAction?: boolean }) => {
   const { projects, projectIds, removeProjectById } = useRagProjectsHook();
   const { startIndexing, abortIndexing, startIndexEventListeners } = useRagIndexing();
   const activeProjectId = useActiveRagProjectId();
   const setActiveProjectId = useSetActiveRagProjectId();
+  const language = useLanguage();
+  const { t } = useTranslation(language);
   const [showAddDialog, setShowAddDialog] = useState(false);
 
   // Start event listeners for indexing progress
@@ -41,12 +44,12 @@ export const ProjectList = ({ hideHeaderAction = false }: { hideHeaderAction?: b
       {!hideHeaderAction && (
         <div className="flex items-center justify-between px-2 py-1">
           <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-            RAG Projects
+            {t('rag.title')}
           </span>
           <button
             onClick={() => setShowAddDialog(true)}
             className="hover:bg-accent text-muted-foreground hover:text-foreground rounded p-1 transition-colors"
-            title="Add project"
+            title={t('rag.addProject')}
           >
             <Plus className="h-3.5 w-3.5" />
           </button>
@@ -54,7 +57,7 @@ export const ProjectList = ({ hideHeaderAction = false }: { hideHeaderAction?: b
       )}
 
       {projectIds.length === 0 ? (
-        <p className="text-muted-foreground px-2 text-xs italic">No projects added yet</p>
+        <p className="text-muted-foreground px-2 text-xs italic">{t('rag.noProjects')}</p>
       ) : (
         <div className="space-y-0.5">
           {projectIds.map((id: string) => {

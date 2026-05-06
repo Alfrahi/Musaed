@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { X, FolderOpen, Loader2 } from 'lucide-react';
 import { dialog } from '@/lib/ipc';
 import { useRagProjects as useRagProjectsHook } from '../hooks/useRagProjects';
-import { useModels } from '@/store/hooks';
+import { useTranslation } from '@/lib/i18n';
+import { useLanguage, useModels } from '@/store/hooks';
 
 interface AddProjectDialogProps {
   onClose: () => void;
@@ -66,11 +67,12 @@ function useHandleAdd(
     embeddingModel: string;
     ignorePatterns: string[];
   }) => Promise<unknown>,
-  onAdded: () => void
+  onAdded: () => void,
+  t: (key: string) => string
 ) {
   return async () => {
     if (!form.name.trim() || !form.path.trim() || !form.embeddingModel.trim()) {
-      form.setError('Please fill in all required fields');
+      form.setError(t('rag.requiredFieldsError'));
       return;
     }
 
@@ -90,7 +92,7 @@ function useHandleAdd(
       });
       if (result) onAdded();
     } catch (e) {
-      form.setError(e instanceof Error ? e.message : 'Failed to add project');
+      form.setError(e instanceof Error ? e.message : t('rag.failedToUpdateProject'));
     } finally {
       form.setIsAdding(false);
     }
@@ -102,7 +104,9 @@ export const AddProjectDialog = ({ onClose, onAdded }: AddProjectDialogProps) =>
   const { addNewProject } = useRagProjectsHook();
   const models = useModels();
   const embeddingModels = filterEmbeddingModels(models);
-  const handleAdd = useHandleAdd(form, addNewProject, onAdded);
+  const language = useLanguage();
+  const { t } = useTranslation(language);
+  const handleAdd = useHandleAdd(form, addNewProject, onAdded, t);
 
   return (
     <div
@@ -114,30 +118,27 @@ export const AddProjectDialog = ({ onClose, onAdded }: AddProjectDialogProps) =>
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Add RAG Project</h2>
+          <h2 className="text-lg font-semibold">{t('rag.addProject')}</h2>
           <button onClick={onClose} className="hover:bg-accent rounded p-1">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <p className="text-muted-foreground text-sm">
-          Add a local project folder to index. All files will be processed locally — no data leaves
-          your machine.
-        </p>
+        <p className="text-muted-foreground text-sm">{t('rag.addProjectDescription')}</p>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium">Project Name</label>
+          <label className="text-sm font-medium">{t('rag.projectName')}</label>
           <input
             type="text"
             value={form.name}
             onChange={(e) => form.setName(e.target.value)}
-            placeholder="My Project"
+            placeholder={t('rag.projectName')}
             className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
           />
         </div>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium">Project Folder</label>
+          <label className="text-sm font-medium">{t('rag.projectFolder')}</label>
           <div className="flex gap-2">
             <input
               type="text"
@@ -151,7 +152,7 @@ export const AddProjectDialog = ({ onClose, onAdded }: AddProjectDialogProps) =>
               className="border-input bg-background hover:bg-accent flex items-center gap-1 rounded-md border px-3 py-2 text-sm"
             >
               <FolderOpen className="h-4 w-4" />
-              Browse
+              {t('rag.browse')}
             </button>
           </div>
         </div>
@@ -160,10 +161,11 @@ export const AddProjectDialog = ({ onClose, onAdded }: AddProjectDialogProps) =>
           value={form.embeddingModel}
           onChange={form.setEmbeddingModel}
           models={embeddingModels}
+          t={t}
         />
 
         <div className="space-y-1">
-          <label className="text-sm font-medium">Ignore Patterns</label>
+          <label className="text-sm font-medium">{t('rag.ignorePatterns')}</label>
           <textarea
             value={form.ignorePatterns}
             onChange={(e) => form.setIgnorePatterns(e.target.value)}
@@ -171,9 +173,7 @@ export const AddProjectDialog = ({ onClose, onAdded }: AddProjectDialogProps) =>
             placeholder="node_modules&#10;dist&#10;.git"
             className="border-input bg-background w-full rounded-md border px-3 py-2 font-mono text-sm"
           />
-          <p className="text-muted-foreground text-xs">
-            One pattern per line. These are added to the default ignore list.
-          </p>
+          <p className="text-muted-foreground text-xs">{t('rag.ignorePatternsDescription')}</p>
         </div>
 
         {form.error && <p className="text-sm text-red-500">{form.error}</p>}
@@ -183,7 +183,7 @@ export const AddProjectDialog = ({ onClose, onAdded }: AddProjectDialogProps) =>
             onClick={onClose}
             className="border-input bg-background hover:bg-accent rounded-md border px-4 py-2 text-sm"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             onClick={handleAdd}
@@ -191,7 +191,7 @@ export const AddProjectDialog = ({ onClose, onAdded }: AddProjectDialogProps) =>
             className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 rounded-md px-4 py-2 text-sm disabled:opacity-50"
           >
             {form.isAdding && <Loader2 className="h-4 w-4 animate-spin" />}
-            Add Project
+            {t('rag.addProjectAction')}
           </button>
         </div>
       </div>
@@ -203,14 +203,16 @@ const EmbeddingModelSelect = ({
   value,
   onChange,
   models,
+  t,
 }: {
   value: string;
   onChange: (v: string) => void;
   models: { name: string }[];
+  t: (key: string, values?: Record<string, string | number | boolean>) => string;
 }) => {
   return (
     <div className="space-y-1">
-      <label className="text-sm font-medium">Embedding Model</label>
+      <label className="text-sm font-medium">{t('rag.embeddingModel')}</label>
       {models.length > 0 ? (
         <select
           value={value}
@@ -222,7 +224,9 @@ const EmbeddingModelSelect = ({
               {m.name}
             </option>
           ))}
-          <option value="nomic-embed-text-v2-moe">nomic-embed-text-v2-moe (default)</option>
+          <option value="nomic-embed-text-v2-moe">
+            {t('rag.defaultEmbeddingModel', { model: 'nomic-embed-text-v2-moe' })}
+          </option>
         </select>
       ) : (
         <input
@@ -234,7 +238,7 @@ const EmbeddingModelSelect = ({
         />
       )}
       <p className="text-muted-foreground text-xs">
-        Ollama embedding model. Install with: ollama pull nomic-embed-text-v2-moe
+        {t('rag.embeddingModelNote', { model: 'nomic-embed-text-v2-moe' })}
       </p>
     </div>
   );

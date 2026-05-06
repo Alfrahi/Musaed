@@ -8,6 +8,8 @@ import { useState, useEffect } from 'react';
 import { listen } from '@/lib/ipc';
 import { IndexProgressSchema } from '@musaed/contracts';
 import { truncateFilePath, formatFileSize } from '../utils/project-helpers';
+import { useLanguage } from '@/store/hooks';
+import { useTranslation } from '@/lib/i18n';
 
 interface ProjectCardProps {
   project: RagProject;
@@ -51,6 +53,8 @@ export const ProjectCard = ({
 }: ProjectCardProps) => {
   const isIndexing = project.status === 'indexing';
   const indexProgress = useProjectIndexProgress(project.id);
+  const language = useLanguage();
+  const { t } = useTranslation(language);
 
   return (
     <div
@@ -61,7 +65,7 @@ export const ProjectCard = ({
       onClick={onSelect}
     >
       <ProjectHeader project={project} isActive={isActive} onSelect={onSelect} />
-      <ProjectStats project={project} />
+      <ProjectStats project={project} t={t} />
       {isIndexing && indexProgress && (
         <IndexingProgress progress={indexProgress} onAbort={onAbort} />
       )}
@@ -72,6 +76,7 @@ export const ProjectCard = ({
         onReindex={onReindex}
         onAbort={onAbort}
         onRemove={onRemove}
+        t={t}
       />
     </div>
   );
@@ -106,21 +111,27 @@ const ProjectHeader = ({
   );
 };
 
-const ProjectStats = ({ project }: { project: RagProject }) => {
+const ProjectStats = ({
+  project,
+  t,
+}: {
+  project: RagProject;
+  t: (key: string, values?: Record<string, string | number | boolean>) => string;
+}) => {
   return (
     <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
       {project.chunkCount > 0 && (
         <>
           <span className="flex items-center gap-0.5">
             <Database className="h-3 w-3" />
-            {project.chunkCount} chunks
+            {t('rag.chunks', { count: project.chunkCount })}
           </span>
           <span>·</span>
           <span>{formatFileSize(project.totalBytes)}</span>
         </>
       )}
-      {project.status === 'ready' && <span className="text-green-500">Indexed</span>}
-      {project.status === 'error' && <span className="text-red-500">Error</span>}
+      {project.status === 'ready' && <span className="text-green-500">{t('rag.indexed')}</span>}
+      {project.status === 'error' && <span className="text-red-500">{t('rag.error')}</span>}
     </div>
   );
 };
@@ -132,6 +143,7 @@ const ProjectActions = ({
   onReindex,
   onAbort,
   onRemove,
+  t,
 }: {
   project: RagProject;
   isIndexing: boolean;
@@ -139,6 +151,7 @@ const ProjectActions = ({
   onReindex: () => void;
   onAbort: () => void;
   onRemove: () => void;
+  t: (key: string) => string;
 }) => {
   return (
     <div
@@ -155,9 +168,9 @@ const ProjectActions = ({
             onIndex();
           }}
           className="text-muted-foreground hover:text-foreground flex items-center gap-0.5 text-xs"
-          title="Index project"
+          title={t('rag.indexProject')}
         >
-          <RefreshCw className="h-3 w-3" /> Index
+          <RefreshCw className="h-3 w-3" /> {t('rag.indexProject')}
         </button>
       )}
       {!isIndexing && project.status === 'ready' && (
@@ -167,9 +180,9 @@ const ProjectActions = ({
             onReindex();
           }}
           className="text-muted-foreground hover:text-foreground flex items-center gap-0.5 text-xs"
-          title="Re-index project"
+          title={t('rag.reindexProject')}
         >
-          <RefreshCw className="h-3 w-3" /> Re-index
+          <RefreshCw className="h-3 w-3" /> {t('rag.reindexProject')}
         </button>
       )}
       {isIndexing && (
@@ -179,9 +192,9 @@ const ProjectActions = ({
             onAbort();
           }}
           className="flex items-center gap-0.5 text-xs text-red-400 hover:text-red-300"
-          title="Cancel indexing"
+          title={t('rag.cancelIndexing')}
         >
-          <X className="h-3 w-3" /> Cancel
+          <X className="h-3 w-3" /> {t('common.cancel')}
         </button>
       )}
       <button
@@ -190,7 +203,7 @@ const ProjectActions = ({
           onRemove();
         }}
         className="text-muted-foreground ms-auto flex items-center gap-0.5 text-xs hover:text-red-400"
-        title="Remove project"
+        title={t('rag.removeProject')}
       >
         <Trash2 className="h-3 w-3" />
       </button>

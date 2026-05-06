@@ -91,16 +91,18 @@ const MermaidDiagram = ({
   svg,
   containerRef,
   className,
+  ariaLabel,
 }: {
   svg: string;
   containerRef: React.RefObject<HTMLDivElement | null>;
   className: string;
+  ariaLabel: string;
 }) => (
   <div
     ref={containerRef}
     className={`mermaid-container my-6 flex justify-center overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 ${className}`}
     dangerouslySetInnerHTML={{ __html: svg }}
-    aria-label="Rendered Mermaid diagram"
+    aria-label={ariaLabel}
   />
 );
 
@@ -195,7 +197,14 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
     );
   }
 
-  return <MermaidDiagram svg={svg} containerRef={containerRef} className={className} />;
+  return (
+    <MermaidDiagram
+      svg={svg}
+      containerRef={containerRef}
+      className={className}
+      ariaLabel={t('a11y.mermaidDiagram')}
+    />
+  );
 };
 
 export default React.memo(MermaidRenderer);
