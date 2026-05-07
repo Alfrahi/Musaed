@@ -533,3 +533,47 @@ export const RAG_VALIDATION_LIMITS = {
   MIN_THRESHOLD: 0.0,
   MAX_FILE_CHUNKS_QUERY: 100,
 } as const;
+
+// ====================== IPC VERSIONING ======================
+
+/** Current global IPC protocol version. Increment on breaking changes. */
+export const IPC_VERSION = 1;
+
+/** Mapping of Tauri command names to their contract version.
+ * When a breaking change occurs, create a new command (e.g., cmd_foo@v2)
+ * and add it here while keeping the old version until migration completes.
+ */
+export const COMMAND_VERSIONS = {
+  // Ollama
+  cmd_ollama_get_models: 1,
+  cmd_ollama_chat: 1,
+  cmd_ollama_abort_chat: 1,
+  cmd_ollama_delete_model: 1,
+  cmd_ollama_pull_model: 1,
+  cmd_ollama_check_health: 1,
+  cmd_ollama_verify_service: 1,
+  cmd_ollama_generate_title: 1,
+  cmd_ollama_validate_model: 1,
+
+  // Logging
+  cmd_logs_append: 1,
+  cmd_logs_clear: 1,
+
+  // RAG
+  cmd_rag_add_project: 1,
+  cmd_rag_remove_project: 1,
+  cmd_rag_update_project: 1,
+  cmd_rag_list_projects: 1,
+  cmd_rag_get_project: 1,
+  cmd_rag_index_project: 1,
+  cmd_rag_abort_index: 1,
+  cmd_rag_reindex_project: 1,
+  cmd_rag_get_index_status: 1,
+  cmd_rag_search: 1,
+  cmd_rag_get_file_chunks: 1,
+  cmd_cmd_rag_get_project_stats: 1,
+  cmd_rag_set_embedding_model: 1,
+  cmd_rag_validate_embedding_model: 1,
+} as const;
+
+export type CommandName = keyof typeof COMMAND_VERSIONS;

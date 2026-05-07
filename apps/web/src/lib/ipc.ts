@@ -24,6 +24,9 @@ import {
   RagModelValidationSchema,
   RAG_VALIDATION_LIMITS,
   sanitizeError,
+  COMMAND_VERSIONS,
+  IPC_VERSION,
+  type CommandName,
 } from '@musaed/contracts';
 import type {
   RagProject,
@@ -36,8 +39,17 @@ import type {
 import toast from 'react-hot-toast';
 
 /**
- * Maps all supported Tauri command names to their argument and return types.
- * This type is used to ensure type-safe IPC calls.
+ * IPC Bridge — Strict Contract Architecture
+ *
+ * All Tauri IPC must route through this file. The bridge provides:
+ * - Type-safe command dispatch via CommandMap
+ * - Input/output validation using Zod schemas
+ * - URL security validation for Ollama endpoints
+ * - Error sanitization to prevent data leakage
+ * - Contract version tracking (COMMAND_VERSIONS)
+ *
+ * Versioning: Each command in COMMAND_VERSIONS maps to its contract version.
+ * Breaking changes require a new command (e.g., cmd_foo@v2) and an entry here.
  */
 export interface CommandMap {
   cmd_ollama_get_models: { args: { baseUrl: string }; return: OllamaModel[] };
@@ -300,6 +312,15 @@ async function callInternal<K extends keyof CommandMap>(
   args: CommandMap[K]['args'],
   options?: { quiet?: boolean }
 ): Promise<CommandMap[K]['return'] | null> {
+  // Dev-only contract registry check (ensures command is registered)
+  if (process.env.NODE_ENV !== 'production') {
+    const _guard: CommandName = command; // type check only; will throw if not assignable
+    if (!(command in COMMAND_VERSIONS)) {
+      // In development, warn about unregistered commands to prevent contract drift
+      console.warn(`[IPC] Command "${command}" is not listed in COMMAND_VERSIONS contract map`);
+    }
+  }
+
   if (
     args &&
     'baseUrl' in args &&
