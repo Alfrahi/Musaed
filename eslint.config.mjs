@@ -161,7 +161,7 @@ export default tseslint.config(
   // ======================
 
   {
-    files: ['apps/web/src/lib/ipc.ts', 'apps/web/src/lib/tauri-storage.ts'],
+    files: ['apps/web/src/lib/ipc.ts', 'apps/web/src/lib/tauri-storage.ts', 'apps/web/vitest.config.ts'],
     rules: {
       'no-restricted-syntax': 'off',
       'no-restricted-imports': 'off',

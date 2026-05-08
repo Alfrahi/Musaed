@@ -11,7 +11,7 @@ export default defineConfig({
     ],
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./src/test/setup.ts'],
+    setupFiles: ['./src/test/setup.ts', './vitest.setup.ts'],
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@musaed/contracts': path.resolve(__dirname, '../../packages/contracts/src'),
