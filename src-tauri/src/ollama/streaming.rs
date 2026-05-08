@@ -3,6 +3,7 @@
 //! Contains the `process_chat_stream` helper that reads newline-delimited JSON
 //! from Ollama's chat endpoint and emits Tauri events for each token.
 
+use tracing;
 use crate::payloads::{BackendError, OllamaToken};
 use futures::StreamExt;
 use serde_json::json;
@@ -33,7 +34,7 @@ pub(crate) async fn process_chat_stream<R: Runtime>(
     loop {
         tokio::select! {
             _ = cancel_token.cancelled() => {
-                log::info!("Stream cancelled for request_id: {}", request_id);
+                tracing::info!("Stream cancelled for request_id: {}", request_id);
                 break;
             }
             next = time::timeout(Duration::from_secs(STREAM_IDLE_TIMEOUT_SECS), lines.next()) => {
@@ -64,19 +65,19 @@ pub(crate) async fn process_chat_stream<R: Runtime>(
                                         *token_count += 1;
                                         let _ = app.emit(EVENT_OLLAMA_TOKEN, &token);
                                     }
-                                    Err(e) => log::warn!("Failed to parse token: {}", e),
+                                    Err(e) => tracing::warn!("Failed to parse token: {}", e),
                                 }
                             }
-                            Err(e) => log::warn!("Failed to parse JSON line: {}", e),
+                            Err(e) => tracing::warn!("Failed to parse JSON line: {}", e),
                         }
                     }
                     Ok(Some(Err(e))) => {
-                        log::error!("Stream read error: {}", e);
+                        tracing::error!("Stream read error: {}", e);
                         break;
                     }
                     Ok(None) => break,
                     Err(_) => {
-                        log::warn!("Idle timeout on stream for request_id: {}", request_id);
+                        tracing::warn!("Idle timeout on stream for request_id: {}", request_id);
                         let _ = app.emit(
                             EVENT_OLLAMA_ERROR,
                             &BackendError::new("STREAM_IDLE_TIMEOUT", "No data received for too long")

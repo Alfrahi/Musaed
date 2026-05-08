@@ -1,5 +1,6 @@
 //! Tauri commands for application logging and diagnostics.
 
+use tracing;
 use crate::logger::ChannelLogger;
 use crate::payloads::ApiResponse;
 use crate::validation::{validation_error, MAX_LOG_ENTRY_LEN};
@@ -162,7 +163,7 @@ pub async fn cmd_logs_append(entry: String) -> ApiResponse<()> {
 
 #[tauri::command]
 pub async fn cmd_logs_clear<R: Runtime>(app: AppHandle<R>) -> ApiResponse<()> {
-    log::info!("Clearing logs");
+    tracing::info!("Clearing logs");
     // Flush pending writes before truncating the file.
     ChannelLogger::global().flush();
 
@@ -172,7 +173,7 @@ pub async fn cmd_logs_clear<R: Runtime>(app: AppHandle<R>) -> ApiResponse<()> {
                 let _ = std::fs::write(&path, b"");
             }
         }
-        Err(e) => log::error!("Failed to resolve log path: {}", e),
+        Err(e) => tracing::error!("Failed to resolve log path: {}", e),
     })
     .await;
     ApiResponse {

@@ -3,6 +3,7 @@
 //! Orchestrates the full indexing flow for a project, emitting progress events
 //! and supporting cancellation.
 
+use tracing;
 use crate::rag::chunker::chunk_content;
 use crate::rag::embedder::OllamaEmbedder;
 use crate::rag::ignore::discover_files;
@@ -84,7 +85,7 @@ pub async fn index_project(
         let content = match std::fs::read(&file.path) {
             Ok(c) => c,
             Err(e) => {
-                log::debug!("Failed to read file {:?}: {}", file.path, e);
+                tracing::debug!("Failed to read file {:?}: {}", file.path, e);
                 continue;
             }
         };
@@ -155,12 +156,12 @@ pub async fn index_project(
             Some(bytes) => match std::str::from_utf8(bytes) {
                 Ok(s) => s.to_string(),
                 Err(_) => {
-                    log::debug!("Skipping non-UTF-8 file: {}", relative_path);
+                    tracing::debug!("Skipping non-UTF-8 file: {}", relative_path);
                     continue;
                 }
             },
             None => {
-                log::debug!("Content not cached for {}, skipping", relative_path);
+                tracing::debug!("Content not cached for {}, skipping", relative_path);
                 continue;
             }
         };
@@ -320,7 +321,7 @@ pub async fn index_project(
         s.set_status(project_id, &ProjectStatus::Ready)?;
     }
 
-    log::info!("Indexing complete for project {}: {} files, {} chunks", project_id, discovered.len(), total_chunks);
+    tracing::info!("Indexing complete for project {}: {} files, {} chunks", project_id, discovered.len(), total_chunks);
 
     Ok(())
 }
@@ -343,6 +344,6 @@ fn emit_progress(
     };
 
     if let Err(e) = app_handle.emit(crate::shared::EVENT_RAG_INDEX_PROGRESS, &progress) {
-        log::debug!("Failed to emit index progress: {}", e);
+        tracing::debug!("Failed to emit index progress: {}", e);
     }
 }

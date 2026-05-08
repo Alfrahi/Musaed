@@ -3,6 +3,7 @@
 //! Contains [`strip_thinking_blocks`] for cleaning model output and the
 //! [`cmd_ollama_generate_title`] Tauri command that produces a short conversation title.
 
+use tracing;
 use crate::payloads::{ApiResponse, BackendError};
 use crate::validation::{
     is_valid_language, is_valid_model_name, validation_error, MAX_TITLE_INPUT_LEN,
@@ -91,7 +92,7 @@ pub async fn cmd_ollama_generate_title(
     assistant_message: String,
     language: String,
 ) -> ApiResponse<String> {
-    log::info!("Generating title with model: {}", model);
+    tracing::info!("Generating title with model: {}", model);
 
     // --- Input validation ---
     if !is_valid_model_name(&model) {
@@ -202,7 +203,7 @@ pub async fn cmd_ollama_generate_title(
                         };
                     }
 
-                    log::info!("Generated title: {}", stripped);
+                    tracing::info!("Generated title: {}", stripped);
                     ApiResponse {
                         success: true,
                         data: Some(stripped.to_string()),
@@ -210,7 +211,7 @@ pub async fn cmd_ollama_generate_title(
                     }
                 }
                 Err(e) => {
-                    log::error!("Failed to parse title response: {}", e);
+                    tracing::error!("Failed to parse title response: {}", e);
                     ApiResponse {
                         success: false,
                         data: None,
@@ -222,7 +223,7 @@ pub async fn cmd_ollama_generate_title(
         Ok(resp) => {
             let status = resp.status().as_u16();
             let body = resp.text().await.unwrap_or_default();
-            log::error!("Title generation failed with HTTP {}: {}", status, body);
+            tracing::error!("Title generation failed with HTTP {}: {}", status, body);
             ApiResponse {
                 success: false,
                 data: None,
@@ -237,7 +238,7 @@ pub async fn cmd_ollama_generate_title(
             }
         }
         Err(e) => {
-            log::error!("Title generation request failed: {}", e);
+            tracing::error!("Title generation request failed: {}", e);
             ApiResponse {
                 success: false,
                 data: None,

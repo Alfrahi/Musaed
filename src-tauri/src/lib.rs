@@ -1,3 +1,5 @@
+use tracing;
+use tracing_subscriber::layer::SubscriberExt;
 use tauri::Manager;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -21,7 +23,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
-            log::info!(
+            tracing::info!(
                 "Second instance attempted with args: {:?} and cwd: {:?}",
                 args,
                 cwd
@@ -32,9 +34,9 @@ pub fn run() {
                 let _ = window.set_focus();
                 let _ = window.unminimize();
                 let _ = window.show();
-                log::info!("Focused existing main window");
+                tracing::info!("Focused existing main window");
             } else {
-                log::warn!("Main window not found when attempting to focus");
+                tracing::warn!("Main window not found when attempting to focus");
             }
         }));
 
@@ -43,10 +45,16 @@ pub fn run() {
         builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
     }
 
-    builder = builder.setup(|app| {
-        if let Err(e) = logger::init_file_logger(app.handle()) {
-            eprintln!("⚠️ Failed to initialize file logger: {}", e);
-        }
+    builder = builder.setup(|app| -> Result<(), Box<dyn std::error::Error>> {
+        // Initialize file logger and get the channel sender for tracing
+        let log_tx = logger::init_file_logger(app.handle())
+            .map_err(|e| format!("Failed to initialize file logger: {}", e))?;
+
+        // Create a tracing layer that forwards events to the log channel
+        let tracing_layer = logger::TracingLayer::new(log_tx);
+        let subscriber = tracing_subscriber::Registry::default().with(tracing_layer);
+        tracing::subscriber::set_global_default(subscriber)
+            .map_err(|e| format!("Failed to set tracing subscriber: {}", e))?;
 
         shared::spawn_cache_eviction_task();
 
@@ -54,16 +62,17 @@ pub fn run() {
         let app_data_dir = app
             .path()
             .app_data_dir()
-            .expect("Failed to resolve app data directory");
+            .map_err(|e| format!("Failed to get app data directory: {}", e))?;
         let rag_dir = app_data_dir.join("musaed").join("rag");
-        std::fs::create_dir_all(&rag_dir).expect("Failed to create RAG data directory");
+        std::fs::create_dir_all(&rag_dir)
+            .map_err(|e| format!("Failed to create RAG data directory: {}", e))?;
         let db_path = rag_dir.join("rag.sqlite3");
 
         let rag_store = rag::store::RagStore::open(&db_path)
-            .expect("Failed to initialize RAG store");
+            .map_err(|e| format!("Failed to initialize RAG store: {}", e))?;
         app.manage(Arc::new(Mutex::new(rag_store)));
 
-        log::info!("RAG store initialized at {:?}", db_path);
+        tracing::info!("RAG store initialized at {:?}", db_path);
 
         Ok(())
     });

@@ -3,6 +3,7 @@
 //! Manages the database schema, CRUD operations for projects, files, chunks,
 //! and vector similarity search via the `sqlite-vec` extension.
 
+use tracing;
 use crate::rag::types::{
     ChunkRecord, ChunkRow, FileRecord, ProjectStats, ProjectStatus, RagProject, SearchResult,
 };
@@ -110,7 +111,7 @@ impl RagStore {
         // Run migrations
         Self::run_migrations(&conn)?;
 
-        log::info!("RAG database opened at {:?}", db_path);
+        tracing::info!("RAG database opened at {:?}", db_path);
 
         Ok(Self {
             conn: Mutex::new(conn),
@@ -130,7 +131,7 @@ impl RagStore {
                 [],
             )
             .map_err(|e| format!("Migration: failed to add status column: {}", e))?;
-            log::info!("Migration: added status column to projects table");
+            tracing::info!("Migration: added status column to projects table");
         }
 
         // Migration 2: Recreate vec_chunks with cosine distance metric.
@@ -164,7 +165,7 @@ impl RagStore {
         };
 
         if needs_vec_rebuild {
-            log::warn!("Migration: rebuilding vec_chunks with cosine distance metric. Existing embeddings will be lost.");
+            tracing::warn!("Migration: rebuilding vec_chunks with cosine distance metric. Existing embeddings will be lost.");
             conn.execute_batch(
                 "DROP TABLE IF EXISTS vec_chunks;
                  CREATE VIRTUAL TABLE vec_chunks USING vec0(
@@ -183,7 +184,7 @@ impl RagStore {
             )
             .map_err(|e| format!("Migration: failed to reset project stats: {}", e))?;
 
-            log::info!("Migration: vec_chunks rebuilt with cosine metric");
+            tracing::info!("Migration: vec_chunks rebuilt with cosine metric");
         }
 
         // Ensure the migration tracking table exists for future migrations

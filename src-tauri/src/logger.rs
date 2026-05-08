@@ -4,13 +4,71 @@ use std::io::Write;
 use std::sync::mpsc;
 use std::sync::OnceLock;
 use tauri::Manager;
+use chrono;
+use tracing::{self, Subscriber, Event};
+use tracing_subscriber::layer::Layer;
+use tracing::field::{Field, Visit};
 
 static LOGGER: OnceLock<ChannelLogger> = OnceLock::new();
 
 /// Envelope for log messages sent through the channel.
-enum LogMsg {
+pub enum LogMsg {
     Line(String),
     Flush,
+}
+
+/// Visitor to collect fields from a tracing event.
+#[derive(Default)]
+struct Fields {
+    parts: Vec<String>,
+}
+
+impl Visit for Fields {
+    fn record_str(&mut self, field: &Field, value: &str) {
+        self.parts.push(format!("{}: {}", field.name(), value));
+    }
+    fn record_debug(&mut self, field: &Field, value: &dyn std::fmt::Debug) {
+        self.parts.push(format!("{}: {:?}", field.name(), value));
+    }
+    fn record_i64(&mut self, field: &Field, value: i64) {
+        self.parts.push(format!("{}: {}", field.name(), value));
+    }
+    fn record_u64(&mut self, field: &Field, value: u64) {
+        self.parts.push(format!("{}: {}", field.name(), value));
+    }
+    fn record_bool(&mut self, field: &Field, value: bool) {
+        self.parts.push(format!("{}: {}", field.name(), value));
+    }
+}
+
+/// A tracing layer that forwards events to the ChannelLogger's channel.
+pub struct TracingLayer {
+    tx: mpsc::Sender<LogMsg>,
+}
+
+impl TracingLayer {
+    /// Create a new TracingLayer with a sender.
+    pub fn new(tx: mpsc::Sender<LogMsg>) -> Self {
+        Self { tx }
+    }
+}
+
+impl<S> Layer<S> for TracingLayer
+where
+    S: Subscriber,
+{
+    fn on_event(&self, event: &Event<'_>, _ctx: tracing_subscriber::layer::Context<'_, S>) {
+        let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
+        let level = event.metadata().level();
+        let mut fields = Fields::default();
+        event.record(&mut fields);
+        let message = if fields.parts.is_empty() {
+            format!("[{}] {}\n", timestamp, level)
+        } else {
+            format!("[{}] {} - {}\n", timestamp, level, fields.parts.join(", "))
+        };
+        let _ = self.tx.send(LogMsg::Line(message));
+    }
 }
 
 pub struct ChannelLogger {
@@ -91,7 +149,9 @@ fn writer_thread(mut file: std::fs::File, rx: mpsc::Receiver<LogMsg>) {
     }
 }
 
-pub fn init_file_logger<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<(), String> {
+/// Initializes the file logger and returns the channel sender.
+/// This sender can be used to create a tracing layer.
+pub fn init_file_logger<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<mpsc::Sender<LogMsg>, String> {
     let data_dir = app
         .path()
         .app_data_dir()
@@ -134,5 +194,6 @@ pub fn init_file_logger<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<
     }
 
     log::info!("✅ File logger initialized at: {}", log_path.display());
-    Ok(())
+
+    Ok(LOGGER.get().unwrap().tx.clone())
 }

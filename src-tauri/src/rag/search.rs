@@ -3,6 +3,7 @@
 //! Combines sqlite-vec vector similarity with BM25 keyword matching for
 //! high-quality retrieval. Context assembly is handled by the frontend.
 
+use tracing;
 use crate::rag::embedder::OllamaEmbedder;
 use crate::rag::store::RagStore;
 use crate::rag::types::SearchResult;
@@ -40,7 +41,7 @@ impl RagSearchEngine {
         let top_k = top_k.unwrap_or(DEFAULT_TOP_K);
         let threshold = threshold.unwrap_or(DEFAULT_THRESHOLD);
 
-        log::debug!(
+        tracing::debug!(
             "RAG Search: project={}, query='{}', model={}, threshold={}",
             project_id,
             query,
@@ -56,15 +57,15 @@ impl RagSearchEngine {
         let s = store.lock().await;
         let candidates = s.search_similar(project_id, &query_embedding, top_k * 2, threshold)?;
         
-        log::debug!("RAG Search: found {} vector candidates", candidates.len());
+        tracing::debug!("RAG Search: found {} vector candidates", candidates.len());
         
         // If no candidates, return early
         if candidates.is_empty() {
-            log::info!("RAG Search: no candidates found for query '{}'", query);
+            tracing::info!("RAG Search: no candidates found for query '{}'", query);
             return Ok(vec![]);
         }
 
-        log::info!(
+        tracing::info!(
             "RAG Search: found {} candidates for query '{}'",
             candidates.len(),
             query

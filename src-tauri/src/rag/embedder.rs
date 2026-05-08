@@ -2,6 +2,7 @@
 //!
 //! Wraps the `/api/embed` endpoint for batched embedding generation.
 
+use tracing;
 use crate::rag::types::ModelValidation;
 use crate::shared::{acquire_global_permit, ollama_endpoint, retry_with_backoff, HTTP_CLIENT};
 use serde::{Deserialize, Serialize};
@@ -135,7 +136,7 @@ impl OllamaEmbedder {
         // Detect dimension from first response
         if self.dimension.is_none() {
             if let Some(first) = embed_response.embeddings.first() {
-                log::info!(
+                tracing::info!(
                     "Detected embedding dimension: {} for model {}",
                     first.len(),
                     self.model

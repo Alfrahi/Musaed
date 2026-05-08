@@ -1,5 +1,6 @@
 //! Shared utilities, global state, and HTTP client used across command modules.
 
+use tracing;
 use crate::ollama_url::parse_ollama_base_url;
 use crate::payloads::ApiResponse;
 use crate::payloads::BackendError;
@@ -135,7 +136,7 @@ fn evict_oldest_request_entry() -> bool {
     match oldest {
         Some(key) => {
             REQUEST_CACHE.remove(&key);
-            log::warn!(
+            tracing::warn!(
                 "Request cache at capacity ({}), evicted oldest entry: {}",
                 MAX_REQUEST_CACHE_SIZE,
                 key
@@ -201,7 +202,7 @@ pub fn spawn_cache_eviction_task() {
             let evicted = evict_stale_requests();
             let len = REQUEST_CACHE.len();
             if evicted > 0 {
-                log::warn!(
+                tracing::warn!(
                     "Evicted {} stale request-cache entr{} (TTL={}s, remaining={})",
                     evicted,
                     if evicted == 1 { "y" } else { "ies" },
@@ -209,7 +210,7 @@ pub fn spawn_cache_eviction_task() {
                     len,
                 );
             } else if len > 0 {
-                log::debug!(
+                tracing::debug!(
                     "Request cache sweep: {} active entries (TTL={}s)",
                     len,
                     REQUEST_CACHE_TTL_SECS,
@@ -240,22 +241,22 @@ where
         match f().await {
             Ok(result) => {
                 if attempt > 0 {
-                    log::info!("Request succeeded after {} retry(ies)", attempt);
+                    tracing::info!("Request succeeded after {} retry(ies)", attempt);
                 }
                 return Ok(result);
             }
             Err(err) => {
                 if !is_retryable_error(&err) {
-                    log::error!("Request failed with non-retryable error: {}", err);
+                    tracing::error!("Request failed with non-retryable error: {}", err);
                     return Err(err);
                 }
                 if attempt == max_retries {
-                    log::error!("Request failed after {} retries: {}", max_retries, err);
+                    tracing::error!("Request failed after {} retries: {}", max_retries, err);
                     return Err(err);
                 }
                 let jitter = (rand::random::<f64>() * 0.1 * backoff_ms as f64) as u64;
                 let delay = backoff_ms + jitter;
-                log::warn!(
+                tracing::warn!(
                     "Request failed (attempt {}), retrying in {}ms: {}",
                     attempt + 1,
                     delay,

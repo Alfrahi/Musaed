@@ -5,6 +5,7 @@
 //!
 //! SECURITY: All filesystem paths are canonicalized to prevent symlink traversal attacks.
 
+use tracing;
 use crate::payloads::{ApiResponse, BackendError};
 use crate::rag::embedder::OllamaEmbedder;
 use crate::rag::indexing;
@@ -333,7 +334,7 @@ pub async fn cmd_rag_index_project(
         RAG_INDEX_ABORT_HANDLES.remove(&project_id_clone);
 
         if let Err(e) = result {
-            log::error!("Indexing failed for project {}: {}", project_id_clone, e);
+            tracing::error!("Indexing failed for project {}: {}", project_id_clone, e);
             let error = crate::rag::types::IndexError {
                 project_id: project_id_clone.clone(),
                 message: e.clone(),

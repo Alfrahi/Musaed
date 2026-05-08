@@ -8,6 +8,7 @@
 //! - [`cmd_ollama_delete_model`] — remove a model from the server
 //! - [`cmd_ollama_verify_service`] — confirm a URL points to an Ollama instance
 
+use tracing;
 use crate::payloads::{
     ApiResponse, BackendError, ModelValidation, OllamaModel, PullProgress, PullStreamError,
 };
@@ -31,7 +32,7 @@ use super::client::{
 
 #[tauri::command]
 pub async fn cmd_ollama_get_models(base_url: String) -> ApiResponse<Vec<OllamaModel>> {
-    log::info!("Fetching Ollama models from: {}", base_url);
+    tracing::info!("Fetching Ollama models from: {}", base_url);
     let start = std::time::Instant::now();
 
     let _global_permit = match acquire_global_permit().await {
@@ -66,7 +67,7 @@ pub async fn cmd_ollama_get_models(base_url: String) -> ApiResponse<Vec<OllamaMo
                     json.get("models").cloned().unwrap_or_else(|| json!([])),
                 )
                 .unwrap_or_default();
-                log::info!(
+                tracing::info!(
                     "Successfully fetched {} models in {:?}",
                     models.len(),
                     start.elapsed()
@@ -78,7 +79,7 @@ pub async fn cmd_ollama_get_models(base_url: String) -> ApiResponse<Vec<OllamaMo
                 }
             }
             Err(e) => {
-                log::error!("Failed to parse models response: {}", e);
+                tracing::error!("Failed to parse models response: {}", e);
                 ApiResponse {
                     success: false,
                     data: None,
@@ -90,7 +91,7 @@ pub async fn cmd_ollama_get_models(base_url: String) -> ApiResponse<Vec<OllamaMo
             }
         },
         Err(e) => {
-            log::error!("Network error fetching models: {}", e);
+            tracing::error!("Network error fetching models: {}", e);
             ApiResponse {
                 success: false,
                 data: None,
@@ -108,7 +109,7 @@ pub async fn cmd_ollama_get_models(base_url: String) -> ApiResponse<Vec<OllamaMo
 
 #[tauri::command]
 pub async fn cmd_ollama_validate_model(base_url: String, model_name: String) -> ApiResponse<ModelValidation> {
-    log::info!("Validating model: {}", model_name);
+    tracing::info!("Validating model: {}", model_name);
 
     if !is_valid_model_name(&model_name) {
         return validation_error(
@@ -147,7 +148,7 @@ pub async fn cmd_ollama_validate_model(base_url: String, model_name: String) -> 
             Ok(json) => {
                 let details =
                     serde_json::from_value(json.get("details").cloned().unwrap_or_default()).ok();
-                log::info!("Model {} validation successful", model_name);
+                tracing::info!("Model {} validation successful", model_name);
                 ApiResponse {
                     success: true,
                     data: Some(ModelValidation {
@@ -159,7 +160,7 @@ pub async fn cmd_ollama_validate_model(base_url: String, model_name: String) -> 
                 }
             }
             Err(e) => {
-                log::error!("Failed to parse model details: {}", e);
+                tracing::error!("Failed to parse model details: {}", e);
                 ApiResponse {
                     success: false,
                     data: Some(ModelValidation {
@@ -172,7 +173,7 @@ pub async fn cmd_ollama_validate_model(base_url: String, model_name: String) -> 
             }
         },
         Ok(_) => {
-            log::warn!("Model validation failed for {}", model_name);
+            tracing::warn!("Model validation failed for {}", model_name);
             ApiResponse {
                 success: false,
                 data: Some(ModelValidation {
@@ -187,7 +188,7 @@ pub async fn cmd_ollama_validate_model(base_url: String, model_name: String) -> 
             }
         }
         Err(e) => {
-            log::error!("Network error validating model: {}", e);
+            tracing::error!("Network error validating model: {}", e);
             ApiResponse {
                 success: false,
                 data: Some(ModelValidation {
@@ -213,7 +214,7 @@ pub async fn cmd_ollama_pull_model<R: Runtime>(
     base_url: String,
     name: String,
 ) -> ApiResponse<()> {
-    log::info!("Starting model pull: {}", name);
+    tracing::info!("Starting model pull: {}", name);
 
     if !is_valid_model_name(&name) {
         return validation_error("INVALID_INPUT", format!("Invalid model name: {:?}", name));
@@ -259,7 +260,7 @@ pub async fn cmd_ollama_pull_model<R: Runtime>(
                         if !response.status().is_success() {
                             let status = response.status().as_u16();
                             let body = response.text().await.unwrap_or_default();
-                            log::error!(
+                            tracing::error!(
                                 "Pull request failed for model {}: HTTP {} — {}",
                                 name_clone,
                                 status,
@@ -280,7 +281,7 @@ pub async fn cmd_ollama_pull_model<R: Runtime>(
                             return;
                         }
 
-                        log::info!("Pull request accepted for model: {}", name_clone);
+                        tracing::info!("Pull request accepted for model: {}", name_clone);
 
                         let stream = response.bytes_stream();
                         let mut lines = FramedRead::new(
@@ -293,7 +294,7 @@ pub async fn cmd_ollama_pull_model<R: Runtime>(
                         loop {
                             tokio::select! {
                                 _ = cancel_token.cancelled() => {
-                                    log::info!("Pull cancelled for model: {}", name_clone);
+                                    tracing::info!("Pull cancelled for model: {}", name_clone);
                                     let _ = app_clone.emit(
                                         EVENT_PULL_ERROR,
                                         &PullStreamError {
@@ -315,7 +316,7 @@ pub async fn cmd_ollama_pull_model<R: Runtime>(
                                                         .as_str()
                                                         .map(str::to_owned)
                                                         .unwrap_or_else(|| err.to_string());
-                                                    log::error!("Pull stream error for {}: {}", name_clone, msg);
+                                                    tracing::error!("Pull stream error for {}: {}", name_clone, msg);
                                                     let _ = app_clone.emit(
                                                         EVENT_PULL_ERROR,
                                                         &PullStreamError {
@@ -343,7 +344,7 @@ pub async fn cmd_ollama_pull_model<R: Runtime>(
                                             }
                                         }
                                         Ok(Some(Err(e))) => {
-                                            log::error!("Stream read error: {}", e);
+                                            tracing::error!("Stream read error: {}", e);
                                             break;
                                         }
                                         Ok(None) => break,
@@ -355,14 +356,14 @@ pub async fn cmd_ollama_pull_model<R: Runtime>(
                             }
                         }
 
-                        log::info!(
+                        tracing::info!(
                             "Model pull completed: {} (duration: {:?})",
                             name_clone,
                             pull_start.elapsed()
                         );
                     }
                     Err(e) => {
-                        log::error!("Pull request failed for model {}: {}", name_clone, e);
+                        tracing::error!("Pull request failed for model {}: {}", name_clone, e);
                         let _ = app_clone.emit(
                             EVENT_PULL_ERROR,
                             &PullStreamError {
@@ -378,7 +379,7 @@ pub async fn cmd_ollama_pull_model<R: Runtime>(
         .await;
 
         if pull_result.is_err() {
-            log::warn!(
+            tracing::warn!(
                 "Pull timed out after {} seconds for model: {}",
                 PULL_ABSOLUTE_TIMEOUT_SECS,
                 name_clone
@@ -406,7 +407,7 @@ pub async fn cmd_ollama_pull_model<R: Runtime>(
 
 #[tauri::command]
 pub async fn cmd_ollama_abort_pull(name: String) -> ApiResponse<()> {
-    log::info!("Aborting model pull: {}", name);
+    tracing::info!("Aborting model pull: {}", name);
 
     if !is_valid_model_name(&name) {
         return validation_error("INVALID_INPUT", format!("Invalid model name: {:?}", name));
@@ -414,9 +415,9 @@ pub async fn cmd_ollama_abort_pull(name: String) -> ApiResponse<()> {
 
     if let Some((_, token)) = PULL_ABORT_HANDLES.remove(&name) {
         token.cancel();
-        log::info!("Model pull {} cancelled successfully", name);
+        tracing::info!("Model pull {} cancelled successfully", name);
     } else {
-        log::warn!("No active pull found for model: {}", name);
+        tracing::warn!("No active pull found for model: {}", name);
     }
 
     ApiResponse {
@@ -430,7 +431,7 @@ pub async fn cmd_ollama_abort_pull(name: String) -> ApiResponse<()> {
 
 #[tauri::command]
 pub async fn cmd_ollama_delete_model(base_url: String, name: String) -> ApiResponse<bool> {
-    log::info!("Deleting model: {}", name);
+    tracing::info!("Deleting model: {}", name);
 
     if !is_valid_model_name(&name) {
         return validation_error("INVALID_INPUT", format!("Invalid model name: {:?}", name));
@@ -459,7 +460,7 @@ pub async fn cmd_ollama_delete_model(base_url: String, name: String) -> ApiRespo
         .await
     {
         Ok(resp) if resp.status().is_success() => {
-            log::info!("Model deleted successfully: {}", name);
+            tracing::info!("Model deleted successfully: {}", name);
             ApiResponse {
                 success: true,
                 data: Some(true),
@@ -468,7 +469,7 @@ pub async fn cmd_ollama_delete_model(base_url: String, name: String) -> ApiRespo
         }
         Ok(resp) => {
             let status = resp.status().as_u16();
-            log::error!("Delete failed with status {}: {}", status, name);
+            tracing::error!("Delete failed with status {}: {}", status, name);
             ApiResponse {
                 success: false,
                 data: Some(false),
@@ -479,7 +480,7 @@ pub async fn cmd_ollama_delete_model(base_url: String, name: String) -> ApiRespo
             }
         }
         Err(e) => {
-            log::error!("Network error deleting model: {}", e);
+            tracing::error!("Network error deleting model: {}", e);
             ApiResponse {
                 success: false,
                 data: Some(false),
@@ -499,7 +500,7 @@ pub async fn cmd_ollama_delete_model(base_url: String, name: String) -> ApiRespo
 /// by requesting `/` and checking the `Server` response header.
 #[tauri::command]
 pub async fn cmd_ollama_verify_service(base_url: String) -> ApiResponse<String> {
-    log::info!("Verifying Ollama service at: {}", base_url);
+    tracing::info!("Verifying Ollama service at: {}", base_url);
 
     let _global_permit = match acquire_global_permit().await {
         Ok(p) => p,
@@ -528,7 +529,7 @@ pub async fn cmd_ollama_verify_service(base_url: String) -> ApiResponse<String> 
 
             if server_header.contains("ollama") {
                 let version = server_header.clone();
-                log::info!(
+                tracing::info!(
                     "Ollama service verified (server header: {:?})",
                     server_header
                 );
@@ -538,7 +539,7 @@ pub async fn cmd_ollama_verify_service(base_url: String) -> ApiResponse<String> 
                     error: None,
                 }
             } else {
-                log::warn!(
+                tracing::warn!(
                     "Service at {} does not appear to be Ollama (server header: {:?})",
                     url,
                     server_header
@@ -555,7 +556,7 @@ pub async fn cmd_ollama_verify_service(base_url: String) -> ApiResponse<String> 
         }
         Err(e) => {
             if e.is_timeout() {
-                log::warn!("Service verification timed out");
+                tracing::warn!("Service verification timed out");
                 ApiResponse {
                     success: false,
                     data: None,
@@ -565,7 +566,7 @@ pub async fn cmd_ollama_verify_service(base_url: String) -> ApiResponse<String> 
                     )),
                 }
             } else {
-                log::warn!("Service verification request failed: {}", e);
+                tracing::warn!("Service verification request failed: {}", e);
                 ApiResponse {
                     success: false,
                     data: None,

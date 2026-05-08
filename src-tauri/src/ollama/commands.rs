@@ -3,9 +3,9 @@
 //! These are the primary interactive commands used by the frontend during
 //! an active chat session or when probing server status.
 
+use tracing;
 use crate::payloads::{ApiResponse, ChatMessage, ChatOptions, OllamaHealth};
 use crate::validation::{is_valid_request_id, validation_error};
-use log;
 use std::time::Instant;
 use tauri::{AppHandle, Runtime};
 
@@ -48,7 +48,7 @@ pub async fn cmd_ollama_chat<R: Runtime>(
 
 #[tauri::command]
 pub async fn cmd_ollama_abort_chat(request_id: String) -> ApiResponse<()> {
-    log::info!("Aborting chat request: {}", request_id);
+    tracing::info!("Aborting chat request: {}", request_id);
 
     if !is_valid_request_id(&request_id) {
         return validation_error(
@@ -59,9 +59,9 @@ pub async fn cmd_ollama_abort_chat(request_id: String) -> ApiResponse<()> {
 
     if let Some((_, token)) = ABORT_HANDLES.remove(&request_id) {
         token.cancel();
-        log::info!("Chat request {} cancelled successfully", request_id);
+        tracing::info!("Chat request {} cancelled successfully", request_id);
     } else {
-        log::warn!("No active chat found for request_id: {}", request_id);
+        tracing::warn!("No active chat found for request_id: {}", request_id);
     }
 
     REQUEST_CACHE.remove(&request_id);

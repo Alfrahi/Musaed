@@ -5,6 +5,7 @@
 //! Tauri-specific concerns (event emitting, state access) and delegate business
 //! rules to this service.
 
+use tracing;
 use super::client::{
     acquire_global_permit, ollama_endpoint, request_cache_try_insert,
     retry_with_backoff, ABORT_HANDLES, CONCURRENT_SEMAPHORE, EVENT_OLLAMA_ERROR, FAST_HTTP_CLIENT,
@@ -17,7 +18,6 @@ use crate::validation::{
     is_valid_model_name, is_valid_request_id, validate_chat_message, validate_chat_options,
     MAX_MESSAGES_COUNT,
 };
-use log;
 use scopeguard::defer;
 use serde_json::json;
 use std::sync::Arc;
@@ -47,7 +47,7 @@ impl OllamaChatService {
         options: ChatOptions,
         request_id: String,
     ) -> Result<(), BackendError> {
-        log::info!(
+        tracing::info!(
             "Starting chat request: request_id={}, model={}",
             request_id,
             model
@@ -118,7 +118,7 @@ impl OllamaChatService {
 
         // Atomic duplicate check (bounded insert with LRU eviction)
         if !request_cache_try_insert(request_id.clone()) {
-            log::warn!("Duplicate request detected: {}", request_id);
+            tracing::warn!("Duplicate request detected: {}", request_id);
             return Err(
                 BackendError::new("DUPLICATE_REQUEST", "Request already in progress")
                     .with_request_id(request_id),
@@ -167,7 +167,7 @@ impl OllamaChatService {
         {
             Ok(resp) => resp,
             Err(e) => {
-                log::error!("Failed to send chat request: {}", e);
+                tracing::error!("Failed to send chat request: {}", e);
                 ABORT_HANDLES.remove(&request_id);
                 REQUEST_CACHE.remove(&request_id);
                 return Err(
@@ -182,7 +182,7 @@ impl OllamaChatService {
         if !response.status().is_success() {
             let status = response.status().as_u16();
             let error_text = response.text().await.unwrap_or_default();
-            log::error!("Ollama returned error status {}: {}", status, error_text);
+            tracing::error!("Ollama returned error status {}: {}", status, error_text);
 
             ABORT_HANDLES.remove(&request_id);
             REQUEST_CACHE.remove(&request_id);
@@ -206,7 +206,7 @@ impl OllamaChatService {
                 REQUEST_CACHE.remove(&request_id_clone);
             }
 
-            log::debug!("Starting streaming for request_id: {}", request_id_clone);
+            tracing::debug!("Starting streaming for request_id: {}", request_id_clone);
 
             let stream_start = Instant::now();
             let mut token_count = 0;
@@ -224,7 +224,7 @@ impl OllamaChatService {
             .await;
 
             if stream_result.is_err() {
-                log::warn!(
+                tracing::warn!(
                     "Chat stream timed out after {} seconds for request_id: {}",
                     STREAM_ABSOLUTE_TIMEOUT_SECS,
                     request_id_clone
@@ -236,7 +236,7 @@ impl OllamaChatService {
                 );
             }
 
-            log::info!(
+            tracing::info!(
                 "Stream completed for request_id: {} (tokens: {}, duration: {:?})",
                 request_id_clone,
                 token_count,
@@ -244,7 +244,7 @@ impl OllamaChatService {
             );
         });
 
-        log::info!(
+        tracing::info!(
             "Chat request initiated successfully in {:?}",
             start.elapsed()
         );
@@ -253,7 +253,7 @@ impl OllamaChatService {
 
     /// Performs a health check against the Ollama server.
     pub async fn health_check(&self, base_url: String) -> Result<OllamaHealth, BackendError> {
-        log::info!("Checking Ollama health: {}", base_url);
+        tracing::info!("Checking Ollama health: {}", base_url);
         let start = Instant::now();
 
         let _global_permit = match acquire_global_permit().await {
@@ -287,7 +287,7 @@ impl OllamaChatService {
                             .filter(|v| !v.is_empty())
                     });
 
-                log::info!(
+                tracing::info!(
                     "Ollama health check passed ({}ms){}",
                     response_time,
                     version
@@ -303,10 +303,10 @@ impl OllamaChatService {
             }
             Err(e) => {
                 if e.is_timeout() {
-                    log::warn!("Ollama health check timed out");
+                    tracing::warn!("Ollama health check timed out");
                     return Err(BackendError::new("HEALTH_CHECK_TIMEOUT", "Request timed out").retryable());
                 } else {
-                    log::warn!("Ollama health check failed: {}", e);
+                    tracing::warn!("Ollama health check failed: {}", e);
                     return Err(BackendError::new("HEALTH_CHECK_FAILED", e.to_string()).retryable());
                 }
             }

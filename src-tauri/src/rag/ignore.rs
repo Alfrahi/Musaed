@@ -3,6 +3,7 @@
 //! Uses the `ignore` crate (ripgrep's walker) to traverse project directories
 //! while respecting .gitignore, .ignore, and custom patterns.
 
+use tracing;
 use ignore::overrides::OverrideBuilder;
 use ignore::WalkBuilder;
 use std::path::{Path, PathBuf};
@@ -158,7 +159,7 @@ pub fn discover_files(
         match entry {
             Ok(entry) => {
                 if files.len() >= MAX_FILES_PER_PROJECT {
-                    log::warn!(
+                    tracing::warn!(
                         "File limit reached ({}) for project {:?}. Remaining files skipped.",
                         MAX_FILES_PER_PROJECT,
                         project_path
@@ -179,7 +180,7 @@ pub fn discover_files(
                 let metadata = match std::fs::metadata(&path) {
                     Ok(m) => m,
                     Err(e) => {
-                        log::debug!("Skipping file {:?}: {}", path, e);
+                        tracing::debug!("Skipping file {:?}: {}", path, e);
                         continue;
                     }
                 };
@@ -191,7 +192,7 @@ pub fn discover_files(
 
                 // Check if the file appears to be binary
                 if is_binary_file(&path) {
-                    log::debug!("Skipping binary file: {:?}", path);
+                    tracing::debug!("Skipping binary file: {:?}", path);
                     continue;
                 }
 
@@ -202,12 +203,12 @@ pub fn discover_files(
                 });
             }
             Err(e) => {
-                log::debug!("Walk error: {}", e);
+                tracing::debug!("Walk error: {}", e);
             }
         }
     }
 
-    log::info!(
+    tracing::info!(
         "Discovered {} files in {:?}",
         files.len(),
         project_path
