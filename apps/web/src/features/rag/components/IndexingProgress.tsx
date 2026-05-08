@@ -1,28 +1,20 @@
 'use client';
 
 import type { IndexProgress } from '@musaed/contracts';
+import { useGlobalSettings } from '../../../store/hooks';
+import { useTranslation } from '../../../lib/i18n';
 
 interface IndexingProgressProps {
   progress: IndexProgress;
   onAbort: () => void;
 }
 
-const phaseLabels: Record<string, string> = {
-  discoveringFiles: 'Discovering files',
-  diffingFiles: 'Checking for changes',
-  deletingStale: 'Removing stale files',
-  readingFiles: 'Reading files',
-  chunkingFiles: 'Chunking files',
-  embeddingChunks: 'Generating embeddings',
-  storingChunks: 'Storing chunks',
-  completed: 'Complete',
-  failed: 'Failed',
-};
-
 export const IndexingProgress = ({ progress, onAbort }: IndexingProgressProps) => {
   const percentage = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
+  const globalSettings = useGlobalSettings();
+  const { t } = useTranslation(globalSettings.language);
 
-  const label = phaseLabels[progress.phase] || progress.phase;
+  const label = t(`rag.indexPhase.${progress.phase}`, { defaultValue: progress.phase });
   const isFailed = progress.phase === 'failed';
   const isCompleted = progress.phase === 'completed';
 

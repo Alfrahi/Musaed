@@ -1,7 +1,8 @@
 'use client';
 
 import { FileText, Code, FileCode, File } from 'lucide-react';
-import { useRagSearchResults } from '@/store/hooks';
+import { useRagSearchResults, useGlobalSettings } from '@/store/hooks';
+import { useTranslation } from '../../../lib/i18n';
 import type { SearchResult } from '@musaed/contracts';
 
 const chunkTypeIcon = (type: string) => {
@@ -19,13 +20,15 @@ const chunkTypeIcon = (type: string) => {
 
 export const SearchResults = () => {
   const results = useRagSearchResults();
+  const globalSettings = useGlobalSettings();
+  const { t } = useTranslation(globalSettings.language);
 
   if (results.length === 0) return null;
 
   return (
     <div className="space-y-2">
       <p className="text-muted-foreground text-xs font-medium">
-        {results.length} result{results.length !== 1 ? 's' : ''} found
+        {t('rag.searchResultCount', { count: results.length })}
       </p>
       <div className="max-h-80 space-y-1.5 overflow-y-auto">
         {results.map((result, i) => (

@@ -10,6 +10,8 @@ import { attachmentImageSrc } from '../imageAttachment';
 import { useMessageActions } from '../hooks/useMessageActions';
 import { MessageAvatar } from './MessageAvatar';
 import { MessageStats } from './MessageStats';
+import { useGlobalSettings } from '../../../store/hooks';
+import { useTranslation } from '../../../lib/i18n';
 
 interface MessageBubbleProps {
   message: Message;
@@ -29,6 +31,53 @@ interface SourceReference {
   language?: string;
 }
 
+interface RagSourceReferencesProps {
+  sources: SourceReference[];
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+  t: (key: string, values?: Record<string, string | number | boolean>) => string;
+}
+
+/** Renders the RAG source references section. */
+const RagSourceReferences = ({
+  sources,
+  isExpanded,
+  onToggleExpand,
+  t,
+}: RagSourceReferencesProps) => (
+  <div className="mt-4 border-t pt-4">
+    <button
+      className="text-muted-foreground hover:text-foreground flex items-center gap-2 text-xs font-medium"
+      onClick={onToggleExpand}
+    >
+      <FileText className="h-3 w-3" />
+      {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+      {t('rag.sourceReferenceCount', { count: sources.length })}
+    </button>
+
+    {isExpanded && (
+      <div className="mt-2 space-y-2 text-xs">
+        {sources.map((source, index) => (
+          <div key={index} className="bg-secondary/50 flex items-start gap-2 rounded-md p-2">
+            <FileText className="text-muted-foreground mt-0.5 h-3 w-3 flex-shrink-0" />
+            <div>
+              <p className="font-medium">
+                {source.filePath}
+                <span className="text-muted-foreground ms-1 font-normal">
+                  (lines {source.startLine}–{source.endLine})
+                </span>
+              </p>
+              {source.language && (
+                <p className="text-muted-foreground">Language: {source.language}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+);
+
 /**
  * Renders a single message bubble in the chat window.
  */
@@ -37,6 +86,9 @@ const MessageBubble = ({ message, labels, formatNumber }: MessageBubbleProps) =>
   const { copied, handleCopy, tps } = useMessageActions(message);
   const sourceReferences = (message.ragSources ?? []) as SourceReference[];
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const globalSettings = useGlobalSettings();
+  const { t } = useTranslation(globalSettings.language);
 
   return (
     <div
@@ -87,45 +139,12 @@ const MessageBubble = ({ message, labels, formatNumber }: MessageBubbleProps) =>
 
           {/* RAG Source References */}
           {sourceReferences.length > 0 && (
-            <div className="mt-4 border-t pt-4">
-              <button
-                className="text-muted-foreground hover:text-foreground flex items-center gap-2 text-xs font-medium"
-                onClick={() => setIsExpanded(!isExpanded)}
-              >
-                <FileText className="h-3 w-3" />
-                {isExpanded ? (
-                  <ChevronUp className="h-3 w-3" />
-                ) : (
-                  <ChevronDown className="h-3 w-3" />
-                )}
-                {sourceReferences.length} source file{sourceReferences.length !== 1 ? 's' : ''}{' '}
-                referenced
-              </button>
-
-              {isExpanded && (
-                <div className="mt-2 space-y-2 text-xs">
-                  {sourceReferences.map((source, index) => (
-                    <div
-                      key={index}
-                      className="bg-secondary/50 flex items-start gap-2 rounded-md p-2"
-                    >
-                      <FileText className="text-muted-foreground mt-0.5 h-3 w-3 flex-shrink-0" />
-                      <div>
-                        <p className="font-medium">
-                          {source.filePath}
-                          <span className="text-muted-foreground ms-1 font-normal">
-                            (lines {source.startLine}–{source.endLine})
-                          </span>
-                        </p>
-                        {source.language && (
-                          <p className="text-muted-foreground">Language: {source.language}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <RagSourceReferences
+              sources={sourceReferences}
+              isExpanded={isExpanded}
+              onToggleExpand={() => setIsExpanded(!isExpanded)}
+              t={t}
+            />
           )}
 
           <MessageStats

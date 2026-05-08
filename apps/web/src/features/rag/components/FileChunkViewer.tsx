@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRagFileBrowser } from '../hooks/useRagFileBrowser';
 import { Loader2, AlertCircle } from 'lucide-react';
-import { useActiveRagProject } from '../../../store/hooks';
+import { useActiveRagProject, useGlobalSettings } from '../../../store/hooks';
+import { useTranslation } from '../../../lib/i18n';
 import type { ChunkRecord } from '@musaed/contracts';
 
 interface FileChunkViewerProps {
@@ -56,6 +57,8 @@ const ChunkCard = ({ chunk }: { chunk: ChunkRecord }) => (
 const FileChunkViewer = ({ filePath }: FileChunkViewerProps) => {
   const activeProject = useActiveRagProject();
   const { fetchFileChunks } = useRagFileBrowser();
+  const globalSettings = useGlobalSettings();
+  const { t } = useTranslation(globalSettings.language);
   const [chunks, setChunks] = useState<ChunkRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -99,7 +102,9 @@ const FileChunkViewer = ({ filePath }: FileChunkViewerProps) => {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b p-2">
-        <h3 className="truncate text-sm font-medium">Chunks for: {filePath}</h3>
+        <h3 className="truncate text-sm font-medium">
+          {t('rag.chunksForFile')} {filePath}
+        </h3>
       </div>
       <div className="flex-1 overflow-auto p-2">
         {chunks.length > 0 ? (
@@ -109,7 +114,7 @@ const FileChunkViewer = ({ filePath }: FileChunkViewerProps) => {
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground p-2 text-sm">No chunks found for this file.</p>
+          <p className="text-muted-foreground p-2 text-sm">{t('rag.noChunksForFile')}</p>
         )}
       </div>
     </div>
