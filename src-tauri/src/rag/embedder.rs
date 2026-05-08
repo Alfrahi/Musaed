@@ -95,11 +95,14 @@ impl OllamaEmbedder {
             input: texts,
         };
 
+        let body_str = serde_json::to_string(&request)
+            .map_err(|e| format!("Failed to serialize embedding request: {}", e))?;
+
         let response = retry_with_backoff(
             || {
+                let body = body_str.clone();
                 let client = &HTTP_CLIENT;
                 let url = &endpoint;
-                let body = serde_json::to_string(&request).unwrap();
                 async move {
                     client
                         .post(url)
