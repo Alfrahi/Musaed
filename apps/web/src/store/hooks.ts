@@ -11,6 +11,7 @@ import {
   selectIsLiveStreaming,
 } from './stores/streaming-store';
 import { useRagStore } from './stores/rag-store';
+import { coordinateStartStream, coordinateStopStream } from './coordination';
 import type {
   Message,
   ChatSettings,
@@ -298,11 +299,11 @@ export function useActiveStreams(): Record<string, string> {
 }
 
 export function useStartStream(): (conversationId: string, requestId: string) => void {
-  return useStreamingStore((s) => s.startStream);
+  return coordinateStartStream;
 }
 
 export function useStopStream(): (conversationId: string) => void {
-  return useStreamingStore((s) => s.stopStream);
+  return coordinateStopStream;
 }
 
 // ---------------------------------------------------------------------------

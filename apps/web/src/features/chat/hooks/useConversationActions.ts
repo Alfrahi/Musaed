@@ -9,6 +9,7 @@ import {
   useMessageStore,
 } from '../../../store';
 import { useSetConversations, useBatchUpdate } from '../../../store/hooks';
+import { coordinateStartStream, coordinateStopStream } from '../../../store/coordination';
 import { chatApi } from '../../../lib/ipc';
 import { useTranslation } from '../../../lib/i18n';
 import { stopBatching } from '../../../store/batch-manager';
@@ -23,7 +24,7 @@ export function abortStreaming(conversationId: string): void {
 
   if (requestId) chatApi.abort(requestId);
   stopBatching(conversationId);
-  streamingState.stopStream(conversationId);
+  coordinateStopStream(conversationId);
 }
 
 /** Create a new conversation with current model and settings. */
@@ -114,11 +115,11 @@ export const useConversationActions = () => {
   }, [batchUpdate]);
 
   const initiateStreaming = useCallback((conversationId: string, requestId: string) => {
-    useStreamingStore.getState().startStream(conversationId, requestId);
+    coordinateStartStream(conversationId, requestId);
   }, []);
 
   const stopStreaming = useCallback((conversationId: string) => {
-    useStreamingStore.getState().stopStream(conversationId);
+    coordinateStopStream(conversationId);
   }, []);
 
   return {

@@ -13,6 +13,7 @@ import {
   useSetSettingsOpen,
   useSetInfoOpen,
 } from '@/store/hooks';
+import { registerHydrationCoordination } from '@/store/coordination';
 import { Sliders, Library } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/i18n';
@@ -130,6 +131,11 @@ const HomeClient = () => {
 
   useTauriEvents();
   useGlobalShortcuts();
+
+  useEffect(() => {
+    const unsubscribe = registerHydrationCoordination();
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     setMounted(true);

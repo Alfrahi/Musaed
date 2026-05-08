@@ -5,7 +5,6 @@ import { shallow } from 'zustand/shallow';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Conversation } from '@musaed/contracts';
 import { createTauriStorage, Migrations } from '../../lib/tauri-storage';
-import { setHydrated } from '../actions';
 
 const CONVERSATION_STORE_VERSION = 3;
 
@@ -145,7 +144,6 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
         conversationIds: state.conversationIds,
         currentConversationId: state.currentConversationId,
       }),
-      onRehydrateStorage: () => () => setHydrated(true),
     }
   ),
   shallow

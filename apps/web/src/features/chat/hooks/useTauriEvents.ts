@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { z } from 'zod';
 import { useSettingsStore, useStreamingStore } from '../../../store';
+import { coordinateStopStream } from '../../../store/coordination';
 import { startBatching, flushAndStop, stopAllBatching } from '../../../store/batch-manager';
 import { persistConversationsNow } from '../../../store/stores/conversation-store';
 import { useUpdatePullStatus, useSetModels } from '../../../store/hooks';
@@ -57,7 +58,7 @@ const handleToken = (payload: OllamaToken) => {
   // On stream completion, flush remaining content immediately and stop
   if (payload.done) {
     flushAndStop(convId);
-    streamingStore.stopStream(convId);
+    coordinateStopStream(convId);
 
     // Auto-generate title for conversations that still have the default title
     triggerAutoTitle(convId);
@@ -77,7 +78,7 @@ const handleError = (payload: BackendError) => {
     )?.[0];
     if (convId) {
       flushAndStop(convId);
-      streamingStore.stopStream(convId);
+      coordinateStopStream(convId);
       toast.error(sanitized.message);
       return;
     }
@@ -87,7 +88,7 @@ const handleError = (payload: BackendError) => {
   // Flush all active streams on unattributed errors
   Object.keys(streamingStore.activeStreams).forEach((id) => {
     flushAndStop(id);
-    streamingStore.stopStream(id);
+    coordinateStopStream(id);
   });
 };
 

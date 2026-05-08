@@ -3,7 +3,6 @@
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { Message } from '@musaed/contracts';
-import { setStreaming } from '../actions';
 
 /** Metrics snapshot carried alongside the live token buffer. */
 export interface StreamMetrics {
@@ -75,19 +74,14 @@ export const useStreamingStore = createWithEqualityFn<StreamingState>()(
     },
 
     startStream: (conversationId, requestId) => {
-      set((state) => {
-        setStreaming(true);
-        return {
-          activeStreams: { ...state.activeStreams, [conversationId]: String(requestId) },
-        };
-      });
+      set((state) => ({
+        activeStreams: { ...state.activeStreams, [conversationId]: String(requestId) },
+      }));
     },
 
     stopStream: (conversationId) => {
       set((state) => {
         const { [conversationId]: _stream, ...remainingStreams } = state.activeStreams;
-        const hasMoreStreams = Object.keys(remainingStreams).length > 0;
-        setStreaming(hasMoreStreams);
         return { activeStreams: remainingStreams };
       });
     },
