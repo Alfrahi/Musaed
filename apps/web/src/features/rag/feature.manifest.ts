@@ -46,7 +46,7 @@ export default {
     'cmd_rag_get_index_status',
     'cmd_rag_search',
     'cmd_rag_get_file_chunks',
-    'cmd_cmd_rag_get_project_stats',
+    'cmd_rag_get_project_stats',
     'cmd_rag_set_embedding_model',
     'cmd_rag_validate_embedding_model',
   ],

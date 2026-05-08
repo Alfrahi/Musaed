@@ -109,7 +109,7 @@ export interface CommandMap {
     return: SearchResult[];
   };
   cmd_rag_get_file_chunks: { args: { projectId: string; filePath: string }; return: ChunkRecord[] };
-  cmd_cmd_rag_get_project_stats: { args: { projectId: string }; return: ProjectStats };
+  cmd_rag_get_project_stats: { args: { projectId: string }; return: ProjectStats };
   cmd_rag_set_embedding_model: { args: { projectId: string; modelName: string }; return: boolean };
   cmd_rag_validate_embedding_model: {
     args: { baseUrl?: string; modelName: string };
@@ -207,7 +207,7 @@ const CommandInputSchemas: {
     projectId: z.string().min(1),
     filePath: z.string().min(1).max(RAG_VALIDATION_LIMITS.MAX_PROJECT_PATH_LEN),
   }),
-  cmd_cmd_rag_get_project_stats: z.object({ projectId: z.string().min(1) }),
+  cmd_rag_get_project_stats: z.object({ projectId: z.string().min(1) }),
   cmd_rag_set_embedding_model: z.object({
     projectId: z.string().min(1),
     modelName: ModelNameSchema,
@@ -249,7 +249,7 @@ const CommandReturnSchemas: {
   cmd_rag_get_index_status: IndexStatusSchema,
   cmd_rag_search: z.array(SearchResultSchema),
   cmd_rag_get_file_chunks: z.array(ChunkRecordSchema),
-  cmd_cmd_rag_get_project_stats: ProjectStatsSchema,
+  cmd_rag_get_project_stats: ProjectStatsSchema,
   cmd_rag_set_embedding_model: z.boolean(),
   cmd_rag_validate_embedding_model: RagModelValidationSchema,
 };
@@ -568,8 +568,7 @@ export const ragApi = {
    * @param projectId - The project identifier
    * @returns ProjectStats object or null on failure
    */
-  getProjectStats: (projectId: string) =>
-    callInternal('cmd_cmd_rag_get_project_stats', { projectId }),
+  getProjectStats: (projectId: string) => callInternal('cmd_rag_get_project_stats', { projectId }),
   /**
    * Changes the embedding model used by a project.
    * @param projectId - The project identifier

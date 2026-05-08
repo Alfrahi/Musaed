@@ -571,7 +571,7 @@ export const COMMAND_VERSIONS = {
   cmd_rag_get_index_status: 1,
   cmd_rag_search: 1,
   cmd_rag_get_file_chunks: 1,
-  cmd_cmd_rag_get_project_stats: 1,
+  cmd_rag_get_project_stats: 1,
   cmd_rag_set_embedding_model: 1,
   cmd_rag_validate_embedding_model: 1,
 } as const;
