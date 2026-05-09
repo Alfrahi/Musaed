@@ -108,6 +108,16 @@ pub async fn cmd_rag_add_project(
         return Ok(validation::rag_validation_error(e));
     }
 
+    // Canonicalize the path and ensure it is a valid directory
+    let canonical_path = Path::new(&path)
+        .canonicalize()
+        .map_err(|e| format!("Failed to resolve project path: {}", e))?;
+    if !canonical_path.is_dir() {
+        return Ok(validation::rag_validation_error(
+            "Project path must be a valid directory".to_string(),
+        ));
+    }
+
     let store = state.inner();
     let s = store.lock().await;
 
@@ -503,47 +513,55 @@ pub async fn cmd_rag_get_file_chunks(
     if let Err(e) = validation::validate_project_id(&project_id) {
         return Ok(validation::rag_validation_error(e));
     }
-    if let Err(e) = validation::validate_file_path(&file_path) {
-        return Ok(validation::rag_validation_error(e));
-    }
 
+    // Get the project to access its root path
     let store = state.inner();
     let s = store.lock().await;
+    let project = s
+        .get_project(&project_id)
+        .map_err(|e| format!("Failed to fetch project: {}", e))?;
+    let project = project.ok_or("Project not found")?;
 
-    Ok(match s.get_file_by_path(&project_id, &file_path) {
-        Ok(Some(file)) => {
-            if let Some(file_id) = file.id {
-                match s.get_file_chunks(file_id) {
-                    Ok(chunks) => ApiResponse {
+    // Validate and canonicalize the file path
+    let canonical_path = validate_and_canonicalize_file_path(Path::new(&project.path), &file_path)
+        .map_err(|e| format!("Invalid file path: {}", e))?;
+
+    Ok(
+        match s.get_file_by_path(&project_id, &canonical_path.to_string_lossy()) {
+            Ok(Some(file)) => {
+                if let Some(file_id) = file.id {
+                    match s.get_file_chunks(file_id) {
+                        Ok(chunks) => ApiResponse {
+                            success: true,
+                            data: Some(chunks),
+                            error: None,
+                        },
+                        Err(e) => ApiResponse {
+                            success: false,
+                            data: None,
+                            error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
+                        },
+                    }
+                } else {
+                    ApiResponse {
                         success: true,
-                        data: Some(chunks),
+                        data: Some(vec![]),
                         error: None,
-                    },
-                    Err(e) => ApiResponse {
-                        success: false,
-                        data: None,
-                        error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
-                    },
-                }
-            } else {
-                ApiResponse {
-                    success: true,
-                    data: Some(vec![]),
-                    error: None,
+                    }
                 }
             }
-        }
-        Ok(None) => ApiResponse {
-            success: true,
-            data: Some(vec![]),
-            error: None,
+            Ok(None) => ApiResponse {
+                success: true,
+                data: Some(vec![]),
+                error: None,
+            },
+            Err(e) => ApiResponse {
+                success: false,
+                data: None,
+                error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
+            },
         },
-        Err(e) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
-        },
-    })
+    )
 }
 
 #[tauri::command]
