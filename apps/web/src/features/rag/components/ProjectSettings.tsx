@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRagProjects } from '../hooks/useRagProjects';
 import { Loader2, Save, X } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useActiveRagProject, useLanguage } from '../../../store/hooks';
+import { useActiveRagProject, useLanguage, useOllamaUrl } from '../../../store/hooks';
+import { ollamaApi } from '@/lib/ipc';
 import { useTranslation } from '@/lib/i18n';
 
 interface ProjectSettingsProps {
@@ -53,19 +54,19 @@ const EmbeddingModelSelect = ({ value, onChange, models, t }: EmbeddingModelSele
 
 const useEmbeddingModels = () => {
   const [embeddingModels, setEmbeddingModels] = useState<{ name: string }[]>([]);
+  const ollamaUrl = useOllamaUrl();
 
   useEffect(() => {
     const fetchModels = async () => {
       try {
-        const response = await fetch('http://localhost:11434/api/tags');
-        const data = await response.json();
-        if (data.models) setEmbeddingModels(data.models);
-      } catch (err) {
-        console.error('Failed to fetch embedding models:', err);
+        const data = await ollamaApi.getModels(ollamaUrl);
+        if (data) setEmbeddingModels(data);
+      } catch {
+        // IPC layer handles error sanitization
       }
     };
     fetchModels();
-  }, []);
+  }, [ollamaUrl]);
 
   return embeddingModels;
 };
