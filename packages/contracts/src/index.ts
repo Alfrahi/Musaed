@@ -380,7 +380,7 @@ export const ChatSettingsSchema = z.object({
   hasDetectedLanguage: z.boolean(),
   enterToSend: z.boolean().default(true),
   chatRetentionDays: z.number().default(0),
-  enableLatex: z.boolean().default(true),
+  enableLatex: z.boolean().default(false),
   enableMermaid: z.boolean().default(true),
   density: z.number().default(1.0),
 });
@@ -413,7 +413,7 @@ export const DEFAULT_SETTINGS: ChatSettings = {
   hasDetectedLanguage: false,
   enterToSend: true,
   chatRetentionDays: 0,
-  enableLatex: true,
+  enableLatex: false,
   enableMermaid: true,
   density: 1.0,
 };
