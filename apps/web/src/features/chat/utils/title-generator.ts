@@ -11,6 +11,40 @@ const MAX_MESSAGE_LENGTH = 500;
 /** Maximum number of words allowed in a generated title. */
 const MAX_TITLE_WORDS = 5;
 
+/** Prefixes indicating the model started reasoning instead of generating a title. */
+const REASONING_STARTERS = [
+  'okay',
+  'alright',
+  'let me',
+  "let's",
+  'i need',
+  'i think',
+  "i'll",
+  'first',
+  'so,',
+  'so i',
+  'well,',
+  'the user',
+  'based on',
+  'to answer',
+  'in order',
+  'sure,',
+  'sure i',
+  'certainly',
+  'of course',
+  "here's",
+  'here is',
+] as const;
+
+/**
+ * Returns true if the text looks like a reasoning/sentence output
+ * rather than a concise title label.
+ */
+function looksLikeReasoning(text: string): boolean {
+  const lower = text.toLowerCase();
+  return REASONING_STARTERS.some((starter) => lower.startsWith(starter));
+}
+
 /** All localized variants of the default conversation title. */
 const DEFAULT_TITLES: ReadonlySet<string> = new Set(['New Chat', 'محادثة جديدة']);
 
@@ -26,24 +60,56 @@ export function isDefaultTitle(title: string): boolean {
  * Cleans a generated title by stripping thinking/reasoning blocks,
  * taking only the last non-empty line (the actual title), and
  * enforcing the maximum word count.
+ *
+ * Returns null if the output looks like reasoning instead of a title.
  */
-function cleanGeneratedTitle(raw: string): string {
+function cleanGeneratedTitle(raw: string): string | null {
   const stripped = stripRedactedThinkingBlocks(raw).trim();
   const lines = stripped
     .split('\n')
     .map((l) => l.trim())
     .filter((l) => l.length > 0);
   const title = lines[lines.length - 1] ?? stripped;
+
+  if (looksLikeReasoning(title)) return null;
+
   return truncateTitleWords(title, MAX_TITLE_WORDS);
 }
 
 /**
- * Truncates a title to at most `maxWords` words.
- * Preserves the leading portion which carries the most important content.
+ * Enforces the word-count limit on a generated title.
+ *
+ * When a model ignores the prompt and produces a sentence instead of a label,
+ * blindly taking the first N words yields poor results (e.g.
+ * "ChatGPT: Large Language Model from"). Instead, we look for natural
+ * separators (colon, dash) and prefer the concise portion before it.
  */
 function truncateTitleWords(title: string, maxWords: number): string {
   const words = title.split(/\s+/).filter((w) => w.length > 0);
   if (words.length <= maxWords) return title;
+
+  // Titles like "ChatGPT: Large Language Model from OpenAI" — the part
+  // before the colon is the concise label.
+  const colonIdx = title.indexOf(':');
+  if (colonIdx !== -1) {
+    const before = title.slice(0, colonIdx).trim();
+    const beforeWords = before.split(/\s+/).filter((w) => w.length > 0);
+    if (beforeWords.length > 0 && beforeWords.length <= maxWords) {
+      return before;
+    }
+  }
+
+  // Titles like "ChatGPT - Large Language Model" — same idea with dashes.
+  const dashIdx = title.indexOf(' - ');
+  if (dashIdx !== -1) {
+    const before = title.slice(0, dashIdx).trim();
+    const beforeWords = before.split(/\s+/).filter((w) => w.length > 0);
+    if (beforeWords.length > 0 && beforeWords.length <= maxWords) {
+      return before;
+    }
+  }
+
+  // Fallback: take first N words (better than an overly long title).
   return words.slice(0, maxWords).join(' ');
 }
 

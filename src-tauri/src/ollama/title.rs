@@ -1,6 +1,6 @@
 //! Title generation helpers.
 //!
-//! Contains [`strip_thinking_blocks`] for cleaning model output and the
+//! Contains [`strip_think_blocks`] for cleaning model output and the
 //! [`cmd_ollama_generate_title`] Tauri command that produces a short conversation title.
 
 use crate::payloads::{ApiResponse, BackendError};
@@ -20,23 +20,84 @@ use super::client::{
 /// Maximum number of words allowed in a generated title.
 const MAX_TITLE_WORDS: usize = 5;
 
-/// Truncates a title to at most `max_words` words, preserving the leading
-/// portion which typically carries the most important content.
+/// Prefixes that indicate the model started reasoning instead of generating a
+/// title. These are common chain-of-thought sentence starters produced when a
+/// model ignores the title-generation prompt and continues the conversation.
+const REASONING_STARTERS: &[&str] = &[
+    "okay",
+    "alright",
+    "let me",
+    "let's",
+    "i need",
+    "i think",
+    "i'll",
+    "first",
+    "so,",
+    "so i",
+    "well,",
+    "the user",
+    "based on",
+    "to answer",
+    "in order",
+    "sure,",
+    "sure i",
+    "certainly",
+    "of course",
+    "here's",
+    "here is",
+];
+
+/// Returns `true` if `text` looks like a reasoning/sentence output rather than
+/// a concise title label. Checked case-insensitively against known starters.
+fn looks_like_reasoning(text: &str) -> bool {
+    let lower = text.to_lowercase();
+    REASONING_STARTERS
+        .iter()
+        .any(|starter| lower.starts_with(starter))
+}
+
+/// Enforces the word-count limit on a generated title.
+///
+/// When a model ignores the prompt and produces a sentence instead of a label,
+/// blindly taking the first N words yields poor results (e.g. "ChatGPT: Large
+/// Language Model from"). Instead, we look for natural separators (colon, dash)
+/// and prefer the concise portion before the separator.
 fn truncate_title_words(title: &str, max_words: usize) -> String {
     let words: Vec<&str> = title.split_whitespace().collect();
     if words.len() <= max_words {
-        title.to_string()
-    } else {
-        words[..max_words].join(" ")
+        return title.to_string();
     }
+
+    // Titles like "ChatGPT: Large Language Model from OpenAI" — the part
+    // before the colon is the concise label.
+    if let Some(colon_pos) = title.find(':') {
+        let before = title[..colon_pos].trim();
+        let before_words: Vec<&str> = before.split_whitespace().collect();
+        if !before_words.is_empty() && before_words.len() <= max_words {
+            return before.to_string();
+        }
+    }
+
+    // Titles like "ChatGPT - Large Language Model" — same idea with dashes.
+    if let Some(dash_pos) = title.find(" - ") {
+        let before = title[..dash_pos].trim();
+        let before_words: Vec<&str> = before.split_whitespace().collect();
+        if !before_words.is_empty() && before_words.len() <= max_words {
+            return before.to_string();
+        }
+    }
+
+    // Fallback: take first N words (better than returning an overly long title).
+    words[..max_words].join(" ")
 }
 
 /// Strips common thinking/reasoning blocks from model output.
 ///
-/// Handles both `<redacted-thinking>` and `<thinkigne` (DeepSeek-R1) tag formats,
-/// plus `<lemma>` blocks, then takes the last non-empty line as the title
+/// Handles `<redacted-thinking>`, `<think>` (DeepSeek-R1), `<thoughts>`,
+/// `<reasoning>`, `<initial_thoughts>`, plus `<lemma>` blocks,
+/// then takes the last non-empty line as the title
 /// to discard any preceding chain-of-thought.
-pub(crate) fn strip_thinking_blocks(content: &str) -> String {
+pub(crate) fn strip_think_blocks(content: &str) -> String {
     let mut result = content.to_string();
 
     // Strip <redacted-thinking>...</redacted-thinking> blocks
@@ -56,13 +117,56 @@ pub(crate) fn strip_thinking_blocks(content: &str) -> String {
         }
     }
 
-    // Strip <thinkigne>...</thinkigne> blocks (DeepSeek-R1 reasoning format)
-    while let Some(start) = result.find("<thinkigne>") {
-        if let Some(end) = result[start + "<thinkigne>".len()..].find("</thinkigne>") {
+    // Strip <think>...</think> blocks (DeepSeek-R1 reasoning format)
+    while let Some(start) = result.find("<think>") {
+        if let Some(end) = result[start + "<think>".len()..].find("</think>") {
             result = format!(
                 "{}{}",
                 &result[..start],
-                &result[start + "<thinkigne>".len() + end + "</thinkigne>".len()..]
+                &result[start + "<think>".len() + end + "</think>".len()..]
+            );
+        } else {
+            result = result[..start].to_string();
+            break;
+        }
+    }
+
+    // Strip <thoughts>...</thoughts> blocks
+    while let Some(start) = result.find("<thoughts>") {
+        if let Some(end) = result[start + "<thoughts>".len()..].find("</thoughts>") {
+            result = format!(
+                "{}{}",
+                &result[..start],
+                &result[start + "<thoughts>".len() + end + "</thoughts>".len()..]
+            );
+        } else {
+            result = result[..start].to_string();
+            break;
+        }
+    }
+
+    // Strip <reasoning>...</reasoning> blocks
+    while let Some(start) = result.find("<reasoning>") {
+        if let Some(end) = result[start + "<reasoning>".len()..].find("</reasoning>") {
+            result = format!(
+                "{}{}",
+                &result[..start],
+                &result[start + "<reasoning>".len() + end + "</reasoning>".len()..]
+            );
+        } else {
+            result = result[..start].to_string();
+            break;
+        }
+    }
+
+    // Strip <initial_thoughts>...</initial_thoughts> blocks
+    while let Some(start) = result.find("<initial_thoughts>") {
+        if let Some(end) = result[start + "<initial_thoughts>".len()..].find("</initial_thoughts>")
+        {
+            result = format!(
+                "{}{}",
+                &result[..start],
+                &result[start + "<initial_thoughts>".len() + end + "</initial_thoughts>".len()..]
             );
         } else {
             result = result[..start].to_string();
@@ -168,15 +272,16 @@ pub async fn cmd_ollama_generate_title<R: Runtime>(
     };
 
     let lang_instruction = if language == "ar" {
-        "You MUST respond in Arabic only."
+        "Respond in Arabic only."
     } else {
-        "You MUST respond in English only."
+        "Respond in English only."
     };
 
     let system_prompt = format!(
-        "Generate a concise, descriptive title (5 words maximum) for this conversation. \
-         The title must capture the main topic or intent. \
-         Output ONLY the title — no thinking, no reasoning, no quotes, no punctuation at the end, no prefix like \"Title:\". \
+        "You are a title generator. Given a question and answer below, produce a very short \
+         descriptive title (5 words max). The title must be a label, not a sentence. \
+         Examples: \"Python Loops\", \"Pasta Carbonara Recipe\", \"Climate Change Effects\". \
+         Output ONLY the title. No quotes, no punctuation, no explanation. \
          {}",
         lang_instruction
     );
@@ -185,11 +290,16 @@ pub async fn cmd_ollama_generate_title<R: Runtime>(
     let truncated_user: String = user_message.chars().take(500).collect();
     let truncated_assistant: String = assistant_message.chars().take(500).collect();
 
+    let user_content = format!(
+        "Question: {}\nAnswer: {}",
+        truncated_user, truncated_assistant
+    );
+
     let payload = json!({
         "model": model,
         "messages": [
             { "role": "system", "content": system_prompt },
-            { "role": "user", "content": format!("User: {}\nAssistant: {}", truncated_user, truncated_assistant) }
+            { "role": "user", "content": user_content }
         ],
         "stream": false,
         "options": {
@@ -216,7 +326,7 @@ pub async fn cmd_ollama_generate_title<R: Runtime>(
 
                     // Strip common thinking/reasoning blocks that some models
                     // (e.g. DeepSeek) emit before the actual title.
-                    let title = strip_thinking_blocks(raw);
+                    let title = strip_think_blocks(raw);
                     let stripped = title.trim();
 
                     if stripped.is_empty() {
@@ -226,6 +336,23 @@ pub async fn cmd_ollama_generate_title<R: Runtime>(
                             error: Some(BackendError::new(
                                 "EMPTY_TITLE",
                                 "Model returned empty title after stripping thinking blocks",
+                            )),
+                        };
+                    }
+
+                    // If the model ignored the prompt and started reasoning
+                    // instead of producing a title, reject the output.
+                    if looks_like_reasoning(stripped) {
+                        tracing::warn!(
+                            "Title output looks like reasoning, rejecting: {:?}",
+                            stripped
+                        );
+                        return ApiResponse {
+                            success: false,
+                            data: None,
+                            error: Some(BackendError::new(
+                                "REASONING_INSTEAD_OF_TITLE",
+                                "Model produced reasoning instead of a title",
                             )),
                         };
                     }

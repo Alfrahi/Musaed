@@ -149,7 +149,7 @@ describe('Contracts: thinking blocks & pull errors', () => {
     expect(out).toContain('world');
   });
 
-  it('strips <thinkigne...</thinkigne> blocks (DeepSeek-R1)', () => {
+  it('strips <think>...</think> blocks (DeepSeek-R1)', () => {
     const inner = 'reasoning content here';
     const raw = `Hello ${THINK_TAG_START}${inner}${THINK_TAG_END} world`;
     const out = stripThinkingBlocks(raw);
@@ -184,7 +184,7 @@ describe('Contracts: thinking blocks & pull errors', () => {
     expect(content.substring(match.contentStart, match.contentEnd)).toBe('thinking');
   });
 
-  it('findThinkingTags finds <thinkigne blocks', () => {
+  it('findThinkingTags finds <think> blocks', () => {
     const content = `before${THINK_TAG_START}reasoning${THINK_TAG_END}after`;
     const match = findThinkingTags(content)!;
     expect(match).not.toBeNull();
@@ -205,7 +205,7 @@ describe('Contracts: thinking blocks & pull errors', () => {
     expect(content.substring(match.contentStart, match.contentEnd)).toBe('partial reasoning...');
   });
 
-  it('prefers <redacted-thinking> over <thinkigne when both are present', () => {
+  it('prefers <redacted-thinking> over <think> when both are present', () => {
     const content = `${REDACTED_THINKING_TAG_START}a${REDACTED_THINKING_TAG_END}${THINK_TAG_START}b${THINK_TAG_END}`;
     const match = findThinkingTags(content)!;
     expect(content.substring(match.contentStart, match.contentEnd)).toBe('a');

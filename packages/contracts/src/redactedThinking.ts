@@ -1,9 +1,12 @@
 /**
  * Thinking-tag handling — single source of truth.
  *
- * Supports two tag formats used by different reasoning models:
+ * Supports tag formats used by different reasoning models:
  *   1. <redacted-thinking>...</redacted-thinking>  (primary)
- *   2. <thinkigne...</thinkigne>                  (DeepSeek-R1 fallback)
+ *   2. <think>...</think>                   (DeepSeek-R1 fallback)
+ *   3. <thoughts>...</thoughts>
+ *   4. <reasoning>...</reasoning>
+ *   5. <initial_thoughts>...</initial_thoughts>
  *
  * Both the synchronous path and the Web Worker blob consume these exports
  * so the regex pattern can never drift out of sync with the tag constants.
@@ -15,24 +18,42 @@ export const REDACTED_THINKING_TAG_START = '<redacted-thinking>';
 export const REDACTED_THINKING_TAG_END = '</redacted-thinking>';
 
 /** DeepSeek-R1 style thinking tags */
-export const THINK_TAG_START = '<thinkigne';
-export const THINK_TAG_END = '</thinkigne';
+export const THINK_TAG_START = '<think>';
+export const THINK_TAG_END = '</think>';
+
+/** Generic thoughts tags */
+export const THOUGHTS_TAG_START = '<thoughts>';
+export const THOUGHTS_TAG_END = '</thoughts>';
+
+/** Reasoning tags */
+export const REASONING_TAG_START = '<reasoning>';
+export const REASONING_TAG_END = '</reasoning>';
+
+/** Initial thoughts tags */
+export const INITIAL_THOUGHTS_TAG_START = '<initial_thoughts>';
+export const INITIAL_THOUGHTS_TAG_END = '</initial_thoughts>';
 
 // ── Regex helpers ───────────────────────────────────────────────────
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
- * Combined regex pattern source that matches **both** tag formats.
+ * Combined regex pattern source that matches **all** tag formats.
  * Injected into the worker blob to prevent drift — never duplicate the pattern.
  *
  * Matches:
  *   <redacted-thinking>...</redacted-thinking>
- *   <thinkigne...</thinkigne>
+ *   <think>...</think>
+ *   <thoughts>...</thoughts>
+ *   <reasoning>...</reasoning>
+ *   <initial_thoughts>...</initial_thoughts>
  */
 export const THINKING_REGEX_SOURCE = [
   `${escapeRegExp(REDACTED_THINKING_TAG_START)}[\\s\\S]*?${escapeRegExp(REDACTED_THINKING_TAG_END)}`,
   `${escapeRegExp(THINK_TAG_START)}[\\s\\S]*?${escapeRegExp(THINK_TAG_END)}`,
+  `${escapeRegExp(THOUGHTS_TAG_START)}[\\s\\S]*?${escapeRegExp(THOUGHTS_TAG_END)}`,
+  `${escapeRegExp(REASONING_TAG_START)}[\\s\\S]*?${escapeRegExp(REASONING_TAG_END)}`,
+  `${escapeRegExp(INITIAL_THOUGHTS_TAG_START)}[\\s\\S]*?${escapeRegExp(INITIAL_THOUGHTS_TAG_END)}`,
 ].join('|');
 
 /** @deprecated Use THINKING_REGEX_SOURCE instead. Kept for backward compatibility. */
@@ -69,18 +90,21 @@ export interface ThinkingTagMatch {
 }
 
 /**
- * Finds the first thinking block in `content`, supporting both
- * `<redacted-thinking>` and `<thinkigne` tag formats.
+ * Finds the first thinking block in `content`, supporting all
+ * recognized thinking tag formats.
  *
  * Returns `null` if no thinking block is found.
  * During streaming, `closeTagLength` will be `-1` and `contentEnd`
  * will be the end of the string.
  */
 export function findThinkingTags(content: string): ThinkingTagMatch | null {
-  // Try <redacted-thinking> first (primary), then <thinkigne (fallback)
+  // Order matters: <redacted-thinking> first (primary), then others
   const matchers: Array<{ start: string; end: string }> = [
     { start: REDACTED_THINKING_TAG_START, end: REDACTED_THINKING_TAG_END },
     { start: THINK_TAG_START, end: THINK_TAG_END },
+    { start: THOUGHTS_TAG_START, end: THOUGHTS_TAG_END },
+    { start: REASONING_TAG_START, end: REASONING_TAG_END },
+    { start: INITIAL_THOUGHTS_TAG_START, end: INITIAL_THOUGHTS_TAG_END },
   ];
 
   for (const { start, end } of matchers) {
