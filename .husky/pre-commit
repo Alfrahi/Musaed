@@ -1,14 +1,19 @@
 #!/usr/bin/env sh
 
-echo "🛡 Musaed Pre-commit (fast)"
+echo "🛡 Musaed Pre-commit (auto-fix enabled)"
 
 set -e
 
 # ── 1. Rust format & lint (only if .rs files changed) ──────
 staged_rs=$(git diff --cached --name-only --diff-filter=ACM -- 'src-tauri/**/*.rs')
 if [ -n "$staged_rs" ]; then
-  echo "🦀 Running Rust checks..."
-  cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
+  echo "🦀 Running Rust formatting..."
+  cargo fmt --all --manifest-path src-tauri/Cargo.toml
+
+  # Re-stage any Rust files that were reformatted
+  echo "$staged_rs" | xargs git add
+
+  echo "🦀 Running Rust lint (Clippy)..."
   cargo clippy --all-targets --all-features --manifest-path src-tauri/Cargo.toml -- -D warnings
 fi
 

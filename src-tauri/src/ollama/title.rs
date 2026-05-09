@@ -9,6 +9,7 @@ use crate::validation::{
 };
 use serde_json::json;
 use std::time::Duration;
+use tauri::Runtime;
 use tracing;
 
 use super::client::{
@@ -85,13 +86,24 @@ pub(crate) fn strip_thinking_blocks(content: &str) -> String {
 /// Ollama with `stream: false`. Uses a system prompt that instructs the model
 /// to return only a concise title.
 #[tauri::command]
-pub async fn cmd_ollama_generate_title(
+pub async fn cmd_ollama_generate_title<R: Runtime>(
+    window: tauri::Window<R>,
     base_url: String,
     model: String,
     user_message: String,
     assistant_message: String,
     language: String,
 ) -> ApiResponse<String> {
+    // Check rate limiting first
+    if let Err(e) = crate::rate_limiter::RATE_LIMITER
+        .check_rate_limit(window.label(), "cmd_ollama_generate_title")
+    {
+        return ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        };
+    }
     tracing::info!("Generating title with model: {}", model);
 
     // --- Input validation ---

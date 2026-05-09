@@ -4,6 +4,7 @@
 //! an active chat session or when probing server status.
 
 use crate::payloads::{ApiResponse, ChatMessage, ChatOptions, OllamaHealth};
+use crate::rate_limiter::RATE_LIMITER;
 use crate::validation::{is_valid_request_id, validation_error};
 use std::time::Instant;
 use tauri::{AppHandle, Runtime};
@@ -21,12 +22,22 @@ static OLLAMA_SERVICE: OllamaChatService = OllamaChatService;
 #[tauri::command]
 pub async fn cmd_ollama_chat<R: Runtime>(
     app: AppHandle<R>,
+    window: tauri::Window<R>,
     base_url: String,
     model: String,
     messages: Vec<ChatMessage>,
     options: ChatOptions,
     request_id: String,
 ) -> ApiResponse<bool> {
+    // Check rate limiting first
+    if let Err(e) = RATE_LIMITER.check_rate_limit(window.label(), "cmd_ollama_chat") {
+        return ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        };
+    }
+
     match OLLAMA_SERVICE
         .chat(app, base_url, model, messages, options, request_id)
         .await

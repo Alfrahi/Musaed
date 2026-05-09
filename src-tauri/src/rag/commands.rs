@@ -17,7 +17,7 @@ use crate::validation::is_valid_model_name;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tauri::Emitter;
+use tauri::{Emitter, Runtime};
 use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 use tracing;
@@ -252,13 +252,24 @@ pub async fn cmd_rag_get_project(
 // ====================== INDEXING COMMANDS ======================
 
 #[tauri::command]
-pub async fn cmd_rag_index_project(
+pub async fn cmd_rag_index_project<R: Runtime>(
+    window: tauri::Window<R>,
     project_id: String,
     force: Option<bool>,
     base_url: Option<String>,
     state: tauri::State<'_, Arc<Mutex<RagStore>>>,
     app_handle: tauri::AppHandle,
 ) -> Result<ApiResponse<bool>, String> {
+    // Check rate limiting first
+    if let Err(e) =
+        crate::rate_limiter::RATE_LIMITER.check_rate_limit(window.label(), "cmd_rag_index_project")
+    {
+        return Ok(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        });
+    }
     if let Err(e) = validation::validate_project_id(&project_id) {
         return Ok(validation::rag_validation_error(e));
     }
@@ -384,13 +395,14 @@ pub async fn cmd_rag_abort_index(project_id: String) -> Result<ApiResponse<bool>
 }
 
 #[tauri::command]
-pub async fn cmd_rag_reindex_project(
+pub async fn cmd_rag_reindex_project<R: Runtime>(
+    window: tauri::Window<R>,
     project_id: String,
     base_url: Option<String>,
     state: tauri::State<'_, Arc<Mutex<RagStore>>>,
     app_handle: tauri::AppHandle,
 ) -> Result<ApiResponse<bool>, String> {
-    cmd_rag_index_project(project_id, Some(true), base_url, state, app_handle).await
+    cmd_rag_index_project(window, project_id, Some(true), base_url, state, app_handle).await
 }
 
 #[tauri::command]

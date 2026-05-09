@@ -213,10 +213,21 @@ pub async fn cmd_ollama_validate_model(
 
 #[tauri::command]
 pub async fn cmd_ollama_pull_model<R: Runtime>(
+    window: tauri::Window<R>,
     app: AppHandle<R>,
     base_url: String,
     name: String,
 ) -> ApiResponse<()> {
+    // Check rate limiting first
+    if let Err(e) =
+        crate::rate_limiter::RATE_LIMITER.check_rate_limit(window.label(), "cmd_ollama_pull_model")
+    {
+        return ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        };
+    }
     tracing::info!("Starting model pull: {}", name);
 
     if !is_valid_model_name(&name) {

@@ -9,6 +9,7 @@ pub mod ollama;
 pub mod ollama_url;
 pub mod payloads;
 pub mod rag;
+pub mod rate_limiter;
 pub mod shared;
 pub mod validation;
 
@@ -95,7 +96,6 @@ pub fn run() {
             rag::commands::cmd_rag_update_project,
             rag::commands::cmd_rag_list_projects,
             rag::commands::cmd_rag_get_project,
-            rag::commands::cmd_rag_index_project,
             rag::commands::cmd_rag_abort_index,
             rag::commands::cmd_rag_reindex_project,
             rag::commands::cmd_rag_get_index_status,
