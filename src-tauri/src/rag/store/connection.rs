@@ -69,16 +69,32 @@ PRAGMA foreign_keys=ON;
 PRAGMA busy_timeout=5000;
 "#;
 
-/// Open (or create) the RAG SQLite database at the given path.
-/// The parent directory must already exist.
+/// Loads the sqlite-vec extension into the SQLite runtime.
+///
+/// # Safety
+///
+/// `sqlite3_auto_extension` registers a C callback function pointer.
+/// Transmuting the Rust function pointer to a C function pointer is undefined
+/// behavior unless the calling convention matches. Here we invoke it through
+/// `transmute` because the SQLite FFI expects a `*const c_void` while Rust
+/// function pointers are typed. The target function `sqlite3_vec_init` uses
+/// the C calling convention (extern "C"), so this is safe in this specific
+/// context. See: <https://www.sqlite.org/c3ref/auto_extension.html>
 #[allow(clippy::missing_transmute_annotations)]
-pub(super) fn open_connection(db_path: &Path) -> Result<Connection, String> {
-    // Load sqlite-vec extension globally BEFORE opening the connection
+pub(super) fn load_vec_extension() -> Result<(), String> {
     unsafe {
         ffi::sqlite3_auto_extension(Some(std::mem::transmute(
             sqlite_vec::sqlite3_vec_init as *const (),
         )));
     }
+    Ok(())
+}
+
+/// Open (or create) the RAG SQLite database at the given path.
+/// The parent directory must already exist.
+pub(super) fn open_connection(db_path: &Path) -> Result<Connection, String> {
+    // Load sqlite-vec extension globally BEFORE opening the connection
+    load_vec_extension()?;
 
     let conn =
         Connection::open(db_path).map_err(|e| format!("Failed to open RAG database: {}", e))?;

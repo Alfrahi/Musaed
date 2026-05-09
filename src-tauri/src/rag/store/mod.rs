@@ -27,16 +27,45 @@ use std::sync::Mutex;
 /// The RAG store. Provides thread-safe access via `std::sync::Mutex`.
 pub struct RagStore {
     conn: Mutex<rusqlite::Connection>,
+    /// Whether the sqlite-vec extension loaded successfully.
+    /// If false, vector operations (embeddings, search) will return an error.
+    rag_enabled: bool,
 }
 
 impl RagStore {
     /// Opens (or creates) the RAG SQLite database at the given path.
     /// The parent directory must already exist.
+    ///
+    /// If the sqlite-vec extension fails to load, RAG features (vector
+    /// embeddings and similarity search) are disabled and a warning is logged.
+    /// The store still opens successfully for basic metadata operations.
     pub fn open(db_path: &Path) -> Result<Self, String> {
-        let conn = open_connection(db_path)?;
-        Ok(Self {
-            conn: Mutex::new(conn),
-        })
+        match open_connection(db_path) {
+            Ok(conn) => Ok(Self {
+                conn: Mutex::new(conn),
+                rag_enabled: true,
+            }),
+            Err(e) => {
+                tracing::warn!(
+                    "Failed to load sqlite-vec extension: {}. \
+                     RAG features (embeddings, similarity search) are disabled.",
+                    e
+                );
+                // Open a basic connection without the vector extension for
+                // metadata operations (projects, files, chunks without vectors).
+                let conn = rusqlite::Connection::open(db_path)
+                    .map_err(|e| format!("Failed to open RAG database: {}", e))?;
+                Ok(Self {
+                    conn: Mutex::new(conn),
+                    rag_enabled: false,
+                })
+            }
+        }
+    }
+
+    /// Returns whether RAG vector features are enabled.
+    pub fn is_rag_enabled(&self) -> bool {
+        self.rag_enabled
     }
 
     // ====================== PROJECT OPERATIONS ======================
@@ -149,20 +178,41 @@ impl RagStore {
 
     // ====================== EMBEDDING OPERATIONS ======================
 
+    /// Inserts a single embedding vector for a chunk.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the sqlite-vec extension is not loaded.
     pub fn insert_embedding(&self, chunk_id: i64, embedding: &[f32]) -> Result<(), String> {
+        if !self.rag_enabled {
+            return Err("RAG features are disabled: sqlite-vec extension not loaded".to_string());
+        }
         insert_embedding(self, chunk_id, embedding)
     }
 
+    /// Inserts multiple embedding vectors in a batch.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the sqlite-vec extension is not loaded.
     pub fn insert_embeddings_batch(
         &self,
         chunk_ids: &[i64],
         embeddings: &[Vec<f32>],
     ) -> Result<(), String> {
+        if !self.rag_enabled {
+            return Err("RAG features are disabled: sqlite-vec extension not loaded".to_string());
+        }
         insert_embeddings_batch(self, chunk_ids, embeddings)
     }
 
     // ====================== SEARCH OPERATIONS ======================
 
+    /// Performs a similarity search over chunk embeddings.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the sqlite-vec extension is not loaded.
     pub fn search_similar(
         &self,
         project_id: &str,
@@ -170,6 +220,9 @@ impl RagStore {
         top_k: usize,
         threshold: f32,
     ) -> Result<Vec<SearchResult>, String> {
+        if !self.rag_enabled {
+            return Err("RAG features are disabled: sqlite-vec extension not loaded".to_string());
+        }
         search_similar(self, project_id, query_embedding, top_k, threshold)
     }
 
