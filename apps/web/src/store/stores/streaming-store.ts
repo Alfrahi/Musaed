@@ -11,9 +11,14 @@ export interface StreamMetrics {
   total_duration?: number;
 }
 
+/** Internal buffer for efficient stream accumulation. */
+interface StreamingBuffer {
+  chunks: string[];
+}
+
 export interface StreamingState {
   /** Per-conversation live content buffer (only for actively streaming conversations). */
-  liveContent: Record<string, string>;
+  liveContent: Record<string, StreamingBuffer>;
   /** Per-conversation metrics snapshot updated with each token. */
   liveMetrics: Record<string, StreamMetrics>;
   /** Pending metrics that haven't been flushed yet. */
@@ -40,12 +45,17 @@ export const useStreamingStore = createWithEqualityFn<StreamingState>()(
     activeStreams: {},
 
     appendToken: (conversationId, token) => {
-      set((state) => ({
-        liveContent: {
-          ...state.liveContent,
-          [conversationId]: (state.liveContent[conversationId] ?? '') + token,
-        },
-      }));
+      set((state) => {
+        const buffer = state.liveContent[conversationId] ?? { chunks: [] };
+        return {
+          liveContent: {
+            ...state.liveContent,
+            [conversationId]: {
+              chunks: [...buffer.chunks, token],
+            },
+          },
+        };
+      });
     },
 
     setPendingMetrics: (conversationId, metrics) => {
@@ -59,8 +69,9 @@ export const useStreamingStore = createWithEqualityFn<StreamingState>()(
 
     flushToConversation: (conversationId) => {
       const { liveContent, pendingMetrics } = get();
-      const content = liveContent[conversationId];
-      if (!content) return null;
+      const buffer = liveContent[conversationId];
+      if (!buffer) return null;
+      const content = buffer.chunks.join('');
       const metrics = pendingMetrics[conversationId] ?? {};
 
       // Clear flushed content but keep metrics for next flush
@@ -110,7 +121,7 @@ export const useStreamingStore = createWithEqualityFn<StreamingState>()(
 // ---------------------------------------------------------------------------
 
 export const selectLiveContent = (conversationId: string) => (state: StreamingState) =>
-  state.liveContent[conversationId] ?? null;
+  state.liveContent[conversationId]?.chunks.join('') ?? null;
 
 export const selectIsLiveStreaming = (conversationId: string) => (state: StreamingState) =>
   conversationId in state.activeStreams;
