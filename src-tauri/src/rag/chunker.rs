@@ -516,7 +516,7 @@ impl Chunker for TextChunker {
             if current.len() + line.len() + 1 > MAX_CHUNK_CHARS && !current.is_empty() {
                 // Try to break at sentence boundary
                 let break_point = find_sentence_break(&current);
-                if break_point > 0 && break_point >= MIN_CHUNK_CHARS {
+                if break_point >= MIN_CHUNK_CHARS {
                     let (before, after) = current.split_at(break_point);
                     chunks.push(RawChunk {
                         content: before.to_string(),

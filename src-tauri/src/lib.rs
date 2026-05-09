@@ -1,4 +1,3 @@
-use tracing;
 use tracing_subscriber::layer::SubscriberExt;
 use tauri::Manager;
 use std::sync::Arc;
