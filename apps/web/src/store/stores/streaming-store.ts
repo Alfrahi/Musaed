@@ -2,7 +2,7 @@
 
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
-import { Message } from '@musaed/contracts';
+import { type Message } from '@musaed/contracts';
 
 /** Metrics snapshot carried alongside the live token buffer. */
 export interface StreamMetrics {

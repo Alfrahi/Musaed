@@ -52,8 +52,11 @@ pub(super) fn delete_file(store: &super::RagStore, file_id: i64) -> Result<(), S
     delete_file_chunks_internal(store, file_id)?;
 
     // Delete file
-    conn.execute("DELETE FROM files WHERE id = ?1", rusqlite::params![file_id])
-        .map_err(|e| format!("Failed to delete file: {}", e))?;
+    conn.execute(
+        "DELETE FROM files WHERE id = ?1",
+        rusqlite::params![file_id],
+    )
+    .map_err(|e| format!("Failed to delete file: {}", e))?;
 
     Ok(())
 }

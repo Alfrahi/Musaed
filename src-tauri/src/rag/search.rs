@@ -3,13 +3,13 @@
 //! Combines sqlite-vec vector similarity with BM25 keyword matching for
 //! high-quality retrieval. Context assembly is handled by the frontend.
 
-use tracing;
+use crate::rag::bm25::BM25;
 use crate::rag::embedder::OllamaEmbedder;
 use crate::rag::store::RagStore;
 use crate::rag::types::SearchResult;
-use crate::rag::bm25::BM25;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tracing;
 
 /// Default number of results to return.
 const DEFAULT_TOP_K: usize = 10;
@@ -56,9 +56,9 @@ impl RagSearchEngine {
         // Vector search in SQLite
         let s = store.lock().await;
         let candidates = s.search_similar(project_id, &query_embedding, top_k * 2, threshold)?;
-        
+
         tracing::debug!("RAG Search: found {} vector candidates", candidates.len());
-        
+
         // If no candidates, return early
         if candidates.is_empty() {
             tracing::info!("RAG Search: no candidates found for query '{}'", query);
@@ -70,7 +70,7 @@ impl RagSearchEngine {
             candidates.len(),
             query
         );
-        
+
         // Prepare documents for BM25
         let documents: Vec<(usize, String)> = candidates
             .iter()
@@ -87,7 +87,10 @@ impl RagSearchEngine {
             .collect();
 
         let bm25_min = bm25_scores.iter().cloned().fold(f32::INFINITY, f32::min);
-        let bm25_max = bm25_scores.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+        let bm25_max = bm25_scores
+            .iter()
+            .cloned()
+            .fold(f32::NEG_INFINITY, f32::max);
         let bm25_range = (bm25_max - bm25_min).max(1e-6); // Avoid division by zero
 
         // Rerank candidates using hybrid scoring (vector + BM25)
@@ -102,10 +105,10 @@ impl RagSearchEngine {
                 candidate
             })
             .collect::<Vec<_>>();
-        
+
         // Sort by hybrid score
         reranked.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
-        
+
         // Return top_k results
         Ok(reranked.into_iter().take(top_k).collect())
     }

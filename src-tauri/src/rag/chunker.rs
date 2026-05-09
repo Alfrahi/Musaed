@@ -23,15 +23,13 @@ const ABSOLUTE_MAX_CHUNK_CHARS: usize = 4000;
 // ====================== EXTENSION MAPS ======================
 
 const CODE_EXTENSIONS: &[&str] = &[
-    "rs", "ts", "tsx", "js", "jsx", "py", "go", "java", "c", "cpp", "h", "hpp",
-    "cs", "rb", "php", "swift", "kt", "scala", "sh", "bash", "zsh",
+    "rs", "ts", "tsx", "js", "jsx", "py", "go", "java", "c", "cpp", "h", "hpp", "cs", "rb", "php",
+    "swift", "kt", "scala", "sh", "bash", "zsh",
 ];
 
 const MARKDOWN_EXTENSIONS: &[&str] = &["md", "mdx"];
 
-const CONFIG_EXTENSIONS: &[&str] = &[
-    "json", "yaml", "yml", "toml", "xml", "ini", "cfg", "conf",
-];
+const CONFIG_EXTENSIONS: &[&str] = &["json", "yaml", "yml", "toml", "xml", "ini", "cfg", "conf"];
 
 // ====================== LANGUAGE DETECTION ======================
 
@@ -39,8 +37,14 @@ const CONFIG_EXTENSIONS: &[&str] = &[
 fn language_for_ext(ext: &str) -> Option<(tree_sitter::Language, &'static str)> {
     match ext {
         "rs" => Some((tree_sitter_rust::LANGUAGE.into(), "rust")),
-        "ts" | "tsx" => Some((tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(), "typescript")),
-        "js" | "jsx" => Some((tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(), "javascript")),
+        "ts" | "tsx" => Some((
+            tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+            "typescript",
+        )),
+        "js" | "jsx" => Some((
+            tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+            "javascript",
+        )),
         "py" => Some((tree_sitter_python::LANGUAGE.into(), "python")),
         "go" => Some((tree_sitter_go::LANGUAGE.into(), "go")),
         "java" => Some((tree_sitter_java::LANGUAGE.into(), "java")),
@@ -119,10 +123,7 @@ fn chunk_ast(tree: &Tree, source: &str, language: &str) -> Vec<RawChunk> {
 
         match kind {
             // Import / use statements — collect but don't create separate chunks
-            "import_statement"
-            | "import_declaration"
-            | "use_declaration"
-            | "extern_crate_item"
+            "import_statement" | "import_declaration" | "use_declaration" | "extern_crate_item"
             | "use_item" => {
                 let text = node_text(child, source);
                 if !text.is_empty() {
@@ -170,11 +171,16 @@ fn chunk_ast(tree: &Tree, source: &str, language: &str) -> Vec<RawChunk> {
                         language: Some(language.to_string()),
                         start_line: start,
                         end_line: end,
-                        metadata: build_chunk_metadata(&names, &imports, enclosing_entity.as_deref()),
+                        metadata: build_chunk_metadata(
+                            &names,
+                            &imports,
+                            enclosing_entity.as_deref(),
+                        ),
                     });
                 } else {
                     // Split oversized node at statement boundaries
-                    let sub_chunks = split_oversized_node(&child, source, language, &names, &imports);
+                    let sub_chunks =
+                        split_oversized_node(&child, source, language, &names, &imports);
                     chunks.extend(sub_chunks);
                 }
                 names.clear();
@@ -218,7 +224,7 @@ fn split_oversized_node(
     } else {
         None
     };
-    
+
     let mut chunks = Vec::new();
     let mut current_text = String::new();
     let mut current_start = node.start_position().row + 1;
@@ -600,7 +606,12 @@ fn build_chunk_metadata(
     if !names.is_empty() {
         map.insert(
             "names".to_string(),
-            serde_json::Value::Array(names.iter().map(|n| serde_json::Value::String(n.clone())).collect()),
+            serde_json::Value::Array(
+                names
+                    .iter()
+                    .map(|n| serde_json::Value::String(n.clone()))
+                    .collect(),
+            ),
         );
     }
 
@@ -612,10 +623,7 @@ fn build_chunk_metadata(
         } else {
             imports_str
         };
-        map.insert(
-            "imports".to_string(),
-            serde_json::Value::String(truncated),
-        );
+        map.insert("imports".to_string(), serde_json::Value::String(truncated));
     }
 
     if let Some(entity) = enclosing_entity {
@@ -702,12 +710,20 @@ fn merge_small_chunks(chunks: Vec<RawChunk>) -> Vec<RawChunk> {
             current.end_line = next.end_line;
             // Update metadata to merge names
             if let Some(names) = next.metadata.get("names") {
-                let current_names = current.metadata.get("names").cloned().unwrap_or(serde_json::json!([]));
+                let current_names = current
+                    .metadata
+                    .get("names")
+                    .cloned()
+                    .unwrap_or(serde_json::json!([]));
                 if let serde_json::Value::Array(mut arr) = current_names {
                     if let serde_json::Value::Array(new_names) = names {
                         arr.extend(new_names.iter().cloned());
                     }
-                    current.metadata.as_object_mut().unwrap().insert("names".to_string(), serde_json::Value::Array(arr));
+                    current
+                        .metadata
+                        .as_object_mut()
+                        .unwrap()
+                        .insert("names".to_string(), serde_json::Value::Array(arr));
                 }
             }
         } else {
@@ -745,12 +761,22 @@ mod tests {
 
     #[test]
     fn test_text_chunker_large_content() {
-        let content = (0..200).map(|i| format!("Line {} with some content.", i)).collect::<Vec<_>>().join("\n");
+        let content = (0..200)
+            .map(|i| format!("Line {} with some content.", i))
+            .collect::<Vec<_>>()
+            .join("\n");
         let chunker = TextChunker;
         let chunks = chunker.chunk(&content, "large.txt");
-        assert!(chunks.len() > 1, "Large text should be split into multiple chunks");
+        assert!(
+            chunks.len() > 1,
+            "Large text should be split into multiple chunks"
+        );
         for chunk in &chunks {
-            assert!(chunk.content.len() <= ABSOLUTE_MAX_CHUNK_CHARS + 200, "Chunk too large: {} chars", chunk.content.len());
+            assert!(
+                chunk.content.len() <= ABSOLUTE_MAX_CHUNK_CHARS + 200,
+                "Chunk too large: {} chars",
+                chunk.content.len()
+            );
         }
     }
 
@@ -839,7 +865,10 @@ struct Foo {
     fn test_find_sentence_break() {
         // Text must be > MIN_CHUNK_CHARS (100) for the function to find breaks
         let padding = "Word ".repeat(30); // ~150 chars of padding
-        let text = format!("{}First sentence. Second sentence. Third sentence.", padding);
+        let text = format!(
+            "{}First sentence. Second sentence. Third sentence.",
+            padding
+        );
         let pos = find_sentence_break(&text);
         assert!(pos > 0, "Should find a sentence break");
         assert!(pos < text.len(), "Break should not be at the end");

@@ -3,7 +3,6 @@
 //! Orchestrates the full indexing flow for a project, emitting progress events
 //! and supporting cancellation.
 
-use tracing;
 use crate::rag::chunker::chunk_content;
 use crate::rag::embedder::OllamaEmbedder;
 use crate::rag::ignore::discover_files;
@@ -14,9 +13,20 @@ use std::sync::Arc;
 use tauri::Emitter;
 use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
+use tracing;
 use xxhash_rust::xxh3::xxh3_64;
 
 // ====================== INDEXING PIPELINE ======================
+
+/// Configuration for an indexing run.
+pub struct IndexOptions<'a> {
+    pub project_id: &'a str,
+    pub project_path: &'a str,
+    pub embedding_model: &'a str,
+    pub base_url: &'a str,
+    pub ignore_patterns: &'a [String],
+    pub force: bool,
+}
 
 /// Run the indexing pipeline for a project.
 ///
@@ -25,16 +35,16 @@ use xxhash_rust::xxh3::xxh3_64;
 /// files, generates embeddings via Ollama, and stores everything in SQLite.
 pub async fn index_project(
     store: Arc<Mutex<RagStore>>,
-    project_id: &str,
-    project_path: &str,
-    embedding_model: &str,
-    base_url: &str,
-    ignore_patterns: &[String],
-    force: bool,
+    opts: IndexOptions<'_>,
     cancel_token: Arc<CancellationToken>,
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
-    let project_path = Path::new(project_path);
+    let project_path = Path::new(opts.project_path);
+    let project_id = opts.project_id;
+    let embedding_model = opts.embedding_model;
+    let base_url = opts.base_url;
+    let ignore_patterns = opts.ignore_patterns;
+    let force = opts.force;
 
     // Mark project as indexing
     {
@@ -43,22 +53,40 @@ pub async fn index_project(
     }
 
     // === Phase 1: Discover files ===
-    emit_progress(&app_handle, project_id, IndexPhase::DiscoveringFiles, 0, 1,
-        "Discovering files...".to_string());
+    emit_progress(
+        &app_handle,
+        project_id,
+        IndexPhase::DiscoveringFiles,
+        0,
+        1,
+        "Discovering files...".to_string(),
+    );
 
     let discovered = discover_files(project_path, ignore_patterns)?;
     let total_files = discovered.len();
 
-    emit_progress(&app_handle, project_id, IndexPhase::DiscoveringFiles, 1, 1,
-        format!("Found {} files", total_files));
+    emit_progress(
+        &app_handle,
+        project_id,
+        IndexPhase::DiscoveringFiles,
+        1,
+        1,
+        format!("Found {} files", total_files),
+    );
 
     if cancel_token.is_cancelled() {
         return Err("Indexing cancelled".to_string());
     }
 
     // === Phase 2: Diff against tracked files ===
-    emit_progress(&app_handle, project_id, IndexPhase::DiffingFiles, 0, total_files,
-        "Checking for changes...".to_string());
+    emit_progress(
+        &app_handle,
+        project_id,
+        IndexPhase::DiffingFiles,
+        0,
+        total_files,
+        "Checking for changes...".to_string(),
+    );
 
     let tracked_files = {
         let s = store.lock().await;
@@ -68,13 +96,16 @@ pub async fn index_project(
     // Build a map of tracked file paths -> (hash, file_id)
     let tracked_map: std::collections::HashMap<String, (String, i64)> = tracked_files
         .iter()
-        .filter_map(|f| f.id.map(|id| (f.relative_path.clone(), (f.file_hash.clone(), id))))
+        .filter_map(|f| {
+            f.id.map(|id| (f.relative_path.clone(), (f.file_hash.clone(), id)))
+        })
         .collect();
 
     // Determine new, modified, and deleted files
     let mut files_to_index: Vec<(String, u64, String)> = Vec::new(); // (relative_path, size, hash)
     let mut files_to_delete: Vec<i64> = Vec::new(); // file IDs
-    let mut file_contents: std::collections::HashMap<String, Vec<u8>> = std::collections::HashMap::new(); // cache for Phase 4
+    let mut file_contents: std::collections::HashMap<String, Vec<u8>> =
+        std::collections::HashMap::new(); // cache for Phase 4
 
     // Find new and modified files (read content once for both hashing and later chunking)
     for file in &discovered {
@@ -108,10 +139,8 @@ pub async fn index_project(
     }
 
     // Find deleted files (tracked but no longer on disk)
-    let discovered_set: std::collections::HashSet<String> = discovered
-        .iter()
-        .map(|f| f.relative_path.clone())
-        .collect();
+    let discovered_set: std::collections::HashSet<String> =
+        discovered.iter().map(|f| f.relative_path.clone()).collect();
 
     for (path, (_, file_id)) in &tracked_map {
         if !discovered_set.contains(path) {
@@ -119,12 +148,28 @@ pub async fn index_project(
         }
     }
 
-    emit_progress(&app_handle, project_id, IndexPhase::DiffingFiles, total_files, total_files,
-        format!("{} new/modified, {} deleted", files_to_index.len(), files_to_delete.len()));
+    emit_progress(
+        &app_handle,
+        project_id,
+        IndexPhase::DiffingFiles,
+        total_files,
+        total_files,
+        format!(
+            "{} new/modified, {} deleted",
+            files_to_index.len(),
+            files_to_delete.len()
+        ),
+    );
 
     // === Phase 3: Delete stale files ===
-    emit_progress(&app_handle, project_id, IndexPhase::DeletingStale, 0, files_to_delete.len(),
-        format!("Removing {} stale files...", files_to_delete.len()));
+    emit_progress(
+        &app_handle,
+        project_id,
+        IndexPhase::DeletingStale,
+        0,
+        files_to_delete.len(),
+        format!("Removing {} stale files...", files_to_delete.len()),
+    );
 
     {
         let s = store.lock().await;
@@ -134,15 +179,27 @@ pub async fn index_project(
             }
             s.delete_file(*file_id)?;
             if i % 100 == 0 {
-                emit_progress(&app_handle, project_id, IndexPhase::DeletingStale, i, files_to_delete.len(),
-                    format!("Deleted {}/{} stale files", i, files_to_delete.len()));
+                emit_progress(
+                    &app_handle,
+                    project_id,
+                    IndexPhase::DeletingStale,
+                    i,
+                    files_to_delete.len(),
+                    format!("Deleted {}/{} stale files", i, files_to_delete.len()),
+                );
             }
         }
     }
 
     // === Phase 4: Read and chunk files ===
-    emit_progress(&app_handle, project_id, IndexPhase::ReadingFiles, 0, files_to_index.len(),
-        "Reading files...".to_string());
+    emit_progress(
+        &app_handle,
+        project_id,
+        IndexPhase::ReadingFiles,
+        0,
+        files_to_index.len(),
+        "Reading files...".to_string(),
+    );
 
     let mut all_raw_chunks: Vec<(String, u64, String, Vec<RawChunk>)> = Vec::new(); // (relative_path, size, hash, chunks)
 
@@ -166,26 +223,54 @@ pub async fn index_project(
             }
         };
 
-        emit_progress(&app_handle, project_id, IndexPhase::ChunkingFiles, i, files_to_index.len(),
-            format!("Chunking {}...", relative_path));
+        emit_progress(
+            &app_handle,
+            project_id,
+            IndexPhase::ChunkingFiles,
+            i,
+            files_to_index.len(),
+            format!("Chunking {}...", relative_path),
+        );
 
         let chunks = chunk_content(&content, relative_path);
         all_raw_chunks.push((relative_path.clone(), *file_size, hash.clone(), chunks));
     }
 
     let total_chunks: usize = all_raw_chunks.iter().map(|(_, _, _, c)| c.len()).sum();
-    emit_progress(&app_handle, project_id, IndexPhase::ChunkingFiles, files_to_index.len(), files_to_index.len(),
-        format!("Total: {} chunks from {} files", total_chunks, files_to_index.len()));
+    emit_progress(
+        &app_handle,
+        project_id,
+        IndexPhase::ChunkingFiles,
+        files_to_index.len(),
+        files_to_index.len(),
+        format!(
+            "Total: {} chunks from {} files",
+            total_chunks,
+            files_to_index.len()
+        ),
+    );
 
     // === Phase 5: Embed chunks ===
-    emit_progress(&app_handle, project_id, IndexPhase::EmbeddingChunks, 0, total_chunks,
-        format!("Embedding {} chunks via {}...", total_chunks, embedding_model));
+    emit_progress(
+        &app_handle,
+        project_id,
+        IndexPhase::EmbeddingChunks,
+        0,
+        total_chunks,
+        format!(
+            "Embedding {} chunks via {}...",
+            total_chunks, embedding_model
+        ),
+    );
 
     let mut embedder = OllamaEmbedder::new(base_url, embedding_model);
 
     // Detect dimension on first run
     if let Err(e) = embedder.detect_dimension().await {
-        return Err(format!("Failed to detect embedding dimension: {}. Is the model '{}' running?", e, embedding_model));
+        return Err(format!(
+            "Failed to detect embedding dimension: {}. Is the model '{}' running?",
+            e, embedding_model
+        ));
     }
 
     let dimension = embedder.dimension().unwrap_or(768);
@@ -206,16 +291,22 @@ pub async fn index_project(
     let app_handle_clone = app_handle.clone();
     let project_id_clone = project_id.to_string();
     let all_embeddings = embedder
-        .embed_chunks(all_chunk_texts, Some(Box::new(move |batch_idx, total_batches, chunks_done| {
-            emit_progress(
-                &app_handle_clone,
-                &project_id_clone,
-                IndexPhase::EmbeddingChunks,
-                chunks_done,
-                total_chunks,
-                format!("Embedding batch {}/{} ({} chunks)", batch_idx, total_batches, chunks_done),
-            );
-        })))
+        .embed_chunks(
+            all_chunk_texts,
+            Some(Box::new(move |batch_idx, total_batches, chunks_done| {
+                emit_progress(
+                    &app_handle_clone,
+                    &project_id_clone,
+                    IndexPhase::EmbeddingChunks,
+                    chunks_done,
+                    total_chunks,
+                    format!(
+                        "Embedding batch {}/{} ({} chunks)",
+                        batch_idx, total_batches, chunks_done
+                    ),
+                );
+            })),
+        )
         .await?;
 
     if cancel_token.is_cancelled() {
@@ -223,8 +314,14 @@ pub async fn index_project(
     }
 
     // === Phase 6: Store chunks and embeddings ===
-    emit_progress(&app_handle, project_id, IndexPhase::StoringChunks, 0, total_chunks,
-        "Storing chunks and embeddings...".to_string());
+    emit_progress(
+        &app_handle,
+        project_id,
+        IndexPhase::StoringChunks,
+        0,
+        total_chunks,
+        "Storing chunks and embeddings...".to_string(),
+    );
 
     {
         let s = store.lock().await;
@@ -291,9 +388,15 @@ pub async fn index_project(
                 embedding_idx += 1;
                 total_stored += 1;
 
-                if total_stored % 100 == 0 {
-                    emit_progress(&app_handle, project_id, IndexPhase::StoringChunks, total_stored, total_chunks,
-                        format!("Stored {}/{} chunks", total_stored, total_chunks));
+                if total_stored.is_multiple_of(100) {
+                    emit_progress(
+                        &app_handle,
+                        project_id,
+                        IndexPhase::StoringChunks,
+                        total_stored,
+                        total_chunks,
+                        format!("Stored {}/{} chunks", total_stored, total_chunks),
+                    );
                 }
             }
         }
@@ -312,8 +415,14 @@ pub async fn index_project(
     }
 
     // === Phase 7: Complete ===
-    emit_progress(&app_handle, project_id, IndexPhase::Completed, total_chunks, total_chunks,
-        "Indexing complete!".to_string());
+    emit_progress(
+        &app_handle,
+        project_id,
+        IndexPhase::Completed,
+        total_chunks,
+        total_chunks,
+        "Indexing complete!".to_string(),
+    );
 
     // Mark project as ready
     {
@@ -321,7 +430,12 @@ pub async fn index_project(
         s.set_status(project_id, &ProjectStatus::Ready)?;
     }
 
-    tracing::info!("Indexing complete for project {}: {} files, {} chunks", project_id, discovered.len(), total_chunks);
+    tracing::info!(
+        "Indexing complete for project {}: {} files, {} chunks",
+        project_id,
+        discovered.len(),
+        total_chunks
+    );
 
     Ok(())
 }

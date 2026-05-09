@@ -1,6 +1,5 @@
 //! Shared utilities, global state, and HTTP client used across command modules.
 
-use tracing;
 use crate::ollama_url::parse_ollama_base_url;
 use crate::payloads::ApiResponse;
 use crate::payloads::BackendError;
@@ -10,6 +9,7 @@ use std::sync::LazyLock;
 use std::time::{Duration, Instant};
 use tokio::sync::Semaphore;
 use tokio_util::sync::CancellationToken;
+use tracing;
 
 // ====================== CONSTANTS ======================
 
@@ -273,7 +273,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Mutex, LazyLock};
+    use std::sync::{LazyLock, Mutex};
 
     // Mutex to serialize access to REQUEST_CACHE in unit tests, avoiding
     // deadlocks when tests run in parallel.
@@ -317,10 +317,10 @@ mod tests {
     #[test]
     fn test_constants_sanity() {
         assert_eq!(MAX_TOTAL_IMAGE_SIZE_BYTES, 10 * 1024 * 1024);
-        assert!(FAST_TIMEOUT_SECS < DEFAULT_TIMEOUT_SECS);
-        assert!(STREAM_IDLE_TIMEOUT_SECS < STREAM_ABSOLUTE_TIMEOUT_SECS);
-        assert!(MAX_CONCURRENT_CHATS <= MAX_CONCURRENT_REQUESTS);
-        assert!(MAX_REQUEST_CACHE_SIZE >= MAX_CONCURRENT_REQUESTS);
+        const { assert!(FAST_TIMEOUT_SECS < DEFAULT_TIMEOUT_SECS) };
+        const { assert!(STREAM_IDLE_TIMEOUT_SECS < STREAM_ABSOLUTE_TIMEOUT_SECS) };
+        const { assert!(MAX_CONCURRENT_CHATS <= MAX_CONCURRENT_REQUESTS) };
+        const { assert!(MAX_REQUEST_CACHE_SIZE >= MAX_CONCURRENT_REQUESTS) };
         assert!(!EVENT_OLLAMA_TOKEN.is_empty());
         assert!(!EVENT_OLLAMA_ERROR.is_empty());
         assert!(!EVENT_PULL_PROGRESS.is_empty());
@@ -415,10 +415,12 @@ mod tests {
     #[test]
     fn test_ttl_is_greater_than_stream_timeout() {
         // Ensure TTL never evicts legitimate in-flight streams
-        assert!(
-            REQUEST_CACHE_TTL_SECS > STREAM_ABSOLUTE_TIMEOUT_SECS,
-            "REQUEST_CACHE_TTL_SECS must exceed STREAM_ABSOLUTE_TIMEOUT_SECS to avoid evicting live streams"
-        );
+        const {
+            assert!(
+                REQUEST_CACHE_TTL_SECS > STREAM_ABSOLUTE_TIMEOUT_SECS,
+                "REQUEST_CACHE_TTL_SECS must exceed STREAM_ABSOLUTE_TIMEOUT_SECS to avoid evicting live streams"
+            )
+        };
     }
 
     #[tokio::test]

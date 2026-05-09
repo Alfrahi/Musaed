@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Info, Github, Shield, Cpu, X, LucideIcon } from 'lucide-react';
+import { Info, Github, Shield, Cpu, X, type LucideIcon } from 'lucide-react';
 import { ModalLayout } from '@/components/ui';
 import { useTranslation } from '../../../lib/i18n';
 import { useLanguage } from '../../../store/hooks';

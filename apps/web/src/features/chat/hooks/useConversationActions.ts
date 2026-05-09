@@ -13,7 +13,10 @@ import { coordinateStartStream, coordinateStopStream } from '../../../store/coor
 import { chatApi } from '../../../lib/ipc';
 import { useTranslation } from '../../../lib/i18n';
 import { stopBatching } from '../../../store/batch-manager';
-import type { ConversationMetadata } from '../../../store/stores/conversation-store';
+import type {
+  ConversationMetadata,
+  ConversationState,
+} from '../../../store/stores/conversation-store';
 
 /**
  * Abort active streaming for a conversation.
@@ -29,11 +32,7 @@ export function abortStreaming(conversationId: string): void {
 
 /** Create a new conversation with current model and settings. */
 const createConversation = (
-  batchUpdate: (
-    updater: (
-      state: import('../../../store/stores/conversation-store').ConversationState
-    ) => Partial<import('../../../store/stores/conversation-store').ConversationState>
-  ) => void,
+  batchUpdate: (updater: (state: ConversationState) => Partial<ConversationState>) => void,
   t: (key: string) => string
 ) => {
   const modelState = useModelStore.getState();

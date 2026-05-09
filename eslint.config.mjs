@@ -1,11 +1,17 @@
-// eslint.config.mjs (v4)
+// eslint.config.mjs — Musaed v3 Enforcement Layer
+// Flat config (ESLint 9+). Rules are partitioned by concern:
+//   ESLint        → code quality, TypeScript strictness, React/Next best practices
+//   dep-cruiser   → architecture boundaries, feature isolation, import graph
+//   Husky         → local guardrail orchestration
+//   CI            → full validation gate
+
 import tseslint from 'typescript-eslint';
 import nextPlugin from '@next/eslint-plugin-next';
-import importPlugin from 'eslint-plugin-import';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import reactPlugin from 'eslint-plugin-react';
 
 export default tseslint.config(
+  // ── Global ignores ──────────────────────────────────────
   {
     ignores: [
       '**/node_modules/**',
@@ -18,12 +24,13 @@ export default tseslint.config(
     ],
   },
 
+  // ── Base: TypeScript recommended ─────────────────────────
   ...tseslint.configs.recommended,
 
+  // ── Main config ─────────────────────────────────────────
   {
     plugins: {
       '@next/next': nextPlugin,
-      import: importPlugin,
       'react-hooks': reactHooksPlugin,
       react: reactPlugin,
     },
@@ -45,9 +52,9 @@ export default tseslint.config(
     },
 
     rules: {
-      // ======================
-      // NEXT + REACT BASE
-      // ======================
+      // ================================================
+      // NEXT + REACT
+      // ================================================
       ...nextPlugin.configs.recommended.rules,
       ...nextPlugin.configs['core-web-vitals'].rules,
       ...reactPlugin.configs.recommended.rules,
@@ -61,9 +68,12 @@ export default tseslint.config(
         { namedComponents: 'arrow-function' },
       ],
 
-      // ======================
+      // Next.js App Router — no pages/ directory
+      '@next/next/no-html-link-for-pages': 'off',
+
+      // ================================================
       // TYPESCRIPT STRICTNESS
-      // ======================
+      // ================================================
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': [
         'warn',
@@ -73,126 +83,145 @@ export default tseslint.config(
           caughtErrorsIgnorePattern: '^_',
         },
       ],
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
+      ],
+      '@typescript-eslint/no-non-null-assertion': 'error',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'error',
+      '@typescript-eslint/consistent-type-exports': 'error',
 
-      // ======================
-      // MUSAED v4 ENFORCEMENT LAYER
-      // ======================
+      // ================================================
+      // MUSAED RUNTIME ENFORCEMENT (no-restricted-syntax)
+      // Architecture boundary rules live in .dependency-cruiser.js
+      // ================================================
       'no-restricted-syntax': [
         'error',
 
-        // SSR FORBIDDEN
+        // SSR FORBIDDEN — Musaed is static-export only
         {
           selector:
-          "ExportNamedDeclaration[declaration.declarations.0.id.name='getServerSideProps']",
-          message: 'Musaed is fully static. SSR is forbidden.',
+            "ExportNamedDeclaration[declaration.declarations.0.id.name='getServerSideProps']",
+          message: 'Musaed is fully static. getServerSideProps is forbidden.',
+        },
+        {
+          selector:
+            "ExportNamedDeclaration[declaration.declarations.0.id.name='getStaticProps']",
+          message: 'Musaed uses static export. getStaticProps is forbidden — use client-side data fetching.',
         },
 
-        // RAW IPC FORBIDDEN
+        // RAW IPC FORBIDDEN — must use src/lib/ipc.ts
         {
           selector: "CallExpression[callee.name='invoke']",
           message: 'Direct invoke() is forbidden. Use src/lib/ipc.ts only.',
         },
 
-        // DIRECT TAURI ACCESS FORBIDDEN
+        // DIRECT TAURI API FORBIDDEN
         {
           selector: "ImportDeclaration[source.value=/^@tauri-apps\\/api/]",
-          message: 'Direct Tauri API usage forbidden. Use IPC bridge only.',
+          message: 'Direct Tauri API usage forbidden. Use IPC bridge (src/lib/ipc.ts) only.',
+        },
+
+        // DIRECT TAURI PLUGIN FORBIDDEN
+        {
+          selector: "ImportDeclaration[source.value=/^@tauri-apps\\/plugin-/]",
+          message: 'Direct Tauri plugin usage forbidden. Use IPC bridge (src/lib/ipc.ts) only.',
         },
 
         // AI TOOLING DRIFT PREVENTION
         {
           selector:
-          "Literal[value=/.*(webpack|vite|rollup|esbuild|turbo).*config.*/i]",
-                               message: 'Do not introduce new tooling/configs without explicit approval.',
+            "Literal[value=/.*(webpack|vite|rollup|esbuild|turbo).*config.*/i]",
+          message: 'Do not introduce new tooling/configs without explicit approval.',
         },
 
-        // PROCESS ENV ABSTRACTION ENFORCEMENT
+        // PROCESS.ENV ABSTRACTION
         {
           selector: "MemberExpression[object.name='process'][property.name='env']",
           message: 'Use typed configuration layer instead of process.env directly.',
         },
-
-        // LOGICAL PROPERTIES (from v2)
-        {
-          selector: 'Literal[value=/^(ml|mr|left|right|padding-left|padding-right)-/]',
-                               message: 'Use logical properties: ms-*, me-*, ps-*, pe-*, inset-inline-*',
-        },
       ],
 
-      // ======================
-      // ARCHITECTURE RULES
-      // ======================
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['**/features/*/*', '@/features/*/*'],
-              message: 'Feature internals are private. Import only from feature index.ts',
-            },
-            {
-              group: ['**/features/*/src/**'],
-              message: 'Cross-feature internal access is forbidden (DDD violation).',
-            },
-          ],
-        },
-      ],
-
-      // ======================
+      // ================================================
       // COMPLEXITY & CODE QUALITY
-      // ======================
-      'max-lines-per-function': ['error', { max: 100, skipBlankLines: true, skipComments: true }],
+      // ================================================
+      'max-lines-per-function': [
+        'error',
+        { max: 100, skipBlankLines: true, skipComments: true },
+      ],
       'prefer-const': 'error',
       'no-else-return': 'error',
       'no-useless-return': 'error',
+      'no-console': ['error', { allow: ['warn', 'error'] }],
 
-      // ======================
-      // MUSAED SPECIFIC
-      // ======================
+      // ================================================
+      // MUSAED-SPECIFIC
+      // ================================================
       'no-restricted-properties': [
         'error',
-        { object: 'console', property: 'log', message: 'Use structured logger' },
+        {
+          object: 'console',
+          property: 'log',
+          message: 'Use structured logger (src/lib/logger.ts).',
+        },
       ],
     },
   },
 
-  // ======================
-  // EXCEPTIONS
-  // ======================
-
+  // ── IPC layer exceptions ─────────────────────────────────
   {
-    files: ['apps/web/src/lib/ipc.ts', 'apps/web/src/lib/tauri-storage.ts', 'apps/web/vitest.config.ts'],
+    files: [
+      'apps/web/src/lib/ipc.ts',
+      'apps/web/src/lib/tauri-storage.ts',
+    ],
     rules: {
       'no-restricted-syntax': 'off',
       'no-restricted-imports': 'off',
     },
   },
 
+  // ── Test file exceptions ─────────────────────────────────
   {
     files: [
       '**/*.{test,spec}.ts',
       '**/*.{test,spec}.tsx',
       'apps/web/src/test/**/*',
       'apps/web/src/tests/**/*',
+      'apps/web/src/__mocks__/**/*',
     ],
     rules: {
       'no-restricted-syntax': 'off',
       'no-restricted-imports': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
       'max-lines-per-function': 'off',
       'no-restricted-properties': 'off',
+      'no-console': 'off',
     },
   },
 
+  // ── Config/JS file exceptions ────────────────────────────
   {
-    files: ['**/*.js'],
+    files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
     rules: {
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+      '@typescript-eslint/consistent-type-imports': 'off',
+      '@typescript-eslint/consistent-type-exports': 'off',
     },
     languageOptions: { parserOptions: { project: null } },
-  }
+  },
+
+  // ── Vitest config exception ──────────────────────────────
+  {
+    files: ['**/vitest*.config.ts'],
+    rules: {
+      'no-restricted-syntax': 'off',
+      'no-restricted-imports': 'off',
+    },
+  },
 );

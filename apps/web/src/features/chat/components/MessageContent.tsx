@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Message, findThinkingTags } from '@musaed/contracts';
+import { type Message, findThinkingTags } from '@musaed/contracts';
 import ThinkingBlock from './ThinkingBlock';
 
 const MarkdownRenderer = dynamic(() => import('./MarkdownRenderer'), {

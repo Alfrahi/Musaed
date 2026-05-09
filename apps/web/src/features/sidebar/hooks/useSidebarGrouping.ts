@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import { Language } from '@musaed/contracts';
-import { ConversationMetadata } from '@/store/stores/conversation-store';
+import { type Language } from '@musaed/contracts';
+import { type ConversationMetadata } from '@/store/stores/conversation-store';
 
 export type TimeGroup = 'search' | 'today' | 'yesterday' | 'lastWeek' | 'older';
 

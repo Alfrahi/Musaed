@@ -4,25 +4,25 @@
 //! and vector similarity search. This module is split into sub-modules for
 //! maintainability and testability.
 
-mod connection;
-mod projects;
-mod files;
 mod chunks;
+mod connection;
 mod embeddings;
+mod files;
+mod projects;
+mod row_mapping;
 mod search_internal;
 mod stats;
-mod row_mapping;
 
-use std::path::Path;
-use std::sync::Mutex;
 use crate::rag::types::*;
-use connection::open_connection;
-use projects::*;
-use files::*;
 use chunks::*;
+use connection::open_connection;
 use embeddings::*;
+use files::*;
+use projects::*;
 use search_internal::*;
 use stats::*;
+use std::path::Path;
+use std::sync::Mutex;
 
 /// The RAG store. Provides thread-safe access via `std::sync::Mutex`.
 pub struct RagStore {
@@ -241,8 +241,12 @@ mod tests {
     #[test]
     fn test_list_projects() {
         let store = test_store();
-        store.create_project(&make_test_project("p1", "A", "/a")).unwrap();
-        store.create_project(&make_test_project("p2", "B", "/b")).unwrap();
+        store
+            .create_project(&make_test_project("p1", "A", "/a"))
+            .unwrap();
+        store
+            .create_project(&make_test_project("p2", "B", "/b"))
+            .unwrap();
 
         let projects = store.list_projects().unwrap();
         assert_eq!(projects.len(), 2);
@@ -251,7 +255,9 @@ mod tests {
     #[test]
     fn test_delete_project() {
         let store = test_store();
-        store.create_project(&make_test_project("p1", "A", "/a")).unwrap();
+        store
+            .create_project(&make_test_project("p1", "A", "/a"))
+            .unwrap();
         store.delete_project("p1").unwrap();
         assert!(store.get_project("p1").unwrap().is_none());
     }
@@ -259,7 +265,9 @@ mod tests {
     #[test]
     fn test_update_project_metadata() {
         let store = test_store();
-        store.create_project(&make_test_project("p1", "A", "/a")).unwrap();
+        store
+            .create_project(&make_test_project("p1", "A", "/a"))
+            .unwrap();
         store
             .update_project_metadata("p1", Some("Updated"), Some(&["dist".to_string()]))
             .unwrap();
@@ -272,7 +280,9 @@ mod tests {
     #[test]
     fn test_update_project_stats() {
         let store = test_store();
-        store.create_project(&make_test_project("p1", "A", "/a")).unwrap();
+        store
+            .create_project(&make_test_project("p1", "A", "/a"))
+            .unwrap();
         store
             .update_project_stats("p1", 100, 500, 1024000, Some("2024-06-01T00:00:00Z"))
             .unwrap();
@@ -285,7 +295,9 @@ mod tests {
     #[test]
     fn test_upsert_file() {
         let store = test_store();
-        store.create_project(&make_test_project("p1", "A", "/a")).unwrap();
+        store
+            .create_project(&make_test_project("p1", "A", "/a"))
+            .unwrap();
 
         let file = FileRecord {
             id: None,
@@ -310,7 +322,10 @@ mod tests {
         let same_id = store.upsert_file(&updated).unwrap();
         assert_eq!(file_id, same_id);
 
-        let fetched = store.get_file_by_path("p1", "src/main.rs").unwrap().unwrap();
+        let fetched = store
+            .get_file_by_path("p1", "src/main.rs")
+            .unwrap()
+            .unwrap();
         assert_eq!(fetched.file_hash, "def456");
         assert_eq!(fetched.file_size, 2048);
     }
@@ -318,7 +333,9 @@ mod tests {
     #[test]
     fn test_insert_and_search_chunks() {
         let store = test_store();
-        store.create_project(&make_test_project("p1", "A", "/a")).unwrap();
+        store
+            .create_project(&make_test_project("p1", "A", "/a"))
+            .unwrap();
 
         let file = FileRecord {
             id: None,
@@ -364,7 +381,9 @@ mod tests {
     #[test]
     fn test_delete_file_cascades() {
         let store = test_store();
-        store.create_project(&make_test_project("p1", "A", "/a")).unwrap();
+        store
+            .create_project(&make_test_project("p1", "A", "/a"))
+            .unwrap();
 
         let file = FileRecord {
             id: None,
@@ -403,7 +422,9 @@ mod tests {
     #[test]
     fn test_get_project_stats() {
         let store = test_store();
-        store.create_project(&make_test_project("p1", "A", "/a")).unwrap();
+        store
+            .create_project(&make_test_project("p1", "A", "/a"))
+            .unwrap();
 
         let stats = store.get_project_stats("p1").unwrap();
         assert_eq!(stats.file_count, 0);
@@ -413,7 +434,9 @@ mod tests {
     #[test]
     fn test_embedding_dimension() {
         let store = test_store();
-        store.create_project(&make_test_project("p1", "A", "/a")).unwrap();
+        store
+            .create_project(&make_test_project("p1", "A", "/a"))
+            .unwrap();
 
         let dim = store.get_embedding_dimension("p1").unwrap();
         assert_eq!(dim, DEFAULT_EMBEDDING_DIMENSION);

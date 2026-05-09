@@ -1,0 +1,30 @@
+#!/usr/bin/env sh
+
+echo "🛡 Musaed Pre-push (thorough)"
+
+set -e
+
+# ── 1. Architecture boundary validation ────────────────────
+echo "🧱 Checking architecture boundaries..."
+pnpm arch-check
+
+# ── 2. Type safety ────────────────────────────────────────
+echo "🔒 Running TypeScript check..."
+pnpm type-check
+
+# ── 3. i18n compliance ────────────────────────────────────
+echo "🌐 Checking i18n compliance..."
+pnpm --filter web i18n:check
+
+# ── 4. No TODOs/FIXMEs in source ──────────────────────────
+echo "📝 Checking for TODOs/FIXMEs..."
+if grep -rE "\bTODO\b|\bFIXME\b|\bHACK\b" apps/web/src --include="*.ts" --include="*.tsx" --exclude-dir={test,tests}; then
+  echo "❌ Found TODO/FIXME comments. Resolve before pushing."
+  exit 1
+fi
+
+# ── 5. Tests ──────────────────────────────────────────────
+echo "🧪 Running tests..."
+pnpm test
+
+echo "✅ Pre-push passed"

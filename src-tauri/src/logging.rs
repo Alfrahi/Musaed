@@ -1,11 +1,11 @@
 //! Tauri commands for application logging and diagnostics.
 
-use tracing;
 use crate::logger::ChannelLogger;
 use crate::payloads::ApiResponse;
 use crate::validation::{validation_error, MAX_LOG_ENTRY_LEN};
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager, Runtime};
+use tracing;
 
 /// Sanitizes a log entry for safe logging.
 ///
@@ -44,7 +44,10 @@ fn sanitize_log_entry(entry: &str) -> String {
     // Step 4: Truncate to prevent memory issues with extremely long entries
     // while preserving the beginning which typically contains useful info
     if collapsed.len() > MAX_LOG_ENTRY_LEN {
-        format!("{}... [TRUNCATED]", &collapsed[..MAX_LOG_ENTRY_LEN.saturating_sub(15)])
+        format!(
+            "{}... [TRUNCATED]",
+            &collapsed[..MAX_LOG_ENTRY_LEN.saturating_sub(15)]
+        )
     } else {
         collapsed
     }
@@ -77,7 +80,9 @@ fn strip_ansi_escapes(input: &str) -> String {
             let mut j = i + 2;
             // OSC sequences end with BEL (0x07) or ESC \
             while j < bytes.len() {
-                if bytes[j] == 0x07 || (bytes[j] == 0x1b && j + 1 < bytes.len() && bytes[j + 1] == b'\\') {
+                if bytes[j] == 0x07
+                    || (bytes[j] == 0x1b && j + 1 < bytes.len() && bytes[j + 1] == b'\\')
+                {
                     j += if bytes[j] == 0x07 { 1 } else { 2 };
                     break;
                 }
@@ -267,7 +272,10 @@ mod tests {
         // Newlines are converted to spaces, preventing multi-line log injection
         assert!(!result.contains('\n'));
         // The content remains intact as a single line; brackets are preserved
-        assert_eq!(result, "Normal message [2024-01-01 00:00:00] [INJECTED] Fake log entry");
+        assert_eq!(
+            result,
+            "Normal message [2024-01-01 00:00:00] [INJECTED] Fake log entry"
+        );
     }
 
     #[test]

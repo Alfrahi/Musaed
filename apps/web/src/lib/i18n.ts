@@ -1,4 +1,4 @@
-import { Language } from '@musaed/contracts';
+import { type Language } from '@musaed/contracts';
 import { useCallback, useMemo } from 'react';
 import IntlMessageFormat from 'intl-messageformat';
 import en from '../../locales/en.json';

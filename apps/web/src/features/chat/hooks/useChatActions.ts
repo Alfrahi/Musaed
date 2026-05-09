@@ -11,14 +11,14 @@ import {
   useSetUIError,
   useActiveRagProject,
 } from '../../../store/hooks';
-import { Message } from '@musaed/contracts';
+import { type Message } from '@musaed/contracts';
 import { useTranslation } from '../../../lib/i18n';
 import { chatApi, ragApi } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
 import { flushAndStop } from '../../../store/batch-manager';
 import { useConversationActions } from './useConversationActions';
-import { FileAttachment } from './useAttachmentUtils';
+import { type FileAttachment } from './useAttachmentUtils';
 import { buildRagSystemContext } from '@/lib/rag/context';
 import { useMessageStore } from '../../../store/stores/message-store';
 
@@ -68,7 +68,7 @@ const buildApiMessages = (
 
   apiMessages.push(
     ...messages.map((m) => ({
-      role: m.role as 'system' | 'user' | 'assistant',
+      role: m.role,
       content:
         m.role === 'user'
           ? getUserMessageContent(m.content ?? '', !!m.images?.length, t)

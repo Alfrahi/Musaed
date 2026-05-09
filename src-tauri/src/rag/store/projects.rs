@@ -2,17 +2,14 @@
 
 use super::connection::DEFAULT_EMBEDDING_DIMENSION;
 use super::row_mapping::row_to_project;
-use crate::rag::types::{RagProject, ProjectStatus};
+use crate::rag::types::{ProjectStatus, RagProject};
+use chrono::Utc;
 use rusqlite::OptionalExtension;
 use std::path::Path;
 use uuid::Uuid;
-use chrono::Utc;
 
 /// Create a new project record in the database.
-pub(super) fn create_project(
-    store: &super::RagStore,
-    project: &RagProject,
-) -> Result<(), String> {
+pub(super) fn create_project(store: &super::RagStore, project: &RagProject) -> Result<(), String> {
     let conn = store.conn.lock().map_err(|e| e.to_string())?;
     conn.execute(
         "INSERT INTO projects (id, name, path, embedding_model, ignore_patterns, created_at, updated_at, indexed_at, file_count, chunk_count, total_bytes, status, embedding_dimension)
@@ -48,7 +45,8 @@ pub(super) async fn create_project_with_params(
 ) -> Result<RagProject, String> {
     // Resolve and validate the project path
     let p = Path::new(path);
-    let canonical_path = p.canonicalize()
+    let canonical_path = p
+        .canonicalize()
         .map_err(|e| format!("Path does not exist or is not accessible: {}", e))?;
     if !canonical_path.is_dir() {
         return Err(format!("Path is not a directory: {:?}", canonical_path));
@@ -82,10 +80,7 @@ pub(super) async fn create_project_with_params(
 }
 
 /// Fetch a single project by ID.
-pub(super) fn get_project(
-    store: &super::RagStore,
-    id: &str,
-) -> Result<Option<RagProject>, String> {
+pub(super) fn get_project(store: &super::RagStore, id: &str) -> Result<Option<RagProject>, String> {
     let conn = store.conn.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
         .prepare("SELECT * FROM projects WHERE id = ?1")
@@ -141,7 +136,7 @@ pub(super) fn update_project_metadata(
     ignore_patterns: Option<&[String]>,
 ) -> Result<(), String> {
     let conn = store.conn.lock().map_err(|e| e.to_string())?;
-    let now =Utc::now().to_rfc3339();
+    let now = Utc::now().to_rfc3339();
 
     if let Some(n) = name {
         conn.execute(
@@ -152,8 +147,7 @@ pub(super) fn update_project_metadata(
     }
 
     if let Some(patterns) = ignore_patterns {
-        let patterns_json =
-            serde_json::to_string(patterns).unwrap_or_else(|_| "[]".to_string());
+        let patterns_json = serde_json::to_string(patterns).unwrap_or_else(|_| "[]".to_string());
         conn.execute(
             "UPDATE projects SET ignore_patterns = ?1, updated_at = ?2 WHERE id = ?3",
             rusqlite::params![patterns_json, now, id],
@@ -174,7 +168,7 @@ pub(super) fn update_project_stats(
     indexed_at: Option<&str>,
 ) -> Result<(), String> {
     let conn = store.conn.lock().map_err(|e| e.to_string())?;
-    let now =Utc::now().to_rfc3339();
+    let now = Utc::now().to_rfc3339();
 
     conn.execute(
         "UPDATE projects SET file_count = ?1, chunk_count = ?2, total_bytes = ?3, indexed_at = ?4, updated_at = ?5 WHERE id = ?6",
@@ -199,7 +193,11 @@ pub(super) fn get_embedding_dimension(store: &super::RagStore, id: &str) -> Resu
 }
 
 /// Set the embedding dimension for a project.
-pub(super) fn set_embedding_dimension(store: &super::RagStore, id: &str, dimension: usize) -> Result<(), String> {
+pub(super) fn set_embedding_dimension(
+    store: &super::RagStore,
+    id: &str,
+    dimension: usize,
+) -> Result<(), String> {
     let conn = store.conn.lock().map_err(|e| e.to_string())?;
     conn.execute(
         "UPDATE projects SET embedding_dimension = ?1 WHERE id = ?2",
@@ -210,9 +208,13 @@ pub(super) fn set_embedding_dimension(store: &super::RagStore, id: &str, dimensi
 }
 
 /// Set the project status (idle, indexing, ready, error).
-pub(super) fn set_status(store: &super::RagStore, id: &str, status: &ProjectStatus) -> Result<(), String> {
+pub(super) fn set_status(
+    store: &super::RagStore,
+    id: &str,
+    status: &ProjectStatus,
+) -> Result<(), String> {
     let conn = store.conn.lock().map_err(|e| e.to_string())?;
-    let now =Utc::now().to_rfc3339();
+    let now = Utc::now().to_rfc3339();
     conn.execute(
         "UPDATE projects SET status = ?1, updated_at = ?2 WHERE id = ?3",
         rusqlite::params![status.as_str(), now, id],
@@ -222,9 +224,13 @@ pub(super) fn set_status(store: &super::RagStore, id: &str, status: &ProjectStat
 }
 
 /// Update the embedding model for a project.
-pub(super) fn update_embedding_model(store: &super::RagStore, id: &str, model: &str) -> Result<(), String> {
+pub(super) fn update_embedding_model(
+    store: &super::RagStore,
+    id: &str,
+    model: &str,
+) -> Result<(), String> {
     let conn = store.conn.lock().map_err(|e| e.to_string())?;
-    let now =Utc::now().to_rfc3339();
+    let now = Utc::now().to_rfc3339();
     conn.execute(
         "UPDATE projects SET embedding_model = ?1, updated_at = ?2 WHERE id = ?3",
         rusqlite::params![model, now, id],

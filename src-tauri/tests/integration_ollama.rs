@@ -39,7 +39,8 @@ async fn get_models_success() {
         .create_async()
         .await;
 
-    let result: ApiResponse<Vec<OllamaModel>> = musaed_lib::ollama::cmd_ollama_get_models(url).await;
+    let result: ApiResponse<Vec<OllamaModel>> =
+        musaed_lib::ollama::cmd_ollama_get_models(url).await;
 
     mock.assert_async().await;
     assert!(result.success);
@@ -61,7 +62,8 @@ async fn get_models_empty_list() {
         .create_async()
         .await;
 
-    let result: ApiResponse<Vec<OllamaModel>> = musaed_lib::ollama::cmd_ollama_get_models(url).await;
+    let result: ApiResponse<Vec<OllamaModel>> =
+        musaed_lib::ollama::cmd_ollama_get_models(url).await;
 
     mock.assert_async().await;
     assert!(result.success);
@@ -91,7 +93,8 @@ async fn get_models_server_error() {
 
     // The command will try to parse the 500 response body as JSON.
     // reqwest doesn't treat 500 as an error, so it'll try to deserialize and fail.
-    let result: ApiResponse<Vec<OllamaModel>> = musaed_lib::ollama::cmd_ollama_get_models(url).await;
+    let result: ApiResponse<Vec<OllamaModel>> =
+        musaed_lib::ollama::cmd_ollama_get_models(url).await;
 
     mock.assert_async().await;
     assert!(!result.success);

@@ -16,10 +16,7 @@ pub(super) fn insert_embedding(
     padded[..copy_len].copy_from_slice(&embedding[..copy_len]);
 
     // Convert to bytes for sqlite-vec
-    let bytes: Vec<u8> = padded
-        .iter()
-        .flat_map(|f| f.to_le_bytes())
-        .collect();
+    let bytes: Vec<u8> = padded.iter().flat_map(|f| f.to_le_bytes()).collect();
 
     conn.execute(
         "INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?1, ?2)",

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import { DEFAULT_SETTINGS, ChatSettings } from '@musaed/contracts';
+import { DEFAULT_SETTINGS, type ChatSettings } from '@musaed/contracts';
 import { useSettingsStore } from '../../../store';
 import { useSetGlobalSettings } from '../../../store/hooks';
 import { logger } from '../../../lib/logger';

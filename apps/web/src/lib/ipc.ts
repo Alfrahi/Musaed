@@ -1,13 +1,14 @@
 import { z } from 'zod';
+import type { StoreOptions as StoreOptionsFull } from '@tauri-apps/plugin-store';
 import {
-  ApiResponse,
-  OllamaModel,
-  ChatMessage,
-  ChatSettings,
-  OllamaHealthIpc,
+  type ApiResponse,
+  type OllamaModel,
+  type ChatMessage,
+  type ChatSettings,
+  type OllamaHealthIpc,
   OllamaModelSchema,
   OllamaHealthIpcSchema,
-  ModelValidation,
+  type ModelValidation,
   ModelValidationSchema,
   ModelNameSchema,
   RequestIdSchema,
@@ -25,7 +26,7 @@ import {
   RAG_VALIDATION_LIMITS,
   sanitizeError,
   COMMAND_VERSIONS,
-  IPC_VERSION,
+  IPC_VERSION as _IPC_VERSION,
   type CommandName,
 } from '@musaed/contracts';
 import type {
@@ -659,15 +660,12 @@ export const opener = {
  * - `load`: Loads a store file; returns null in browser.
  * Provides a simple key-value store interface backed by a JSON file.
  */
-export type StoreOptions = Partial<import('@tauri-apps/plugin-store').StoreOptions>;
+export type StoreOptions = Partial<StoreOptionsFull>;
 
 export const store = {
   load: async (file: string, opts?: StoreOptions) =>
     checkIsTauri()
-      ? (await import('@tauri-apps/plugin-store')).load(
-          file,
-          opts as import('@tauri-apps/plugin-store').StoreOptions
-        )
+      ? (await import('@tauri-apps/plugin-store')).load(file, opts as StoreOptionsFull)
       : null,
 };
 

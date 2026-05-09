@@ -41,28 +41,26 @@ pub(super) fn search_similar(
         ORDER BY v.distance
     "#;
 
-    let mut stmt = conn.prepare(sql).map_err(|e| format!("Failed to prepare search: {}", e))?;
+    let mut stmt = conn
+        .prepare(sql)
+        .map_err(|e| format!("Failed to prepare search: {}", e))?;
 
     let results = stmt
-        .query_map(
-            rusqlite::params![query_bytes, project_id, top_k],
-            |row| {
-                let metadata_str: String = row.get(6)?;
-                let distance: f32 = row.get(8)?;
-                Ok(SearchResult {
-                    chunk_id: row.get(0)?,
-                    content: row.get(1)?,
-                    chunk_type: row.get(2)?,
-                    language: row.get(3)?,
-                    start_line: row.get::<_, i64>(4)? as usize,
-                    end_line: row.get::<_, i64>(5)? as usize,
-                    metadata: serde_json::from_str(&metadata_str)
-                        .unwrap_or(serde_json::json!({})),
-                    file_path: row.get(7)?,
-                    score: 1.0 - distance, // Convert distance to similarity score
-                })
-            },
-        )
+        .query_map(rusqlite::params![query_bytes, project_id, top_k], |row| {
+            let metadata_str: String = row.get(6)?;
+            let distance: f32 = row.get(8)?;
+            Ok(SearchResult {
+                chunk_id: row.get(0)?,
+                content: row.get(1)?,
+                chunk_type: row.get(2)?,
+                language: row.get(3)?,
+                start_line: row.get::<_, i64>(4)? as usize,
+                end_line: row.get::<_, i64>(5)? as usize,
+                metadata: serde_json::from_str(&metadata_str).unwrap_or(serde_json::json!({})),
+                file_path: row.get(7)?,
+                score: 1.0 - distance, // Convert distance to similarity score
+            })
+        })
         .map_err(|e| format!("Failed to execute search: {}", e))?
         .filter_map(|r| r.ok())
         .filter(|r| r.score >= threshold)

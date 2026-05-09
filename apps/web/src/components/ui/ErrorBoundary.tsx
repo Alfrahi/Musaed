@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 import { RefreshCw, AlertTriangle, WifiOff, HelpCircle } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import { useGlobalSettings } from '@/store/hooks';

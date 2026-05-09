@@ -1,13 +1,13 @@
+use chrono;
 use log::LevelFilter;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::sync::mpsc;
 use std::sync::OnceLock;
 use tauri::Manager;
-use chrono;
-use tracing::{self, Subscriber, Event};
-use tracing_subscriber::layer::Layer;
 use tracing::field::{Field, Visit};
+use tracing::{self, Event, Subscriber};
+use tracing_subscriber::layer::Layer;
 
 static LOGGER: OnceLock<ChannelLogger> = OnceLock::new();
 
@@ -151,7 +151,9 @@ fn writer_thread(mut file: std::fs::File, rx: mpsc::Receiver<LogMsg>) {
 
 /// Initializes the file logger and returns the channel sender.
 /// This sender can be used to create a tracing layer.
-pub fn init_file_logger<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<mpsc::Sender<LogMsg>, String> {
+pub fn init_file_logger<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+) -> Result<mpsc::Sender<LogMsg>, String> {
     let data_dir = app
         .path()
         .app_data_dir()

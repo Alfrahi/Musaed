@@ -89,8 +89,10 @@ impl BM25 {
 /// Tokenize text into terms (words).
 fn tokenize(text: &str) -> Vec<String> {
     // Detect language for better tokenization (optional)
-    let _lang = whatlang::detect(text).map(|info| info.lang()).unwrap_or(Lang::Eng);
-    
+    let _lang = whatlang::detect(text)
+        .map(|info| info.lang())
+        .unwrap_or(Lang::Eng);
+
     // Simple tokenization: split on non-alphanumeric characters
     text.split(|c: char| !c.is_alphanumeric() && c != '_')
         .filter(|s| !s.is_empty())
@@ -115,12 +117,12 @@ mod tests {
             (2, "hello rust".to_string()),
             (3, "world rust programming".to_string()),
         ];
-        
+
         let bm25 = BM25::new(&documents);
         let score1 = bm25.score("hello", 1);
         let score2 = bm25.score("hello", 2);
         let score3 = bm25.score("hello", 3);
-        
+
         assert!(score1 > score3); // Document 1 should score higher for "hello"
         assert!(score2 > score3); // Document 2 should score higher for "hello"
         assert!(score1 > 0.0); // Non-zero score for matching document

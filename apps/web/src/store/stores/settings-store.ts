@@ -3,7 +3,7 @@
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { ChatSettings, DEFAULT_SETTINGS } from '@musaed/contracts';
+import { type ChatSettings, DEFAULT_SETTINGS } from '@musaed/contracts';
 import { createTauriStorage } from '../../lib/tauri-storage';
 
 interface SettingsState {

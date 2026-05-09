@@ -1,6 +1,6 @@
 'use client';
 
-import { stripRedactedThinkingBlocks, Language, Message } from '@musaed/contracts';
+import { stripRedactedThinkingBlocks, type Language, type Message } from '@musaed/contracts';
 import { titleApi } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
 import type { ConversationMetadata } from '../../../store/stores/conversation-store';

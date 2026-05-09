@@ -33,8 +33,11 @@ export const logger = {
         : sanitized.message;
 
     if (!config.isProd) {
-      const consoleMethod = level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log';
-      console[consoleMethod](`[${level.toUpperCase()}] ${finalMessage}`, context || '');
+      if (level === 'error') {
+        console.error(`[${level.toUpperCase()}] ${finalMessage}`, context || '');
+      } else if (level === 'warn') {
+        console.warn(`[${level.toUpperCase()}] ${finalMessage}`, context || '');
+      }
     }
 
     const entry: LogEntry = {

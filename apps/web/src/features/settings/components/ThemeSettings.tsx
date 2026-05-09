@@ -1,10 +1,10 @@
 'use client';
 
-import { Sun, Moon, Monitor, LucideIcon } from 'lucide-react';
+import { Sun, Moon, Monitor, type LucideIcon } from 'lucide-react';
 import { useGlobalSettings, useLanguage } from '../../../store/hooks';
 import { useSettingsActions } from '../hooks/useSettingsActions';
 import { useTranslation } from '../../../lib/i18n';
-import { Theme } from '@musaed/contracts';
+import { type Theme } from '@musaed/contracts';
 import { cn } from '../../../lib/utils';
 
 const ThemeSettings = () => {

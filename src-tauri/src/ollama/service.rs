@@ -5,11 +5,10 @@
 //! Tauri-specific concerns (event emitting, state access) and delegate business
 //! rules to this service.
 
-use tracing;
 use super::client::{
-    acquire_global_permit, ollama_endpoint, request_cache_try_insert,
-    retry_with_backoff, ABORT_HANDLES, CONCURRENT_SEMAPHORE, EVENT_OLLAMA_ERROR, FAST_HTTP_CLIENT,
-    HTTP_CLIENT, INITIAL_REQUEST_TIMEOUT_SECS, MAX_TOTAL_IMAGE_SIZE_BYTES, REQUEST_CACHE,
+    acquire_global_permit, ollama_endpoint, request_cache_try_insert, retry_with_backoff,
+    ABORT_HANDLES, CONCURRENT_SEMAPHORE, EVENT_OLLAMA_ERROR, FAST_HTTP_CLIENT, HTTP_CLIENT,
+    INITIAL_REQUEST_TIMEOUT_SECS, MAX_TOTAL_IMAGE_SIZE_BYTES, REQUEST_CACHE,
     STREAM_ABSOLUTE_TIMEOUT_SECS,
 };
 use super::streaming::process_chat_stream;
@@ -25,6 +24,7 @@ use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Runtime};
 use tokio::time;
 use tokio_util::sync::CancellationToken;
+use tracing;
 
 pub struct OllamaChatService;
 
@@ -170,12 +170,10 @@ impl OllamaChatService {
                 tracing::error!("Failed to send chat request: {}", e);
                 ABORT_HANDLES.remove(&request_id);
                 REQUEST_CACHE.remove(&request_id);
-                return Err(
-                    BackendError::new("REQUEST_ERROR", e.to_string())
-                        .with_request_id(request_id)
-                        .with_context("Failed to connect to Ollama chat endpoint".to_string())
-                        .retryable(),
-                );
+                return Err(BackendError::new("REQUEST_ERROR", e.to_string())
+                    .with_request_id(request_id)
+                    .with_context("Failed to connect to Ollama chat endpoint".to_string())
+                    .retryable());
             }
         };
 
@@ -186,11 +184,9 @@ impl OllamaChatService {
 
             ABORT_HANDLES.remove(&request_id);
             REQUEST_CACHE.remove(&request_id);
-            return Err(
-                BackendError::new("OLLAMA_ERROR", error_text)
-                    .with_request_id(request_id)
-                    .with_context(format!("HTTP Status: {}", status)),
-            );
+            return Err(BackendError::new("OLLAMA_ERROR", error_text)
+                .with_request_id(request_id)
+                .with_context(format!("HTTP Status: {}", status)));
         }
 
         let request_id_clone = request_id.clone();
@@ -304,10 +300,10 @@ impl OllamaChatService {
             Err(e) => {
                 if e.is_timeout() {
                     tracing::warn!("Ollama health check timed out");
-                    return Err(BackendError::new("HEALTH_CHECK_TIMEOUT", "Request timed out").retryable());
+                    Err(BackendError::new("HEALTH_CHECK_TIMEOUT", "Request timed out").retryable())
                 } else {
                     tracing::warn!("Ollama health check failed: {}", e);
-                    return Err(BackendError::new("HEALTH_CHECK_FAILED", e.to_string()).retryable());
+                    Err(BackendError::new("HEALTH_CHECK_FAILED", e.to_string()).retryable())
                 }
             }
         }

@@ -3,13 +3,13 @@
 //! Contains [`strip_thinking_blocks`] for cleaning model output and the
 //! [`cmd_ollama_generate_title`] Tauri command that produces a short conversation title.
 
-use tracing;
 use crate::payloads::{ApiResponse, BackendError};
 use crate::validation::{
     is_valid_language, is_valid_model_name, validation_error, MAX_TITLE_INPUT_LEN,
 };
 use serde_json::json;
 use std::time::Duration;
+use tracing;
 
 use super::client::{
     acquire_global_permit, invalid_ollama_base, ollama_endpoint, FAST_HTTP_CLIENT,

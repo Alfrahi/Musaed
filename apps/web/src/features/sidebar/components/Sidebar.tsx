@@ -7,7 +7,7 @@ import { useSearchQuery, useIsHydrated, useLanguage } from '@/store/hooks';
 import {
   useConversationStore,
   selectFilteredConversations,
-  ConversationMetadata,
+  type ConversationMetadata,
 } from '@/store/stores/conversation-store';
 import { useTranslation } from '@/lib/i18n';
 import { ProjectList, AddProjectDialog } from '@/components/rag';
@@ -18,7 +18,7 @@ import SidebarHeader from './SidebarHeader';
 import SidebarSkeleton from './SidebarSkeleton';
 import SidebarInfo from './SidebarInfo';
 import { useSidebarActions } from '../hooks/useSidebarActions';
-import { useSidebarGrouping } from '../hooks/useSidebarGrouping';
+import { useSidebarGrouping, type SidebarItem } from '../hooks/useSidebarGrouping';
 
 /** Group header (Today, Yesterday, etc.) with optional clear-all button. */
 const GroupHeader = ({
@@ -54,7 +54,7 @@ const SidebarItemContent = ({
   handleClearAll,
   t,
 }: {
-  item: import('../hooks/useSidebarGrouping').SidebarItem;
+  item: SidebarItem;
   searchQuery: string;
   filteredConversations: ConversationMetadata[];
   handleClearAll: () => void;
@@ -78,7 +78,7 @@ const SidebarItemContent = ({
   }
   return (
     <div className="ps-0 pe-0">
-      <ConversationItem conversation={item.data!} />
+      <ConversationItem conversation={item.data as ConversationMetadata} />
     </div>
   );
 };

@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import {
-  OllamaConnectionManager,
+  type OllamaConnectionManager,
   ConnectionState,
-  OllamaHealth,
+  type OllamaHealth,
   getConnectionManager,
 } from '@/lib/connection-manager';
 import { useSettingsStore } from '@/store';

@@ -1,7 +1,7 @@
-use tracing_subscriber::layer::SubscriberExt;
-use tauri::Manager;
 use std::sync::Arc;
+use tauri::Manager;
 use tokio::sync::Mutex;
+use tracing_subscriber::layer::SubscriberExt;
 
 pub mod logger;
 pub mod logging;

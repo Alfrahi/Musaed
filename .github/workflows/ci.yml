@@ -1,0 +1,157 @@
+name: Musaed CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  PNPM_HOME: /home/runner/.local/share/pnpm
+
+jobs:
+  # ── Job 1: Lint + Type-check + Architecture ─────────────
+  validate:
+    name: Lint · Type · Architecture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: ESLint
+        run: pnpm lint
+
+      - name: TypeScript type-check
+        run: pnpm type-check
+
+      - name: Architecture boundary check
+        run: pnpm arch-check
+
+      - name: i18n compliance
+        run: pnpm --filter web i18n:check
+
+      - name: No TODOs/FIXMEs
+        run: |
+          if grep -rE "\bTODO\b|\bFIXME\b|\bHACK\b" apps/web/src --include="*.ts" --include="*.tsx" --exclude-dir={test,tests}; then
+            echo "❌ Found TODO/FIXME comments in source."
+            exit 1
+          fi
+
+  # ── Job 2: Tests ────────────────────────────────────────
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests
+        run: pnpm test
+
+  # ── Job 3: Rust checks ─────────────────────────────────
+  rust:
+    name: Rust · Format · Clippy · Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            src-tauri/target
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: rust-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: rust-${{ runner.os }}-
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
+
+      - name: Cargo fmt
+        run: cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
+
+      - name: Cargo clippy
+        run: cargo clippy --all-targets --all-features --manifest-path src-tauri/Cargo.toml -- -D warnings
+
+      - name: Cargo test
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+  # ── Job 4: Build verification ────────────────────────────
+  build:
+    name: Build · Static Export
+    runs-on: ubuntu-latest
+    needs: [test, rust]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            src-tauri/target
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: rust-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: rust-${{ runner.os }}-
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
+
+      - name: Build frontend (static export)
+        run: pnpm --filter web build
+
+      - name: Verify static output exists
+        run: test -d apps/web/out && echo "✅ Static export verified"

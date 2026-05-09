@@ -24,7 +24,8 @@ pub mod types;
 
 pub use commands::{cmd_ollama_abort_chat, cmd_ollama_chat, cmd_ollama_check_health};
 pub use models::{
-    cmd_ollama_abort_pull, cmd_ollama_delete_model, cmd_ollama_get_models, cmd_ollama_pull_model, cmd_ollama_validate_model, cmd_ollama_verify_service,
+    cmd_ollama_abort_pull, cmd_ollama_delete_model, cmd_ollama_get_models, cmd_ollama_pull_model,
+    cmd_ollama_validate_model, cmd_ollama_verify_service,
 };
 pub use title::cmd_ollama_generate_title;
 
@@ -42,7 +43,7 @@ mod tests {
         ABORT_HANDLES, MAX_TOTAL_IMAGE_SIZE_BYTES, PULL_ABORT_HANDLES, REQUEST_CACHE,
     };
     use dashmap::mapref::entry::Entry;
-    use std::sync::{Arc, Mutex, LazyLock};
+    use std::sync::{Arc, LazyLock, Mutex};
     use std::time::Instant;
     use tokio_util::sync::CancellationToken;
 
@@ -116,7 +117,7 @@ mod tests {
 
     #[test]
     fn messages_without_images_have_zero_size() {
-        let messages = vec![ChatMessage {
+        let messages = [ChatMessage {
             role: "user".to_string(),
             content: "hello".to_string(),
             images: None,

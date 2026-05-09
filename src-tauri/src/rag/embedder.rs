@@ -2,10 +2,13 @@
 //!
 //! Wraps the `/api/embed` endpoint for batched embedding generation.
 
-use tracing;
 use crate::rag::types::ModelValidation;
 use crate::shared::{acquire_global_permit, ollama_endpoint, retry_with_backoff, HTTP_CLIENT};
 use serde::{Deserialize, Serialize};
+use tracing;
+
+/// Progress callback for batched embedding: `(batch_index, total_batches, chunks_embedded)`.
+type EmbedProgressFn = Box<dyn Fn(usize, usize, usize) + Send + Sync>;
 
 /// Default batch size for embedding requests.
 const DEFAULT_BATCH_SIZE: usize = 64;
@@ -62,7 +65,10 @@ impl OllamaEmbedder {
             text.to_string()
         };
         let results = self.embed_batch_internal(vec![input]).await?;
-        results.into_iter().next().ok_or_else(|| "No embedding returned".to_string())
+        results
+            .into_iter()
+            .next()
+            .ok_or_else(|| "No embedding returned".to_string())
     }
 
     /// Embed a batch of texts (for indexing).
@@ -70,9 +76,12 @@ impl OllamaEmbedder {
         if texts.is_empty() {
             return Ok(vec![]);
         }
-        
+
         let inputs = if self.model.to_lowercase().contains("nomic") {
-            texts.into_iter().map(|t| format!("search_document: {}", t)).collect()
+            texts
+                .into_iter()
+                .map(|t| format!("search_document: {}", t))
+                .collect()
         } else {
             texts
         };
@@ -152,13 +161,13 @@ impl OllamaEmbedder {
     pub async fn embed_chunks(
         &mut self,
         chunks: Vec<String>,
-        progress_fn: Option<Box<dyn Fn(usize, usize, usize) + Send + Sync>>,
+        progress_fn: Option<EmbedProgressFn>,
     ) -> Result<Vec<Vec<f32>>, String> {
         if chunks.is_empty() {
             return Ok(vec![]);
         }
 
-        let total_batches = (chunks.len() + self.batch_size - 1) / self.batch_size;
+        let total_batches = chunks.len().div_ceil(self.batch_size);
         let mut all_embeddings = Vec::with_capacity(chunks.len());
 
         for (batch_idx, batch_start) in (0..chunks.len()).step_by(self.batch_size).enumerate() {
@@ -216,7 +225,6 @@ impl OllamaEmbedder {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

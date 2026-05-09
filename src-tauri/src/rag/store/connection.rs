@@ -1,6 +1,6 @@
 //! Database connection management, schema, and migrations.
 
-use rusqlite::{Connection, ffi};
+use rusqlite::{ffi, Connection};
 use std::path::Path;
 
 /// Default embedding vector dimension. Will be overridden per-project after
@@ -80,8 +80,8 @@ pub(super) fn open_connection(db_path: &Path) -> Result<Connection, String> {
         )));
     }
 
-    let conn = Connection::open(db_path)
-        .map_err(|e| format!("Failed to open RAG database: {}", e))?;
+    let conn =
+        Connection::open(db_path).map_err(|e| format!("Failed to open RAG database: {}", e))?;
 
     // Apply pragmas
     conn.execute_batch(PRAGMAS_SQL)
@@ -100,9 +100,7 @@ pub(super) fn open_connection(db_path: &Path) -> Result<Connection, String> {
 /// Run database migrations for schema changes across versions.
 pub(super) fn run_migrations(conn: &Connection) -> Result<(), String> {
     // Migration 1: Add `status` column to projects table.
-    let has_status_column: bool = conn
-        .prepare("SELECT status FROM projects LIMIT 0")
-        .is_ok();
+    let has_status_column: bool = conn.prepare("SELECT status FROM projects LIMIT 0").is_ok();
     if !has_status_column {
         conn.execute(
             "ALTER TABLE projects ADD COLUMN status TEXT NOT NULL DEFAULT 'idle'",

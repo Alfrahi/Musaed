@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { ArrowDown } from 'lucide-react';
-import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
+import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
 import {
   useGlobalSettings,
   useIsHydrated,
@@ -18,9 +18,9 @@ import { useStreamingStore, selectLiveContent } from '../../../store/stores/stre
 import MessageBubble from './MessageBubble';
 import ChatWindowSkeleton from './ChatWindowSkeleton';
 import EmptyState from './EmptyState';
-import { useTranslation, TranslationKey } from '../../../lib/i18n';
+import { useTranslation, type TranslationKey } from '../../../lib/i18n';
 import { cn } from '../../../lib/utils';
-import { Message } from '@musaed/contracts';
+import { type Message } from '@musaed/contracts';
 
 interface MessageLabels {
   user: string;

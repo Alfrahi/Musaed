@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { Copy, Check, ChevronDown, ChevronUp, FileText } from 'lucide-react';
-import { Message } from '@musaed/contracts';
+import { type Message } from '@musaed/contracts';
 import { cn } from '../../../lib/utils';
 import MessageContent from './MessageContent';
 import { attachmentImageSrc } from '../imageAttachment';

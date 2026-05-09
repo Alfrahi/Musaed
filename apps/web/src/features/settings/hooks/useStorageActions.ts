@@ -12,9 +12,9 @@ import { useTranslation } from '../../../lib/i18n';
 import { checkIsTauri, dialog, fs } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
-import { ConversationSchema, OllamaModel, Message } from '@musaed/contracts';
+import { ConversationSchema, type OllamaModel, type Message } from '@musaed/contracts';
 import { useMessageStore } from '../../../store/stores/message-store';
-import { ConversationMetadata } from '../../../store/stores/conversation-store';
+import { type ConversationMetadata } from '../../../store/stores/conversation-store';
 
 const useSizeCalculations = (
   conversations: Record<string, ConversationMetadata>,

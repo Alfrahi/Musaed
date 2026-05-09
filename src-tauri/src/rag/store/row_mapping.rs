@@ -1,7 +1,7 @@
 //! Row mapping utilities.
 
+use crate::rag::types::{ProjectStatus, RagProject};
 use rusqlite::Row;
-use crate::rag::types::{RagProject, ProjectStatus};
 
 pub(super) fn row_to_project(row: &Row<'_>) -> Result<RagProject, rusqlite::Error> {
     let ignore_patterns_str: String = row.get(4)?;

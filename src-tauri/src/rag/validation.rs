@@ -84,7 +84,7 @@ pub fn validate_search(
         ));
     }
     if let Some(k) = top_k {
-        if k < MIN_TOP_K || k > MAX_TOP_K {
+        if !(MIN_TOP_K..=MAX_TOP_K).contains(&k) {
             return Err(format!(
                 "topK must be {}-{}, got {}",
                 MIN_TOP_K, MAX_TOP_K, k
@@ -92,7 +92,7 @@ pub fn validate_search(
         }
     }
     if let Some(t) = threshold {
-        if t < MIN_THRESHOLD || t > MAX_THRESHOLD {
+        if !(MIN_THRESHOLD..=MAX_THRESHOLD).contains(&t) {
             return Err(format!(
                 "threshold must be {}-{}, got {}",
                 MIN_THRESHOLD, MAX_THRESHOLD, t
@@ -164,7 +164,10 @@ mod tests {
 
     #[test]
     fn invalid_add_project_name_too_long() {
-        assert!(validate_add_project(&"x".repeat(MAX_PROJECT_NAME_LEN + 1), "/path", "model", &[]).is_err());
+        assert!(
+            validate_add_project(&"x".repeat(MAX_PROJECT_NAME_LEN + 1), "/path", "model", &[])
+                .is_err()
+        );
     }
 
     #[test]
@@ -179,7 +182,9 @@ mod tests {
 
     #[test]
     fn invalid_add_project_too_many_ignore_patterns() {
-        let patterns: Vec<String> = (0..=MAX_IGNORE_PATTERNS).map(|i| format!("pat{i}")).collect();
+        let patterns: Vec<String> = (0..=MAX_IGNORE_PATTERNS)
+            .map(|i| format!("pat{i}"))
+            .collect();
         assert!(validate_add_project("name", "/path", "model", &patterns).is_err());
     }
 

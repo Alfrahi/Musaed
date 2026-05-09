@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useMessageStore } from './message-store';
-import { Message } from '@musaed/contracts';
+import { type Message } from '@musaed/contracts';
 
 describe('Message Store', () => {
   beforeEach(() => {

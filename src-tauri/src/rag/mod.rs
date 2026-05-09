@@ -16,6 +16,7 @@
 //! - `bm25.rs`      — BM25 ranking for hybrid search
 //! - `commands.rs`  — All RAG Tauri IPC commands
 
+pub mod bm25;
 pub mod chunker;
 pub mod commands;
 pub mod embedder;
@@ -25,7 +26,6 @@ pub mod search;
 pub mod store;
 pub mod types;
 pub mod validation;
-pub mod bm25;
 
 // Re-export key types
 pub use store::RagStore;

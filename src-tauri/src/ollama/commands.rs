@@ -3,11 +3,11 @@
 //! These are the primary interactive commands used by the frontend during
 //! an active chat session or when probing server status.
 
-use tracing;
 use crate::payloads::{ApiResponse, ChatMessage, ChatOptions, OllamaHealth};
 use crate::validation::{is_valid_request_id, validation_error};
 use std::time::Instant;
 use tauri::{AppHandle, Runtime};
+use tracing;
 
 use super::client::ABORT_HANDLES;
 use super::client::REQUEST_CACHE;

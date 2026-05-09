@@ -1,5 +1,5 @@
 import React from 'react';
-import { Message } from '@musaed/contracts';
+import { type Message } from '@musaed/contracts';
 import { Cpu, Zap } from 'lucide-react';
 
 interface MessageStatsProps {

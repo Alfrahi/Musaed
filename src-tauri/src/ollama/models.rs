@@ -8,7 +8,6 @@
 //! - [`cmd_ollama_delete_model`] — remove a model from the server
 //! - [`cmd_ollama_verify_service`] — confirm a URL points to an Ollama instance
 
-use tracing;
 use crate::payloads::{
     ApiResponse, BackendError, ModelValidation, OllamaModel, PullProgress, PullStreamError,
 };
@@ -21,6 +20,7 @@ use tauri::{AppHandle, Emitter, Runtime};
 use tokio::time;
 use tokio_util::codec::{FramedRead, LinesCodec};
 use tokio_util::sync::CancellationToken;
+use tracing;
 
 use super::client::{
     acquire_global_permit, invalid_ollama_base, ollama_endpoint, retry_with_backoff,
@@ -108,7 +108,10 @@ pub async fn cmd_ollama_get_models(base_url: String) -> ApiResponse<Vec<OllamaMo
 // ==================== MODEL VALIDATION ====================
 
 #[tauri::command]
-pub async fn cmd_ollama_validate_model(base_url: String, model_name: String) -> ApiResponse<ModelValidation> {
+pub async fn cmd_ollama_validate_model(
+    base_url: String,
+    model_name: String,
+) -> ApiResponse<ModelValidation> {
     tracing::info!("Validating model: {}", model_name);
 
     if !is_valid_model_name(&model_name) {

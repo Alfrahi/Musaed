@@ -1,32 +1,19 @@
 #!/usr/bin/env sh
 
-echo "🛡 Musaed v3 Pre-commit Guard"
+echo "🛡 Musaed Pre-commit (fast)"
 
 set -e
 
-# ── 1. Lint + Auto-fix ─────────────────────────────────────
+# ── 1. Rust format & lint (only if .rs files changed) ──────
+staged_rs=$(git diff --cached --name-only --diff-filter=ACM -- 'src-tauri/**/*.rs')
+if [ -n "$staged_rs" ]; then
+  echo "🦀 Running Rust checks..."
+  cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
+  cargo clippy --all-targets --all-features --manifest-path src-tauri/Cargo.toml -- -D warnings
+fi
+
+# ── 2. Lint + format staged JS/TS files ────────────────────
 echo "🔧 Running lint-staged..."
 pnpm exec lint-staged
 
-# ── 2. Architecture Boundary Check ────────────────────────
-echo "🧱 Checking architecture boundaries..."
-pnpm arch-check
-
-# ── 3. Type Safety ────────────────────────────────────────
-echo "🔒 Running TypeScript check..."
-pnpm type-check
-
-# ── 4. i18n Compliance ────────────────────────────────────
-echo "🌐 Checking i18n compliance..."
-pnpm --filter web i18n:check
-
-# ── 5. No TODOs/FIXMEs in source ──────────────────────────
-echo "📝 Checking for TODOs/FIXMEs..."
-if grep -rE "\bTODO\b|\bFIXME\b|\bHACK\b" apps/web/src --include="*.ts" --include="*.tsx" --exclude-dir={test,tests}; then
-  echo "❌ Found TODO/FIXME comments. Please resolve them before committing."
-  exit 1
-else
-  echo "✅ No TODO/FIXME comments found"
-fi
-
-echo "🎉 All Musaed v3 pre-commit checks passed!"
+echo "✅ Pre-commit passed"

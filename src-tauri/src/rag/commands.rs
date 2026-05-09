@@ -5,15 +5,12 @@
 //!
 //! SECURITY: All filesystem paths are canonicalized to prevent symlink traversal attacks.
 
-use tracing;
 use crate::payloads::{ApiResponse, BackendError};
 use crate::rag::embedder::OllamaEmbedder;
 use crate::rag::indexing;
 use crate::rag::search::RagSearchEngine;
 use crate::rag::store::RagStore;
-use crate::rag::types::{
-    ChunkRecord, IndexStatus, ModelValidation, ProjectStats, RagProject,
-};
+use crate::rag::types::{ChunkRecord, IndexStatus, ModelValidation, ProjectStats, RagProject};
 use crate::rag::validation;
 use crate::shared::RAG_INDEX_ABORT_HANDLES;
 use crate::validation::is_valid_model_name;
@@ -23,6 +20,7 @@ use std::sync::Arc;
 use tauri::Emitter;
 use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
+use tracing;
 
 // ====================== PATH SECURITY HELPERS ======================
 
@@ -104,19 +102,19 @@ pub async fn cmd_rag_add_project(
     state: tauri::State<'_, Arc<Mutex<RagStore>>>,
     _app_handle: tauri::AppHandle,
 ) -> Result<ApiResponse<RagProject>, String> {
-    if let Err(e) = validation::validate_add_project(
-        &name,
-        &path,
-        &embedding_model,
-        &ignore_patterns,
-    ) {
+    if let Err(e) =
+        validation::validate_add_project(&name, &path, &embedding_model, &ignore_patterns)
+    {
         return Ok(validation::rag_validation_error(e));
     }
 
     let store = state.inner();
     let s = store.lock().await;
 
-    match s.create_project_with_params(&name, &path, &embedding_model, &ignore_patterns).await {
+    match s
+        .create_project_with_params(&name, &path, &embedding_model, &ignore_patterns)
+        .await
+    {
         Ok(project) => Ok(ApiResponse {
             success: true,
             data: Some(project),
@@ -170,11 +168,9 @@ pub async fn cmd_rag_update_project(
     let store = state.inner();
     let s = store.lock().await;
 
-    if let Err(e) = s.update_project_metadata(
-        &project_id,
-        name.as_deref(),
-        ignore_patterns.as_deref(),
-    ) {
+    if let Err(e) =
+        s.update_project_metadata(&project_id, name.as_deref(), ignore_patterns.as_deref())
+    {
         return Ok(ApiResponse {
             success: false,
             data: None,
@@ -309,8 +305,7 @@ pub async fn cmd_rag_index_project(
     let embedding_model = project.embedding_model.clone();
     let ignore_patterns = project.ignore_patterns.clone();
     let force_val = force.unwrap_or(false);
-    let base_url_val = base_url
-        .unwrap_or_else(|| "http://localhost:11434".to_string());
+    let base_url_val = base_url.unwrap_or_else(|| "http://localhost:11434".to_string());
 
     let store_clone = store.clone();
     let app_handle_for_index = app_handle.clone();
@@ -320,12 +315,14 @@ pub async fn cmd_rag_index_project(
     tauri::async_runtime::spawn(async move {
         let result = indexing::index_project(
             store_clone.clone(),
-            &project_id_for_spawn,
-            &project_path,
-            &embedding_model,
-            &base_url_val,
-            &ignore_patterns,
-            force_val,
+            indexing::IndexOptions {
+                project_id: &project_id_for_spawn,
+                project_path: &project_path,
+                embedding_model: &embedding_model,
+                base_url: &base_url_val,
+                ignore_patterns: &ignore_patterns,
+                force: force_val,
+            },
             cancel_token,
             app_handle_for_index,
         )
@@ -350,7 +347,8 @@ pub async fn cmd_rag_index_project(
                 chunk_count: stats.as_ref().map(|s| s.chunk_count).unwrap_or(0),
                 total_bytes: stats.as_ref().map(|s| s.total_bytes).unwrap_or(0),
             };
-            let _ = app_handle_for_callback.emit(crate::shared::EVENT_RAG_INDEX_COMPLETE, &complete);
+            let _ =
+                app_handle_for_callback.emit(crate::shared::EVENT_RAG_INDEX_COMPLETE, &complete);
         }
     });
 
@@ -362,27 +360,27 @@ pub async fn cmd_rag_index_project(
 }
 
 #[tauri::command]
-pub async fn cmd_rag_abort_index(
-    project_id: String,
-) -> Result<ApiResponse<bool>, String> {
+pub async fn cmd_rag_abort_index(project_id: String) -> Result<ApiResponse<bool>, String> {
     if let Err(e) = validation::validate_project_id(&project_id) {
         return Ok(validation::rag_validation_error(e));
     }
 
-    Ok(if let Some((_, token)) = RAG_INDEX_ABORT_HANDLES.remove(&project_id) {
-        token.cancel();
-        ApiResponse {
-            success: true,
-            data: Some(true),
-            error: None,
-        }
-    } else {
-        ApiResponse {
-            success: true,
-            data: Some(false),
-            error: None,
-        }
-    })
+    Ok(
+        if let Some((_, token)) = RAG_INDEX_ABORT_HANDLES.remove(&project_id) {
+            token.cancel();
+            ApiResponse {
+                success: true,
+                data: Some(true),
+                error: None,
+            }
+        } else {
+            ApiResponse {
+                success: true,
+                data: Some(false),
+                error: None,
+            }
+        },
+    )
 }
 
 #[tauri::command]
@@ -392,14 +390,7 @@ pub async fn cmd_rag_reindex_project(
     state: tauri::State<'_, Arc<Mutex<RagStore>>>,
     app_handle: tauri::AppHandle,
 ) -> Result<ApiResponse<bool>, String> {
-    cmd_rag_index_project(
-        project_id,
-        Some(true),
-        base_url,
-        state,
-        app_handle,
-    )
-    .await
+    cmd_rag_index_project(project_id, Some(true), base_url, state, app_handle).await
 }
 
 #[tauri::command]
@@ -436,12 +427,7 @@ pub async fn cmd_rag_search(
     state: tauri::State<'_, Arc<Mutex<RagStore>>>,
     _app_handle: tauri::AppHandle,
 ) -> Result<ApiResponse<Vec<crate::rag::types::SearchResult>>, String> {
-    if let Err(e) = validation::validate_search(
-        &project_id,
-        &query,
-        top_k,
-        threshold,
-    ) {
+    if let Err(e) = validation::validate_search(&project_id, &query, top_k, threshold) {
         return Ok(validation::rag_validation_error(e));
     }
 
@@ -468,31 +454,32 @@ pub async fn cmd_rag_search(
         }
     };
 
-    let base_url_val = base_url
-        .unwrap_or_else(|| "http://localhost:11434".to_string());
+    let base_url_val = base_url.unwrap_or_else(|| "http://localhost:11434".to_string());
 
-    Ok(match RagSearchEngine::search(
-        store.clone(),
-        &project_id,
-        &query,
-        &base_url_val,
-        &project.embedding_model,
-        top_k,
-        threshold,
+    Ok(
+        match RagSearchEngine::search(
+            store.clone(),
+            &project_id,
+            &query,
+            &base_url_val,
+            &project.embedding_model,
+            top_k,
+            threshold,
+        )
+        .await
+        {
+            Ok(results) => ApiResponse {
+                success: true,
+                data: Some(results),
+                error: None,
+            },
+            Err(e) => ApiResponse {
+                success: false,
+                data: None,
+                error: Some(BackendError::new("cmd_rag_search_ERROR", e)),
+            },
+        },
     )
-    .await
-    {
-        Ok(results) => ApiResponse {
-            success: true,
-            data: Some(results),
-            error: None,
-        },
-        Err(e) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new("cmd_rag_search_ERROR", e)),
-        },
-    })
 }
 
 #[tauri::command]
@@ -663,7 +650,11 @@ mod path_security_tests {
     fn test_canonicalize_path_traversal_blocked() {
         let dir = tempdir().unwrap();
         let project_root = dir.path();
-        let target = project_root.join("..").join("..").join("etc").join("passwd");
+        let target = project_root
+            .join("..")
+            .join("..")
+            .join("etc")
+            .join("passwd");
 
         let result = canonicalize_path_within_project(project_root, &target);
         assert!(result.is_err());

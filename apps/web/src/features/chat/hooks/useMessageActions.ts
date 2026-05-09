@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { stripRedactedThinkingBlocks, Message } from '@musaed/contracts';
+import { stripRedactedThinkingBlocks, type Message } from '@musaed/contracts';
 
 /**
  * Hook for handling message copy operations with feedback.

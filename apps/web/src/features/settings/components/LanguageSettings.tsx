@@ -4,7 +4,7 @@ import { Languages } from 'lucide-react';
 import { useGlobalSettings, useLanguage } from '../../../store/hooks';
 import { useSettingsActions } from '../hooks/useSettingsActions';
 import { useTranslation } from '../../../lib/i18n';
-import { Language } from '@musaed/contracts';
+import { type Language } from '@musaed/contracts';
 
 const LanguageSettings = () => {
   const globalSettings = useGlobalSettings();

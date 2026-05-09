@@ -1,6 +1,6 @@
 'use client';
 
-import { StateStorage } from 'zustand/middleware';
+import { type StateStorage } from 'zustand/middleware';
 import { z } from 'zod';
 import { checkIsTauri, store } from './ipc';
 import { logger } from './logger';

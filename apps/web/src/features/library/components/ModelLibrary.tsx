@@ -12,6 +12,7 @@ import { useModelActions } from '../hooks/useModelActions';
 import { dialog } from '../../../lib/ipc';
 import { cn } from '../../../lib/utils';
 import { ModalLayout } from '@/components/ui';
+import type { Language } from '@musaed/contracts';
 
 interface ModelLibraryProps {
   isOpen: boolean;
@@ -45,7 +46,7 @@ const FeaturedGrid = ({
   pullStatus: Record<string, { status: string }>;
   handlePull: (name: string) => void;
   translateOllamaStatus: (s: string) => string;
-  language: import('@musaed/contracts').Language;
+  language: Language;
 }) => (
   <VirtuosoGrid
     style={{ height: '100%' }}
@@ -90,7 +91,7 @@ const InstalledList = ({
     } | null;
   }[];
   handleDelete: (name: string) => void;
-  language: import('@musaed/contracts').Language;
+  language: Language;
 }) => (
   <Virtuoso
     style={{ height: '100%' }}

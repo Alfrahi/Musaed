@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import { useLanguage } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 import {
-  FileAttachment,
+  type FileAttachment,
   handleTauriImageUploadInternal,
   handleTauriFileUploadInternal,
 } from './useAttachmentUtils';

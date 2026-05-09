@@ -12,7 +12,7 @@ import DiagnosticsSettings from './DiagnosticsSettings';
 import InputSettings from './InputSettings';
 import StorageSettings from './StorageSettings';
 import MarkdownSettings from './MarkdownSettings';
-import { TranslationKey, useTranslation } from '../../../lib/i18n';
+import { type TranslationKey, useTranslation } from '../../../lib/i18n';
 import { dialog } from '../../../lib/ipc';
 import { ModalLayout } from '@/components/ui';
 import { cn } from '../../../lib/utils';

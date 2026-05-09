@@ -20,6 +20,7 @@ import type {
   SearchResult,
 } from '@musaed/contracts';
 import type { ConversationState, ConversationMetadata } from './stores/conversation-store';
+import type { IndexProgress } from '@musaed/contracts';
 
 // ---------------------------------------------------------------------------
 // useConversationStore selectors
@@ -360,7 +361,7 @@ export function useSetActiveRagProjectId(): (id: string | null) => void {
 
 export function useSetRagIndexProgress(): (
   projectId: string,
-  progress: import('@musaed/contracts').IndexProgress | null
+  progress: IndexProgress | null
 ) => void {
   return useRagStore((s) => s.setIndexProgress);
 }

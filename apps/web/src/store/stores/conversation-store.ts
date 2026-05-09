@@ -3,8 +3,8 @@
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Conversation } from '@musaed/contracts';
-import { createTauriStorage, Migrations } from '../../lib/tauri-storage';
+import { type Conversation } from '@musaed/contracts';
+import { createTauriStorage, type Migrations } from '../../lib/tauri-storage';
 
 const CONVERSATION_STORE_VERSION = 3;
 

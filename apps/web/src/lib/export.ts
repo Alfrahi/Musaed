@@ -1,6 +1,6 @@
 'use client';
 
-import { Conversation, stripRedactedThinkingBlocks } from '@musaed/contracts';
+import { type Conversation, stripRedactedThinkingBlocks } from '@musaed/contracts';
 import { dialog, fs, checkIsTauri } from './ipc';
 
 interface ExportContext {

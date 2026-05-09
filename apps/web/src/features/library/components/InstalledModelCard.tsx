@@ -4,7 +4,7 @@ import React from 'react';
 import { Trash2, Zap, ShieldCheck, Code, BrainCircuit, HardDrive } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { useTranslation } from '../../../lib/i18n';
-import { Language } from '@musaed/contracts';
+import { type Language } from '@musaed/contracts';
 import { useModelCapabilities } from '../hooks/useModelCapabilities';
 
 interface InstalledModelCardProps {

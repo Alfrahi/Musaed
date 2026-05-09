@@ -44,7 +44,7 @@ const DirectionProvider = ({ children }: { children: React.ReactNode }) => {
       return () => mediaQuery.removeEventListener('change', handleChange);
     }
 
-    applyTheme(globalSettings.theme as 'light' | 'dark');
+    applyTheme(globalSettings.theme);
     return undefined;
   }, [globalSettings.theme, isHydrated]);
 

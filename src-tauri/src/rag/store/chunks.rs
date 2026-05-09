@@ -1,13 +1,10 @@
 //! Chunk CRUD operations.
 
-use rusqlite::params;
 use crate::rag::types::ChunkRow;
+use rusqlite::params;
 
 /// Insert a single chunk and return its ID.
-pub(super) fn insert_chunk(
-    store: &super::RagStore,
-    chunk: &ChunkRow,
-) -> Result<i64, String> {
+pub(super) fn insert_chunk(store: &super::RagStore, chunk: &ChunkRow) -> Result<i64, String> {
     let conn = store.conn.lock().map_err(|e| e.to_string())?;
     conn.execute(
         "INSERT INTO chunks (project_id, file_id, chunk_index, content, chunk_type, language, start_line, end_line, metadata)
@@ -98,10 +95,7 @@ pub(super) fn get_file_chunks(
 }
 
 /// Delete all chunks for a given file (and their embeddings).
-pub(super) fn delete_file_chunks(
-    store: &super::RagStore,
-    file_id: i64,
-) -> Result<(), String> {
+pub(super) fn delete_file_chunks(store: &super::RagStore, file_id: i64) -> Result<(), String> {
     // Delete embeddings first
     super::embeddings::delete_embeddings_for_chunks_of_file(store, file_id)?;
     // Delete chunks

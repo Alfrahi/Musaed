@@ -3,10 +3,10 @@
 //! Uses the `ignore` crate (ripgrep's walker) to traverse project directories
 //! while respecting .gitignore, .ignore, and custom patterns.
 
-use tracing;
 use ignore::overrides::OverrideBuilder;
 use ignore::WalkBuilder;
 use std::path::{Path, PathBuf};
+use tracing;
 
 // ====================== DEFAULT IGNORE PATTERNS ======================
 
@@ -91,7 +91,7 @@ const ALWAYS_IGNORE: &[&str] = &[
 ];
 
 /// Maximum file size to index (1 MB). Larger files are skipped.
-const MAX_FILE_SIZE: u64 = 1 * 1024 * 1024;
+const MAX_FILE_SIZE: u64 = 1024 * 1024;
 
 /// Maximum number of files to index per project (safety cap).
 const MAX_FILES_PER_PROJECT: usize = 50_000;
@@ -119,7 +119,10 @@ pub fn discover_files(
         return Err(format!("Project path does not exist: {:?}", project_path));
     }
     if !project_path.is_dir() {
-        return Err(format!("Project path is not a directory: {:?}", project_path));
+        return Err(format!(
+            "Project path is not a directory: {:?}",
+            project_path
+        ));
     }
 
     let mut builder = WalkBuilder::new(project_path);
@@ -167,7 +170,7 @@ pub fn discover_files(
                     break;
                 }
 
-                if !entry.file_type().map_or(false, |ft| ft.is_file()) {
+                if !entry.file_type().is_some_and(|ft| ft.is_file()) {
                     continue;
                 }
 
@@ -208,11 +211,7 @@ pub fn discover_files(
         }
     }
 
-    tracing::info!(
-        "Discovered {} files in {:?}",
-        files.len(),
-        project_path
-    );
+    tracing::info!("Discovered {} files in {:?}", files.len(), project_path);
 
     Ok(files)
 }
@@ -243,9 +242,9 @@ pub fn is_text_file(path: &Path) -> bool {
             let ext_str = ext.to_string_lossy().to_lowercase();
             // Check against the binary extensions in ALWAYS_IGNORE
             let binary_exts = [
-                "png", "jpg", "jpeg", "gif", "webp", "ico", "woff", "woff2", "ttf",
-                "eot", "mp3", "mp4", "zip", "gz", "tar", "so", "dll", "dylib",
-                "exe", "o", "a", "lib", "pyc", "class", "jar", "wasm",
+                "png", "jpg", "jpeg", "gif", "webp", "ico", "woff", "woff2", "ttf", "eot", "mp3",
+                "mp4", "zip", "gz", "tar", "so", "dll", "dylib", "exe", "o", "a", "lib", "pyc",
+                "class", "jar", "wasm",
             ];
             !binary_exts.contains(&ext_str.as_str())
         }

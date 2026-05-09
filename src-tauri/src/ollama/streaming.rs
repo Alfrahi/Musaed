@@ -3,7 +3,6 @@
 //! Contains the `process_chat_stream` helper that reads newline-delimited JSON
 //! from Ollama's chat endpoint and emits Tauri events for each token.
 
-use tracing;
 use crate::payloads::{BackendError, OllamaToken};
 use futures::StreamExt;
 use serde_json::json;
@@ -12,6 +11,7 @@ use tauri::{Emitter, Runtime};
 use tokio::time;
 use tokio_util::codec::{FramedRead, LinesCodec};
 use tokio_util::sync::CancellationToken;
+use tracing;
 
 use super::client::{EVENT_OLLAMA_ERROR, EVENT_OLLAMA_TOKEN, STREAM_IDLE_TIMEOUT_SECS};
 

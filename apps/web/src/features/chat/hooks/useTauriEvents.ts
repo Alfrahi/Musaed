@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { z } from 'zod';
+import { type z } from 'zod';
 import { useSettingsStore, useStreamingStore } from '../../../store';
 import { coordinateStopStream } from '../../../store/coordination';
 import { startBatching, flushAndStop, stopAllBatching } from '../../../store/batch-manager';
@@ -15,11 +15,11 @@ import {
   PullProgressSchema,
   PullErrorSchema,
   OllamaTokenSchema,
-  Message,
-  OllamaToken,
-  BackendError,
-  PullProgress,
-  PullError,
+  type Message,
+  type OllamaToken,
+  type BackendError,
+  type PullProgress,
+  type PullError,
 } from '@musaed/contracts';
 import toast from 'react-hot-toast';
 import { logger } from '../../../lib/logger';
