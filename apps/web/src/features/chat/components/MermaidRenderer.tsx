@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import mermaid from 'mermaid';
+import DOMPurify from 'dompurify';
 
 import {
   extractMermaidContent,
@@ -24,7 +25,7 @@ const initMermaid = (theme: MermaidRendererProps['theme']) => {
   mermaid.initialize({
     startOnLoad: false,
     theme: (isDark ? 'dark' : theme) as 'dark' | 'default',
-    securityLevel: 'loose',
+    securityLevel: 'strict',
     suppressErrorRendering: true,
     flowchart: { useMaxWidth: true, htmlLabels: true },
     sequence: { useMaxWidth: true },
@@ -81,7 +82,8 @@ const MermaidError = ({
     </pre>
     <p
       className="mt-3 text-xs text-red-500/80"
-      dangerouslySetInnerHTML={{ __html: requirementNote }}
+      // Sanitize requirement note (i18n string) before injection
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(requirementNote) }}
     />
   </div>
 );
@@ -101,7 +103,10 @@ const MermaidDiagram = ({
   <div
     ref={containerRef}
     className={`mermaid-container my-6 flex justify-center overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 ${className}`}
-    dangerouslySetInnerHTML={{ __html: svg }}
+    // Sanitize SVG output before injection
+    dangerouslySetInnerHTML={{
+      __html: DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } }),
+    }}
     aria-label={ariaLabel}
   />
 );

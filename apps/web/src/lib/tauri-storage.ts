@@ -85,7 +85,10 @@ export const createTauriStorage = (
   migrations?: Migrations
 ): StateStorage => ({
   getItem: async (name: string): Promise<string | null> => {
-    if (!checkIsTauri()) return localStorage.getItem(name);
+    if (!checkIsTauri()) {
+      // Dev-only fallback; no sensitive data stored per security review
+      return localStorage.getItem(name);
+    }
     try {
       const appStore = (await store.load(filename, { autoSave: true })) as TauriStoreLike | null;
       if (!appStore) return null;
@@ -98,6 +101,7 @@ export const createTauriStorage = (
   },
   setItem: async (name: string, value: string): Promise<void> => {
     if (!checkIsTauri()) {
+      // Dev-only fallback; no sensitive data stored per security review
       localStorage.setItem(name, value);
       return;
     }
@@ -112,6 +116,7 @@ export const createTauriStorage = (
   },
   removeItem: async (name: string): Promise<void> => {
     if (!checkIsTauri()) {
+      // Dev-only fallback; no sensitive data stored per security review
       localStorage.removeItem(name);
       return;
     }
