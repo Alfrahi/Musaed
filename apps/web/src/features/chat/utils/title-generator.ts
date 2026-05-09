@@ -8,6 +8,9 @@ import type { ConversationMetadata } from '../../../store/stores/conversation-st
 /** Maximum characters to send for each message when generating a title. */
 const MAX_MESSAGE_LENGTH = 500;
 
+/** Maximum number of words allowed in a generated title. */
+const MAX_TITLE_WORDS = 5;
+
 /** All localized variants of the default conversation title. */
 const DEFAULT_TITLES: ReadonlySet<string> = new Set(['New Chat', 'محادثة جديدة']);
 
@@ -20,8 +23,9 @@ export function isDefaultTitle(title: string): boolean {
 }
 
 /**
- * Cleans a generated title by stripping thinking/reasoning blocks and
- * taking only the last non-empty line (the actual title).
+ * Cleans a generated title by stripping thinking/reasoning blocks,
+ * taking only the last non-empty line (the actual title), and
+ * enforcing the maximum word count.
  */
 function cleanGeneratedTitle(raw: string): string {
   const stripped = stripRedactedThinkingBlocks(raw).trim();
@@ -29,7 +33,18 @@ function cleanGeneratedTitle(raw: string): string {
     .split('\n')
     .map((l) => l.trim())
     .filter((l) => l.length > 0);
-  return lines[lines.length - 1] ?? stripped;
+  const title = lines[lines.length - 1] ?? stripped;
+  return truncateTitleWords(title, MAX_TITLE_WORDS);
+}
+
+/**
+ * Truncates a title to at most `maxWords` words.
+ * Preserves the leading portion which carries the most important content.
+ */
+function truncateTitleWords(title: string, maxWords: number): string {
+  const words = title.split(/\s+/).filter((w) => w.length > 0);
+  if (words.length <= maxWords) return title;
+  return words.slice(0, maxWords).join(' ');
 }
 
 /**

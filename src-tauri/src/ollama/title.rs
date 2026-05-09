@@ -17,6 +17,20 @@ use super::client::{
     FAST_TIMEOUT_SECS,
 };
 
+/// Maximum number of words allowed in a generated title.
+const MAX_TITLE_WORDS: usize = 5;
+
+/// Truncates a title to at most `max_words` words, preserving the leading
+/// portion which typically carries the most important content.
+fn truncate_title_words(title: &str, max_words: usize) -> String {
+    let words: Vec<&str> = title.split_whitespace().collect();
+    if words.len() <= max_words {
+        title.to_string()
+    } else {
+        words[..max_words].join(" ")
+    }
+}
+
 /// Strips common thinking/reasoning blocks from model output.
 ///
 /// Handles both `<redacted-thinking>` and `<thinkigne` (DeepSeek-R1) tag formats,
@@ -160,7 +174,8 @@ pub async fn cmd_ollama_generate_title<R: Runtime>(
     };
 
     let system_prompt = format!(
-        "Generate a short title (3-6 words) for this conversation. \
+        "Generate a concise, descriptive title (5 words maximum) for this conversation. \
+         The title must capture the main topic or intent. \
          Output ONLY the title — no thinking, no reasoning, no quotes, no punctuation at the end, no prefix like \"Title:\". \
          {}",
         lang_instruction
@@ -215,10 +230,13 @@ pub async fn cmd_ollama_generate_title<R: Runtime>(
                         };
                     }
 
-                    tracing::info!("Generated title: {}", stripped);
+                    // Enforce the 5-word maximum regardless of model compliance.
+                    let final_title = truncate_title_words(stripped, MAX_TITLE_WORDS);
+
+                    tracing::info!("Generated title: {}", final_title);
                     ApiResponse {
                         success: true,
-                        data: Some(stripped.to_string()),
+                        data: Some(final_title),
                         error: None,
                     }
                 }
