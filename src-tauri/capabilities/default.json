@@ -16,7 +16,7 @@
     {
       "identifier": "fs:allow-read-file",
       "allow": [
-        { "path": "$PICTURE/**/*" },
+        { "path": "$PICTURE/Musaed/**/*" },
         { "path": "$DOCUMENT/Musaed/**/*" },
         { "path": "$DESKTOP/Musaed/**/*" },
         { "path": "$DOWNLOAD/Musaed/**/*" },
