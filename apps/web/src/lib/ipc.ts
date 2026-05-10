@@ -682,9 +682,18 @@ function isOpenerUrlAllowed(url: string): boolean {
 export const opener = {
   openUrl: async (url: string) => {
     if (!isOpenerUrlAllowed(url)) return;
-    return checkIsTauri()
-      ? (await import('@tauri-apps/plugin-opener')).openUrl(url)
-      : window.open(url, '_blank');
+    if (checkIsTauri()) {
+      return (await import('@tauri-apps/plugin-opener')).openUrl(url);
+    }
+    // Validate URL protocol before opening in browser dev mode
+    const allowedProtocols = ['http:', 'https:', 'mailto:'];
+    try {
+      const parsed = new URL(url);
+      if (!allowedProtocols.includes(parsed.protocol)) return;
+    } catch {
+      return; // Invalid URL — silently reject
+    }
+    window.open(url, '_blank');
   },
 };
 
