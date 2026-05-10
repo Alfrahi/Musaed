@@ -645,14 +645,37 @@ export const dialog = {
 };
 
 /**
+ * Allowed URL patterns for the opener plugin.
+ * Must stay in sync with `src-tauri/capabilities/default.json`.
+ */
+const OPENER_ALLOWED_PATTERNS: readonly RegExp[] = [
+  /^https:\/\/github\.com\/alfrahi\/musaed\/.+$/,
+  /^https:\/\/github\.com\/Alfrahi\/Musaed\/.+$/,
+  /^https:\/\/github\.com\/alfrahi\/musaed$/,
+  /^https:\/\/github\.com\/Alfrahi\/Musaed$/,
+  /^https:\/\/ollama\.com\/.+$/,
+  /^https:\/\/ollama\.com$/,
+  /^https:\/\/ollama\.ai\/.+$/,
+  /^https:\/\/ollama\.ai$/,
+  /^mailto:/,
+];
+
+function isOpenerUrlAllowed(url: string): boolean {
+  return OPENER_ALLOWED_PATTERNS.some((pattern) => pattern.test(url));
+}
+
+/**
  * Wrapper around Tauri's opener plugin.
  * - `openUrl`: Opens a URL in the default browser; uses window.open in browser (may be blocked).
+ *   URLs are validated against the allowlist before being passed to the native layer.
  */
 export const opener = {
-  openUrl: async (url: string) =>
-    checkIsTauri()
+  openUrl: async (url: string) => {
+    if (!isOpenerUrlAllowed(url)) return;
+    return checkIsTauri()
       ? (await import('@tauri-apps/plugin-opener')).openUrl(url)
-      : window.open(url, '_blank'),
+      : window.open(url, '_blank');
+  },
 };
 
 /**

@@ -44,8 +44,10 @@
     {
       "identifier": "opener:allow-open-url",
       "allow": [
-        { "url": "https://*" },
-        { "url": "http://*" },
+        { "url": "https://github.com/alfrahi/musaed/**" },
+        { "url": "https://github.com/Alfrahi/Musaed/**" },
+        { "url": "https://ollama.com/**" },
+        { "url": "https://ollama.ai/**" },
         { "url": "mailto:*" }
       ]
     },
