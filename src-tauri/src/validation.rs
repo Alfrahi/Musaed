@@ -29,6 +29,9 @@ pub const MAX_IMAGE_B64_LEN: usize = 10 * 1024 * 1024; // 10 MiB
 /// Maximum length for a log entry string.
 pub const MAX_LOG_ENTRY_LEN: usize = 10 * 1024; // 10 KiB
 
+/// Maximum length for a log-clear confirmation token (UUID v4 = 36 chars).
+pub const MAX_LOG_CLEAR_TOKEN_LEN: usize = 64; // generous for UUID + future formats
+
 /// Maximum length for user/assistant message fragments sent to title generation.
 pub const MAX_TITLE_INPUT_LEN: usize = 10 * 1024; // 10 KiB
 

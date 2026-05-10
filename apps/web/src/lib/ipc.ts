@@ -16,6 +16,7 @@ import {
   IpcChatMessageSchema,
   IpcChatOptionsSchema,
   LogEntrySchema,
+  LogClearTokenSchema,
   VALIDATION_LIMITS,
   RagProjectSchema,
   SearchResultSchema,
@@ -84,7 +85,8 @@ export interface CommandMap {
     return: ModelValidation;
   };
   cmd_logs_append: { args: { entry: string }; return: void };
-  cmd_logs_clear: { args: Record<string, never>; return: void };
+  cmd_logs_request_clear_token: { args: Record<string, never>; return: string };
+  cmd_logs_clear: { args: { token: string }; return: void };
 
   // RAG commands
   cmd_rag_add_project: {
@@ -155,7 +157,8 @@ const CommandInputSchemas: {
   }),
   cmd_ollama_validate_model: z.object({ baseUrl: z.string(), modelName: ModelNameSchema }),
   cmd_logs_append: z.object({ entry: LogEntrySchema }),
-  cmd_logs_clear: undefined,
+  cmd_logs_request_clear_token: undefined,
+  cmd_logs_clear: z.object({ token: LogClearTokenSchema }),
 
   // RAG command input schemas
   cmd_rag_add_project: z.object({
@@ -236,6 +239,7 @@ const CommandReturnSchemas: {
   cmd_ollama_generate_title: z.string(),
   cmd_ollama_validate_model: ModelValidationSchema,
   cmd_logs_append: voidSchema,
+  cmd_logs_request_clear_token: z.string(),
   cmd_logs_clear: voidSchema,
 
   // RAG command return schemas
@@ -481,9 +485,15 @@ export const logApi = {
    */
   append: (entry: string) => callInternal('cmd_logs_append', { entry }),
   /**
-   * Clears all log entries.
+   * Requests a confirmation token, then clears all log entries.
+   * The two-step token pattern ensures the clear operation was explicitly
+   * authorized by the backend, preventing unauthorized log destruction.
    */
-  clear: () => callInternal('cmd_logs_clear', {}),
+  clear: async () => {
+    const token = await callInternal('cmd_logs_request_clear_token', {});
+    if (!token) return null;
+    return callInternal('cmd_logs_clear', { token });
+  },
 };
 
 /**

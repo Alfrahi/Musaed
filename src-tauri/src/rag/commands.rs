@@ -504,7 +504,7 @@ pub async fn cmd_rag_search(
             Err(e) => ApiResponse {
                 success: false,
                 data: None,
-                error: Some(BackendError::new("cmd_rag_search_ERROR", e)),
+                error: Some(BackendError::new("RAG_SEARCH_ERROR", e)),
             },
         },
     )

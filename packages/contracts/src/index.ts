@@ -131,6 +131,7 @@ export const VALIDATION_LIMITS = {
   MAX_IMAGES_PER_MESSAGE: 10,
   MAX_IMAGE_B64_LEN: 10 * 1024 * 1024,
   MAX_LOG_ENTRY_LEN: 10 * 1024,
+  MAX_LOG_CLEAR_TOKEN_LEN: 64,
   MAX_TITLE_INPUT_LEN: 10 * 1024,
   MAX_ROLE_LEN: 32,
   TEMPERATURE_RANGE: [0, 2] as const,
@@ -216,6 +217,12 @@ export const IpcChatOptionsSchema = z.object({
 export const LogEntrySchema = z
   .string()
   .max(VALIDATION_LIMITS.MAX_LOG_ENTRY_LEN, 'Log entry exceeds size limit');
+
+/** Validates a log-clear confirmation token (UUID v4 format). */
+export const LogClearTokenSchema = z
+  .string()
+  .min(1)
+  .max(VALIDATION_LIMITS.MAX_LOG_CLEAR_TOKEN_LEN, 'Clear token exceeds size limit');
 
 export const OllamaModelDetailsSchema = z.object({
   format: z.string().nullish(),
@@ -563,6 +570,7 @@ export const COMMAND_VERSIONS = {
 
   // Logging
   cmd_logs_append: 1,
+  cmd_logs_request_clear_token: 1,
   cmd_logs_clear: 1,
 
   // RAG

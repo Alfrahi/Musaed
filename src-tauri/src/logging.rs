@@ -2,10 +2,21 @@
 
 use crate::logger::ChannelLogger;
 use crate::payloads::ApiResponse;
-use crate::validation::{validation_error, MAX_LOG_ENTRY_LEN};
+use crate::validation::{validation_error, MAX_LOG_CLEAR_TOKEN_LEN, MAX_LOG_ENTRY_LEN};
+use dashmap::DashMap;
 use std::path::PathBuf;
+use std::sync::LazyLock;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager, Runtime};
 use tracing;
+
+/// Time-to-live for a log-clear confirmation token (seconds).
+/// The caller must present the token within this window after requesting it.
+const LOG_CLEAR_TOKEN_TTL_SECS: u64 = 30;
+
+/// Pending confirmation tokens for destructive log-clear operations.
+/// Maps token string → creation instant. Tokens are single-use and TTL-bounded.
+static LOG_CLEAR_TOKENS: LazyLock<DashMap<String, Instant>> = LazyLock::new(DashMap::new);
 
 /// Sanitizes a log entry for safe logging.
 ///
@@ -166,9 +177,81 @@ pub async fn cmd_logs_append(entry: String) -> ApiResponse<()> {
     }
 }
 
+/// Generates a random confirmation token for the log-clear operation.
+/// Returns a UUID-based token that must be presented within the TTL window.
 #[tauri::command]
-pub async fn cmd_logs_clear<R: Runtime>(app: AppHandle<R>) -> ApiResponse<()> {
-    tracing::info!("Clearing logs");
+pub async fn cmd_logs_request_clear_token() -> ApiResponse<String> {
+    // Evict expired tokens before generating a new one
+    evict_expired_clear_tokens();
+
+    let token = uuid::Uuid::new_v4().to_string();
+    LOG_CLEAR_TOKENS.insert(token.clone(), Instant::now());
+
+    tracing::info!(
+        "Log clear token issued (TTL={}s, pending={})",
+        LOG_CLEAR_TOKEN_TTL_SECS,
+        LOG_CLEAR_TOKENS.len()
+    );
+
+    ApiResponse {
+        success: true,
+        data: Some(token),
+        error: None,
+    }
+}
+
+/// Removes expired entries from the log-clear token store.
+fn evict_expired_clear_tokens() {
+    let cutoff = Instant::now().checked_sub(Duration::from_secs(LOG_CLEAR_TOKEN_TTL_SECS));
+
+    match cutoff {
+        Some(c) => LOG_CLEAR_TOKENS.retain(|_, created| *created > c),
+        None => { /* TTL exceeds uptime — nothing can be expired */ }
+    }
+}
+
+/// Clears the log file after validating a confirmation token.
+///
+/// The caller must first invoke `cmd_logs_request_clear_token` to obtain a token,
+/// then present it here within the TTL window. Tokens are single-use — successful
+/// or failed validation removes the token from the pending store.
+#[tauri::command]
+pub async fn cmd_logs_clear<R: Runtime>(app: AppHandle<R>, token: String) -> ApiResponse<()> {
+    // Validate token format before lookup
+    if token.is_empty() || token.len() > MAX_LOG_CLEAR_TOKEN_LEN {
+        return validation_error("INVALID_TOKEN", "Clear token is missing or malformed");
+    }
+
+    // Evict expired tokens first
+    evict_expired_clear_tokens();
+
+    // Atomically remove and validate the token (single-use)
+    let entry = LOG_CLEAR_TOKENS.remove(&token);
+    match entry {
+        Some((_, created)) => {
+            let elapsed = created.elapsed();
+            if elapsed > Duration::from_secs(LOG_CLEAR_TOKEN_TTL_SECS) {
+                tracing::warn!(
+                    "Expired log clear token rejected (elapsed={:.1}s, TTL={}s)",
+                    elapsed.as_secs_f64(),
+                    LOG_CLEAR_TOKEN_TTL_SECS
+                );
+                return validation_error(
+                    "TOKEN_EXPIRED",
+                    "Confirmation token has expired. Request a new token and try again.",
+                );
+            }
+        }
+        None => {
+            tracing::warn!("Invalid log clear token rejected");
+            return validation_error(
+                "INVALID_TOKEN",
+                "Invalid confirmation token. Request a new token and try again.",
+            );
+        }
+    }
+
+    tracing::info!("Clearing logs (confirmed via token)");
     // Flush pending writes before truncating the file.
     ChannelLogger::global().flush();
 
@@ -297,5 +380,117 @@ mod tests {
         let input = "   leading and trailing   ";
         let result = collapse_whitespace(input);
         assert_eq!(result, "leading and trailing");
+    }
+
+    // ---- Confirmation token tests ----
+
+    #[test]
+    fn test_clear_token_issue_and_validate() {
+        LOG_CLEAR_TOKENS.clear();
+
+        // Simulate issuing a token
+        let token = uuid::Uuid::new_v4().to_string();
+        LOG_CLEAR_TOKENS.insert(token.clone(), Instant::now());
+
+        // Token should be present
+        assert!(LOG_CLEAR_TOKENS.contains_key(&token));
+
+        // Removing (consuming) the token should succeed
+        let entry = LOG_CLEAR_TOKENS.remove(&token);
+        assert!(entry.is_some(), "token should be found and removed");
+        assert!(
+            LOG_CLEAR_TOKENS.get(&token).is_none(),
+            "token should be gone after removal"
+        );
+
+        // Second removal should fail (single-use)
+        let entry2 = LOG_CLEAR_TOKENS.remove(&token);
+        assert!(entry2.is_none(), "token should not be reusable");
+
+        LOG_CLEAR_TOKENS.clear();
+    }
+
+    #[test]
+    fn test_clear_token_expired_is_evicted() {
+        LOG_CLEAR_TOKENS.clear();
+
+        // Insert a token that is already expired
+        let expired_token = "expired-test-token".to_string();
+        LOG_CLEAR_TOKENS.insert(
+            expired_token.clone(),
+            Instant::now() - Duration::from_secs(LOG_CLEAR_TOKEN_TTL_SECS + 10),
+        );
+
+        // Also insert a fresh token
+        let fresh_token = "fresh-test-token".to_string();
+        LOG_CLEAR_TOKENS.insert(fresh_token.clone(), Instant::now());
+
+        // Evict expired tokens
+        evict_expired_clear_tokens();
+
+        // Expired token should be gone, fresh token should remain
+        assert!(
+            LOG_CLEAR_TOKENS.get(&expired_token).is_none(),
+            "expired token should be evicted"
+        );
+        assert!(
+            LOG_CLEAR_TOKENS.get(&fresh_token).is_some(),
+            "fresh token should remain"
+        );
+
+        LOG_CLEAR_TOKENS.clear();
+    }
+
+    #[test]
+    fn test_clear_token_single_use_rejection() {
+        LOG_CLEAR_TOKENS.clear();
+
+        let token = uuid::Uuid::new_v4().to_string();
+        LOG_CLEAR_TOKENS.insert(token.clone(), Instant::now());
+
+        // First removal succeeds
+        let first = LOG_CLEAR_TOKENS.remove(&token);
+        assert!(first.is_some());
+
+        // Second removal fails (already consumed)
+        let second = LOG_CLEAR_TOKENS.remove(&token);
+        assert!(
+            second.is_none(),
+            "single-use token must not be consumed twice"
+        );
+
+        LOG_CLEAR_TOKENS.clear();
+    }
+
+    #[test]
+    fn test_clear_token_invalid_rejected() {
+        LOG_CLEAR_TOKENS.clear();
+
+        // Token was never issued
+        let entry = LOG_CLEAR_TOKENS.remove("nonexistent-token");
+        assert!(entry.is_none(), "unissued token must be rejected");
+
+        LOG_CLEAR_TOKENS.clear();
+    }
+
+    #[test]
+    fn test_clear_token_ttl_constant_sanity() {
+        const { assert!(LOG_CLEAR_TOKEN_TTL_SECS > 0, "TTL must be positive") };
+        const {
+            assert!(
+                LOG_CLEAR_TOKEN_TTL_SECS <= 300,
+                "TTL should be reasonable (≤5 minutes)"
+            )
+        };
+    }
+
+    #[test]
+    fn test_clear_token_max_len_sanity() {
+        const {
+            assert!(
+                MAX_LOG_CLEAR_TOKEN_LEN >= 36,
+                "MAX_LOG_CLEAR_TOKEN_LEN must accommodate UUID v4 (36 chars)"
+            )
+        };
     }
 }

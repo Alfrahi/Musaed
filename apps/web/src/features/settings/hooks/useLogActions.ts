@@ -59,7 +59,8 @@ export function useLogActions() {
           logger.info('System logs cleared');
         }
       } catch (err) {
-        logger.error('Failed to clear logs', { error: err });
+        const message = err instanceof Error ? err.message : String(err);
+        logger.error('Failed to clear logs', { error: message });
         toast.error(t('error.genericError'));
       }
     }

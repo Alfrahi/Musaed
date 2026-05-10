@@ -3,5 +3,6 @@ identifier = "allow-logging-commands"
 description = "Enables commands for system logging and diagnostics."
 commands.allow = [
     "cmd_logs_append",
+    "cmd_logs_request_clear_token",
     "cmd_logs_clear"
 ]

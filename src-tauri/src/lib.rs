@@ -90,6 +90,7 @@ pub fn run() {
             ollama::models::cmd_ollama_verify_service,
             ollama::title::cmd_ollama_generate_title,
             logging::cmd_logs_append,
+            logging::cmd_logs_request_clear_token,
             logging::cmd_logs_clear,
             rag::commands::cmd_rag_add_project,
             rag::commands::cmd_rag_remove_project,
