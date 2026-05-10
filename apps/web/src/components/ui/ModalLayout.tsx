@@ -1,7 +1,6 @@
 'use client';
 
 import React, { type ReactNode } from 'react';
-import FocusTrap from 'focus-trap-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -24,26 +23,24 @@ const ModalLayout = ({
   if (!isOpen) return null;
 
   return (
-    <FocusTrap focusTrapOptions={{ allowOutsideClick: true }}>
-      <div
+    <div
+      className={cn(
+        'bg-background/80 fixed inset-0 flex items-center justify-center p-6 backdrop-blur-sm',
+        zIndex
+      )}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.99 }}
+        animate={{ opacity: 1, scale: 1 }}
         className={cn(
-          'bg-background/80 fixed inset-0 flex items-center justify-center p-6 backdrop-blur-sm',
-          zIndex
+          'border-sidebar-border shadow-pro flex w-full flex-col overflow-hidden border bg-white dark:bg-zinc-950',
+          maxWidth,
+          className
         )}
       >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.99 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className={cn(
-            'border-sidebar-border shadow-pro flex w-full flex-col overflow-hidden border bg-white dark:bg-zinc-950',
-            maxWidth,
-            className
-          )}
-        >
-          {children}
-        </motion.div>
-      </div>
-    </FocusTrap>
+        {children}
+      </motion.div>
+    </div>
   );
 };
 

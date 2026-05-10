@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import { type Language } from '@musaed/contracts';
 import { type ConversationMetadata } from '@/store/stores/conversation-store';
 
 export type TimeGroup = 'search' | 'today' | 'yesterday' | 'lastWeek' | 'older';
@@ -20,7 +19,6 @@ export interface SidebarItem {
  * @param {Record<string, ConversationMetadata>} conversations - Map of conversation IDs to objects.
  * @param {string[]} conversationIds - Ordered list of conversation IDs.
  * @param {string} searchQuery - The user's current search term.
- * @param {Language} language - The active application language.
  * @param {number} [initialLoadCount=50] - Number of conversations to load initially.
  * @param {number} [loadMoreCount=20] - Number of conversations to load when reaching the end.
  * @returns {[SidebarItem[], () => void]} A tuple containing the flattened list of headers and conversation items, and a function to load more conversations.
@@ -29,7 +27,6 @@ export function useSidebarGrouping(
   conversations: Record<string, ConversationMetadata>,
   conversationIds: string[],
   searchQuery: string,
-  _language: Language,
   initialLoadCount: number = 50,
   loadMoreCount: number = 20
 ) {

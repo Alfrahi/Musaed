@@ -7,7 +7,8 @@ import { IndexingProgress } from './IndexingProgress';
 import type { RagProject, IndexProgress as IndexProgressType } from '@musaed/contracts';
 import { listen } from '@/lib/ipc';
 import { IndexProgressSchema } from '@musaed/contracts';
-import { truncateFilePath, formatFileSize } from '../utils/project-helpers';
+import { truncateFilePath } from '../utils/project-helpers';
+import { formatFileSize } from '@/lib/formatFileSize';
 import { useLanguage } from '@/store/hooks';
 import { useTranslation } from '@/lib/i18n';
 

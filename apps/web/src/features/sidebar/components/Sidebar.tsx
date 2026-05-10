@@ -98,8 +98,7 @@ const Sidebar = () => {
   const [virtualItems, loadMore] = useSidebarGrouping(
     filteredConversations.reduce((acc, conv) => ({ ...acc, [conv.id]: conv }), {}),
     filteredConversations.map((conv) => conv.id),
-    searchQuery,
-    language
+    searchQuery
   );
 
   if (!isHydrated) {

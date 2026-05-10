@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRagFileBrowser } from '../hooks/useRagFileBrowser';
 import { Loader2, AlertCircle } from 'lucide-react';
-import { useActiveRagProject, useGlobalSettings } from '../../../store/hooks';
+import { useActiveRagProject, useLanguage } from '../../../store/hooks';
 import { useTranslation } from '../../../lib/i18n';
 import type { ChunkRecord } from '@musaed/contracts';
 
@@ -57,8 +57,7 @@ const ChunkCard = ({ chunk }: { chunk: ChunkRecord }) => (
 const FileChunkViewer = ({ filePath }: FileChunkViewerProps) => {
   const activeProject = useActiveRagProject();
   const { fetchFileChunks } = useRagFileBrowser();
-  const globalSettings = useGlobalSettings();
-  const { t } = useTranslation(globalSettings.language);
+  const { t } = useTranslation(useLanguage());
   const [chunks, setChunks] = useState<ChunkRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
