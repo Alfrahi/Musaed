@@ -102,7 +102,7 @@ pub fn run() {
             rag::commands::cmd_rag_get_index_status,
             rag::commands::cmd_rag_search,
             rag::commands::cmd_rag_get_file_chunks,
-            rag::commands::cmd_cmd_rag_get_project_stats,
+            rag::commands::cmd_rag_get_project_stats,
             rag::commands::cmd_rag_set_embedding_model,
             rag::commands::cmd_rag_validate_embedding_model,
         ])

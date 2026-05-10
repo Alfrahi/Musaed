@@ -326,7 +326,10 @@ pub async fn cmd_rag_index_project<R: Runtime>(
     let embedding_model = project.embedding_model.clone();
     let ignore_patterns = project.ignore_patterns.clone();
     let force_val = force.unwrap_or(false);
-    let base_url_val = base_url.unwrap_or_else(|| "http://localhost:11434".to_string());
+    let base_url_val = match base_url {
+        Some(url) => crate::ollama_url::parse_ollama_base_url(&url)?.to_string(),
+        None => "http://localhost:11434".to_string(),
+    };
 
     let store_clone = store.clone();
     let app_handle_for_index = app_handle.clone();
@@ -476,7 +479,10 @@ pub async fn cmd_rag_search(
         }
     };
 
-    let base_url_val = base_url.unwrap_or_else(|| "http://localhost:11434".to_string());
+    let base_url_val = match base_url {
+        Some(url) => crate::ollama_url::parse_ollama_base_url(&url)?.to_string(),
+        None => "http://localhost:11434".to_string(),
+    };
 
     Ok(
         match RagSearchEngine::search(
@@ -565,7 +571,7 @@ pub async fn cmd_rag_get_file_chunks(
 }
 
 #[tauri::command]
-pub async fn cmd_cmd_rag_get_project_stats(
+pub async fn cmd_rag_get_project_stats(
     project_id: String,
     state: tauri::State<'_, Arc<Mutex<RagStore>>>,
 ) -> Result<ApiResponse<ProjectStats>, String> {
@@ -639,7 +645,10 @@ pub async fn cmd_rag_validate_embedding_model(
         )));
     }
 
-    let ollama_url = base_url.unwrap_or_else(|| "http://localhost:11434".to_string());
+    let ollama_url = match base_url {
+        Some(url) => crate::ollama_url::parse_ollama_base_url(&url)?.to_string(),
+        None => "http://localhost:11434".to_string(),
+    };
     let embedder = OllamaEmbedder::new(&ollama_url, &model_name);
 
     Ok(match embedder.validate().await {
