@@ -69,23 +69,25 @@ PRAGMA foreign_keys=ON;
 PRAGMA busy_timeout=5000;
 "#;
 
+/// Type-safe wrapper for the sqlite3_auto_extension callback.
+///
+/// `sqlite3_auto_extension` expects an `extern "C"` callback matching the
+/// `sqlite3_auto_extension` prototype, but `sqlite_vec::sqlite3_vec_init`
+/// takes no arguments and returns `()`. This wrapper bridges the two,
+/// returning 0 (SQLITE_OK) to indicate success.
+extern "C" fn sqlite3_vec_init_wrapper(
+    _db: *mut ffi::sqlite3,
+    _pz_err_msg: *mut *mut std::os::raw::c_char,
+    _p_api: *const ffi::sqlite3_api_routines,
+) -> std::os::raw::c_int {
+    unsafe { sqlite_vec::sqlite3_vec_init() };
+    0
+}
+
 /// Loads the sqlite-vec extension into the SQLite runtime.
-///
-/// # Safety
-///
-/// `sqlite3_auto_extension` registers a C callback function pointer.
-/// Transmuting the Rust function pointer to a C function pointer is undefined
-/// behavior unless the calling convention matches. Here we invoke it through
-/// `transmute` because the SQLite FFI expects a `*const c_void` while Rust
-/// function pointers are typed. The target function `sqlite3_vec_init` uses
-/// the C calling convention (extern "C"), so this is safe in this specific
-/// context. See: <https://www.sqlite.org/c3ref/auto_extension.html>
-#[allow(clippy::missing_transmute_annotations)]
 pub(super) fn load_vec_extension() -> Result<(), String> {
     unsafe {
-        ffi::sqlite3_auto_extension(Some(std::mem::transmute(
-            sqlite_vec::sqlite3_vec_init as *const (),
-        )));
+        ffi::sqlite3_auto_extension(Some(sqlite3_vec_init_wrapper));
     }
     Ok(())
 }
