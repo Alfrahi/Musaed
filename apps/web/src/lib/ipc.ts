@@ -25,6 +25,7 @@ import {
   IndexStatusSchema,
   RagModelValidationSchema,
   RAG_VALIDATION_LIMITS,
+  MAX_FILE_PATH_LEN,
   sanitizeError,
   COMMAND_VERSIONS,
   IPC_VERSION as _IPC_VERSION,
@@ -209,7 +210,7 @@ const CommandInputSchemas: {
   }),
   cmd_rag_get_file_chunks: z.object({
     projectId: z.string().min(1),
-    filePath: z.string().min(1).max(RAG_VALIDATION_LIMITS.MAX_PROJECT_PATH_LEN),
+    filePath: z.string().min(1).max(MAX_FILE_PATH_LEN),
   }),
   cmd_rag_get_project_stats: z.object({ projectId: z.string().min(1) }),
   cmd_rag_set_embedding_model: z.object({

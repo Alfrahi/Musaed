@@ -3,6 +3,7 @@ use tauri::Manager;
 use tokio::sync::Mutex;
 use tracing_subscriber::layer::SubscriberExt;
 
+pub mod generated_validation;
 pub mod logger;
 pub mod logging;
 pub mod ollama;

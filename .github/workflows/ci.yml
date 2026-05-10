@@ -49,6 +49,9 @@ jobs:
       - name: i18n compliance
         run: pnpm --filter web i18n:check
 
+      - name: Validation constants sync
+        run: pnpm codegen:validation:check
+
       - name: No TODOs/FIXMEs
         run: |
           if grep -rE "\bTODO\b|\bFIXME\b|\bHACK\b" apps/web/src --include="*.ts" --include="*.tsx" --exclude-dir={test,tests}; then

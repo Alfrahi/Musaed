@@ -122,26 +122,25 @@ export interface ApiResponse<T> {
 
 // ====================== IPC INPUT VALIDATION ======================
 
-/** Validation constants mirroring the Rust backend limits. */
-export const VALIDATION_LIMITS = {
-  MAX_MODEL_NAME_LEN: 128,
-  MAX_REQUEST_ID_LEN: 128,
-  MAX_MESSAGE_CONTENT_LEN: 50 * 1024,
-  MAX_MESSAGES_COUNT: 1000,
-  MAX_IMAGES_PER_MESSAGE: 10,
-  MAX_IMAGE_B64_LEN: 10 * 1024 * 1024,
-  MAX_LOG_ENTRY_LEN: 10 * 1024,
-  MAX_LOG_CLEAR_TOKEN_LEN: 64,
-  MAX_TITLE_INPUT_LEN: 10 * 1024,
-  MAX_ROLE_LEN: 32,
-  TEMPERATURE_RANGE: [0, 2] as const,
-  TOP_K_RANGE: [1, 200] as const,
-  TOP_P_RANGE: [0, 1] as const,
-  NUM_PREDICT_RANGE: [1, 32768] as const,
-  NUM_CTX_RANGE: [1, 131072] as const,
-  MAX_STOP_SEQUENCES: 10,
-  MAX_STOP_SEQUENCE_LEN: 256,
-} as const;
+// Import validation constants from the single source of truth so they are
+// available as local bindings for Zod schemas below, and re-export them for
+// external consumers.
+// See packages/contracts/src/validation-limits.ts for documentation.
+import {
+  VALIDATION_LIMITS,
+  RAG_VALIDATION_LIMITS,
+  VALID_ROLES,
+  VALID_LANGUAGES,
+  MAX_FILE_PATH_LEN,
+} from './validation-limits';
+
+export {
+  VALIDATION_LIMITS,
+  RAG_VALIDATION_LIMITS,
+  VALID_ROLES,
+  VALID_LANGUAGES,
+  MAX_FILE_PATH_LEN,
+};
 
 const MODEL_NAME_RE = /^[a-zA-Z0-9._:-]+$/;
 
@@ -533,19 +532,7 @@ export const RagModelValidationSchema = z.object({
 });
 export type RagModelValidation = z.infer<typeof RagModelValidationSchema>;
 
-// RAG-specific validation limits
-export const RAG_VALIDATION_LIMITS = {
-  MAX_PROJECT_NAME_LEN: 256,
-  MAX_PROJECT_PATH_LEN: 4096,
-  MAX_IGNORE_PATTERNS: 100,
-  MAX_IGNORE_PATTERN_LEN: 512,
-  MAX_SEARCH_QUERY_LEN: 10 * 1024, // 10 KiB
-  MAX_TOP_K: 50,
-  MIN_TOP_K: 1,
-  MAX_THRESHOLD: 1.0,
-  MIN_THRESHOLD: 0.0,
-  MAX_FILE_CHUNKS_QUERY: 100,
-} as const;
+// RAG validation limits are now in validation-limits.ts, re-exported above.
 
 // ====================== IPC VERSIONING ======================
 

@@ -1,73 +1,18 @@
-//! Input validation constants and helpers for all Tauri IPC commands.
+//! Input validation helpers for all Tauri IPC commands.
 //!
 //! Every command that receives data from the frontend must validate its inputs
 //! through this module before proceeding. This is the backend's primary defense
 //! against malformed, oversized, or malicious payloads.
+//!
+//! Constants are defined in [`crate::generated_validation`] (auto-generated from
+//! `packages/contracts/src/validation-limits.ts`) and re-exported here for
+//! backward compatibility.
 
 use crate::payloads::{ApiResponse, BackendError};
 
-// ====================== STRING LENGTH LIMITS ======================
-
-/// Maximum length for model / name strings (e.g. "llama3:latest").
-pub const MAX_MODEL_NAME_LEN: usize = 128;
-
-/// Maximum length for a request ID.
-pub const MAX_REQUEST_ID_LEN: usize = 128;
-
-/// Maximum length for a single message's content field.
-pub const MAX_MESSAGE_CONTENT_LEN: usize = 50 * 1024; // 50 KiB
-
-/// Maximum number of messages in a single chat request.
-pub const MAX_MESSAGES_COUNT: usize = 1000;
-
-/// Maximum number of base64-encoded images per single message.
-pub const MAX_IMAGES_PER_MESSAGE: usize = 10;
-
-/// Maximum length for a single base64-encoded image string.
-pub const MAX_IMAGE_B64_LEN: usize = 10 * 1024 * 1024; // 10 MiB
-
-/// Maximum length for a log entry string.
-pub const MAX_LOG_ENTRY_LEN: usize = 10 * 1024; // 10 KiB
-
-/// Maximum length for a log-clear confirmation token (UUID v4 = 36 chars).
-pub const MAX_LOG_CLEAR_TOKEN_LEN: usize = 64; // generous for UUID + future formats
-
-/// Maximum length for user/assistant message fragments sent to title generation.
-pub const MAX_TITLE_INPUT_LEN: usize = 10 * 1024; // 10 KiB
-
-/// Maximum length for a role string.
-pub const MAX_ROLE_LEN: usize = 32;
-
-// ====================== ALLOWED VALUES ======================
-
-/// Valid role strings accepted by the chat endpoint.
-pub const VALID_ROLES: &[&str] = &["system", "user", "assistant"];
-
-/// Valid language codes for title generation.
-pub const VALID_LANGUAGES: &[&str] = &["en", "ar"];
-
-// ====================== NUMERIC RANGES ======================
-
-/// Allowed range for temperature.
-pub const TEMPERATURE_RANGE: (f32, f32) = (0.0, 2.0);
-
-/// Allowed range for top_k.
-pub const TOP_K_RANGE: (u32, u32) = (1, 200);
-
-/// Allowed range for top_p.
-pub const TOP_P_RANGE: (f32, f32) = (0.0, 1.0);
-
-/// Allowed range for num_predict.
-pub const NUM_PREDICT_RANGE: (u32, u32) = (1, 32768);
-
-/// Allowed range for num_ctx.
-pub const NUM_CTX_RANGE: (u32, u32) = (1, 131072);
-
-/// Maximum number of stop sequences.
-pub const MAX_STOP_SEQUENCES: usize = 10;
-
-/// Maximum length of a single stop sequence string.
-pub const MAX_STOP_SEQUENCE_LEN: usize = 256;
+// Re-export all generated constants so existing code continues to work
+// without changing import paths.
+pub use crate::generated_validation::*;
 
 // ====================== REGEX PATTERNS ======================
 
@@ -444,5 +389,30 @@ mod tests {
         assert!(!resp.success);
         assert!(resp.data.is_none());
         assert_eq!(resp.error.unwrap().code, "INVALID_INPUT");
+    }
+
+    // --- generated constants match expected values ---
+
+    #[test]
+    fn generated_constants_sanity() {
+        assert_eq!(MAX_MODEL_NAME_LEN, 128);
+        assert_eq!(MAX_REQUEST_ID_LEN, 128);
+        assert_eq!(MAX_MESSAGE_CONTENT_LEN, 50 * 1024);
+        assert_eq!(MAX_MESSAGES_COUNT, 1000);
+        assert_eq!(MAX_IMAGES_PER_MESSAGE, 10);
+        assert_eq!(MAX_IMAGE_B64_LEN, 10 * 1024 * 1024);
+        assert_eq!(MAX_LOG_ENTRY_LEN, 10 * 1024);
+        assert_eq!(MAX_LOG_CLEAR_TOKEN_LEN, 64);
+        assert_eq!(MAX_TITLE_INPUT_LEN, 10 * 1024);
+        assert_eq!(MAX_ROLE_LEN, 32);
+        assert_eq!(TEMPERATURE_RANGE, (0.0, 2.0));
+        assert_eq!(TOP_K_RANGE, (1, 200));
+        assert_eq!(TOP_P_RANGE, (0.0, 1.0));
+        assert_eq!(NUM_PREDICT_RANGE, (1, 32768));
+        assert_eq!(NUM_CTX_RANGE, (1, 131072));
+        assert_eq!(MAX_STOP_SEQUENCES, 10);
+        assert_eq!(MAX_STOP_SEQUENCE_LEN, 256);
+        assert_eq!(VALID_ROLES, &["system", "user", "assistant"]);
+        assert_eq!(VALID_LANGUAGES, &["en", "ar"]);
     }
 }

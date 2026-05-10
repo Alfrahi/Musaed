@@ -11,6 +11,8 @@
     "type-check": "pnpm --filter \"*\" type-check",
     "validate": "pnpm lint && pnpm type-check && pnpm --filter web i18n:check",
     "arch-check": "pnpm -F web exec depcruise src --config ../../.dependency-cruiser.js",
+    "codegen:validation": "node scripts/codegen-validation.mjs",
+    "codegen:validation:check": "node scripts/codegen-validation.mjs --check",
     "prepare": "husky"
   },
   "devDependencies": {

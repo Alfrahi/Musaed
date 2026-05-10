@@ -16,6 +16,10 @@ pnpm type-check
 echo "🌐 Checking i18n compliance..."
 pnpm --filter web i18n:check
 
+# ── 3b. Validation constants sync ──────────────────────────
+echo "🔗 Checking validation constants sync..."
+pnpm codegen:validation:check
+
 # ── 4. No TODOs/FIXMEs in source ──────────────────────────
 echo "📝 Checking for TODOs/FIXMEs..."
 if grep -rE "\bTODO\b|\bFIXME\b|\bHACK\b" apps/web/src --include="*.ts" --include="*.tsx" --exclude-dir={test,tests}; then

@@ -1,21 +1,18 @@
 //! RAG-specific input validation for all RAG IPC commands.
+//!
+//! Constants are defined in [`crate::generated_validation`] (auto-generated from
+//! `packages/contracts/src/validation-limits.ts`) and re-exported here for
+//! backward compatibility.
 
 use crate::payloads::{ApiResponse, BackendError};
 use crate::validation::is_valid_model_name;
 
-// ====================== LENGTH LIMITS ======================
-
-pub const MAX_PROJECT_NAME_LEN: usize = 256;
-pub const MAX_PROJECT_PATH_LEN: usize = 4096;
-pub const MAX_IGNORE_PATTERNS: usize = 100;
-pub const MAX_IGNORE_PATTERN_LEN: usize = 512;
-pub const MAX_SEARCH_QUERY_LEN: usize = 10 * 1024; // 10 KiB
-pub const MAX_TOP_K: usize = 50;
-pub const MIN_TOP_K: usize = 1;
-pub const MAX_THRESHOLD: f32 = 1.0;
-pub const MIN_THRESHOLD: f32 = 0.0;
-pub const MAX_FILE_CHUNKS_QUERY: usize = 100;
-pub const MAX_FILE_PATH_LEN: usize = 4096;
+// Re-export RAG-specific constants from the generated module.
+pub use crate::generated_validation::{
+    MAX_FILE_CHUNKS_QUERY, MAX_FILE_PATH_LEN, MAX_IGNORE_PATTERNS, MAX_IGNORE_PATTERN_LEN,
+    MAX_PROJECT_NAME_LEN, MAX_PROJECT_PATH_LEN, MAX_SEARCH_QUERY_LEN, MAX_THRESHOLD, MAX_TOP_K,
+    MIN_THRESHOLD, MIN_TOP_K,
+};
 
 // ====================== VALIDATORS ======================
 
@@ -247,5 +244,22 @@ mod tests {
         assert!(resp.data.is_none());
         let err = resp.error.unwrap();
         assert_eq!(err.code, "RAG_VALIDATION_ERROR");
+    }
+
+    // --- generated RAG constants match expected values ---
+
+    #[test]
+    fn generated_rag_constants_sanity() {
+        assert_eq!(MAX_PROJECT_NAME_LEN, 256);
+        assert_eq!(MAX_PROJECT_PATH_LEN, 4096);
+        assert_eq!(MAX_IGNORE_PATTERNS, 100);
+        assert_eq!(MAX_IGNORE_PATTERN_LEN, 512);
+        assert_eq!(MAX_SEARCH_QUERY_LEN, 10 * 1024);
+        assert_eq!(MAX_TOP_K, 50);
+        assert_eq!(MIN_TOP_K, 1);
+        assert_eq!(MAX_THRESHOLD, 1.0);
+        assert_eq!(MIN_THRESHOLD, 0.0);
+        assert_eq!(MAX_FILE_CHUNKS_QUERY, 100);
+        assert_eq!(MAX_FILE_PATH_LEN, 4096);
     }
 }
