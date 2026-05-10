@@ -6,6 +6,8 @@ import { useTranslation } from '@/lib/i18n';
 import { useGlobalSettings } from '@/store/hooks';
 import { logger } from '@/lib/logger';
 import { opener } from '@/lib/ipc';
+import { sanitizeError } from '@musaed/contracts';
+import { config } from '@/lib/config';
 
 interface Props {
   children: ReactNode;
@@ -123,14 +125,14 @@ class ErrorBoundary extends Component<Props, State> {
               <p className="text-sm text-gray-600 dark:text-gray-400">{errorUI.description}</p>
             </div>
 
-            {this.state.errorType === 'general' && this.state.error && (
+            {this.state.errorType === 'general' && this.state.error && config.isDev && (
               <details className="text-start">
                 <summary className="cursor-pointer text-[10px] font-bold tracking-widest text-gray-500 uppercase hover:text-gray-700">
                   <HelpCircle size={12} className="me-1 inline" />
                   {t('error.details')}
                 </summary>
                 <pre className="mbs-2 max-h-24 overflow-auto rounded bg-gray-100 p-2 text-[9px] text-gray-700 dark:bg-gray-900 dark:text-gray-300">
-                  {this.state.error.stack}
+                  {sanitizeError(this.state.error).message}
                 </pre>
               </details>
             )}
