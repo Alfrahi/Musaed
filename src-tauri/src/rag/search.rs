@@ -106,8 +106,15 @@ impl RagSearchEngine {
             })
             .collect::<Vec<_>>();
 
-        // Sort by hybrid score
-        reranked.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+        // Filter NaN scores before sorting to prevent panic
+        reranked.retain(|c| !c.score.is_nan());
+
+        // Sort by hybrid score (treat NaN comparisons as equal)
+        reranked.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         // Return top_k results
         Ok(reranked.into_iter().take(top_k).collect())
