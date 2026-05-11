@@ -30,6 +30,7 @@ import {
   COMMAND_VERSIONS,
   IPC_VERSION as _IPC_VERSION,
   type CommandName,
+  AssembledContextSchema,
 } from '@musaed/contracts';
 import type {
   RagProject,
@@ -38,6 +39,7 @@ import type {
   ChunkRecord,
   IndexStatus,
   RagModelValidation,
+  AssembledContext,
 } from '@musaed/contracts';
 import toast from 'react-hot-toast';
 
@@ -118,6 +120,17 @@ export interface CommandMap {
   cmd_rag_validate_embedding_model: {
     args: { baseUrl?: string; modelName: string };
     return: RagModelValidation;
+  };
+  cmd_rag_assemble_context: {
+    args: {
+      projectId: string;
+      query: string;
+      topK?: number;
+      threshold?: number;
+      maxChars?: number;
+      baseUrl?: string;
+    };
+    return: AssembledContext;
   };
 }
 
@@ -221,6 +234,23 @@ const CommandInputSchemas: {
     baseUrl: z.string(),
     modelName: ModelNameSchema,
   }),
+  cmd_rag_assemble_context: z.object({
+    projectId: z.string().min(1),
+    query: z.string().min(1).max(RAG_VALIDATION_LIMITS.MAX_SEARCH_QUERY_LEN),
+    topK: z
+      .number()
+      .int()
+      .min(RAG_VALIDATION_LIMITS.MIN_TOP_K)
+      .max(RAG_VALIDATION_LIMITS.MAX_TOP_K)
+      .optional(),
+    threshold: z
+      .number()
+      .min(RAG_VALIDATION_LIMITS.MIN_THRESHOLD)
+      .max(RAG_VALIDATION_LIMITS.MAX_THRESHOLD)
+      .optional(),
+    maxChars: z.number().int().min(1).max(RAG_VALIDATION_LIMITS.MAX_RAG_CONTEXT_CHARS).optional(),
+    baseUrl: z.string().optional(),
+  }),
 };
 
 /**
@@ -258,6 +288,7 @@ const CommandReturnSchemas: {
   cmd_rag_get_project_stats: ProjectStatsSchema,
   cmd_rag_set_embedding_model: z.boolean(),
   cmd_rag_validate_embedding_model: RagModelValidationSchema,
+  cmd_rag_assemble_context: AssembledContextSchema,
 };
 
 /**
@@ -597,6 +628,14 @@ export const ragApi = {
    */
   validateEmbeddingModel: (baseUrl: string | undefined, modelName: string) =>
     callInternal('cmd_rag_validate_embedding_model', { baseUrl, modelName }),
+  /**
+   * Performs semantic search and assembles a RAG context prompt in a single IPC call.
+   * Replaces the previous two-step process of search + client-side context assembly.
+   * @param args - { projectId, query, topK?, threshold?, maxChars?, baseUrl? }
+   * @returns AssembledContext with the formatted context string, citations, and token count
+   */
+  assembleContext: (args: CommandMap['cmd_rag_assemble_context']['args']) =>
+    callInternal('cmd_rag_assemble_context', args),
 };
 
 /**

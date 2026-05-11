@@ -110,6 +110,9 @@ export const MAX_FILE_CHUNKS_QUERY = 100;
 /** Maximum length for a file path in chunk queries. */
 export const MAX_FILE_PATH_LEN = 4096;
 
+/** Default maximum character budget for assembled RAG context. */
+export const MAX_RAG_CONTEXT_CHARS = 20_000;
+
 // ====================== CONVENIENCE GROUPINGS ======================
 // These objects re-export the flat constants above so existing consumers
 // that reference `VALIDATION_LIMITS.X` or `RAG_VALIDATION_LIMITS.X`
@@ -149,4 +152,5 @@ export const RAG_VALIDATION_LIMITS = {
   MIN_THRESHOLD,
   MAX_FILE_CHUNKS_QUERY,
   MAX_FILE_PATH_LEN,
+  MAX_RAG_CONTEXT_CHARS,
 } as const;

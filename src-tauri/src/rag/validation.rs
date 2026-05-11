@@ -10,8 +10,8 @@ use crate::validation::is_valid_model_name;
 // Re-export RAG-specific constants from the generated module.
 pub use crate::generated_validation::{
     MAX_FILE_CHUNKS_QUERY, MAX_FILE_PATH_LEN, MAX_IGNORE_PATTERNS, MAX_IGNORE_PATTERN_LEN,
-    MAX_PROJECT_NAME_LEN, MAX_PROJECT_PATH_LEN, MAX_SEARCH_QUERY_LEN, MAX_THRESHOLD, MAX_TOP_K,
-    MIN_THRESHOLD, MIN_TOP_K,
+    MAX_PROJECT_NAME_LEN, MAX_PROJECT_PATH_LEN, MAX_RAG_CONTEXT_CHARS, MAX_SEARCH_QUERY_LEN,
+    MAX_THRESHOLD, MAX_TOP_K, MIN_THRESHOLD, MIN_TOP_K,
 };
 
 // ====================== VALIDATORS ======================
@@ -126,6 +126,28 @@ pub fn validate_file_path(file_path: &str) -> Result<(), String> {
     // Reject absolute paths or path traversal
     if file_path.starts_with('/') || file_path.starts_with("..") {
         return Err("File path must be relative to the project root".to_string());
+    }
+    Ok(())
+}
+
+/// Validates the input for `cmd_rag_assemble_context`.
+pub fn validate_assemble_context(
+    project_id: &str,
+    query: &str,
+    top_k: Option<usize>,
+    threshold: Option<f32>,
+    max_chars: Option<usize>,
+) -> Result<(), String> {
+    // Reuse search validation for the core fields
+    validate_search(project_id, query, top_k, threshold)?;
+
+    if let Some(mc) = max_chars {
+        if mc == 0 || mc > MAX_RAG_CONTEXT_CHARS {
+            return Err(format!(
+                "maxChars must be 1-{}, got {}",
+                MAX_RAG_CONTEXT_CHARS, mc
+            ));
+        }
     }
     Ok(())
 }
@@ -261,5 +283,43 @@ mod tests {
         assert_eq!(MIN_THRESHOLD, 0.0);
         assert_eq!(MAX_FILE_CHUNKS_QUERY, 100);
         assert_eq!(MAX_FILE_PATH_LEN, 4096);
+        assert_eq!(MAX_RAG_CONTEXT_CHARS, 20_000);
+    }
+
+    #[test]
+    fn valid_assemble_context() {
+        assert!(validate_assemble_context(
+            "proj-id",
+            "how does X work?",
+            Some(10),
+            Some(0.5),
+            None
+        )
+        .is_ok());
+        assert!(validate_assemble_context(
+            "proj-id",
+            "how does X work?",
+            Some(10),
+            Some(0.5),
+            Some(10_000)
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn invalid_assemble_context_max_chars_zero() {
+        assert!(validate_assemble_context("proj-id", "query", None, None, Some(0)).is_err());
+    }
+
+    #[test]
+    fn invalid_assemble_context_max_chars_too_large() {
+        assert!(validate_assemble_context(
+            "proj-id",
+            "query",
+            None,
+            None,
+            Some(MAX_RAG_CONTEXT_CHARS + 1)
+        )
+        .is_err());
     }
 }

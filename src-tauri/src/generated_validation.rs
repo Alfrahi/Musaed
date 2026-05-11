@@ -99,3 +99,6 @@ pub const MAX_FILE_CHUNKS_QUERY: usize = 100;
 
 /// Maximum length for a file path in chunk queries.
 pub const MAX_FILE_PATH_LEN: usize = 4096;
+
+/// Default maximum character budget for assembled RAG context.
+pub const MAX_RAG_CONTEXT_CHARS: usize = 20000;

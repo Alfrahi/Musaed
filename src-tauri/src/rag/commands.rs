@@ -6,11 +6,14 @@
 //! SECURITY: All filesystem paths are canonicalized to prevent symlink traversal attacks.
 
 use crate::payloads::{ApiResponse, BackendError};
+use crate::rag::context_assembler;
 use crate::rag::embedder::OllamaEmbedder;
 use crate::rag::indexing;
 use crate::rag::search::RagSearchEngine;
 use crate::rag::store::RagStore;
-use crate::rag::types::{ChunkRecord, IndexStatus, ModelValidation, ProjectStats, RagProject};
+use crate::rag::types::{
+    AssembledContext, ChunkRecord, IndexStatus, ModelValidation, ProjectStats, RagProject,
+};
 use crate::rag::validation;
 use crate::shared::RAG_INDEX_ABORT_HANDLES;
 use crate::validation::is_valid_model_name;
@@ -597,6 +600,84 @@ pub async fn cmd_rag_get_project_stats(
 }
 
 // ====================== EMBEDDING MODEL COMMANDS ======================
+
+// ====================== CONTEXT ASSEMBLY COMMANDS ======================
+
+#[tauri::command]
+pub async fn cmd_rag_assemble_context(
+    project_id: String,
+    query: String,
+    top_k: Option<usize>,
+    threshold: Option<f32>,
+    max_chars: Option<usize>,
+    base_url: Option<String>,
+    state: tauri::State<'_, Arc<Mutex<RagStore>>>,
+) -> Result<ApiResponse<AssembledContext>, String> {
+    if let Err(e) =
+        validation::validate_assemble_context(&project_id, &query, top_k, threshold, max_chars)
+    {
+        return Ok(validation::rag_validation_error(e));
+    }
+
+    let store = state.inner();
+
+    let project = {
+        let s = store.lock().await;
+        match s.get_project(&project_id) {
+            Ok(Some(p)) => p,
+            Ok(None) => {
+                return Ok(ApiResponse {
+                    success: false,
+                    data: None,
+                    error: Some(BackendError::new("RAG_NOT_FOUND", "Project not found")),
+                })
+            }
+            Err(e) => {
+                return Ok(ApiResponse {
+                    success: false,
+                    data: None,
+                    error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
+                })
+            }
+        }
+    };
+
+    let base_url_val = match base_url {
+        Some(url) => crate::ollama_url::parse_ollama_base_url(&url)?.to_string(),
+        None => "http://localhost:11434".to_string(),
+    };
+
+    // Step 1: Search
+    let results = match RagSearchEngine::search(
+        store.clone(),
+        &project_id,
+        &query,
+        &base_url_val,
+        &project.embedding_model,
+        top_k,
+        threshold,
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            return Ok(ApiResponse {
+                success: false,
+                data: None,
+                error: Some(BackendError::new("RAG_SEARCH_ERROR", e)),
+            })
+        }
+    };
+
+    // Step 2: Assemble context
+    let assembled = context_assembler::assemble_context(&results, &project.path, max_chars);
+
+    Ok(ApiResponse {
+        success: true,
+        data: Some(assembled),
+        error: None,
+    })
+}
 
 #[tauri::command]
 pub async fn cmd_rag_set_embedding_model(

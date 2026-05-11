@@ -1,7 +1,7 @@
 //! Vector search and hybrid ranking for RAG.
 //!
 //! Combines sqlite-vec vector similarity with BM25 keyword matching for
-//! high-quality retrieval. Context assembly is handled by the frontend.
+//! high-quality retrieval. Context assembly is handled by `context_assembler.rs`.
 
 use crate::rag::bm25::BM25;
 use crate::rag::embedder::OllamaEmbedder;

@@ -532,6 +532,23 @@ export const RagModelValidationSchema = z.object({
 });
 export type RagModelValidation = z.infer<typeof RagModelValidationSchema>;
 
+// ====================== RAG CONTEXT ASSEMBLY ======================
+
+export const CitationSchema = z.object({
+  filePath: z.string(),
+  startLine: z.number(),
+  endLine: z.number(),
+  language: z.string().nullable(),
+});
+export type Citation = z.infer<typeof CitationSchema>;
+
+export const AssembledContextSchema = z.object({
+  assembledContext: z.string(),
+  citations: z.array(CitationSchema),
+  tokenCount: z.number(),
+});
+export type AssembledContext = z.infer<typeof AssembledContextSchema>;
+
 // RAG validation limits are now in validation-limits.ts, re-exported above.
 
 // ====================== IPC VERSIONING ======================
@@ -575,6 +592,7 @@ export const COMMAND_VERSIONS = {
   cmd_rag_get_project_stats: 1,
   cmd_rag_set_embedding_model: 1,
   cmd_rag_validate_embedding_model: 1,
+  cmd_rag_assemble_context: 1,
 } as const;
 
 export type CommandName = keyof typeof COMMAND_VERSIONS;

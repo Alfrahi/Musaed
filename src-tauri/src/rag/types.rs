@@ -165,6 +165,25 @@ pub struct ModelValidation {
     pub error: Option<String>,
 }
 
+// ====================== CONTEXT ASSEMBLY ======================
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Citation {
+    pub file_path: String,
+    pub start_line: usize,
+    pub end_line: usize,
+    pub language: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct AssembledContext {
+    pub assembled_context: String,
+    pub citations: Vec<Citation>,
+    pub token_count: usize,
+}
+
 // ====================== INTERNAL DB TYPES ======================
 
 /// Internal row representation for the `files` table.

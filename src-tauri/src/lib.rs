@@ -107,6 +107,7 @@ pub fn run() {
             rag::commands::cmd_rag_get_project_stats,
             rag::commands::cmd_rag_set_embedding_model,
             rag::commands::cmd_rag_validate_embedding_model,
+            rag::commands::cmd_rag_assemble_context,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -19,8 +19,8 @@ import toast from 'react-hot-toast';
 import { flushAndStop } from '../../../store/batch-manager';
 import { useConversationActions } from './useConversationActions';
 import { type FileAttachment } from './useAttachmentUtils';
-import { buildRagSystemContext } from '@/lib/rag/context';
 import { useMessageStore } from '../../../store/stores/message-store';
+import type { Citation } from '@musaed/contracts';
 
 /** Build prompt with file context injected. */
 function buildPromptWithContext(
@@ -109,39 +109,25 @@ const handleStreamError = (
   toast.error(msg);
 };
 
-interface RagSourceRef {
-  filePath: string;
-  startLine: number;
-  endLine: number;
-  language?: string;
-}
-
 /** Build RAG context for the chat query if an active project is set. */
 async function fetchRagContext(
   query: string,
   activeRagProject: { id: string; path: string } | null,
   ollamaUrl: string
-): Promise<{ context: string; sources: RagSourceRef[] } | undefined> {
+): Promise<{ context: string; sources: Citation[] } | undefined> {
   if (!activeRagProject) return undefined;
   try {
-    const results = await ragApi.search({
+    const result = await ragApi.assembleContext({
       projectId: activeRagProject.id,
       query,
       topK: 10,
       baseUrl: ollamaUrl,
     });
-    if (results && results.length > 0) {
-      const context = buildRagSystemContext(results, activeRagProject.path);
-      const sources: RagSourceRef[] = results.map((r) => ({
-        filePath: r.filePath,
-        startLine: r.startLine,
-        endLine: r.endLine,
-        language: r.language ?? undefined,
-      }));
-      return { context, sources };
+    if (result && result.assembledContext) {
+      return { context: result.assembledContext, sources: result.citations };
     }
   } catch (err) {
-    logger.warn('RAG search failed, continuing without context:', { error: String(err) });
+    logger.warn('RAG context assembly failed, continuing without context:', { error: String(err) });
   }
   return undefined;
 }
@@ -210,7 +196,12 @@ export const useChatActions = () => {
         globalSettings.ollamaUrl
       );
       const ragContext = ragResult?.context;
-      const ragSources = ragResult?.sources;
+      const ragSources = ragResult?.sources.map((s) => ({
+        filePath: s.filePath,
+        startLine: s.startLine,
+        endLine: s.endLine,
+        language: s.language ?? undefined,
+      }));
 
       const userMsg: Message = {
         id: crypto.randomUUID(),

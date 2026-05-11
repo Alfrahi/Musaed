@@ -194,6 +194,7 @@ const RAG_CONSTS = [
   'MIN_THRESHOLD',
   'MAX_FILE_CHUNKS_QUERY',
   'MAX_FILE_PATH_LEN',
+  'MAX_RAG_CONTEXT_CHARS',
 ];
 
 // Constants that are f32 in Rust (floats, not integers)

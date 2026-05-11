@@ -6,16 +6,15 @@ import {
   useSetActiveRagProjectId,
   useRagSearchResults,
 } from '../../../store/hooks';
-import { useRagSearch } from './useRagSearch';
-import { buildRagSystemContext } from '../utils/context-assembler';
+import { ragApi } from '../../../lib/ipc';
+import { logger } from '../../../lib/logger';
 
 export function useRagContext() {
   const activeProject = useActiveRagProject();
   const setActiveProjectId = useSetActiveRagProjectId();
   const searchResults = useRagSearchResults();
-  const { search } = useRagSearch();
 
-  // Cache search results for the current query to avoid re-searching
+  // Cache assembled context for the current query to avoid re-searching
   const contextCache = useRef<Map<string, string>>(new Map());
 
   const activateProject = useCallback(
@@ -34,29 +33,33 @@ export function useRagContext() {
       const cached = contextCache.current.get(cacheKey);
       if (cached) return cached;
 
-      // Search
-      const results = await search({
-        projectId: activeProject.id,
-        query,
-        topK: 10,
-      });
+      // Delegate search + assembly to Rust via single IPC call
+      try {
+        const result = await ragApi.assembleContext({
+          projectId: activeProject.id,
+          query,
+          topK: 10,
+        });
 
-      if (!results || results.length === 0) return '';
+        if (result && result.assembledContext) {
+          // Cache the result
+          contextCache.current.set(cacheKey, result.assembledContext);
 
-      const context = buildRagSystemContext(results, activeProject.path);
+          // Prune cache if too large
+          if (contextCache.current.size > 50) {
+            const firstKey = contextCache.current.keys().next().value;
+            if (firstKey) contextCache.current.delete(firstKey);
+          }
 
-      // Cache the result
-      contextCache.current.set(cacheKey, context);
-
-      // Prune cache if too large
-      if (contextCache.current.size > 50) {
-        const firstKey = contextCache.current.keys().next().value;
-        if (firstKey) contextCache.current.delete(firstKey);
+          return result.assembledContext;
+        }
+      } catch (err) {
+        logger.warn('RAG context assembly failed:', { error: String(err) });
       }
 
-      return context;
+      return '';
     },
-    [activeProject, search]
+    [activeProject]
   );
 
   // Clear cache when project changes

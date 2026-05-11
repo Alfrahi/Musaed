@@ -26,13 +26,7 @@ export default {
       'useRagContext',
       'useRagFileBrowser',
     ],
-    utils: [
-      'buildRagSystemContext',
-      'formatFileSize',
-      'fileNameFromPath',
-      'truncateFilePath',
-      'getRelativeFilePath',
-    ],
+    utils: ['formatFileSize', 'fileNameFromPath', 'truncateFilePath', 'getRelativeFilePath'],
   },
   ipcEndpoints: [
     'cmd_rag_add_project',
@@ -45,6 +39,7 @@ export default {
     'cmd_rag_reindex_project',
     'cmd_rag_get_index_status',
     'cmd_rag_search',
+    'cmd_rag_assemble_context',
     'cmd_rag_get_file_chunks',
     'cmd_rag_get_project_stats',
     'cmd_rag_set_embedding_model',

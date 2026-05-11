@@ -27,10 +27,6 @@ vi.mock('@/store/batch-manager', () => ({
   flushAndStop: vi.fn(),
 }));
 
-vi.mock('@/lib/rag/context', () => ({
-  buildRagSystemContext: vi.fn(() => 'RAG context'),
-}));
-
 vi.mock('@/lib/i18n', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));

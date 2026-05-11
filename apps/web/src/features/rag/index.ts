@@ -15,6 +15,5 @@ export { useRagIndexing } from './hooks/useRagIndexing';
 export { useRagSearch } from './hooks/useRagSearch';
 export { useRagContext } from './hooks/useRagContext';
 export { useRagFileBrowser } from './hooks/useRagFileBrowser';
-export { buildRagSystemContext } from './utils/context-assembler';
 export { fileNameFromPath, truncateFilePath, getRelativeFilePath } from './utils/project-helpers';
 export { formatFileSize } from '@/lib/formatFileSize';
