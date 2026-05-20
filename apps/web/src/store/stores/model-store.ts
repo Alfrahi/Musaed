@@ -2,9 +2,8 @@
 
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import { type OllamaModel } from '@musaed/contracts';
-import { createTauriStorage } from '../../lib/tauri-storage';
+// Persistence moved to Rust backend – this store is now in‑memory only
 
 interface PullStatus {
   status: string;
@@ -31,29 +30,22 @@ export const selectIsModelPulling = (modelName: string) => (state: ModelState) =
   !!state.pullStatus[modelName];
 
 export const useModelStore = createWithEqualityFn<ModelState>()(
-  persist(
-    (set) => ({
-      models: [],
-      selectedModel: '',
-      pullStatus: {},
-      setModels: (models) => set({ models }),
-      setSelectedModel: (selectedModel) => set({ selectedModel }),
-      updatePullStatus: (name, status) =>
-        set((state) => {
-          const next = { ...state.pullStatus };
-          if (status === null) {
-            delete next[name];
-          } else {
-            next[name] = status;
-          }
-          return { pullStatus: next };
-        }),
-    }),
-    {
-      name: 'musaed-model-storage',
-      storage: createJSONStorage(() => createTauriStorage('model-state.json')),
-      partialize: (state) => ({ selectedModel: state.selectedModel }),
-    }
-  ),
+  (set) => ({
+    models: [],
+    selectedModel: '',
+    pullStatus: {},
+    setModels: (models) => set({ models }),
+    setSelectedModel: (selectedModel) => set({ selectedModel }),
+    updatePullStatus: (name, status) =>
+      set((state) => {
+        const next = { ...state.pullStatus };
+        if (status === null) {
+          delete next[name];
+        } else {
+          next[name] = status;
+        }
+        return { pullStatus: next };
+      }),
+  }),
   shallow
 );

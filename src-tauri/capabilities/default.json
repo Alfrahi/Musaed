@@ -59,6 +59,7 @@
     "updater:default",
     "allow-ollama-commands",
     "allow-logging-commands",
-    "allow-rag-commands"
+    "allow-rag-commands",
+    "allow-conversation-commands"
   ]
 }

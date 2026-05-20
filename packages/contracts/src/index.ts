@@ -593,6 +593,13 @@ export const COMMAND_VERSIONS = {
   cmd_rag_set_embedding_model: 1,
   cmd_rag_validate_embedding_model: 1,
   cmd_rag_assemble_context: 1,
+  // Conversations
+  cmd_conversations_list: 1,
+  cmd_conversation_get: 1,
+  cmd_conversation_create: 1,
+  cmd_message_append: 1,
+  cmd_conversation_delete: 1,
+  cmd_conversations_clear: 1,
 } as const;
 
 export type CommandName = keyof typeof COMMAND_VERSIONS;

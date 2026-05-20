@@ -2,12 +2,14 @@
 
 import { useEffect } from 'react';
 import { type z } from 'zod';
+
 import { useSettingsStore, useStreamingStore } from '../../../store';
-import { coordinateStopStream } from '../../../store/coordination';
-import { startBatching, flushAndStop, stopAllBatching } from '../../../store/batch-manager';
-import { persistConversationsNow } from '../../../store/stores/conversation-store';
 import { useUpdatePullStatus, useSetModels } from '../../../store/hooks';
 import { listen, ollamaApi } from '../../../lib/ipc';
+import { flushAndStop } from '../../../store/batch-manager';
+import { coordinateStopStream } from '../../../store/coordination';
+import { useMessageStore } from '../../../store/stores/message-store';
+import { conversationApi } from '../../../lib/ipc';
 import { triggerAutoTitle } from './useAutoTitle';
 import {
   sanitizeError,
@@ -36,12 +38,12 @@ const handleToken = (payload: OllamaToken) => {
   if (!convId) return;
 
   const token = payload.message?.content ?? '';
-  const isFirstToken = !(convId in streamingStore.liveContent);
+  const _isFirstToken = !(convId in streamingStore.liveContent);
 
   // Accumulate token in the lightweight streaming buffer
   streamingStore.appendToken(convId, token);
 
-  // Stash metrics so they're included in the next batch flush
+  // Stash metrics so they're included in the next flush
   const metrics: Partial<Message> = {};
   if (payload.eval_count != null) metrics.eval_count = payload.eval_count;
   if (payload.eval_duration != null) metrics.eval_duration = payload.eval_duration;
@@ -50,15 +52,23 @@ const handleToken = (payload: OllamaToken) => {
     streamingStore.setPendingMetrics(convId, metrics);
   }
 
-  // Start the batch timer on the first token if not already running
-  if (isFirstToken) {
-    startBatching(convId);
-  }
-
   // On stream completion, flush remaining content immediately and stop
   if (payload.done) {
     flushAndStop(convId);
     coordinateStopStream(convId);
+
+    // Persist the completed assistant message to Rust backend
+    const msgs = useMessageStore.getState().messages[convId] ?? [];
+    const lastMsg = msgs[msgs.length - 1];
+    if (lastMsg && lastMsg.role === 'assistant') {
+      (async () => {
+        try {
+          await conversationApi.appendMessage(convId, lastMsg);
+        } catch (e) {
+          console.error('Failed to persist completed message:', e);
+        }
+      })();
+    }
 
     // Auto-generate title for conversations that still have the default title
     triggerAutoTitle(convId);
@@ -69,7 +79,6 @@ const handleToken = (payload: OllamaToken) => {
 const handleError = (payload: BackendError) => {
   const sanitized = sanitizeError(payload);
   const streamingStore = useStreamingStore.getState();
-
   logger.error('Backend error event', { error: sanitized });
 
   if (sanitized.requestId) {
@@ -85,6 +94,7 @@ const handleError = (payload: BackendError) => {
   }
 
   toast.error(sanitized.message);
+
   // Flush all active streams on unattributed errors
   Object.keys(streamingStore.activeStreams).forEach((id) => {
     flushAndStop(id);
@@ -117,9 +127,7 @@ const createPullProgressHandler =
       payload.total && payload.completed != null
         ? Math.round((payload.completed / payload.total) * 100)
         : undefined;
-
     updatePullStatus(modelKey, { status: payload.status, progress });
-
     if (payload.status === 'success') {
       const data = await ollamaApi.getModels(useSettingsStore.getState().globalSettings.ollamaUrl);
       if (data) setModels(data);
@@ -181,10 +189,9 @@ export function useTauriEvents() {
     };
 
     setup();
+
     return () => {
       isMounted = false;
-      stopAllBatching();
-      persistConversationsNow();
       unlisteners.forEach((un) => un());
     };
   }, [updatePullStatus, setModels]);

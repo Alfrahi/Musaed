@@ -7,6 +7,14 @@ vi.mock('@/lib/ipc', () => ({
     chat: vi.fn().mockResolvedValue(true),
     abort: vi.fn(),
   },
+  conversationApi: {
+    listConversations: vi.fn(),
+    getConversation: vi.fn(),
+    createConversation: vi.fn().mockResolvedValue('conv1'),
+    appendMessage: vi.fn(),
+    deleteConversation: vi.fn(),
+    clearAllConversations: vi.fn(),
+  },
   ragApi: {
     search: vi.fn(),
   },
@@ -27,6 +35,23 @@ vi.mock('@/store/batch-manager', () => ({
   flushAndStop: vi.fn(),
 }));
 
+vi.mock('@/store/coordination', () => ({
+  coordinateStartStream: vi.fn(),
+  coordinateStopStream: vi.fn(),
+}));
+
+vi.mock('@/store/stores/ui-store', () => {
+  const getState = vi.fn(() => ({
+    isStreaming: false,
+    isHydrated: true,
+    setStreaming: vi.fn(),
+    setHydrated: vi.fn(),
+  }));
+  const useUIStore: any = vi.fn(() => getState());
+  useUIStore.getState = getState;
+  return { useUIStore };
+});
+
 vi.mock('@/lib/i18n', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -46,6 +71,7 @@ vi.mock('@/store/stores/streaming-store', () => {
     activeStreams: {},
     startStream: vi.fn(),
     stopStream: vi.fn(),
+    clearStream: vi.fn(),
   }));
   const useStreamingStore: any = vi.fn(() => getState());
   useStreamingStore.getState = getState;

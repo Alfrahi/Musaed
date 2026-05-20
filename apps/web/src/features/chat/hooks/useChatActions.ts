@@ -14,6 +14,7 @@ import {
 import { type Message } from '@musaed/contracts';
 import { useTranslation } from '../../../lib/i18n';
 import { chatApi, ragApi } from '../../../lib/ipc';
+import { addMessage as backendAddMessage } from '../../../lib/conversation-backend';
 import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
 import { flushAndStop } from '../../../store/batch-manager';
@@ -58,14 +59,11 @@ const buildApiMessages = (
   if (ragContext) {
     combinedSystem = combinedSystem ? `${ragContext}\n\n${combinedSystem}` : ragContext;
   }
-
   const apiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
-
   // Only add system message if there's actual content
   if (combinedSystem) {
     apiMessages.push({ role: 'system', content: combinedSystem });
   }
-
   apiMessages.push(
     ...messages.map((m) => ({
       role: m.role,
@@ -79,7 +77,6 @@ const buildApiMessages = (
     role: 'user',
     content: getUserMessageContent(fullPrompt, images.length > 0, t),
   });
-
   return apiMessages;
 };
 
@@ -95,7 +92,6 @@ const handleStreamError = (
 ) => {
   const msg = err instanceof Error ? err.message : String(err);
   if (msg.toLowerCase().includes('aborted')) return;
-
   logger.error('Chat error', { error: msg, requestId });
   // Flush any buffered tokens before appending the error message
   flushAndStop(conversationId);
@@ -105,6 +101,16 @@ const handleStreamError = (
     false
   );
   stopStreaming(conversationId);
+
+  // Persist the failed assistant message to Rust backend
+  const msgs = useMessageStore.getState().messages[conversationId] ?? [];
+  const lastMsg = msgs[msgs.length - 1];
+  if (lastMsg && lastMsg.role === 'assistant') {
+    backendAddMessage(conversationId, lastMsg).catch((e) =>
+      console.error('Failed to persist error message:', e)
+    );
+  }
+
   setError(msg);
   toast.error(msg);
 };
@@ -156,6 +162,51 @@ const prepareChatPayload = (
   };
 };
 
+/** Create user and assistant message objects for a new chat turn. */
+function createChatMessages(
+  input: string,
+  images: string[],
+  model: string,
+  requestId: string,
+  ragSources?: {
+    filePath: string;
+    startLine: number;
+    endLine: number;
+    language: string | undefined;
+  }[]
+): [Message, Message] {
+  const userMsg: Message = {
+    id: crypto.randomUUID(),
+    role: 'user',
+    content: input,
+    images: images.length > 0 ? images : undefined,
+    timestamp: Date.now(),
+    requestId,
+  };
+  const assistantMsg: Message = {
+    id: crypto.randomUUID(),
+    role: 'assistant',
+    content: '',
+    timestamp: Date.now(),
+    model,
+    requestId,
+    ragSources,
+  };
+  return [userMsg, assistantMsg];
+}
+
+/** Persist the user message to the Rust backend (fire-and-forget).
+ *  The assistant message is persisted on stream completion (useTauriEvents). */
+function persistUserMessage(conversationId: string, userMsg: Message) {
+  (async () => {
+    try {
+      await backendAddMessage(conversationId, userMsg);
+    } catch (e) {
+      console.error('Failed to persist user message:', e);
+    }
+  })();
+}
+
 /**
  * Sends a message to Ollama with proper error handling and streaming setup.
  */
@@ -168,7 +219,6 @@ export const useChatActions = () => {
   const globalSettings = useGlobalSettings();
   const setError = useSetUIError();
   const activeRagProject = useActiveRagProject();
-
   const { initiateStreaming, stopStreaming } = useConversationActions();
   const { t } = useTranslation(globalSettings.language);
 
@@ -176,13 +226,11 @@ export const useChatActions = () => {
     async (input: string, images: string[], files: FileAttachment[] = []) => {
       const trimmedInput = input.trim();
       const hasAttachments = images.length > 0 || files.length > 0;
-
       if (!currentConversationId || !selectedModel) {
         if (!selectedModel) toast.error(t('chat.noModelSelected'));
         return;
       }
       if (!trimmedInput && !hasAttachments) return;
-
       const currentConv = conversations[currentConversationId];
       if (!currentConv) return;
 
@@ -195,7 +243,6 @@ export const useChatActions = () => {
         activeRagProject,
         globalSettings.ollamaUrl
       );
-      const ragContext = ragResult?.context;
       const ragSources = ragResult?.sources.map((s) => ({
         filePath: s.filePath,
         startLine: s.startLine,
@@ -203,24 +250,15 @@ export const useChatActions = () => {
         language: s.language ?? undefined,
       }));
 
-      const userMsg: Message = {
-        id: crypto.randomUUID(),
-        role: 'user',
-        content: trimmedInput,
-        images: images.length > 0 ? images : undefined,
-        timestamp: Date.now(),
+      const [userMsg, assistantMsg] = createChatMessages(
+        trimmedInput,
+        images,
+        selectedModel,
         requestId,
-      };
-      const assistantMsg: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: '',
-        timestamp: Date.now(),
-        model: selectedModel,
-        requestId,
-        ragSources,
-      };
+        ragSources
+      );
       addMessages(currentConversationId, [userMsg, assistantMsg]);
+      persistUserMessage(currentConversationId, userMsg);
 
       try {
         const messages = useMessageStore.getState().messages[currentConversationId] || [];
@@ -230,14 +268,9 @@ export const useChatActions = () => {
           images,
           t,
           globalSettings,
-          ragContext
+          ragResult?.context
         );
-
-        const success = await chatApi.chat({
-          ...payload,
-          model: selectedModel,
-          requestId,
-        });
+        const success = await chatApi.chat({ ...payload, model: selectedModel, requestId });
         if (success !== true) throw new Error(t('chat.connectionFailed'));
       } catch (err) {
         handleStreamError(

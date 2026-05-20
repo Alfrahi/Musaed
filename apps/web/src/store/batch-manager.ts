@@ -2,57 +2,45 @@
 
 import { useStreamingStore } from './stores/streaming-store';
 import { useMessageStore } from './stores/message-store';
-
-const BATCH_INTERVAL_MS = 500;
-const timers: Record<string, ReturnType<typeof setInterval>> = {};
+import type { Message } from '@musaed/contracts';
 
 /**
- * Start batching tokens for a conversation.
- * Tokens accumulate in the streaming store; a periodic timer flushes them
- * to the conversation store at a capped rate.
- */
-export function startBatching(conversationId: string): void {
-  if (timers[conversationId]) return; // Already batching
-
-  timers[conversationId] = setInterval(() => {
-    flush(conversationId);
-  }, BATCH_INTERVAL_MS);
-}
-
-/** Flush pending live content from the streaming store into the conversation store. */
-function flush(conversationId: string): void {
-  const result = useStreamingStore.getState().flushToConversation(conversationId);
-  if (!result) return;
-
-  useMessageStore.getState().updateLastMessage(conversationId, {
-    content: result.content,
-    ...result.metrics,
-  });
-}
-
-/**
- * Immediately flush any remaining content and stop the batch timer.
- * Called when the stream completes (done=true) or on error.
+ * Flushes accumulated streaming content from the streaming buffer
+ * into the message store, then stops the stream.
+ *
+ * This replaces the previous batch-manager that accumulated tokens
+ * on a timer. Now that streaming tokens are handled directly by the
+ * streaming store's live buffer, flush is only needed when a stream
+ * ends (done or error) to commit the final content to the message store.
  */
 export function flushAndStop(conversationId: string): void {
-  clearTimer(conversationId);
-  flush(conversationId);
-}
+  const streamingStore = useStreamingStore.getState();
+  const result = streamingStore.flushToConversation(conversationId);
 
-/** Stop batching without flushing (e.g., on abort). */
-export function stopBatching(conversationId: string): void {
-  clearTimer(conversationId);
-  useStreamingStore.getState().clearStream(conversationId);
-}
+  if (result) {
+    const messageStore = useMessageStore.getState();
+    const messages = messageStore.messages[conversationId] ?? [];
 
-/** Stop all active batch timers and clear streaming buffers. */
-export function stopAllBatching(): void {
-  Object.keys(timers).forEach(stopBatching);
-}
-
-function clearTimer(conversationId: string): void {
-  if (timers[conversationId]) {
-    clearInterval(timers[conversationId]);
-    delete timers[conversationId];
+    if (messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      const updatedMsg: Message = {
+        ...lastMsg,
+        content: lastMsg.content + result.content,
+        ...result.metrics,
+        done: true,
+      };
+      messageStore.setMessages(conversationId, [...messages.slice(0, -1), updatedMsg]);
+    }
   }
+
+  streamingStore.stopStream(conversationId);
+}
+
+/**
+ * Stops batching for a conversation without flushing.
+ * Used when aborting a stream where buffered content should be discarded.
+ */
+export function stopBatching(conversationId: string): void {
+  const streamingStore = useStreamingStore.getState();
+  streamingStore.stopStream(conversationId);
 }

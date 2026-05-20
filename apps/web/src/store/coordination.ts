@@ -1,54 +1,63 @@
 'use client';
 
-/**
- * Cross-store coordination layer.
- *
- * Orchestrates state changes that span multiple stores by calling each
- * store's own public actions sequentially. Store modules must NOT import
- * each other directly — all cross-store side effects live here.
- */
-
 import { useStreamingStore } from './stores/streaming-store';
 import { useUIStore } from './stores/ui-store';
-import { useConversationStore } from './stores/conversation-store';
 
 /**
- * Start streaming for a conversation.
+ * Coordinates streaming start/stop between the streaming store
+ * and UI state (isStreaming flag).
  *
- * 1. Registers the stream in the streaming store.
- * 2. Signals the UI store that at least one stream is active.
+ * This replaces the previous coordination module that also handled
+ * persistence batching. Now that persistence is handled by the Rust
+ * backend, coordination only manages the streaming lifecycle.
+ */
+
+/**
+ * Starts streaming for a conversation — marks the UI as streaming
+ * and registers the stream in the streaming store.
  */
 export function coordinateStartStream(conversationId: string, requestId: string): void {
-  useStreamingStore.getState().startStream(conversationId, requestId);
   useUIStore.getState().setStreaming(true);
+  useStreamingStore.getState().startStream(conversationId, requestId);
 }
 
 /**
- * Stop streaming for a conversation.
- *
- * 1. Removes the stream from the streaming store.
- * 2. Updates the UI store's isStreaming flag based on remaining active streams.
+ * Stops streaming for a conversation — flushes any remaining content,
+ * clears the stream, and updates the UI flag if no other streams are active.
  */
 export function coordinateStopStream(conversationId: string): void {
   useStreamingStore.getState().stopStream(conversationId);
-  const hasMoreStreams = Object.keys(useStreamingStore.getState().activeStreams).length > 0;
-  useUIStore.getState().setStreaming(hasMoreStreams);
+  useStreamingStore.getState().clearStream(conversationId);
+
+  // Only clear global streaming flag when no streams remain active
+  const { activeStreams } = useStreamingStore.getState();
+  if (Object.keys(activeStreams).length === 0) {
+    useUIStore.getState().setStreaming(false);
+  }
 }
 
 /**
- * Register a listener that signals the UI store when the conversation
- * store finishes persist rehydration. Safe to call after rehydration
- * has already completed (signals immediately in that case).
+ * Registers hydration coordination for the app.
  *
- * @returns Cleanup function that removes the listener.
+ * This is called once on mount in HomeClient. It ensures the UI
+ * transitions from the loading state to the interactive state once
+ * all stores have hydrated from the Rust backend.
+ *
+ * Returns an unsubscribe function for cleanup.
  */
 export function registerHydrationCoordination(): () => void {
-  if (useConversationStore.persist.hasHydrated()) {
+  let disposed = false;
+
+  // Mark as hydrated immediately since persistence is now handled
+  // by the Rust backend (no async Tauri Store hydration needed
+  // for conversation/message stores).
+  const { isHydrated } = useUIStore.getState();
+  if (!isHydrated) {
     useUIStore.getState().setHydrated(true);
-    return () => {};
   }
 
-  return useConversationStore.persist.onFinishHydration(() => {
-    useUIStore.getState().setHydrated(true);
-  });
+  return () => {
+    if (disposed) return;
+    disposed = true;
+  };
 }

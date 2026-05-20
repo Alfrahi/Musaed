@@ -31,6 +31,9 @@ import {
   IPC_VERSION as _IPC_VERSION,
   type CommandName,
   AssembledContextSchema,
+  type Conversation,
+  type Message,
+  ConversationSchema,
 } from '@musaed/contracts';
 import type {
   RagProject,
@@ -132,6 +135,12 @@ export interface CommandMap {
     };
     return: AssembledContext;
   };
+  cmd_conversations_list: { args: Record<string, never>; return: Conversation[] };
+  cmd_conversation_get: { args: { id: string }; return: Conversation };
+  cmd_conversation_create: { args: { conversation: Conversation }; return: string };
+  cmd_message_append: { args: { conversationId: string; message: Message }; return: void };
+  cmd_conversation_delete: { args: { id: string }; return: void };
+  cmd_conversations_clear: { args: Record<string, never>; return: void };
 }
 
 const voidSchema = z.preprocess((val) => (val === null ? undefined : val), z.void());
@@ -251,6 +260,25 @@ const CommandInputSchemas: {
     maxChars: z.number().int().min(1).max(RAG_VALIDATION_LIMITS.MAX_RAG_CONTEXT_CHARS).optional(),
     baseUrl: z.string().optional(),
   }),
+  cmd_conversations_list: undefined,
+  cmd_conversation_get: z.object({ id: z.string().min(1) }),
+  cmd_conversation_create: z.object({
+    conversation: z.object({
+      id: z.string(),
+      title: z.string(),
+      model: z.string(),
+      settings: z.any(),
+      createdAt: z.number(),
+      updatedAt: z.number(),
+      messages: z.array(z.any()),
+    }),
+  }),
+  cmd_message_append: z.object({
+    conversationId: z.string().min(1),
+    message: z.any(),
+  }),
+  cmd_conversation_delete: z.object({ id: z.string().min(1) }),
+  cmd_conversations_clear: undefined,
 };
 
 /**
@@ -289,6 +317,12 @@ const CommandReturnSchemas: {
   cmd_rag_set_embedding_model: z.boolean(),
   cmd_rag_validate_embedding_model: RagModelValidationSchema,
   cmd_rag_assemble_context: AssembledContextSchema,
+  cmd_conversations_list: z.array(ConversationSchema),
+  cmd_conversation_get: ConversationSchema,
+  cmd_conversation_create: z.string(),
+  cmd_message_append: voidSchema,
+  cmd_conversation_delete: voidSchema,
+  cmd_conversations_clear: voidSchema,
 };
 
 /**
@@ -765,4 +799,24 @@ export const fs = {
     checkIsTauri() ? (await import('@tauri-apps/plugin-fs')).readTextFile(path) : null,
   readFile: async (path: string): Promise<Uint8Array | null> =>
     checkIsTauri() ? (await import('@tauri-apps/plugin-fs')).readFile(path) : null,
+};
+
+/**
+ * Conversation & Message APIs - manages conversation persistence operations.
+ * - listConversations: fetches all conversations from backend storage
+ * - getConversation: fetches a specific conversation by ID
+ * - createConversation: creates a new conversation
+ * - appendMessage: adds a message to a conversation
+ * - deleteConversation: removes a conversation by ID
+ * - clearAllConversations: removes all conversations
+ */
+export const conversationApi = {
+  listConversations: () => callInternal('cmd_conversations_list', {}),
+  getConversation: (id: string) => callInternal('cmd_conversation_get', { id }),
+  createConversation: (conversation: Conversation) =>
+    callInternal('cmd_conversation_create', { conversation }),
+  appendMessage: (conversationId: string, message: Message) =>
+    callInternal('cmd_message_append', { conversationId, message }),
+  deleteConversation: (id: string) => callInternal('cmd_conversation_delete', { id }),
+  clearAllConversations: () => callInternal('cmd_conversations_clear', {}),
 };

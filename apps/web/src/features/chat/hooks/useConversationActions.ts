@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
+
 import {
   useConversationStore,
   useModelStore,
@@ -9,10 +10,9 @@ import {
   useMessageStore,
 } from '../../../store';
 import { useSetConversations, useBatchUpdate } from '../../../store/hooks';
+import { chatApi, conversationApi } from '../../../lib/ipc';
 import { coordinateStartStream, coordinateStopStream } from '../../../store/coordination';
-import { chatApi } from '../../../lib/ipc';
 import { useTranslation } from '../../../lib/i18n';
-import { stopBatching } from '../../../store/batch-manager';
 import type {
   ConversationMetadata,
   ConversationState,
@@ -24,20 +24,17 @@ import type {
 export function abortStreaming(conversationId: string): void {
   const streamingState = useStreamingStore.getState();
   const requestId = streamingState.activeStreams[conversationId];
-
   if (requestId) chatApi.abort(requestId);
-  stopBatching(conversationId);
   coordinateStopStream(conversationId);
 }
 
 /** Create a new conversation with current model and settings. */
-const createConversation = (
+const createConversation = async (
   batchUpdate: (updater: (state: ConversationState) => Partial<ConversationState>) => void,
   t: (key: string) => string
 ) => {
   const modelState = useModelStore.getState();
   const settingsState = useSettingsStore.getState();
-
   const id = crypto.randomUUID();
   const newConv: ConversationMetadata = {
     id,
@@ -48,10 +45,19 @@ const createConversation = (
     updatedAt: Date.now(),
   };
 
+  // Persist via Rust backend first — API requires full Conversation with messages
+  const createdId = await conversationApi.createConversation({
+    ...newConv,
+    messages: [],
+  });
+
+  // Use the backend-returned ID (falls back to local id if null)
+  const resolvedId = createdId ?? id;
+
   batchUpdate((state) => ({
-    conversations: { [id]: newConv, ...state.conversations },
-    conversationIds: [id, ...state.conversationIds],
-    currentConversationId: id,
+    conversations: { [resolvedId]: newConv, ...state.conversations },
+    conversationIds: [resolvedId, ...state.conversationIds],
+    currentConversationId: resolvedId,
   }));
 };
 
@@ -61,7 +67,6 @@ const createConversation = (
 export const useConversationActions = () => {
   const setConversations = useSetConversations();
   const batchUpdate = useBatchUpdate();
-
   const { t } = useTranslation(useSettingsStore.getState().globalSettings.language);
 
   const createNewConversation = useCallback(() => {
@@ -82,6 +87,15 @@ export const useConversationActions = () => {
         conversationIds: remainingIds,
         currentConversationId: newCurrentId,
       }));
+
+      // Persist deletion via Rust backend
+      (async () => {
+        try {
+          await conversationApi.deleteConversation(id);
+        } catch (e) {
+          console.error('Failed to delete conversation on backend:', e);
+        }
+      })();
 
       // Clean up messages
       useMessageStore.getState().clearMessages(id);
@@ -104,11 +118,22 @@ export const useConversationActions = () => {
 
   const clearAllConversations = useCallback(() => {
     Object.keys(useStreamingStore.getState().activeStreams).forEach(abortStreaming);
+
+    // Persist clearing via Rust backend
+    (async () => {
+      try {
+        await conversationApi.clearAllConversations();
+      } catch (e) {
+        console.error('Failed to clear conversations on backend:', e);
+      }
+    })();
+
     batchUpdate(() => ({
       conversations: {},
       conversationIds: [],
       currentConversationId: null,
     }));
+
     // Clear all messages
     useMessageStore.setState({ messages: {} });
   }, [batchUpdate]);

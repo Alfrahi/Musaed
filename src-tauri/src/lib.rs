@@ -1,8 +1,9 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex as StdMutex};
 use tauri::Manager;
 use tokio::sync::Mutex;
 use tracing_subscriber::layer::SubscriberExt;
 
+pub mod conversation;
 pub mod generated_validation;
 pub mod logger;
 pub mod logging;
@@ -59,6 +60,20 @@ pub fn run() {
 
         shared::spawn_cache_eviction_task();
 
+        // Initialize conversation store
+        let app_data_dir = app
+            .path()
+            .app_data_dir()
+            .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+        let conversation_dir = app_data_dir.join("musaed").join("conversations");
+        std::fs::create_dir_all(&conversation_dir)
+            .map_err(|e| format!("Failed to create conversation data directory: {}", e))?;
+        let db_path = conversation_dir.join("conversations.sqlite3");
+
+        let conversation_store = crate::conversation::store::ConversationStore::new(&db_path)
+            .map_err(|e| format!("Failed to initialize conversation store: {}", e))?;
+        app.manage(Arc::new(StdMutex::new(conversation_store)));
+
         // Initialize RAG store
         let app_data_dir = app
             .path()
@@ -108,6 +123,12 @@ pub fn run() {
             rag::commands::cmd_rag_set_embedding_model,
             rag::commands::cmd_rag_validate_embedding_model,
             rag::commands::cmd_rag_assemble_context,
+            conversation::commands::cmd_conversations_list,
+            conversation::commands::cmd_conversation_get,
+            conversation::commands::cmd_conversation_create,
+            conversation::commands::cmd_message_append,
+            conversation::commands::cmd_conversation_delete,
+            conversation::commands::cmd_conversations_clear,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

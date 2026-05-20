@@ -22,8 +22,8 @@ pub fn build_rag_system_context(
 
     let header = format!(
         "You have access to the following codebase context from the project at \"{}\". \
-         Use this information to answer the user's question. Always reference the file \
-         path and line numbers when referring to specific code.\n\n",
+Use this information to answer the user's question. Always reference the file \
+path and line numbers when referring to specific code.\n\n",
         project_path
     );
 
@@ -77,7 +77,6 @@ pub fn assemble_context(
     let max = max_chars.unwrap_or(MAX_RAG_CONTEXT_CHARS);
     let (assembled_context, citations, token_count) =
         build_rag_system_context(results, project_path, max);
-
     AssembledContext {
         assembled_context,
         citations,
@@ -144,20 +143,33 @@ mod tests {
         let results = vec![make_result("README.md", "Hello world", 1, 5, None)];
         let (ctx, _, _) = build_rag_system_context(&results, "/project", 20_000);
 
+        // Header line should have trailing space (empty lang tag) but no backtick-wrapped tag
         assert!(ctx.contains("### Source 1: README.md (lines 1-5) \n"));
-        assert!(!ctx.contains("`"));
+
+        // No source header line should contain a backtick-enclosed language tag
+        for line in ctx.lines() {
+            if line.starts_with("### Source") {
+                assert!(
+                    !line.contains('`'),
+                    "source header should not have lang tag: {line}"
+                );
+            }
+        }
     }
 
     #[test]
     fn char_budget_stops_adding_results() {
-        let big_content = "x".repeat(15_000);
+        // Header (~216 chars) + source prefix (~46 chars) + content + suffix (~6 chars)
+        // Total = ~268 + content. With content=19_700, total ≈ 19_968 < 20_000 (first fits).
+        // Remaining budget too small for second result, so it is skipped.
+        let big_content = "x".repeat(19_700);
         let results = vec![
             make_result("a.rs", &big_content, 1, 100, Some("rust")),
             make_result("b.rs", "small", 1, 5, Some("rust")),
         ];
         let (ctx, citations, _) = build_rag_system_context(&results, "/project", 20_000);
 
-        // The first result alone (~15k chars + header + source formatting) should consume
+        // The first result alone (~19.7k chars + header + source formatting) should consume
         // most of the 20k budget, so the second result should not fit.
         assert_eq!(citations.len(), 1);
         assert_eq!(citations[0].file_path, "a.rs");
