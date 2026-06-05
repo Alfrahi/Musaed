@@ -63,11 +63,6 @@ fn looks_like_reasoning(text: &str) -> bool {
 /// Language Model from"). Instead, we look for natural separators (colon, dash)
 /// and prefer the concise portion before the separator.
 fn truncate_title_words(title: &str, max_words: usize) -> String {
-    let words: Vec<&str> = title.split_whitespace().collect();
-    if words.len() <= max_words {
-        return title.to_string();
-    }
-
     // Titles like "ChatGPT: Large Language Model from OpenAI" — the part
     // before the colon is the concise label.
     if let Some(colon_pos) = title.find(':') {
@@ -85,6 +80,11 @@ fn truncate_title_words(title: &str, max_words: usize) -> String {
         if !before_words.is_empty() && before_words.len() <= max_words {
             return before.to_string();
         }
+    }
+
+    let words: Vec<&str> = title.split_whitespace().collect();
+    if words.len() <= max_words {
+        return title.to_string();
     }
 
     // Fallback: take first N words (better than returning an overly long title).
@@ -406,5 +406,58 @@ pub async fn cmd_ollama_generate_title<R: Runtime>(
                 ),
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -- truncate_title_words --
+
+    #[test]
+    fn truncate_short_title_unchanged() {
+        assert_eq!(
+            truncate_title_words("one two three four five", 5),
+            "one two three four five"
+        );
+    }
+
+    #[test]
+    fn truncate_uses_colon_separator() {
+        assert_eq!(
+            truncate_title_words("ChatGPT: Large Language Model from OpenAI", 5),
+            "ChatGPT"
+        );
+    }
+
+    #[test]
+    fn truncate_uses_dash_separator() {
+        assert_eq!(
+            truncate_title_words("ChatGPT - Large Language Model", 5),
+            "ChatGPT"
+        );
+    }
+
+    #[test]
+    fn truncate_fallback_first_n_words() {
+        assert_eq!(
+            truncate_title_words("one two three four five six seven", 5),
+            "one two three four five"
+        );
+    }
+
+    // -- looks_like_reasoning --
+
+    #[test]
+    fn reasoning_detected_for_starter() {
+        assert!(looks_like_reasoning("Okay, so the title is"));
+        assert!(looks_like_reasoning("Let me think about this"));
+    }
+
+    #[test]
+    fn reasoning_not_detected_for_title() {
+        assert!(!looks_like_reasoning("Python Loops"));
+        assert!(!looks_like_reasoning("Climate Change"));
     }
 }

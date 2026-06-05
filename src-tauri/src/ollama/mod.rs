@@ -29,10 +29,6 @@ pub use models::{
 };
 pub use title::cmd_ollama_generate_title;
 
-// ---- Internal helpers (used by tests within this module) ----
-#[cfg(test)]
-use title::strip_think_blocks;
-
 // ==================== TESTS ====================
 
 #[cfg(test)]
@@ -150,47 +146,5 @@ mod tests {
     async fn cmd_ollama_abort_pull_handles_nonexistent_model() {
         let result = models::cmd_ollama_abort_pull("nonexistent".to_string()).await;
         assert!(result.success);
-    }
-
-    // ---- strip_think_blocks tests ----
-
-    #[test]
-    fn strip_redacted_thinking_block() {
-        let input = "<redacted-thinking>some reasoning</redacted-thinking>Hello World";
-        assert_eq!(strip_think_blocks(input), "Hello World");
-    }
-
-    #[test]
-    fn strip_think_block() {
-        let input = "<think>reasoning</think>Title Here";
-        assert_eq!(strip_think_blocks(input), "Title Here");
-    }
-
-    #[test]
-    fn strip_lemma_block() {
-        let input = "<lemma>math</lemma>Final Answer";
-        assert_eq!(strip_think_blocks(input), "Final Answer");
-    }
-
-    #[test]
-    fn strip_takes_last_nonempty_line() {
-        let input = "line one\nline two\n  \nfinal line";
-        assert_eq!(strip_think_blocks(input), "final line");
-    }
-
-    #[test]
-    fn strip_unclosed_tag_removes_everything_after() {
-        let input = "before<redacted-thinking>no closing tag";
-        assert_eq!(strip_think_blocks(input), "before");
-    }
-
-    #[test]
-    fn strip_empty_input() {
-        assert_eq!(strip_think_blocks(""), "");
-    }
-
-    #[test]
-    fn strip_no_tags_returns_trimmed() {
-        assert_eq!(strip_think_blocks("  plain text  "), "plain text");
     }
 }

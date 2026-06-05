@@ -206,7 +206,8 @@ fn evict_expired_clear_tokens() {
 
     match cutoff {
         Some(c) => LOG_CLEAR_TOKENS.retain(|_, created| *created > c),
-        None => { /* TTL exceeds uptime — nothing can be expired */ }
+        // System uptime < TTL: every token predates the cutoff, so evict all.
+        None => LOG_CLEAR_TOKENS.clear(),
     }
 }
 

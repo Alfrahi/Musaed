@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { stripRedactedThinkingBlocks, type Message } from '@musaed/contracts';
+import { stripThinkingBlocks, type Message } from '@musaed/contracts';
 
 /**
  * Hook for handling message copy operations with feedback.
@@ -8,7 +8,7 @@ export function useMessageActions(message: Message) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(() => {
-    const cleanContent = stripRedactedThinkingBlocks(message.content);
+    const cleanContent = stripThinkingBlocks(message.content);
     navigator.clipboard.writeText(cleanContent || message.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

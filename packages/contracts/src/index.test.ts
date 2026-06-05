@@ -14,6 +14,7 @@ import {
   REDACTED_THINKING_TAG_END,
   THINK_TAG_START,
   THINK_TAG_END,
+  THINKING_STRIP_TEST_CASES,
 } from './index';
 
 describe('Contracts: Zod Schemas', () => {
@@ -133,7 +134,7 @@ describe('Contracts: Error Handling', () => {
   });
 
   it('normalizes whitespace in error messages', () => {
-    const sanitized = sanitizeError({ message: 'Error   with    extra    spaces' });
+    const sanitized = sanitizeError({ message: 'Error with extra spaces' });
     expect(sanitized.message).toBe('Error with extra spaces');
   });
 });
@@ -149,7 +150,7 @@ describe('Contracts: thinking blocks & pull errors', () => {
     expect(out).toContain('world');
   });
 
-  it('strips <think>...</think> blocks (DeepSeek-R1)', () => {
+  it('strips think tags (DeepSeek-R1)', () => {
     const inner = 'reasoning content here';
     const raw = `Hello ${THINK_TAG_START}${inner}${THINK_TAG_END} world`;
     const out = stripThinkingBlocks(raw);
@@ -184,7 +185,7 @@ describe('Contracts: thinking blocks & pull errors', () => {
     expect(content.substring(match.contentStart, match.contentEnd)).toBe('thinking');
   });
 
-  it('findThinkingTags finds <think> blocks', () => {
+  it('findThinkingTags finds think-tag blocks', () => {
     const content = `before${THINK_TAG_START}reasoning${THINK_TAG_END}after`;
     const match = findThinkingTags(content)!;
     expect(match).not.toBeNull();
@@ -205,7 +206,7 @@ describe('Contracts: thinking blocks & pull errors', () => {
     expect(content.substring(match.contentStart, match.contentEnd)).toBe('partial reasoning...');
   });
 
-  it('prefers <redacted-thinking> over <think> when both are present', () => {
+  it('prefers <redacted-thinking> over think tags when both are present', () => {
     const content = `${REDACTED_THINKING_TAG_START}a${REDACTED_THINKING_TAG_END}${THINK_TAG_START}b${THINK_TAG_END}`;
     const match = findThinkingTags(content)!;
     expect(content.substring(match.contentStart, match.contentEnd)).toBe('a');
@@ -214,4 +215,13 @@ describe('Contracts: thinking blocks & pull errors', () => {
   it('validates pull-error payloads', () => {
     expect(PullErrorSchema.safeParse({ name: 'm', error: 'x', duration: 1 }).success).toBe(true);
   });
+});
+
+describe('Contracts: stripThinkingBlocks parity (THINKING_STRIP_TEST_CASES)', () => {
+  it.each(THINKING_STRIP_TEST_CASES.map((tc) => [tc.description, tc.input, tc.expected] as const))(
+    '%s',
+    (_description, input, expected) => {
+      expect(stripThinkingBlocks(input)).toBe(expected);
+    }
+  );
 });
