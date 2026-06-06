@@ -7,6 +7,9 @@ import { useModelActions } from '@/lib/useModelActions';
 import { useConversationActions } from './useConversationActions';
 import { useSettingsActions } from '@/lib/useSettingsActions';
 import { useStorageCleanup } from '@/lib/useStorageCleanup';
+import { initializeConversations } from '@/lib/conversation-backend';
+import { useMessageStore } from '@/store/stores/message-store';
+import { conversationApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
 import { getSystemLanguage } from '@/lib/i18n';
 
@@ -46,8 +49,26 @@ export function useChatInitialization() {
         logger.warn('Initial model fetch failed', { error: fetchErr });
       }
 
-      const { conversationIds } = useConversationStore.getState();
-      if (conversationIds.length === 0) {
+      // Load persisted conversations from the Rust backend
+      const conversations = await initializeConversations();
+      if (conversations && conversations.length > 0) {
+        const { batchUpdate } = useConversationStore.getState();
+        batchUpdate(() => ({
+          conversations: Object.fromEntries(conversations.map((c) => [c.id, c])),
+          conversationIds: conversations.map((c) => c.id),
+          currentConversationId: conversations[0].id,
+        }));
+
+        // Load messages for the most recent conversation
+        try {
+          const fullConv = await conversationApi.getConversation(conversations[0].id);
+          if (fullConv && fullConv.messages.length > 0) {
+            useMessageStore.getState().setMessages(conversations[0].id, fullConv.messages);
+          }
+        } catch (msgErr) {
+          logger.warn('Failed to load messages for initial conversation', { error: msgErr });
+        }
+      } else {
         createNewConversation();
       }
 

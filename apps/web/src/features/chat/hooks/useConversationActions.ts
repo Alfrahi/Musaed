@@ -13,6 +13,7 @@ import { useSetConversations, useBatchUpdate } from '../../../store/hooks';
 import { chatApi, conversationApi } from '../../../lib/ipc';
 import { coordinateStartStream, coordinateStopStream } from '../../../store/coordination';
 import { useTranslation } from '../../../lib/i18n';
+import { updateConversation as backendUpdateConversation } from '../../../lib/conversation-backend';
 import type {
   ConversationMetadata,
   ConversationState,
@@ -105,13 +106,16 @@ export const useConversationActions = () => {
 
   const updateConversationTitle = useCallback(
     (id: string, title: string) => {
+      const updatedAt = Date.now();
       const state = useConversationStore.getState();
       const updated = state.conversationIds.map((cid) =>
-        cid === id
-          ? { ...state.conversations[cid], title, updatedAt: Date.now() }
-          : state.conversations[cid]
+        cid === id ? { ...state.conversations[cid], title, updatedAt } : state.conversations[cid]
       );
       setConversations(updated);
+      // Persist title update to Rust backend
+      backendUpdateConversation(id, title, updatedAt).catch((e) =>
+        console.error('Failed to persist title update:', e)
+      );
     },
     [setConversations]
   );

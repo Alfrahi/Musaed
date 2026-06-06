@@ -176,6 +176,15 @@ impl ConversationStore {
         Ok(())
     }
 
+    pub fn update_conversation(&self, id: &str, title: &str, updated_at: i64) -> SqlResult<()> {
+        let conn = self.lock_conn();
+        conn.execute(
+            "UPDATE conversations SET title = ?1, updated_at = ?2 WHERE id = ?3",
+            params![title, updated_at, id],
+        )?;
+        Ok(())
+    }
+
     pub fn add_message(&self, conversation_id: &str, msg: &Message) -> SqlResult<()> {
         let conn = self.lock_conn();
         conn.execute(

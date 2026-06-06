@@ -98,3 +98,23 @@ export async function clearAllConversations(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Update a conversation's title in backend storage
+ * @param id The conversation ID
+ * @param title The new title
+ * @param updatedAt The updated timestamp
+ */
+export async function updateConversation(
+  id: string,
+  title: string,
+  updatedAt: number
+): Promise<boolean> {
+  try {
+    await conversationApi.updateConversation(id, title, updatedAt);
+    return true;
+  } catch (error) {
+    console.error(`Failed to update conversation ${id} in backend:`, error);
+    return false;
+  }
+}

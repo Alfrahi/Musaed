@@ -21,7 +21,7 @@ import { useGlobalShortcuts } from '@/hooks/useGlobalShortcuts';
 import { cn } from '@/lib/utils';
 import { checkIsTauri } from '@/lib/ipc';
 
-import { useChatInitialization, useTauriEvents } from '@/features/chat';
+import { useChatInitialization, useTauriEvents, useConversationMessages } from '@/features/chat';
 import TaskStatus from '@/components/ui/TaskStatus';
 import OllamaConnectionStatus from '@/components/ui/OllamaConnectionStatus';
 
@@ -131,6 +131,7 @@ const HomeClient = () => {
 
   useTauriEvents();
   useGlobalShortcuts();
+  useConversationMessages();
 
   useEffect(() => {
     const unsubscribe = registerHydrationCoordination();

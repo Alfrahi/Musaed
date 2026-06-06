@@ -5,6 +5,7 @@ import { type Language } from '@musaed/contracts';
 import { useConversationStore } from '../../../store/stores/conversation-store';
 import { useMessageStore } from '../../../store/stores/message-store';
 import { useSettingsStore } from '../../../store/stores/settings-store';
+import { updateConversation as backendUpdateConversation } from '../../../lib/conversation-backend';
 import { generateConversationTitle, isDefaultTitle } from '../utils/title-generator';
 import { logger } from '../../../lib/logger';
 
@@ -25,7 +26,6 @@ export function useAutoTitle() {
     const state = useConversationStore.getState();
     const conversation = state.conversations[conversationId];
     if (!conversation) return;
-
     if (!isDefaultTitle(conversation.title)) return;
 
     const messages = useMessageStore.getState().messages[conversationId] || [];
@@ -37,7 +37,7 @@ export function useAutoTitle() {
 
     try {
       const ollamaUrl = useSettingsStore.getState().globalSettings.ollamaUrl;
-      const lang = useSettingsStore.getState().globalSettings.language as Language;
+      const lang = useSettingsStore.getState().globalSettings.language;
 
       const title = await generateConversationTitle(conversation, messages, ollamaUrl, lang);
       if (!title) return;
@@ -48,7 +48,9 @@ export function useAutoTitle() {
       if (!currentConv || !isDefaultTitle(currentConv.title)) return;
 
       useConversationStore.getState().updateConversation(conversationId, { title });
-
+      backendUpdateConversation(conversationId, title, Date.now()).catch((e) =>
+        console.error('Failed to persist auto-title:', e)
+      );
       logger.info('Auto-generated conversation title', { conversationId, title });
     } catch (err) {
       logger.warn('Auto-title generation failed', { conversationId, error: err });
@@ -70,7 +72,6 @@ export async function triggerAutoTitle(conversationId: string): Promise<void> {
   const state = useConversationStore.getState();
   const conversation = state.conversations[conversationId];
   if (!conversation) return;
-
   if (!isDefaultTitle(conversation.title)) return;
 
   const messages = useMessageStore.getState().messages[conversationId] || [];
@@ -88,14 +89,15 @@ export async function triggerAutoTitle(conversationId: string): Promise<void> {
       settings.ollamaUrl,
       settings.language
     );
-
     if (!title) return;
 
     const current = useConversationStore.getState().conversations[conversationId];
     if (!current || !isDefaultTitle(current.title)) return;
 
     useConversationStore.getState().updateConversation(conversationId, { title });
-
+    backendUpdateConversation(conversationId, title, Date.now()).catch((e) =>
+      console.error('Failed to persist auto-title:', e)
+    );
     logger.info('Auto-generated conversation title', { conversationId, title });
   } catch (err) {
     logger.warn('Auto-title generation failed', { conversationId, error: err });

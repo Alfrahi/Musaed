@@ -12,21 +12,16 @@ pub struct CommandResponse<T> {
     error: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct ConversationListResponse {
-    conversations: Vec<Conversation>,
-}
-
 #[tauri::command]
 pub async fn cmd_conversations_list(
     state: State<'_, Arc<Mutex<ConversationStore>>>,
-) -> Result<CommandResponse<ConversationListResponse>, String> {
+) -> Result<CommandResponse<Vec<Conversation>>, String> {
     let store = state.inner().lock().map_err(|e| e.to_string())?;
     match store.list_conversations() {
         Ok(conversations) => {
             let response = CommandResponse {
                 success: true,
-                data: Some(ConversationListResponse { conversations }),
+                data: Some(conversations),
                 error: None,
             };
             Ok(response)
@@ -164,7 +159,35 @@ pub async fn cmd_conversations_clear(
             Ok(response)
         }
         Err(e) => {
+            let response: CommandResponse<()> = CommandResponse {
+                success: false,
+                data: None,
+                error: Some(e.to_string()),
+            };
+            Ok(response)
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn cmd_conversation_update(
+    state: State<'_, Arc<Mutex<ConversationStore>>>,
+    id: String,
+    title: String,
+    updated_at: i64,
+) -> Result<CommandResponse<()>, String> {
+    let store = state.inner().lock().map_err(|e| e.to_string())?;
+    match store.update_conversation(&id, &title, updated_at) {
+        Ok(_) => {
             let response = CommandResponse {
+                success: true,
+                data: Some(()),
+                error: None,
+            };
+            Ok(response)
+        }
+        Err(e) => {
+            let response: CommandResponse<()> = CommandResponse {
                 success: false,
                 data: None,
                 error: Some(e.to_string()),

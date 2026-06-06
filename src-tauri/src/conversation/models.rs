@@ -20,25 +20,34 @@ pub struct Message {
     pub id: String,
     pub role: String,
     pub content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub images: Option<Vec<String>>,
-    #[serde(rename = "timestamp")]
     pub timestamp: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub done: Option<bool>,
-    #[serde(rename = "requestId")]
+    #[serde(rename = "requestId", skip_serializing_if = "Option::is_none")]
     pub request_id: Option<String>,
-    #[serde(rename = "eval_count")]
+    #[serde(rename = "evalCount", skip_serializing_if = "Option::is_none")]
     pub eval_count: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_duration: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub eval_duration: Option<i64>,
+    #[serde(rename = "ragSources", skip_serializing_if = "Option::is_none")]
     pub rag_sources: Option<Vec<RagSource>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RagSource {
+    #[serde(rename = "filePath")]
     pub file_path: String,
+    #[serde(rename = "startLine")]
     pub start_line: u32,
+    #[serde(rename = "endLine")]
     pub end_line: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub language: Option<String>,
 }
 

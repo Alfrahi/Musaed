@@ -349,24 +349,24 @@ export const MessageSchema = z.object({
   id: z.string(),
   role: z.enum(['user', 'assistant', 'system']),
   content: z.string(),
-  images: z.array(z.string()).optional(),
+  images: z.array(z.string()).nullish(),
   timestamp: z.number(),
-  model: z.string().optional(),
-  done: z.boolean().optional(),
-  requestId: z.string().optional(),
-  eval_count: z.number().optional(),
-  eval_duration: z.number().optional(),
-  total_duration: z.number().optional(),
+  model: z.string().nullish(),
+  done: z.boolean().nullish(),
+  requestId: z.string().nullish(),
+  eval_count: z.number().nullish(),
+  eval_duration: z.number().nullish(),
+  total_duration: z.number().nullish(),
   ragSources: z
     .array(
       z.object({
         filePath: z.string(),
         startLine: z.number(),
         endLine: z.number(),
-        language: z.string().optional(),
+        language: z.string().nullish(),
       })
     )
-    .optional(),
+    .nullish(),
 });
 
 export type Message = z.infer<typeof MessageSchema>;
@@ -602,6 +602,7 @@ export const COMMAND_VERSIONS = {
   cmd_message_append: 1,
   cmd_conversation_delete: 1,
   cmd_conversations_clear: 1,
+  cmd_conversation_update: 1,
 } as const;
 
 export type CommandName = keyof typeof COMMAND_VERSIONS;

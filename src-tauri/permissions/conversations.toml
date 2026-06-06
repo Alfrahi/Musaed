@@ -2,10 +2,11 @@
 identifier = "allow-conversation-commands"
 description = "Enables conversation management commands."
 commands.allow = [
-    "cmd_conversations_list",
-    "cmd_conversation_get",
-    "cmd_conversation_create",
-    "cmd_message_append",
-    "cmd_conversation_delete",
-    "cmd_conversations_clear",
+  "cmd_conversations_list",
+  "cmd_conversation_get",
+  "cmd_conversation_create",
+  "cmd_message_append",
+  "cmd_conversation_delete",
+  "cmd_conversations_clear",
+  "cmd_conversation_update",
 ]

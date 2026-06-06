@@ -141,6 +141,7 @@ export interface CommandMap {
   cmd_message_append: { args: { conversationId: string; message: Message }; return: void };
   cmd_conversation_delete: { args: { id: string }; return: void };
   cmd_conversations_clear: { args: Record<string, never>; return: void };
+  cmd_conversation_update: { args: { id: string; title: string; updatedAt: number }; return: void };
 }
 
 const voidSchema = z.preprocess((val) => (val === null ? undefined : val), z.void());
@@ -279,6 +280,11 @@ const CommandInputSchemas: {
   }),
   cmd_conversation_delete: z.object({ id: z.string().min(1) }),
   cmd_conversations_clear: undefined,
+  cmd_conversation_update: z.object({
+    id: z.string().min(1),
+    title: z.string().min(1),
+    updatedAt: z.number(),
+  }),
 };
 
 /**
@@ -323,6 +329,7 @@ const CommandReturnSchemas: {
   cmd_message_append: voidSchema,
   cmd_conversation_delete: voidSchema,
   cmd_conversations_clear: voidSchema,
+  cmd_conversation_update: voidSchema,
 };
 
 /**
@@ -428,11 +435,11 @@ async function callInternal<K extends keyof CommandMap>(
     const schema = CommandReturnSchemas[command];
 
     if (response?.success) {
-      if (!schema) return (response.data ?? (true as unknown)) as CommandMap[K]['return'];
+      if (!schema) return response.data ?? true;
       const result = schema.safeParse(response.data);
       if (!result.success) {
         // Prevent raw Zod errors from leaking
-        console.error(`[IPC] Response validation failed for "${command}"`);
+        console.error(`[IPC] Response validation failed for "${command}"`, result.error.issues);
         throw new Error('Invalid response from backend');
       }
       return result.data;
@@ -819,4 +826,6 @@ export const conversationApi = {
     callInternal('cmd_message_append', { conversationId, message }),
   deleteConversation: (id: string) => callInternal('cmd_conversation_delete', { id }),
   clearAllConversations: () => callInternal('cmd_conversations_clear', {}),
+  updateConversation: (id: string, title: string, updatedAt: number) =>
+    callInternal('cmd_conversation_update', { id, title, updatedAt }),
 };
