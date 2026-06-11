@@ -4,6 +4,7 @@ use tokio::sync::Mutex;
 use tracing_subscriber::layer::SubscriberExt;
 
 pub mod conversation;
+pub mod error_codes;
 pub mod generated_validation;
 pub mod logger;
 pub mod logging;

@@ -3,6 +3,7 @@
 //! Contains the `process_chat_stream` helper that reads newline-delimited JSON
 //! from Ollama's chat endpoint and emits Tauri events for each token.
 
+use crate::error_codes;
 use crate::payloads::{BackendError, OllamaToken};
 use futures::StreamExt;
 use serde_json::json;
@@ -50,7 +51,7 @@ pub(crate) async fn process_chat_stream<R: Runtime>(
                                     let msg = err.as_str().map(str::to_owned).unwrap_or_else(|| err.to_string());
                                     let _ = app.emit(
                                         EVENT_OLLAMA_ERROR,
-                                        &BackendError::new("OLLAMA_ERROR", msg)
+                                        &BackendError::new(error_codes::OLLAMA_ERROR, msg)
                                             .with_request_id(request_id.to_string()),
                                     );
                                     break;
@@ -80,7 +81,7 @@ pub(crate) async fn process_chat_stream<R: Runtime>(
                         tracing::warn!("Idle timeout on stream for request_id: {}", request_id);
                         let _ = app.emit(
                             EVENT_OLLAMA_ERROR,
-                            &BackendError::new("STREAM_IDLE_TIMEOUT", "No data received for too long")
+                            &BackendError::new(error_codes::STREAM_IDLE_TIMEOUT, "No data received for too long")
                                 .with_request_id(request_id.to_string()),
                         );
                         break;

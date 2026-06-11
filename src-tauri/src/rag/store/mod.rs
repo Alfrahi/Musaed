@@ -498,4 +498,101 @@ mod tests {
         let dim = store.get_embedding_dimension("p1").unwrap();
         assert_eq!(dim, 1024);
     }
+
+    /// Regression test for BUG-001: delete_file must not deadlock when
+    /// deleting embeddings, chunks, and the file row under a single Mutex
+    /// lock acquisition. std::sync::Mutex is non-recursive on Linux.
+    #[test]
+    fn test_delete_file_no_deadlock() {
+        let store = test_store();
+        store
+            .create_project(&make_test_project("p1", "A", "/a"))
+            .unwrap();
+
+        let file = FileRecord {
+            id: None,
+            project_id: "p1".to_string(),
+            relative_path: "src/deadlock_test.rs".to_string(),
+            file_hash: "deadbeef".to_string(),
+            file_size: 200,
+            modified_at: "2024-01-01".to_string(),
+            chunk_count: 2,
+        };
+        let file_id = store.upsert_file(&file).unwrap();
+
+        // Insert chunks and embeddings
+        for i in 0..2 {
+            let chunk = ChunkRow {
+                id: None,
+                project_id: "p1".to_string(),
+                file_id,
+                chunk_index: i,
+                content: format!("// chunk {i}"),
+                chunk_type: "code".to_string(),
+                language: Some("rust".to_string()),
+                start_line: i * 10 + 1,
+                end_line: i * 10 + 10,
+                metadata: serde_json::json!({}),
+            };
+            let chunk_id = store.insert_chunk(&chunk).unwrap();
+            let embedding = vec![0.0f32; 768];
+            store.insert_embedding(chunk_id, &embedding).unwrap();
+        }
+
+        // This call would previously deadlock (BUG-001).
+        store
+            .delete_file(file_id)
+            .expect("delete_file should succeed");
+
+        // Verify all data is gone
+        assert!(store.get_file_chunks(file_id).unwrap().is_empty());
+        assert!(store
+            .get_file_by_path("p1", "src/deadlock_test.rs")
+            .unwrap()
+            .is_none());
+    }
+
+    /// Regression test for BUG-001: delete_file_chunks must not deadlock
+    /// when deleting embeddings and chunks under a single Mutex lock.
+    #[test]
+    fn test_delete_file_chunks_no_deadlock() {
+        let store = test_store();
+        store
+            .create_project(&make_test_project("p1", "A", "/a"))
+            .unwrap();
+
+        let file = FileRecord {
+            id: None,
+            project_id: "p1".to_string(),
+            relative_path: "src/chunks_deadlock.rs".to_string(),
+            file_hash: "cafe".to_string(),
+            file_size: 100,
+            modified_at: "2024-01-01".to_string(),
+            chunk_count: 1,
+        };
+        let file_id = store.upsert_file(&file).unwrap();
+
+        let chunk = ChunkRow {
+            id: None,
+            project_id: "p1".to_string(),
+            file_id,
+            chunk_index: 0,
+            content: "fn test() {}".to_string(),
+            chunk_type: "code".to_string(),
+            language: Some("rust".to_string()),
+            start_line: 1,
+            end_line: 1,
+            metadata: serde_json::json!({}),
+        };
+        let chunk_id = store.insert_chunk(&chunk).unwrap();
+        let embedding = vec![0.0f32; 768];
+        store.insert_embedding(chunk_id, &embedding).unwrap();
+
+        // This call would previously deadlock (BUG-001).
+        store
+            .delete_file_chunks(file_id)
+            .expect("delete_file_chunks should succeed");
+
+        assert!(store.get_file_chunks(file_id).unwrap().is_empty());
+    }
 }

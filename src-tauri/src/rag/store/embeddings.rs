@@ -59,17 +59,3 @@ pub(super) fn insert_embeddings_batch(
         .map_err(|e| format!("Failed to commit embedding batch: {}", e))?;
     Ok(())
 }
-
-/// Delete embeddings for all chunks of a file (via subquery).
-pub(super) fn delete_embeddings_for_chunks_of_file(
-    store: &super::RagStore,
-    file_id: i64,
-) -> Result<(), String> {
-    let conn = store.conn.lock().map_err(|e| e.to_string())?;
-    conn.execute(
-        "DELETE FROM vec_chunks WHERE chunk_id IN (SELECT id FROM chunks WHERE file_id = ?1)",
-        rusqlite::params![file_id],
-    )
-    .map_err(|e| format!("Failed to delete embeddings: {}", e))?;
-    Ok(())
-}

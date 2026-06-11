@@ -8,6 +8,7 @@
 //! - [`cmd_ollama_delete_model`] — remove a model from the server
 //! - [`cmd_ollama_verify_service`] — confirm a URL points to an Ollama instance
 
+use crate::error_codes;
 use crate::payloads::{
     ApiResponse, BackendError, ModelValidation, OllamaModel, PullProgress, PullStreamError,
 };
@@ -41,7 +42,7 @@ pub async fn cmd_ollama_get_models(base_url: String) -> ApiResponse<Vec<OllamaMo
             return ApiResponse {
                 success: false,
                 data: None,
-                error: Some(BackendError::new("RATE_LIMITED", msg)),
+                error: Some(BackendError::new(error_codes::RATE_LIMITED, msg)),
             }
         }
     };
@@ -84,7 +85,7 @@ pub async fn cmd_ollama_get_models(base_url: String) -> ApiResponse<Vec<OllamaMo
                     success: false,
                     data: None,
                     error: Some(
-                        BackendError::new("INVALID_RESPONSE", e.to_string())
+                        BackendError::new(error_codes::INVALID_RESPONSE, e.to_string())
                             .with_context("Failed to parse JSON response from Ollama".to_string()),
                     ),
                 }
@@ -96,7 +97,7 @@ pub async fn cmd_ollama_get_models(base_url: String) -> ApiResponse<Vec<OllamaMo
                 success: false,
                 data: None,
                 error: Some(
-                    BackendError::new("NETWORK_ERROR", e.to_string())
+                    BackendError::new(error_codes::NETWORK_ERROR, e.to_string())
                         .with_context("Failed to connect to Ollama server".to_string())
                         .retryable(),
                 ),
@@ -131,7 +132,7 @@ pub async fn cmd_ollama_validate_model(
                     model_name: model_name.clone(),
                     details: None,
                 }),
-                error: Some(BackendError::new("RATE_LIMITED", msg)),
+                error: Some(BackendError::new(error_codes::RATE_LIMITED, msg)),
             }
         }
     };
@@ -171,7 +172,7 @@ pub async fn cmd_ollama_validate_model(
                         model_name,
                         details: None,
                     }),
-                    error: Some(BackendError::new("PARSE_ERROR", e.to_string())),
+                    error: Some(BackendError::new(error_codes::PARSE_ERROR, e.to_string())),
                 }
             }
         },
@@ -200,7 +201,7 @@ pub async fn cmd_ollama_validate_model(
                     details: None,
                 }),
                 error: Some(
-                    BackendError::new("NETWORK_ERROR", e.to_string())
+                    BackendError::new(error_codes::NETWORK_ERROR, e.to_string())
                         .with_context("Failed to connect to Ollama server".to_string())
                         .retryable(),
                 ),
@@ -245,7 +246,7 @@ pub async fn cmd_ollama_pull_model<R: Runtime>(
             return ApiResponse {
                 success: false,
                 data: None,
-                error: Some(BackendError::new("RATE_LIMITED", msg)),
+                error: Some(BackendError::new(error_codes::RATE_LIMITED, msg)),
             }
         }
     };
@@ -457,7 +458,7 @@ pub async fn cmd_ollama_delete_model(base_url: String, name: String) -> ApiRespo
             return ApiResponse {
                 success: false,
                 data: Some(false),
-                error: Some(BackendError::new("RATE_LIMITED", msg)),
+                error: Some(BackendError::new(error_codes::RATE_LIMITED, msg)),
             }
         }
     };
@@ -499,7 +500,7 @@ pub async fn cmd_ollama_delete_model(base_url: String, name: String) -> ApiRespo
                 success: false,
                 data: Some(false),
                 error: Some(
-                    BackendError::new("NETWORK_ERROR", e.to_string())
+                    BackendError::new(error_codes::NETWORK_ERROR, e.to_string())
                         .with_context("Failed to connect to Ollama server".to_string())
                         .retryable(),
                 ),
@@ -522,7 +523,7 @@ pub async fn cmd_ollama_verify_service(base_url: String) -> ApiResponse<String> 
             return ApiResponse {
                 success: false,
                 data: None,
-                error: Some(BackendError::new("RATE_LIMITED", msg)),
+                error: Some(BackendError::new(error_codes::RATE_LIMITED, msg)),
             }
         }
     };

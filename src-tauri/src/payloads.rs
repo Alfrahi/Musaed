@@ -19,9 +19,13 @@ pub struct BackendError {
 }
 
 impl BackendError {
-    pub fn new(code: impl Into<String>, message: impl Into<String>) -> Self {
+    /// Creates a new error using a canonical error code constant from
+    /// [`crate::error_codes`]. The `code` parameter MUST be a `&'static str`
+    /// constant defined in that module — raw string literals are rejected by
+    /// the type signature to prevent untracked error codes.
+    pub fn new(code: &'static str, message: impl Into<String>) -> Self {
         Self {
-            code: code.into(),
+            code: code.to_string(),
             message: message.into(),
             request_id: None,
             context: None,
@@ -139,13 +143,14 @@ pub struct ModelValidation {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error_codes;
 
     // --- BackendError builder tests ---
 
     #[test]
     fn backend_error_new() {
-        let err = BackendError::new("TEST_CODE", "test message");
-        assert_eq!(err.code, "TEST_CODE");
+        let err = BackendError::new(error_codes::UNKNOWN, "test message");
+        assert_eq!(err.code, "UNKNOWN");
         assert_eq!(err.message, "test message");
         assert!(err.request_id.is_none());
         assert!(err.context.is_none());
@@ -154,7 +159,7 @@ mod tests {
 
     #[test]
     fn backend_error_builder_chain() {
-        let err = BackendError::new("E", "msg")
+        let err = BackendError::new(error_codes::INTERNAL_ERROR, "msg")
             .with_request_id("req-123".to_string())
             .with_context("some context".to_string())
             .retryable();
@@ -165,7 +170,7 @@ mod tests {
 
     #[test]
     fn backend_error_serializes_camel_case() {
-        let err = BackendError::new("CODE", "msg")
+        let err = BackendError::new(error_codes::RATE_LIMITED, "msg")
             .with_request_id("r1".to_string())
             .retryable();
         let json = serde_json::to_string(&err).unwrap();
@@ -192,11 +197,11 @@ mod tests {
         let resp: ApiResponse<String> = ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new("ERR", "fail")),
+            error: Some(BackendError::new(error_codes::INTERNAL_ERROR, "fail")),
         };
         let json = serde_json::to_string(&resp).unwrap();
         assert!(json.contains("\"success\":false"));
-        assert!(json.contains("\"code\":\"ERR\""));
+        assert!(json.contains("\"code\":\"INTERNAL_ERROR\""));
     }
 
     #[test]

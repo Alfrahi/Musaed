@@ -48,7 +48,7 @@ pub fn is_valid_language(lang: &str) -> bool {
 // ====================== VALIDATION HELPERS ======================
 
 /// Builds a validation error `ApiResponse`.
-pub fn validation_error<T>(code: &str, message: impl Into<String>) -> ApiResponse<T> {
+pub fn validation_error<T>(code: &'static str, message: impl Into<String>) -> ApiResponse<T> {
     ApiResponse {
         success: false,
         data: None,
@@ -162,6 +162,7 @@ pub fn validate_chat_message(msg: &crate::payloads::ChatMessage) -> Result<(), S
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error_codes;
     use crate::payloads::ChatOptions;
 
     // --- is_valid_model_name ---
@@ -385,7 +386,7 @@ mod tests {
 
     #[test]
     fn validation_error_response() {
-        let resp: ApiResponse<String> = validation_error("INVALID_INPUT", "bad data");
+        let resp: ApiResponse<String> = validation_error(error_codes::INVALID_INPUT, "bad data");
         assert!(!resp.success);
         assert!(resp.data.is_none());
         assert_eq!(resp.error.unwrap().code, "INVALID_INPUT");

@@ -7,8 +7,7 @@ use rusqlite::params;
 pub(super) fn insert_chunk(store: &super::RagStore, chunk: &ChunkRow) -> Result<i64, String> {
     let conn = store.conn.lock().map_err(|e| e.to_string())?;
     conn.execute(
-        "INSERT INTO chunks (project_id, file_id, chunk_index, content, chunk_type, language, start_line, end_line, metadata)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        "INSERT INTO chunks (project_id, file_id, chunk_index, content, chunk_type, language, start_line, end_line, metadata) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         params![
             chunk.project_id,
             chunk.file_id,
@@ -22,7 +21,6 @@ pub(super) fn insert_chunk(store: &super::RagStore, chunk: &ChunkRow) -> Result<
         ],
     )
     .map_err(|e| format!("Failed to insert chunk: {}", e))?;
-
     Ok(conn.last_insert_rowid())
 }
 
@@ -35,13 +33,11 @@ pub(super) fn insert_chunks_batch(
     let tx = conn
         .unchecked_transaction()
         .map_err(|e| format!("Failed to begin transaction: {}", e))?;
-
     {
         let mut stmt = tx.prepare(
-            "INSERT INTO chunks (project_id, file_id, chunk_index, content, chunk_type, language, start_line, end_line, metadata)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
-        ).map_err(|e| format!("Failed to prepare insert: {}", e))?;
-
+            "INSERT INTO chunks (project_id, file_id, chunk_index, content, chunk_type, language, start_line, end_line, metadata) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        )
+        .map_err(|e| format!("Failed to prepare insert: {}", e))?;
         for chunk in chunks {
             stmt.execute(params![
                 chunk.project_id,
@@ -57,7 +53,6 @@ pub(super) fn insert_chunks_batch(
             .map_err(|e| format!("Failed to insert chunk: {}", e))?;
         }
     }
-
     tx.commit()
         .map_err(|e| format!("Failed to commit chunk batch: {}", e))?;
     Ok(())
@@ -72,7 +67,6 @@ pub(super) fn get_file_chunks(
     let mut stmt = conn
         .prepare("SELECT id, chunk_index, content, chunk_type, language, start_line, end_line, metadata FROM chunks WHERE file_id = ?1 ORDER BY chunk_index")
         .map_err(|e| format!("Failed to prepare query: {}", e))?;
-
     let chunks = stmt
         .query_map(params![file_id], |row| {
             let metadata_str: String = row.get(7)?;
@@ -90,26 +84,26 @@ pub(super) fn get_file_chunks(
         .map_err(|e| format!("Failed to query chunks: {}", e))?
         .filter_map(|r| r.ok())
         .collect();
-
     Ok(chunks)
 }
 
 /// Delete all chunks for a given file (and their embeddings).
+///
+/// Both deletions must happen under a **single** lock acquisition to avoid
+/// deadlocking on Linux where `std::sync::Mutex` is non-recursive (BUG-001).
 pub(super) fn delete_file_chunks(store: &super::RagStore, file_id: i64) -> Result<(), String> {
-    // Delete embeddings first
-    super::embeddings::delete_embeddings_for_chunks_of_file(store, file_id)?;
-    // Delete chunks
-    delete_file_chunks_internal(store, file_id)?;
-    Ok(())
-}
-
-/// Internal: delete chunks for a file (without embeddings).
-pub(super) fn delete_file_chunks_internal(
-    store: &super::RagStore,
-    file_id: i64,
-) -> Result<(), String> {
     let conn = store.conn.lock().map_err(|e| e.to_string())?;
+
+    // Delete embeddings first (via subquery)
+    conn.execute(
+        "DELETE FROM vec_chunks WHERE chunk_id IN (SELECT id FROM chunks WHERE file_id = ?1)",
+        params![file_id],
+    )
+    .map_err(|e| format!("Failed to delete embeddings: {}", e))?;
+
+    // Delete chunks
     conn.execute("DELETE FROM chunks WHERE file_id = ?1", params![file_id])
         .map_err(|e| format!("Failed to delete chunks: {}", e))?;
+
     Ok(())
 }

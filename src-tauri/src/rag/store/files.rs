@@ -2,9 +2,6 @@
 
 use rusqlite::OptionalExtension;
 
-use super::chunks::delete_file_chunks_internal;
-use super::embeddings::delete_embeddings_for_chunks_of_file;
-
 /// Upsert a file record. Returns the file ID.
 pub(super) fn upsert_file(
     store: &super::RagStore,
@@ -42,14 +39,26 @@ pub(super) fn upsert_file(
 }
 
 /// Delete a file and all its associated chunks and embeddings.
+///
+/// All three deletions (embeddings, chunks, file) must happen under a **single**
+/// lock acquisition. Calling the per-table helpers would re-lock the Mutex and
+/// deadlock on Linux where `std::sync::Mutex` is non-recursive (BUG-001).
 pub(super) fn delete_file(store: &super::RagStore, file_id: i64) -> Result<(), String> {
     let conn = store.conn.lock().map_err(|e| e.to_string())?;
 
     // Delete embeddings first (via subquery)
-    delete_embeddings_for_chunks_of_file(store, file_id)?;
+    conn.execute(
+        "DELETE FROM vec_chunks WHERE chunk_id IN (SELECT id FROM chunks WHERE file_id = ?1)",
+        rusqlite::params![file_id],
+    )
+    .map_err(|e| format!("Failed to delete embeddings: {}", e))?;
 
     // Delete chunks explicitly for safety, though CASCADE should handle
-    delete_file_chunks_internal(store, file_id)?;
+    conn.execute(
+        "DELETE FROM chunks WHERE file_id = ?1",
+        rusqlite::params![file_id],
+    )
+    .map_err(|e| format!("Failed to delete chunks: {}", e))?;
 
     // Delete file
     conn.execute(
@@ -68,6 +77,7 @@ pub(super) fn get_file_by_path(
     relative_path: &str,
 ) -> Result<Option<crate::rag::types::FileRecord>, String> {
     let conn = store.conn.lock().map_err(|e| e.to_string())?;
+
     let mut stmt = conn
         .prepare("SELECT id, project_id, relative_path, file_hash, file_size, modified_at, chunk_count FROM files WHERE project_id = ?1 AND relative_path = ?2")
         .map_err(|e| format!("Failed to prepare query: {}", e))?;
@@ -96,6 +106,7 @@ pub(super) fn get_project_files(
     project_id: &str,
 ) -> Result<Vec<crate::rag::types::FileRecord>, String> {
     let conn = store.conn.lock().map_err(|e| e.to_string())?;
+
     let mut stmt = conn
         .prepare("SELECT id, project_id, relative_path, file_hash, file_size, modified_at, chunk_count FROM files WHERE project_id = ?1 ORDER BY relative_path")
         .map_err(|e| format!("Failed to prepare query: {}", e))?;

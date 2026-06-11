@@ -1,5 +1,6 @@
 //! Shared utilities, global state, and HTTP client used across command modules.
 
+use crate::error_codes;
 use crate::ollama_url::parse_ollama_base_url;
 use crate::payloads::ApiResponse;
 use crate::payloads::BackendError;
@@ -111,7 +112,7 @@ pub fn invalid_ollama_base<T>(msg: impl Into<String>) -> ApiResponse<T> {
     ApiResponse {
         success: false,
         data: None,
-        error: Some(BackendError::new("INVALID_URL", msg.into())),
+        error: Some(BackendError::new(error_codes::INVALID_URL, msg.into())),
     }
 }
 

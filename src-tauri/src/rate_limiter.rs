@@ -6,6 +6,7 @@
 use dashmap::DashMap;
 use std::time::{Duration, Instant};
 
+use crate::error_codes;
 use crate::payloads::BackendError;
 
 /// Rate limit configuration for a specific command.
@@ -104,7 +105,7 @@ impl RateLimiter {
         // Check if the number of requests exceeds the limit
         if timestamps.len() >= config.max_requests {
             return Err(BackendError::new(
-                "RATE_LIMITED",
+                error_codes::RATE_LIMITED,
                 format!(
                     "Rate limit exceeded for command '{}'. Maximum {} requests per {}ms.",
                     command, config.max_requests, config.window_ms

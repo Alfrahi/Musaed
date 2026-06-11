@@ -12,6 +12,7 @@ use super::client::{
     STREAM_ABSOLUTE_TIMEOUT_SECS,
 };
 use super::streaming::process_chat_stream;
+use crate::error_codes;
 use crate::payloads::{BackendError, ChatMessage, ChatOptions, OllamaHealth};
 use crate::validation::{
     is_valid_model_name, is_valid_request_id, validate_chat_message, validate_chat_options,
@@ -57,13 +58,13 @@ impl OllamaChatService {
         // --- Input validation ---
         if !is_valid_model_name(&model) {
             return Err(BackendError::new(
-                "INVALID_INPUT",
+                error_codes::INVALID_INPUT,
                 format!("Invalid model name: {:?}", model),
             ));
         }
         if !is_valid_request_id(&request_id) {
             return Err(BackendError::new(
-                "INVALID_INPUT",
+                error_codes::INVALID_INPUT,
                 format!("Invalid request_id: {:?}", request_id),
             ));
         }
@@ -79,11 +80,11 @@ impl OllamaChatService {
         }
         for msg in &messages {
             if let Err(e) = validate_chat_message(msg) {
-                return Err(BackendError::new("INVALID_INPUT", e));
+                return Err(BackendError::new(error_codes::INVALID_INPUT, e));
             }
         }
         if let Err(e) = validate_chat_options(&options) {
-            return Err(BackendError::new("INVALID_INPUT", e));
+            return Err(BackendError::new(error_codes::INVALID_INPUT, e));
         }
 
         // Image size safety check
@@ -106,23 +107,24 @@ impl OllamaChatService {
 
         let url = match ollama_endpoint(&base_url, "api/chat") {
             Ok(u) => u,
-            Err(msg) => return Err(BackendError::new("INVALID_URL", msg)),
+            Err(msg) => return Err(BackendError::new(error_codes::INVALID_URL, msg)),
         };
 
         let _global_permit = match acquire_global_permit().await {
             Ok(p) => p,
             Err(msg) => {
-                return Err(BackendError::new("RATE_LIMITED", msg));
+                return Err(BackendError::new(error_codes::RATE_LIMITED, msg));
             }
         };
 
         // Atomic duplicate check (bounded insert with LRU eviction)
         if !request_cache_try_insert(request_id.clone()) {
             tracing::warn!("Duplicate request detected: {}", request_id);
-            return Err(
-                BackendError::new("DUPLICATE_REQUEST", "Request already in progress")
-                    .with_request_id(request_id),
-            );
+            return Err(BackendError::new(
+                error_codes::DUPLICATE_REQUEST,
+                "Request already in progress",
+            )
+            .with_request_id(request_id));
         }
 
         let permit = match CONCURRENT_SEMAPHORE.acquire().await {
@@ -170,10 +172,12 @@ impl OllamaChatService {
                 tracing::error!("Failed to send chat request: {}", e);
                 ABORT_HANDLES.remove(&request_id);
                 REQUEST_CACHE.remove(&request_id);
-                return Err(BackendError::new("REQUEST_ERROR", e.to_string())
-                    .with_request_id(request_id)
-                    .with_context("Failed to connect to Ollama chat endpoint".to_string())
-                    .retryable());
+                return Err(
+                    BackendError::new(error_codes::INTERNAL_ERROR, e.to_string())
+                        .with_request_id(request_id)
+                        .with_context("Failed to connect to Ollama chat endpoint".to_string())
+                        .retryable(),
+                );
             }
         };
 
@@ -184,7 +188,7 @@ impl OllamaChatService {
 
             ABORT_HANDLES.remove(&request_id);
             REQUEST_CACHE.remove(&request_id);
-            return Err(BackendError::new("OLLAMA_ERROR", error_text)
+            return Err(BackendError::new(error_codes::OLLAMA_ERROR, error_text)
                 .with_request_id(request_id)
                 .with_context(format!("HTTP Status: {}", status)));
         }
@@ -227,7 +231,7 @@ impl OllamaChatService {
                 );
                 let _ = app_clone.emit(
                     EVENT_OLLAMA_ERROR,
-                    &BackendError::new("STREAM_TIMEOUT", "Chat stream timed out")
+                    &BackendError::new(error_codes::STREAM_TIMEOUT, "Chat stream timed out")
                         .with_request_id(request_id_clone.clone()),
                 );
             }
@@ -255,13 +259,13 @@ impl OllamaChatService {
         let _global_permit = match acquire_global_permit().await {
             Ok(p) => p,
             Err(msg) => {
-                return Err(BackendError::new("RATE_LIMITED", msg));
+                return Err(BackendError::new(error_codes::RATE_LIMITED, msg));
             }
         };
 
         let url = match ollama_endpoint(&base_url, "api/tags") {
             Ok(u) => u,
-            Err(msg) => return Err(BackendError::new("INVALID_URL", msg)),
+            Err(msg) => return Err(BackendError::new(error_codes::INVALID_URL, msg)),
         };
 
         match FAST_HTTP_CLIENT.get(&url).send().await {
@@ -300,10 +304,16 @@ impl OllamaChatService {
             Err(e) => {
                 if e.is_timeout() {
                     tracing::warn!("Ollama health check timed out");
-                    Err(BackendError::new("HEALTH_CHECK_TIMEOUT", "Request timed out").retryable())
+                    Err(
+                        BackendError::new(error_codes::HEALTH_CHECK_TIMEOUT, "Request timed out")
+                            .retryable(),
+                    )
                 } else {
                     tracing::warn!("Ollama health check failed: {}", e);
-                    Err(BackendError::new("HEALTH_CHECK_FAILED", e.to_string()).retryable())
+                    Err(
+                        BackendError::new(error_codes::HEALTH_CHECK_FAILED, e.to_string())
+                            .retryable(),
+                    )
                 }
             }
         }
