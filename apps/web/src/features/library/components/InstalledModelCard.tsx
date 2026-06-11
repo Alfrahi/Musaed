@@ -11,8 +11,8 @@ interface InstalledModelCardProps {
   name: string;
   size?: number | string | null;
   details?: {
-    parameter_size?: string | null;
-    quantization_level?: string | null;
+    parameterSize?: string | null;
+    quantizationLevel?: string | null;
     family?: string | null;
   };
   onDelete?: (name: string) => void;
@@ -49,7 +49,7 @@ const InstalledModelCard = ({
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-bold">{name}</h3>
-            {details?.parameter_size && (
+            {details?.parameterSize && (
               <span
                 className={cn(
                   'rounded-sm px-1.5 py-0.5 text-[9px] font-black tracking-tighter uppercase',
@@ -58,7 +58,7 @@ const InstalledModelCard = ({
                     : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800'
                 )}
               >
-                {details.parameter_size}
+                {details.parameterSize}
               </span>
             )}
           </div>
@@ -69,9 +69,9 @@ const InstalledModelCard = ({
                 {displaySize}
               </span>
             )}
-            {details?.quantization_level && (
+            {details?.quantizationLevel && (
               <span className="font-mono text-[10px] text-zinc-400">
-                {details.quantization_level}
+                {details.quantizationLevel}
               </span>
             )}
           </div>

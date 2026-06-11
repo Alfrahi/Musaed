@@ -26,8 +26,8 @@ describe('Contracts: Zod Schemas', () => {
       details: {
         format: 'gguf',
         family: 'llama',
-        parameter_size: '8B',
-        quantization_level: 'Q4_0',
+        parameterSize: '8B',
+        quantizationLevel: 'Q4_0',
       },
     };
     expect(OllamaModelSchema.safeParse(validModel).success).toBe(true);

@@ -22,8 +22,8 @@ interface ModelCardProps {
   description?: string;
   size?: number | string | null;
   details?: {
-    parameter_size?: string | null;
-    quantization_level?: string | null;
+    parameterSize?: string | null;
+    quantizationLevel?: string | null;
     family?: string | null;
   };
   isDownloaded: boolean;
@@ -70,7 +70,7 @@ const InstalledModelCard = ({
   language: Language;
 }) => {
   const { t } = useTranslation(language);
-  const { isHeavy } = getHardwareFit(details?.parameter_size);
+  const { isHeavy } = getHardwareFit(details?.parameterSize);
 
   return (
     <div className="group flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/50 dark:hover:border-zinc-700">
@@ -81,7 +81,7 @@ const InstalledModelCard = ({
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-bold">{name}</h3>
-            {details?.parameter_size && (
+            {details?.parameterSize && (
               <span
                 className={cn(
                   'rounded-sm px-1.5 py-0.5 text-[9px] font-black tracking-tighter uppercase',
@@ -90,7 +90,7 @@ const InstalledModelCard = ({
                     : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800'
                 )}
               >
-                {details.parameter_size}
+                {details.parameterSize}
               </span>
             )}
           </div>
@@ -130,8 +130,8 @@ const InstalledModelMeta = ({
         {displaySize}
       </span>
     )}
-    {details?.quantization_level && (
-      <span className="font-mono text-[10px] text-zinc-400">{details.quantization_level}</span>
+    {details?.quantizationLevel && (
+      <span className="font-mono text-[10px] text-zinc-400">{details.quantizationLevel}</span>
     )}
   </div>
 );
@@ -369,7 +369,7 @@ const ModelCard = ({
 
   const displaySize = size ? (typeof size === 'string' ? size : formatFileSize(size)) : null;
   const capabilities = getModelCapabilities(name);
-  const hardwareFit = getHardwareFit(details?.parameter_size);
+  const hardwareFit = getHardwareFit(details?.parameterSize);
 
   if (variant === 'installed') {
     return (

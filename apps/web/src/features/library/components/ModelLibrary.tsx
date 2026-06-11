@@ -85,8 +85,8 @@ const InstalledList = ({
     name: string;
     size?: number | null;
     details?: {
-      parameter_size?: string | null;
-      quantization_level?: string | null;
+      parameterSize?: string | null;
+      quantizationLevel?: string | null;
       family?: string | null;
     } | null;
   }[];

@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 
 interface ModelDetails {
-  parameter_size?: string | null;
-  quantization_level?: string | null;
+  parameterSize?: string | null;
+  quantizationLevel?: string | null;
   family?: string | null;
 }
 
@@ -16,7 +16,7 @@ export const useModelCapabilities = (name: string, details?: ModelDetails) => {
     const isCode = nameLower.includes('code') || nameLower.includes('coder');
     const isReasoning = nameLower.includes('r1') || nameLower.includes('reasoner');
 
-    const paramSize = details?.parameter_size?.toLowerCase() || '';
+    const paramSize = details?.parameterSize?.toLowerCase() || '';
     const isHeavy =
       paramSize.includes('70b') || paramSize.includes('110b') || paramSize.includes('405b');
     const isLight =

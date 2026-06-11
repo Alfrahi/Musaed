@@ -278,8 +278,8 @@ export const LogClearTokenSchema = z
 export const OllamaModelDetailsSchema = z.object({
   format: z.string().nullish(),
   family: z.string().nullish(),
-  parameter_size: z.string().nullish(),
-  quantization_level: z.string().nullish(),
+  parameterSize: z.string().nullish(),
+  quantizationLevel: z.string().nullish(),
 });
 
 export const OllamaModelSchema = z.object({
@@ -304,11 +304,11 @@ export const OllamaTokenSchema = z.object({
   createdAt: z.string().nullish(),
   message: ChatMessageSchema.nullish(),
   done: z.boolean().default(false),
-  total_duration: z.number().nullish(),
-  load_duration: z.number().nullish(),
-  prompt_eval_count: z.number().nullish(),
-  eval_count: z.number().nullish(),
-  eval_duration: z.number().nullish(),
+  totalDuration: z.number().nullish(),
+  loadDuration: z.number().nullish(),
+  promptEvalCount: z.number().nullish(),
+  evalCount: z.number().nullish(),
+  evalDuration: z.number().nullish(),
   requestId: z.string().nullish(),
 });
 
@@ -316,9 +316,11 @@ export type OllamaToken = z.infer<typeof OllamaTokenSchema>;
 
 export const PullProgressSchema = z.object({
   status: z.string(),
+  digest: z.string().nullish(),
   completed: z.number().nullish(),
   total: z.number().nullish(),
   name: z.string().nullish(),
+  percentage: z.number().nullish(),
 });
 
 export type PullProgress = z.infer<typeof PullProgressSchema>;
@@ -406,9 +408,9 @@ export const MessageSchema = z.object({
   model: z.string().nullish(),
   done: z.boolean().nullish(),
   requestId: z.string().nullish(),
-  eval_count: z.number().nullish(),
-  eval_duration: z.number().nullish(),
-  total_duration: z.number().nullish(),
+  evalCount: z.number().nullish(),
+  evalDuration: z.number().nullish(),
+  totalDuration: z.number().nullish(),
   ragSources: z
     .array(
       z.object({

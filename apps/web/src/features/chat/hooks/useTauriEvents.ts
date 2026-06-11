@@ -114,8 +114,8 @@ const createPullProgressHandler =
         details?: {
           format?: string | null;
           family?: string | null;
-          parameter_size?: string | null;
-          quantization_level?: string | null;
+          parameterSize?: string | null;
+          quantizationLevel?: string | null;
         } | null;
       }[]
     ) => void,

@@ -18,12 +18,12 @@ describe('Model Store', () => {
         details: {
           format: 'gguf',
           family: 'llama',
-          parameter_size: '8b',
-          quantization_level: 'q4_0',
+          parameterSize: '8b',
+          quantizationLevel: 'q4_0',
         },
       },
     ];
-    useModelStore.getState().setModels(mockModels as any);
+    useModelStore.getState().setModels(mockModels);
     expect(useModelStore.getState().models).toEqual(mockModels);
   });
 
