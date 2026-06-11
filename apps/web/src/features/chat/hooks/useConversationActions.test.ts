@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-
 import { useConversationActions } from './useConversationActions';
-import { useBatchUpdate, useSetConversations } from '@/store/hooks';
+import { useBatchUpdate, useUpdateConversation } from '@/store/hooks';
 import { coordinateStopStream } from '@/store/coordination';
 import { chatApi } from '@/lib/ipc';
 import { useStreamingStore } from '@/store/stores/streaming-store';
@@ -11,7 +10,7 @@ import { useConversationStore } from '@/store/stores/conversation-store';
 
 // Mock hooks
 vi.mock('@/store/hooks', () => ({
-  useSetConversations: vi.fn(() => vi.fn()),
+  useUpdateConversation: vi.fn(() => vi.fn()),
   useBatchUpdate: vi.fn(() => vi.fn()),
   useLanguage: vi.fn(() => 'en'),
 }));
@@ -47,6 +46,7 @@ vi.mock('@/lib/ipc', () => ({
     appendMessage: vi.fn(),
     deleteConversation: vi.fn(),
     clearAllConversations: vi.fn(),
+    updateConversation: vi.fn(),
   },
   logApi: {
     append: vi.fn(),
@@ -126,7 +126,7 @@ vi.mock('@/store/stores/streaming-store', () => {
 
 // Get references to the mock functions for configuration
 const mockUseBatchUpdate = useBatchUpdate as any;
-const mockUseSetConversations = useSetConversations as any;
+const mockUseUpdateConversation = useUpdateConversation as any;
 const mockCoordinateStopStream = coordinateStopStream as any;
 const mockUseStreamingStore = useStreamingStore as any;
 const mockUseMessageStore = useMessageStore as any;
@@ -135,10 +135,9 @@ const mockUseConversationStore = useConversationStore as any;
 describe('useConversationActions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-
     // Default implementations
     mockUseBatchUpdate.mockReturnValue(vi.fn());
-    mockUseSetConversations.mockReturnValue(vi.fn());
+    mockUseUpdateConversation.mockReturnValue(vi.fn());
 
     // Streaming store default
     mockUseStreamingStore.getState.mockReturnValue({
@@ -180,7 +179,6 @@ describe('useConversationActions', () => {
   it('deletes conversation and clears messages', () => {
     const mockBatchUpdate = vi.fn();
     const mockClearMessages = vi.fn();
-
     mockUseBatchUpdate.mockReturnValue(mockBatchUpdate);
     mockUseMessageStore.getState.mockReturnValue({
       messages: {},
@@ -228,9 +226,9 @@ describe('useConversationActions', () => {
     expect(mockCoordinateStopStream).toHaveBeenCalledWith('conv1');
   });
 
-  it('updates conversation title and timestamp', () => {
-    const mockSetConversations = vi.fn();
-    mockUseSetConversations.mockReturnValue(mockSetConversations);
+  it('updates conversation title via updateConversation with id and partial updates', () => {
+    const mockUpdateConversation = vi.fn();
+    mockUseUpdateConversation.mockReturnValue(mockUpdateConversation);
 
     const { result } = renderHook(() => useConversationActions());
 
@@ -238,7 +236,10 @@ describe('useConversationActions', () => {
       result.current.updateConversationTitle('conv1', 'New Title');
     });
 
-    expect(mockSetConversations).toHaveBeenCalled();
+    expect(mockUpdateConversation).toHaveBeenCalledWith('conv1', {
+      title: 'New Title',
+      updatedAt: expect.any(Number),
+    });
   });
 
   it('clears all conversations, ids, and messages', () => {

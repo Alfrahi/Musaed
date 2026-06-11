@@ -14,6 +14,7 @@ vi.mock('@/lib/ipc', () => ({
     appendMessage: vi.fn(),
     deleteConversation: vi.fn(),
     clearAllConversations: vi.fn(),
+    updateConversation: vi.fn(),
   },
   ragApi: {
     search: vi.fn(),
@@ -141,6 +142,7 @@ vi.mock('@/store/hooks', () => ({
   useSetUIError: vi.fn(() => vi.fn()),
   useActiveRagProject: vi.fn(() => null),
   useSetConversations: vi.fn(() => vi.fn()),
+  useUpdateConversation: vi.fn(() => vi.fn()),
   useBatchUpdate: vi.fn(() => vi.fn()),
   useConversationActions: vi.fn(() => ({
     initiateStreaming: vi.fn().mockImplementation((conversationId, requestId, onStreamUpdate) => {

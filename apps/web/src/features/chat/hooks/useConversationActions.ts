@@ -9,7 +9,7 @@ import {
   useStreamingStore,
   useMessageStore,
 } from '../../../store';
-import { useSetConversations, useBatchUpdate } from '../../../store/hooks';
+import { useUpdateConversation, useBatchUpdate } from '../../../store/hooks';
 import { chatApi, conversationApi } from '../../../lib/ipc';
 import { coordinateStartStream, coordinateStopStream } from '../../../store/coordination';
 import { useTranslation } from '../../../lib/i18n';
@@ -36,6 +36,7 @@ const createConversation = async (
 ) => {
   const modelState = useModelStore.getState();
   const settingsState = useSettingsStore.getState();
+
   const id = crypto.randomUUID();
   const newConv: ConversationMetadata = {
     id,
@@ -66,7 +67,7 @@ const createConversation = async (
  * Hook for conversation management (create, delete, rename, clear).
  */
 export const useConversationActions = () => {
-  const setConversations = useSetConversations();
+  const updateConversation = useUpdateConversation();
   const batchUpdate = useBatchUpdate();
   const { t } = useTranslation(useSettingsStore.getState().globalSettings.language);
 
@@ -77,7 +78,6 @@ export const useConversationActions = () => {
   const deleteConversation = useCallback(
     (id: string) => {
       abortStreaming(id);
-
       const state = useConversationStore.getState();
       const { [id]: _removed, ...remainingConversations } = state.conversations;
       const remainingIds = state.conversationIds.filter((cid) => cid !== id);
@@ -107,17 +107,13 @@ export const useConversationActions = () => {
   const updateConversationTitle = useCallback(
     (id: string, title: string) => {
       const updatedAt = Date.now();
-      const state = useConversationStore.getState();
-      const updated = state.conversationIds.map((cid) =>
-        cid === id ? { ...state.conversations[cid], title, updatedAt } : state.conversations[cid]
-      );
-      setConversations(updated);
+      updateConversation(id, { title, updatedAt });
       // Persist title update to Rust backend
       backendUpdateConversation(id, title, updatedAt).catch((e) =>
         console.error('Failed to persist title update:', e)
       );
     },
-    [setConversations]
+    [updateConversation]
   );
 
   const clearAllConversations = useCallback(() => {
