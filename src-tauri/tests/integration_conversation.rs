@@ -1,5 +1,5 @@
 use musaed_lib::conversation::{
-    models::{Conversation, Message},
+    models::{ChatSettings, Conversation, Message},
     store::ConversationStore,
 };
 use std::path::PathBuf;
@@ -17,7 +17,7 @@ fn test_create_and_fetch_conversation() {
         id: "test1".into(),
         title: "Test Conversation".into(),
         model: "test-model".into(),
-        settings: serde_json::json!({}),
+        settings: ChatSettings::default(),
         created_at: 0,
         updated_at: 0,
         messages: vec![],
@@ -35,7 +35,7 @@ fn test_append_message() {
         id: "c2".into(),
         title: "C2".into(),
         model: "m".into(),
-        settings: serde_json::json!({}),
+        settings: ChatSettings::default(),
         created_at: 0,
         updated_at: 0,
         messages: vec![],
@@ -70,7 +70,7 @@ fn test_delete_conversation() {
         id: "del".into(),
         title: "Del".into(),
         model: "m".into(),
-        settings: serde_json::json!({}),
+        settings: ChatSettings::default(),
         created_at: 0,
         updated_at: 0,
         messages: vec![],
