@@ -55,6 +55,16 @@ pub const RAG_STATS_ERROR: &str = "RAG_STATS_ERROR";
 pub const RAG_VALIDATION_ERROR: &str = "RAG_VALIDATION_ERROR";
 pub const RAG_ALREADY_INDEXING: &str = "RAG_ALREADY_INDEXING";
 
+// ── Conversation ──────────────────────────────────────
+pub const CONVERSATION_NOT_FOUND: &str = "CONVERSATION_NOT_FOUND";
+pub const CONVERSATION_FETCH_ERROR: &str = "CONVERSATION_FETCH_ERROR";
+pub const CONVERSATION_LIST_ERROR: &str = "CONVERSATION_LIST_ERROR";
+pub const CONVERSATION_CREATE_ERROR: &str = "CONVERSATION_CREATE_ERROR";
+pub const CONVERSATION_DELETE_ERROR: &str = "CONVERSATION_DELETE_ERROR";
+pub const CONVERSATION_UPDATE_ERROR: &str = "CONVERSATION_UPDATE_ERROR";
+pub const MESSAGE_APPEND_ERROR: &str = "MESSAGE_APPEND_ERROR";
+pub const CONVERSATION_LOCK_ERROR: &str = "CONVERSATION_LOCK_ERROR";
+
 // ── Generic ───────────────────────────────────────────
 pub const INTERNAL_ERROR: &str = "INTERNAL_ERROR";
 pub const ABORTED: &str = "ABORTED";
@@ -103,6 +113,14 @@ mod tests {
             RAG_STATS_ERROR,
             RAG_VALIDATION_ERROR,
             RAG_ALREADY_INDEXING,
+            CONVERSATION_NOT_FOUND,
+            CONVERSATION_FETCH_ERROR,
+            CONVERSATION_LIST_ERROR,
+            CONVERSATION_CREATE_ERROR,
+            CONVERSATION_DELETE_ERROR,
+            CONVERSATION_UPDATE_ERROR,
+            MESSAGE_APPEND_ERROR,
+            CONVERSATION_LOCK_ERROR,
             INTERNAL_ERROR,
             ABORTED,
             UNKNOWN,

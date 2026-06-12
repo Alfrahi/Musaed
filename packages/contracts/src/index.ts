@@ -54,6 +54,16 @@ export enum BackendErrorCode {
   RagValidationError = 'RAG_VALIDATION_ERROR',
   RagAlreadyIndexing = 'RAG_ALREADY_INDEXING',
 
+  // ── Conversation ──────────────────────────────────────
+  ConversationNotFound = 'CONVERSATION_NOT_FOUND',
+  ConversationFetchError = 'CONVERSATION_FETCH_ERROR',
+  ConversationListError = 'CONVERSATION_LIST_ERROR',
+  ConversationCreateError = 'CONVERSATION_CREATE_ERROR',
+  ConversationDeleteError = 'CONVERSATION_DELETE_ERROR',
+  ConversationUpdateError = 'CONVERSATION_UPDATE_ERROR',
+  MessageAppendError = 'MESSAGE_APPEND_ERROR',
+  ConversationLockError = 'CONVERSATION_LOCK_ERROR',
+
   // ── Generic ───────────────────────────────────────────
   InternalError = 'INTERNAL_ERROR',
   Aborted = 'ABORTED',
@@ -70,10 +80,13 @@ export const BackendErrorSchema = z
     code: z.string().default(BackendErrorCode.Unknown),
     message: z.string(),
     requestId: z.string().nullish(),
+    context: z.string().nullish(),
+    isRetryable: z.boolean().default(false),
   })
   .transform((data) => ({
     ...data,
     requestId: data.requestId,
+    context: data.context,
   }));
 
 export type BackendError = z.infer<typeof BackendErrorSchema>;
