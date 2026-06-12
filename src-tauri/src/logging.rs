@@ -54,10 +54,13 @@ fn sanitize_log_entry(entry: &str) -> String {
 
     // Step 4: Truncate to prevent memory issues with extremely long entries
     // while preserving the beginning which typically contains useful info
-    if collapsed.len() > MAX_LOG_ENTRY_LEN {
+    if collapsed.chars().count() > MAX_LOG_ENTRY_LEN {
         format!(
             "{}... [TRUNCATED]",
-            &collapsed[..MAX_LOG_ENTRY_LEN.saturating_sub(15)]
+            &collapsed
+                .chars()
+                .take(MAX_LOG_ENTRY_LEN.saturating_sub(15))
+                .collect::<String>()
         )
     } else {
         collapsed
