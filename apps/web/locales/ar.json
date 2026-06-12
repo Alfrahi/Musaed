@@ -68,6 +68,8 @@
     "localUser": "المستخدم المحلي",
     "noModelSelected": "لم يتم اختيار نموذج. يرجى اختيار نموذج من المكتبة أولاً.",
     "connectionFailed": "فشل الاتصال بـ Ollama. يرجى التأكد من أنه قيد التشغيل.",
+    "connecting": "جاري الاتصال بـ Ollama",
+    "offline": "غير متصل",
     "startFresh": "بدء جلسة جديدة",
     "privateNote": "خصوصية 100٪",
     "runningLocally": "يعمل محلياً",

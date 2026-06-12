@@ -68,6 +68,8 @@
     "localUser": "Local User",
     "noModelSelected": "No model selected. Please select a model from the library first.",
     "connectionFailed": "Ollama connection failed. Please ensure it is running.",
+    "connecting": "Connecting to Ollama",
+    "offline": "Offline",
     "startFresh": "Start fresh session",
     "privateNote": "100% Private",
     "runningLocally": "Running locally",
