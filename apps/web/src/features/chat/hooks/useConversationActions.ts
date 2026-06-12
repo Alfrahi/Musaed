@@ -11,7 +11,11 @@ import {
 } from '../../../store';
 import { useUpdateConversation, useBatchUpdate } from '../../../store/hooks';
 import { chatApi, conversationApi } from '../../../lib/ipc';
-import { coordinateStartStream, coordinateStopStream } from '../../../store/coordination';
+import {
+  coordinateStartStream,
+  coordinateStopStream,
+  flushAndStop,
+} from '../../../store/coordination';
 import { useTranslation } from '../../../lib/i18n';
 import { updateConversation as backendUpdateConversation } from '../../../lib/conversation-backend';
 import type {
@@ -143,6 +147,7 @@ export const useConversationActions = () => {
   }, []);
 
   const stopStreaming = useCallback((conversationId: string) => {
+    flushAndStop(conversationId);
     coordinateStopStream(conversationId);
   }, []);
 
