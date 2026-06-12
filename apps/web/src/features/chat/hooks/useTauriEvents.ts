@@ -9,8 +9,8 @@ import { listen, ollamaApi } from '../../../lib/ipc';
 import { flushAndStop } from '../../../store/batch-manager';
 import { coordinateStopStream } from '../../../store/coordination';
 import { useMessageStore } from '../../../store/stores/message-store';
-import { conversationApi } from '../../../lib/ipc';
 import { triggerAutoTitle } from './useAutoTitle';
+import { persistMessage } from '../../../lib/message-persistence';
 import {
   sanitizeError,
   BackendErrorSchema,
@@ -57,17 +57,22 @@ const handleToken = (payload: OllamaToken) => {
     flushAndStop(convId);
     coordinateStopStream(convId);
 
-    // Persist the completed assistant message to Rust backend
+    // Persist the completed assistant message to Rust backend with retry logic
     const msgs = useMessageStore.getState().messages[convId] ?? [];
     const lastMsg = msgs[msgs.length - 1];
     if (lastMsg && lastMsg.role === 'assistant') {
-      (async () => {
-        try {
-          await conversationApi.appendMessage(convId, lastMsg);
-        } catch (e) {
-          console.error('Failed to persist completed message:', e);
+      persistMessage(convId, lastMsg).then((result) => {
+        if (!result.success) {
+          toast.error('Failed to save message to history');
+          logger.error('Message persistence failed after retries', {
+            conversationId: convId,
+            messageId: lastMsg.id,
+            role: lastMsg.role,
+            retries: result.retries,
+            error: result.error,
+          });
         }
-      })();
+      });
     }
 
     // Auto-generate title for conversations that still have the default title

@@ -14,7 +14,6 @@ import {
 import { type Message } from '@musaed/contracts';
 import { useTranslation } from '../../../lib/i18n';
 import { chatApi, ragApi } from '../../../lib/ipc';
-import { addMessage as backendAddMessage } from '../../../lib/conversation-backend';
 import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
 import { flushAndStop } from '../../../store/batch-manager';
@@ -22,6 +21,7 @@ import { useConversationActions } from './useConversationActions';
 import { type FileAttachment } from './useAttachmentUtils';
 import { useMessageStore } from '../../../store/stores/message-store';
 import type { Citation } from '@musaed/contracts';
+import { persistMessage } from '../../../lib/message-persistence';
 
 /** Build prompt with file context injected. */
 function buildPromptWithContext(
@@ -102,13 +102,20 @@ const handleStreamError = (
   );
   stopStreaming(conversationId);
 
-  // Persist the failed assistant message to Rust backend
+  // Persist the failed assistant message to Rust backend with retry logic
   const msgs = useMessageStore.getState().messages[conversationId] ?? [];
   const lastMsg = msgs[msgs.length - 1];
   if (lastMsg && lastMsg.role === 'assistant') {
-    backendAddMessage(conversationId, lastMsg).catch((e) =>
-      console.error('Failed to persist error message:', e)
-    );
+    persistMessage(conversationId, lastMsg).then((result) => {
+      if (!result.success) {
+        logger.error('Failed to persist error message after retries', {
+          conversationId,
+          messageId: lastMsg.id,
+          retries: result.retries,
+          error: result.error,
+        });
+      }
+    });
   }
 
   setError(msg);
@@ -195,16 +202,18 @@ function createChatMessages(
   return [userMsg, assistantMsg];
 }
 
-/** Persist the user message to the Rust backend (fire-and-forget).
- *  The assistant message is persisted on stream completion (useTauriEvents). */
+/** Persist the user message to the Rust backend with retry logic. */
 function persistUserMessage(conversationId: string, userMsg: Message) {
-  (async () => {
-    try {
-      await backendAddMessage(conversationId, userMsg);
-    } catch (e) {
-      console.error('Failed to persist user message:', e);
+  persistMessage(conversationId, userMsg).then((result) => {
+    if (!result.success) {
+      logger.error('Failed to persist user message after retries', {
+        conversationId,
+        messageId: userMsg.id,
+        retries: result.retries,
+        error: result.error,
+      });
     }
-  })();
+  });
 }
 
 /**
