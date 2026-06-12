@@ -5,7 +5,6 @@ describe('Streaming Store', () => {
   beforeEach(() => {
     useStreamingStore.setState({
       liveContent: {},
-      liveMetrics: {},
       pendingMetrics: {},
       activeStreams: {},
     });

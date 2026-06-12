@@ -4,13 +4,6 @@ import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { type Message } from '@musaed/contracts';
 
-/** Metrics snapshot carried alongside the live token buffer. */
-export interface StreamMetrics {
-  eval_count?: number;
-  eval_duration?: number;
-  total_duration?: number;
-}
-
 /** Internal buffer for efficient stream accumulation. */
 interface StreamingBuffer {
   chunks: string[];
@@ -19,8 +12,6 @@ interface StreamingBuffer {
 export interface StreamingState {
   /** Per-conversation live content buffer (only for actively streaming conversations). */
   liveContent: Record<string, StreamingBuffer>;
-  /** Per-conversation metrics snapshot updated with each token. */
-  liveMetrics: Record<string, StreamMetrics>;
   /** Pending metrics that haven't been flushed yet. */
   pendingMetrics: Record<string, Partial<Message>>;
   /** Track which conversations are actively streaming. */
@@ -40,7 +31,6 @@ export interface StreamingState {
 export const useStreamingStore = createWithEqualityFn<StreamingState>()(
   (set, get) => ({
     liveContent: {},
-    liveMetrics: {},
     pendingMetrics: {},
     activeStreams: {},
 
@@ -74,7 +64,7 @@ export const useStreamingStore = createWithEqualityFn<StreamingState>()(
       const content = buffer.chunks.join('');
       const metrics = pendingMetrics[conversationId] ?? {};
 
-      // Clear flushed content but keep metrics for next flush
+      // Clear flushed content and metrics
       set((state) => {
         const { [conversationId]: _flushed, ...remaining } = state.liveContent;
         const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
@@ -110,8 +100,7 @@ export const useStreamingStore = createWithEqualityFn<StreamingState>()(
       });
     },
 
-    clearAll: () =>
-      set({ liveContent: {}, liveMetrics: {}, pendingMetrics: {}, activeStreams: {} }),
+    clearAll: () => set({ liveContent: {}, pendingMetrics: {}, activeStreams: {} }),
   }),
   shallow
 );

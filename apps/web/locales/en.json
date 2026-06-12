@@ -273,7 +273,10 @@
     "unknownError": "An unknown error occurred.",
     "downloadOllama": "Download Ollama",
     "report": "Report Issues",
-    "unsupportedLink": "Unsupported link"
+    "unsupportedLink": "Unsupported link",
+    "connectionError": "Connection Error",
+    "genericError": "Something went wrong. Please try again.",
+    "imageConversionFailed": "Failed to convert image to base64"
   },
   "a11y": {
     "closeModal": "Close modal",

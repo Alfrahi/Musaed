@@ -32,7 +32,9 @@ export const selectFilteredConversations = (state: ConversationState) => {
   const { conversations, conversationIds, searchQuery } = state;
   const list = conversationIds.map((id) => conversations[id]).filter(Boolean);
   if (!searchQuery) return list;
-  return list.filter((conv) => conv.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  return list.filter((conv) =>
+    (conv.title ?? '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
 };
 
 export const useConversationStore = createWithEqualityFn<ConversationState>()(

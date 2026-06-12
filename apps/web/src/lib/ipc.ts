@@ -241,7 +241,7 @@ const CommandInputSchemas: {
     modelName: ModelNameSchema,
   }),
   cmd_rag_validate_embedding_model: z.object({
-    baseUrl: z.string(),
+    baseUrl: z.string().optional(),
     modelName: ModelNameSchema,
   }),
   cmd_rag_assemble_context: z.object({

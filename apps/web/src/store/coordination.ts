@@ -2,6 +2,9 @@
 
 import { useStreamingStore } from './stores/streaming-store';
 import { useUIStore } from './stores/ui-store';
+import { useSettingsStore } from './stores/settings-store';
+import { useRagStore } from './stores/rag-store';
+import { useMessageStore } from './stores/message-store';
 
 /**
  * Coordinates streaming start/stop between the streaming store
@@ -22,6 +25,24 @@ export function coordinateStartStream(conversationId: string, requestId: string)
 }
 
 /**
+ * Flushes any pending content from the streaming buffer to the message store,
+ * then removes the conversation from active streams.
+ *
+ * This ensures buffered tokens are persisted before abort/stop so no content
+ * is silently discarded.
+ */
+export function flushAndStop(conversationId: string): void {
+  const flushed = useStreamingStore.getState().flushToConversation(conversationId);
+  if (flushed) {
+    useMessageStore.getState().updateLastMessage(conversationId, {
+      content: flushed.content,
+      ...flushed.metrics,
+    });
+  }
+  useStreamingStore.getState().stopStream(conversationId);
+}
+
+/**
  * Stops streaming for a conversation — flushes any remaining content,
  * clears the stream, and updates the UI flag if no other streams are active.
  */
@@ -36,24 +57,22 @@ export function coordinateStopStream(conversationId: string): void {
   }
 }
 
+const STORES_TO_HYDRATE = 2;
+
 /**
- * Registers hydration coordination for the app.
- *
- * This is called once on mount in HomeClient. It ensures the UI
- * transitions from the loading state to the interactive state once
- * all stores have hydrated from the Rust backend.
- *
- * Returns an unsubscribe function for cleanup.
+ * Triggers async rehydration for all persisted stores that use skipHydration.
+ * Each store's onRehydrateStorage callback will call UIStore.onStoreRehydrated(),
+ * which decrements the pending counter. When it reaches 0, isHydrated is set true.
  */
 export function registerHydrationCoordination(): () => void {
   let disposed = false;
 
-  // Mark as hydrated immediately since persistence is now handled
-  // by the Rust backend (no async Tauri Store hydration needed
-  // for conversation/message stores).
   const { isHydrated } = useUIStore.getState();
+
   if (!isHydrated) {
-    useUIStore.getState().setHydrated(true);
+    useUIStore.getState().setPendingRehydrations(STORES_TO_HYDRATE);
+    useSettingsStore.persist.rehydrate();
+    useRagStore.persist.rehydrate();
   }
 
   return () => {

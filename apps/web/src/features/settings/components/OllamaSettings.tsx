@@ -10,6 +10,9 @@ import { useModelActions } from '@/features/library';
 import { useTranslation } from '@/lib/i18n';
 import { isValidOllamaUrl, sanitizeOllamaUrl, ollamaApi } from '@/lib/ipc';
 
+/** Module-level AbortController so rapid URL changes cancel pending verifications. */
+let pendingVerification: AbortController | null = null;
+
 /**
  * Handles Ollama URL validation: sanitizes, validates host, then verifies
  * the target is actually an Ollama instance via a backend handshake.
@@ -29,9 +32,15 @@ const handleOllamaUrlBlurFactory = (
     return;
   }
 
+  // Cancel any in-flight verification before starting a new one
+  pendingVerification?.abort();
+  const controller = new AbortController();
+  pendingVerification = controller;
+
   updateGlobalSettings({ ollamaUrl: sanitized });
 
   ollamaApi.verifyService(sanitized).then((result) => {
+    if (controller.signal.aborted) return;
     if (result === null) {
       toast.error(t('settings.notOllamaService'));
       updateGlobalSettings({ ollamaUrl: lastValidRef.current });

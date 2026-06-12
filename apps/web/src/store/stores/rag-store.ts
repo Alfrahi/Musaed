@@ -5,6 +5,7 @@ import { shallow } from 'zustand/shallow';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { RagProject, IndexProgress, SearchResult } from '@musaed/contracts';
 import { createTauriStorage } from '../../lib/tauri-storage';
+import { useUIStore } from './ui-store';
 
 const RAG_STORE_VERSION = 1;
 
@@ -24,6 +25,8 @@ export interface RagState {
   setIndexProgress: (projectId: string, progress: IndexProgress | null) => void;
   setSearchResults: (results: SearchResult[]) => void;
   setIsSearching: (isSearching: boolean) => void;
+  /** Resync projectIds from project keys — guards against partialize desync. */
+  normalize: () => void;
   reset: () => void;
 }
 
@@ -106,17 +109,37 @@ export const useRagStore = createWithEqualityFn<RagState>()(
 
       setIsSearching: (isSearching: boolean) => set({ isSearching }),
 
+      normalize: () =>
+        set((state: RagState) => {
+          const validIds = state.projectIds.filter((id) => id in state.projects);
+          if (validIds.length !== state.projectIds.length) {
+            return { projectIds: validIds };
+          }
+          return state;
+        }),
+
       reset: () => set(initialState),
     }),
     {
       name: 'rag-state',
       storage: createJSONStorage(() => createTauriStorage('rag-state.json', RAG_STORE_VERSION)),
+      version: RAG_STORE_VERSION,
+      migrate: (_persistedState, _version) => _persistedState,
+      skipHydration: true,
       // Only persist these fields — search results and indexing progress are ephemeral
       partialize: (state: RagState) => ({
         projects: state.projects,
         projectIds: state.projectIds,
         activeProjectId: state.activeProjectId,
       }),
+      onRehydrateStorage: () => {
+        return (_state, error) => {
+          if (error) {
+            console.error('RAG store rehydration failed:', error);
+          }
+          useUIStore.getState().onStoreRehydrated();
+        };
+      },
     }
   ),
   shallow

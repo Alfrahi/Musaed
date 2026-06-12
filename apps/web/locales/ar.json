@@ -273,7 +273,10 @@
     "unknownError": "حدث خطأ غير معروف.",
     "downloadOllama": "تحميل Ollama",
     "report": "إبلاغ عن مشكلة",
-    "unsupportedLink": "رابط غير مدعوم"
+    "unsupportedLink": "رابط غير مدعوم",
+    "connectionError": "خطأ في الاتصال",
+    "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+    "imageConversionFailed": "فشل في تحويل الصورة إلى base64"
   },
   "a11y": {
     "closeModal": "إغلاق النافذة",

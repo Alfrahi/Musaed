@@ -28,7 +28,14 @@ const RenameInput = ({
   onBlur: () => void;
   onSubmit: (e: React.FormEvent) => void;
 }) => (
-  <form onSubmit={onSubmit} className="flex min-w-0 flex-1 items-center">
+  <form
+    onSubmit={onSubmit}
+    className="flex min-w-0 flex-1 items-center"
+    onBlur={(e) => {
+      if (e.currentTarget.contains(e.relatedTarget)) return;
+      onBlur();
+    }}
+  >
     <input
       autoFocus
       value={value}
@@ -116,7 +123,10 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
         <RenameInput
           value={editTitle}
           onChange={setEditTitle}
-          onBlur={() => setEditingId(null)}
+          onBlur={() => {
+            handleRenameConversation(conversation.id, editTitle);
+            setEditingId(null);
+          }}
           onSubmit={handleSubmitRename}
         />
       ) : (

@@ -5,7 +5,7 @@ import { useRagProjects } from '../hooks/useRagProjects';
 import { Loader2, Save, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useActiveRagProject, useLanguage, useOllamaUrl } from '../../../store/hooks';
-import { ollamaApi } from '@/lib/ipc';
+import { ollamaApi, ragApi } from '@/lib/ipc';
 import { useTranslation } from '@/lib/i18n';
 
 interface ProjectSettingsProps {
@@ -142,7 +142,14 @@ const ProjectSettingsForm = ({ onClose }: { onClose: () => void }) => {
       }
 
       if (embeddingModel !== activeProject.embeddingModel) {
-        toast.success(t('rag.embeddingModelUpdated'));
+        const success = await ragApi.setEmbeddingModel(activeProject.id, embeddingModel);
+        if (success) {
+          toast.success(t('rag.embeddingModelUpdated'));
+        } else {
+          toast.error(t('error.genericError'));
+          setIsSaving(false);
+          return;
+        }
       }
       onClose();
     } catch {

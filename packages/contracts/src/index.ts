@@ -320,6 +320,7 @@ export const OllamaTokenSchema = z.object({
   totalDuration: z.number().nullish(),
   loadDuration: z.number().nullish(),
   promptEvalCount: z.number().nullish(),
+  promptEvalDuration: z.number().nullish(),
   evalCount: z.number().nullish(),
   evalDuration: z.number().nullish(),
   requestId: z.string().nullish(),

@@ -22,6 +22,7 @@ vi.mock('@/store/batch-manager', () => ({
 vi.mock('@/store/coordination', () => ({
   coordinateStartStream: vi.fn(),
   coordinateStopStream: vi.fn(),
+  flushAndStop: vi.fn(),
 }));
 
 vi.mock('@/store/stores/ui-store', () => {

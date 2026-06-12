@@ -60,6 +60,8 @@ export function useOllamaConnection() {
     return () => {
       unsubscribe();
       connectionManager.stopHealthChecks();
+      // Reset stale CONNECTING state if unmounted mid-reconnect
+      setConnectionState(ConnectionState.DISCONNECTED);
     };
   }, [globalSettings.ollamaUrl, setOllamaConnected]);
 

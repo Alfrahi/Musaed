@@ -25,11 +25,14 @@ import type {
 
 /**
  * Abort active streaming for a conversation.
+ * Flushes any buffered tokens to the message store before aborting
+ * so no content is silently discarded.
  */
 export function abortStreaming(conversationId: string): void {
   const streamingState = useStreamingStore.getState();
   const requestId = streamingState.activeStreams[conversationId];
   if (requestId) chatApi.abort(requestId);
+  flushAndStop(conversationId);
   coordinateStopStream(conversationId);
 }
 

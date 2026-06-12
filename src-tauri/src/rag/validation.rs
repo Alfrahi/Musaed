@@ -104,12 +104,30 @@ pub fn validate_project_id(project_id: &str) -> Result<(), String> {
     if project_id.is_empty() {
         return Err("Project ID must not be empty".to_string());
     }
-    // UUID v4 format: 8-4-4-4-12 hex chars
-    if !project_id
-        .chars()
-        .all(|c| c.is_ascii_hexdigit() || c == '-')
+    // UUID v4 format: 8-4-4-4-12 (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+    // Verify correct length first, then dash positions, then hex content
+    if project_id.len() != 36 {
+        return Err("Invalid project ID format: expected 36 characters".to_string());
+    }
+    if project_id.as_bytes()[8] != b'-'
+        || project_id.as_bytes()[13] != b'-'
+        || project_id.as_bytes()[18] != b'-'
+        || project_id.as_bytes()[23] != b'-'
     {
-        return Err("Invalid project ID format".to_string());
+        return Err("Invalid project ID format: expected 8-4-4-4-12 layout".to_string());
+    }
+    // Verify groups are all hex digits
+    let hex_groups = [
+        &project_id[0..8],
+        &project_id[9..13],
+        &project_id[14..18],
+        &project_id[19..23],
+        &project_id[24..36],
+    ];
+    for group in hex_groups {
+        if !group.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Err("Invalid project ID format: non-hexadecimal character".to_string());
+        }
     }
     Ok(())
 }
@@ -242,6 +260,25 @@ mod tests {
     #[test]
     fn invalid_project_id_chars() {
         assert!(validate_project_id("not-a-uuid!@#").is_err());
+    }
+
+    #[test]
+    fn invalid_project_id_wrong_length() {
+        assert!(validate_project_id("abc").is_err());
+        assert!(validate_project_id("550e8400-e29b-41d4-a716").is_err());
+    }
+
+    #[test]
+    fn invalid_project_id_wrong_dash_positions() {
+        assert!(validate_project_id("550e840e-29b-41d4-a716-446655440000").is_err()); // dash at 8 instead of 9
+        assert!(validate_project_id("550e8400-e-9b41d4-a716-446655440000").is_err()); // dash at 12 instead of 13
+        assert!(validate_project_id("550e8400-e29b-4-1d4-a716-446655440000").is_err());
+        // dash at 15 instead of 18
+    }
+
+    #[test]
+    fn invalid_project_id_non_hex_in_groups() {
+        assert!(validate_project_id("550e84zz-e29b-41d4-a716-446655440000").is_err());
     }
 
     #[test]

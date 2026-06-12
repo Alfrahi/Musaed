@@ -39,8 +39,10 @@ export function flushAndStop(conversationId: string): void {
 /**
  * Stops batching for a conversation without flushing.
  * Used when aborting a stream where buffered content should be discarded.
+ * Clears the liveContent and pendingMetrics buffers to prevent memory leaks.
  */
 export function stopBatching(conversationId: string): void {
   const streamingStore = useStreamingStore.getState();
   streamingStore.stopStream(conversationId);
+  streamingStore.clearStream(conversationId);
 }
