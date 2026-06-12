@@ -97,7 +97,14 @@ export async function handleTauriImageUploadInternal(
     if (!validateFileSize(data.byteLength, t)) continue;
 
     const mime = mimeFromExtension(filePath);
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(data)));
+    try {
+      const buffer = Buffer.from(data);
+      const base64 = buffer.toString('base64');
+    } catch (error) {
+      logger.error('Failed to convert image to base64', { path: filePath, error });
+      toast.error(t('error.imageConversionFailed'));
+      continue;
+    }
     newImages.push(`data:${mime};base64,${base64}`);
   }
 
