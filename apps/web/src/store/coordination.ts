@@ -6,6 +6,8 @@ import { useSettingsStore } from './stores/settings-store';
 import { useRagStore } from './stores/rag-store';
 import { useMessageStore } from './stores/message-store';
 
+import type { Message } from '@musaed/contracts';
+
 /**
  * Coordinates streaming start/stop between the streaming store
  * and UI state (isStreaming flag).
@@ -32,14 +34,26 @@ export function coordinateStartStream(conversationId: string, requestId: string)
  * is silently discarded.
  */
 export function flushAndStop(conversationId: string): void {
-  const flushed = useStreamingStore.getState().flushToConversation(conversationId);
-  if (flushed) {
-    useMessageStore.getState().updateLastMessage(conversationId, {
-      content: flushed.content,
-      ...flushed.metrics,
-    });
+  const streamingStore = useStreamingStore.getState();
+  const result = streamingStore.flushToConversation(conversationId);
+
+  if (result) {
+    const messageStore = useMessageStore.getState();
+    const messages = messageStore.messages[conversationId] ?? [];
+
+    if (messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      const updatedMsg: Message = {
+        ...lastMsg,
+        content: lastMsg.content + result.content,
+        ...result.metrics,
+        done: true,
+      };
+      messageStore.setMessages(conversationId, [...messages.slice(0, -1), updatedMsg]);
+    }
   }
-  useStreamingStore.getState().stopStream(conversationId);
+
+  streamingStore.stopStream(conversationId);
 }
 
 /**
@@ -55,6 +69,16 @@ export function coordinateStopStream(conversationId: string): void {
   if (Object.keys(activeStreams).length === 0) {
     useUIStore.getState().setStreaming(false);
   }
+}
+
+/**
+ * Stops batching for a conversation without flushing.
+ * Used when aborting a stream where buffered content should be discarded.
+ * Clears the liveContent and pendingMetrics buffers to prevent memory leaks.
+ */
+export function stopBatching(conversationId: string): void {
+  useStreamingStore.getState().stopStream(conversationId);
+  useStreamingStore.getState().clearStream(conversationId);
 }
 
 const STORES_TO_HYDRATE = 2;
