@@ -24,7 +24,7 @@ const initMermaid = (theme: MermaidRendererProps['theme']) => {
 
   mermaid.initialize({
     startOnLoad: false,
-    theme: (isDark ? 'dark' : theme) as 'dark' | 'default',
+    theme: isDark ? 'dark' : theme,
     securityLevel: 'strict',
     suppressErrorRendering: true,
     flowchart: { useMaxWidth: true, htmlLabels: true },

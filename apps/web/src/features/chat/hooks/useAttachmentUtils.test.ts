@@ -1,7 +1,6 @@
 import { handleTauriImageUploadInternal } from './useAttachmentUtils';
 import { describe, expect, it, vi } from 'vitest';
 import { dialog, fs } from '../../../lib/ipc';
-import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
 
 // Mock the Tauri IPC functions

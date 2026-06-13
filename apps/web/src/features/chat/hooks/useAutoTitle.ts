@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useRef } from 'react';
-import { type Language } from '@musaed/contracts';
 import { useConversationStore } from '../../../store/stores/conversation-store';
 import { useMessageStore } from '../../../store/stores/message-store';
 import { useSettingsStore } from '../../../store/stores/settings-store';

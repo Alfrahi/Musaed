@@ -6,8 +6,6 @@ import { useSettingsStore } from './stores/settings-store';
 import { useRagStore } from './stores/rag-store';
 import { useMessageStore } from './stores/message-store';
 
-import type { Message } from '@musaed/contracts';
-
 /**
  * Coordinates streaming start/stop between the streaming store
  * and UI state (isStreaming flag).

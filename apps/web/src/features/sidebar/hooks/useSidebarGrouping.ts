@@ -55,10 +55,8 @@ export function useSidebarGrouping(
   const groupedItems = useMemo(() => {
     if (searchQuery) {
       return [
-        { type: 'header', group: 'search', id: 'header-search' } as SidebarItem,
-        ...loadedConversations.map(
-          (conv) => ({ type: 'conversation', data: conv, id: conv.id }) as SidebarItem
-        ),
+        { type: 'header', group: 'search', id: 'header-search' },
+        ...loadedConversations.map((conv) => ({ type: 'conversation', data: conv, id: conv.id })),
       ];
     }
 
@@ -86,10 +84,8 @@ export function useSidebarGrouping(
     return (['today', 'yesterday', 'lastWeek', 'older'] as TimeGroup[]).flatMap((groupKey) => {
       if (groups[groupKey].length === 0) return [];
       return [
-        { type: 'header', group: groupKey, id: `header-${groupKey}` } as SidebarItem,
-        ...groups[groupKey].map(
-          (conv) => ({ type: 'conversation', data: conv, id: conv.id }) as SidebarItem
-        ),
+        { type: 'header', group: groupKey, id: `header-${groupKey}` },
+        ...groups[groupKey].map((conv) => ({ type: 'conversation', data: conv, id: conv.id })),
       ];
     });
   }, [loadedConversations, searchQuery]);

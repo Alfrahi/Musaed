@@ -149,7 +149,7 @@ const validateAndSetConversations = (
       const validated = raw.conversations.map((c: unknown) => ConversationSchema.parse(c));
 
       // Separate metadata and messages
-      const metadata = validated.map(({ messages: _, ...m }) => m as ConversationMetadata);
+      const metadata = validated.map(({ messages: _, ...m }) => m);
       setConversations(metadata);
 
       validated.forEach((c) => {

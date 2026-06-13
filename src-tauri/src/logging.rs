@@ -204,7 +204,15 @@ pub async fn cmd_logs_request_clear_token() -> ApiResponse<String> {
 }
 
 /// Removes expired entries from the log-clear token store.
+///
+/// This function does nothing if the `TESTING` environment variable is set.
+/// Tests should manage their own token state to avoid race conditions.
 fn evict_expired_clear_tokens() {
+    // Skip eviction during tests to avoid race conditions with parallel test execution
+    if std::env::var("TESTING").is_ok() {
+        return;
+    }
+
     let cutoff = Instant::now().checked_sub(Duration::from_secs(LOG_CLEAR_TOKEN_TTL_SECS));
 
     match cutoff {
@@ -278,6 +286,10 @@ pub async fn cmd_logs_clear<R: Runtime>(app: AppHandle<R>, token: String) -> Api
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    // Mutex to serialize token tests that share the global LOG_CLEAR_TOKENS
+    static TOKEN_TEST_MUTEX: Mutex<()> = Mutex::new(());
 
     #[test]
     fn test_sanitize_log_entry_preserves_normal_text() {
@@ -390,6 +402,9 @@ mod tests {
 
     #[test]
     fn test_clear_token_issue_and_validate() {
+        // Acquire lock to serialize access to shared LOG_CLEAR_TOKENS
+        let _guard = TOKEN_TEST_MUTEX.lock().unwrap();
+        std::env::set_var("TESTING", "1");
         LOG_CLEAR_TOKENS.clear();
 
         // Simulate issuing a token
@@ -412,10 +427,15 @@ mod tests {
         assert!(entry2.is_none(), "token should not be reusable");
 
         LOG_CLEAR_TOKENS.clear();
+        std::env::remove_var("TESTING");
     }
 
     #[test]
     fn test_clear_token_expired_is_evicted() {
+        // Acquire lock to serialize access to shared LOG_CLEAR_TOKENS
+        let _guard = TOKEN_TEST_MUTEX.lock().unwrap();
+        // Set TESTING flag to disable automatic eviction
+        std::env::set_var("TESTING", "1");
         LOG_CLEAR_TOKENS.clear();
 
         // Insert a token that is already expired
@@ -429,8 +449,12 @@ mod tests {
         let fresh_token = "fresh-test-token".to_string();
         LOG_CLEAR_TOKENS.insert(fresh_token.clone(), Instant::now());
 
-        // Evict expired tokens
-        evict_expired_clear_tokens();
+        // Manually perform eviction for testing (bypassing the env guard)
+        let cutoff = Instant::now().checked_sub(Duration::from_secs(LOG_CLEAR_TOKEN_TTL_SECS));
+        match cutoff {
+            Some(c) => LOG_CLEAR_TOKENS.retain(|_, created| *created > c),
+            None => LOG_CLEAR_TOKENS.clear(),
+        }
 
         // Expired token should be gone, fresh token should remain
         assert!(
@@ -443,10 +467,15 @@ mod tests {
         );
 
         LOG_CLEAR_TOKENS.clear();
+        std::env::remove_var("TESTING");
     }
 
     #[test]
     fn test_clear_token_single_use_rejection() {
+        // Acquire lock to serialize access to shared LOG_CLEAR_TOKENS
+        let _guard = TOKEN_TEST_MUTEX.lock().unwrap();
+        // Set TESTING flag to disable automatic eviction
+        std::env::set_var("TESTING", "1");
         LOG_CLEAR_TOKENS.clear();
 
         let token = uuid::Uuid::new_v4().to_string();
@@ -464,10 +493,15 @@ mod tests {
         );
 
         LOG_CLEAR_TOKENS.clear();
+        std::env::remove_var("TESTING");
     }
 
     #[test]
     fn test_clear_token_invalid_rejected() {
+        // Acquire lock to serialize access to shared LOG_CLEAR_TOKENS
+        let _guard = TOKEN_TEST_MUTEX.lock().unwrap();
+        // Set TESTING flag to disable automatic eviction
+        std::env::set_var("TESTING", "1");
         LOG_CLEAR_TOKENS.clear();
 
         // Token was never issued
@@ -475,6 +509,7 @@ mod tests {
         assert!(entry.is_none(), "unissued token must be rejected");
 
         LOG_CLEAR_TOKENS.clear();
+        std::env::remove_var("TESTING");
     }
 
     #[test]

@@ -43,7 +43,7 @@ export const useSettingsStore = createWithEqualityFn<SettingsState>()(
         createTauriStorage('settings-state.json', 1, SETTINGS_MIGRATIONS)
       ),
       version: 1,
-      migrate: (persistedState, version) => {
+      migrate: (persistedState, _version) => {
         // Apply migration for the current version if exists, otherwise merge with defaults
         const migration = SETTINGS_MIGRATIONS[1];
         if (migration && typeof persistedState === 'object' && persistedState !== null) {

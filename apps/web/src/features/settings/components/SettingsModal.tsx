@@ -12,7 +12,7 @@ import DiagnosticsSettings from './DiagnosticsSettings';
 import InputSettings from './InputSettings';
 import StorageSettings from './StorageSettings';
 import MarkdownSettings from './MarkdownSettings';
-import { type TranslationKey, useTranslation } from '../../../lib/i18n';
+import { useTranslation } from '../../../lib/i18n';
 import { dialog } from '../../../lib/ipc';
 import { ModalLayout } from '@/components/ui';
 import { cn } from '../../../lib/utils';
@@ -181,23 +181,23 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
     () => [
       {
         id: 'general' as const,
-        label: t('settings.tabs.general' as TranslationKey),
+        label: t('settings.tabs.general'),
         icon: Settings2,
       },
       {
         id: 'appearance' as const,
-        label: t('settings.tabs.appearance' as TranslationKey),
+        label: t('settings.tabs.appearance'),
         icon: Layout,
       },
-      { id: 'ai' as const, label: t('settings.tabs.ai' as TranslationKey), icon: Cpu },
+      { id: 'ai' as const, label: t('settings.tabs.ai'), icon: Cpu },
       {
         id: 'storage' as const,
-        label: t('settings.tabs.storage' as TranslationKey),
+        label: t('settings.tabs.storage'),
         icon: HardDrive,
       },
       {
         id: 'advanced' as const,
-        label: t('settings.tabs.advanced' as TranslationKey),
+        label: t('settings.tabs.advanced'),
         icon: Terminal,
       },
     ],

@@ -40,6 +40,12 @@ export const useStreamingStore = createWithEqualityFn<StreamingState>()(
 
     appendToken: (conversationId, token) => {
       set((state) => {
+        // Only append tokens for conversations that are actively streaming
+        // This prevents zombie buffer creation after clearStream is called
+        if (!(conversationId in state.activeStreams)) {
+          return state;
+        }
+
         const buffer = state.liveContent[conversationId] ?? { chunks: [] };
         return {
           liveContent: {

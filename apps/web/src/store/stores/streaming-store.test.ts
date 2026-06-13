@@ -12,7 +12,8 @@ describe('Streaming Store', () => {
   });
 
   it('appends tokens to a new conversation buffer', () => {
-    const { appendToken } = useStreamingStore.getState();
+    const { appendToken, startStream } = useStreamingStore.getState();
+    startStream('conv1', 'req1');
     appendToken('conv1', 'Hello');
     appendToken('conv1', ' ');
 
@@ -21,7 +22,8 @@ describe('Streaming Store', () => {
   });
 
   it('appends tokens to an existing conversation buffer', () => {
-    const { appendToken } = useStreamingStore.getState();
+    const { appendToken, startStream } = useStreamingStore.getState();
+    startStream('conv1', 'req1');
     appendToken('conv1', 'Hello');
     appendToken('conv1', 'World');
 
@@ -30,7 +32,9 @@ describe('Streaming Store', () => {
   });
 
   it('maintains isolated buffers per conversation', () => {
-    const { appendToken } = useStreamingStore.getState();
+    const { appendToken, startStream } = useStreamingStore.getState();
+    startStream('conv1', 'req1');
+    startStream('conv2', 'req2');
     appendToken('conv1', 'A');
     appendToken('conv2', 'B');
 
@@ -40,7 +44,8 @@ describe('Streaming Store', () => {
   });
 
   it('flushes joins chunks into a single string and clears buffer', () => {
-    const { appendToken, flushToConversation } = useStreamingStore.getState();
+    const { appendToken, flushToConversation, startStream } = useStreamingStore.getState();
+    startStream('conv1', 'req1');
     appendToken('conv1', 'Hello');
     appendToken('conv1', ' ');
     appendToken('conv1', 'World');
@@ -59,9 +64,11 @@ describe('Streaming Store', () => {
   });
 
   it('flushToConversation is idempotent — second call returns null', () => {
-    const { appendToken, flushToConversation, markFlushed } = useStreamingStore.getState();
+    const { appendToken, flushToConversation, markFlushed, startStream } =
+      useStreamingStore.getState();
 
     // First flush should succeed
+    startStream('conv1', 'req1');
     appendToken('conv1', 'Hello');
     const result1 = flushToConversation('conv1');
     expect(result1).toEqual({ content: 'Hello', metrics: {} });
@@ -85,7 +92,9 @@ describe('Streaming Store', () => {
   });
 
   it('flush includes pending metrics', () => {
-    const { appendToken, setPendingMetrics, flushToConversation } = useStreamingStore.getState();
+    const { appendToken, setPendingMetrics, flushToConversation, startStream } =
+      useStreamingStore.getState();
+    startStream('conv1', 'req1');
     appendToken('conv1', 'Test');
     setPendingMetrics('conv1', { evalCount: 5, totalDuration: 200 });
 
@@ -94,7 +103,11 @@ describe('Streaming Store', () => {
   });
 
   it('clearStream removes specific conversation data', () => {
-    const { appendToken, setPendingMetrics, clearStream } = useStreamingStore.getState();
+    const { appendToken, setPendingMetrics, clearStream, startStream } =
+      useStreamingStore.getState();
+
+    // conv1 needs to be actively streaming to accept tokens
+    startStream('conv1', 'req1');
     appendToken('conv1', 'data');
     setPendingMetrics('conv1', { evalCount: 1 });
     setPendingMetrics('conv2', { evalCount: 2 });
@@ -109,9 +122,9 @@ describe('Streaming Store', () => {
 
   it('clearAll resets all state', () => {
     const { appendToken, setPendingMetrics, startStream, clearAll } = useStreamingStore.getState();
+    startStream('conv1', 'req123');
     appendToken('conv1', 'text');
     setPendingMetrics('conv1', { evalCount: 1 });
-    startStream('conv1', 'req123');
 
     clearAll();
 
@@ -119,6 +132,24 @@ describe('Streaming Store', () => {
     expect(state.liveContent).toEqual({});
     expect(state.pendingMetrics).toEqual({});
     expect(state.activeStreams).toEqual({});
+  });
+
+  it('appendToken rejects tokens for non-streaming conversations (zombie buffer prevention)', () => {
+    const { appendToken, startStream, clearStream } = useStreamingStore.getState();
+
+    // Start streaming
+    startStream('conv1', 'req1');
+    appendToken('conv1', 'Hello');
+
+    // Clear the stream (simulating stop/clear scenario)
+    clearStream('conv1');
+
+    // Attempted token append after clear should be rejected (no zombie buffer)
+    appendToken('conv1', 'World');
+
+    const state = useStreamingStore.getState();
+    expect(state.liveContent['conv1']).toBeUndefined();
+    expect(state.activeStreams['conv1']).toBeUndefined();
   });
 
   it('selectLiveContent returns joined string or null', () => {
