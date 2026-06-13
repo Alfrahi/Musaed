@@ -7,6 +7,7 @@ describe('Streaming Store', () => {
       liveContent: {},
       pendingMetrics: {},
       activeStreams: {},
+      flushedStreams: new Set(),
     });
   });
 
@@ -57,29 +58,46 @@ describe('Streaming Store', () => {
     expect(result).toBeNull();
   });
 
+  it('flushToConversation is idempotent — second call returns null', () => {
+    const { appendToken, flushToConversation, markFlushed } = useStreamingStore.getState();
+
+    // First flush should succeed
+    appendToken('conv1', 'Hello');
+    const result1 = flushToConversation('conv1');
+    expect(result1).toEqual({ content: 'Hello', metrics: {} });
+
+    // Mark as flushed (simulating what flushAndStop does)
+    markFlushed('conv1');
+
+    // Second flush should return null even with new data
+    appendToken('conv1', 'World');
+    const result2 = flushToConversation('conv1');
+    expect(result2).toBeNull();
+  });
+
   it('setPendingMetrics stores and merges metrics', () => {
     const { setPendingMetrics } = useStreamingStore.getState();
-    setPendingMetrics('conv1', { eval_count: 10 });
-    setPendingMetrics('conv1', { eval_duration: 100 });
+    setPendingMetrics('conv1', { evalCount: 10 });
+    setPendingMetrics('conv1', { evalDuration: 100 });
 
     const state = useStreamingStore.getState();
-    expect(state.pendingMetrics['conv1']).toEqual({ eval_count: 10, eval_duration: 100 });
+    expect(state.pendingMetrics['conv1']).toEqual({ evalCount: 10, evalDuration: 100 });
   });
 
   it('flush includes pending metrics', () => {
     const { appendToken, setPendingMetrics, flushToConversation } = useStreamingStore.getState();
     appendToken('conv1', 'Test');
-    setPendingMetrics('conv1', { eval_count: 5, total_duration: 200 });
+    setPendingMetrics('conv1', { evalCount: 5, totalDuration: 200 });
 
     const result = flushToConversation('conv1');
-    expect(result?.metrics).toEqual({ eval_count: 5, total_duration: 200 });
+    expect(result?.metrics).toEqual({ evalCount: 5, totalDuration: 200 });
   });
 
   it('clearStream removes specific conversation data', () => {
     const { appendToken, setPendingMetrics, clearStream } = useStreamingStore.getState();
     appendToken('conv1', 'data');
-    setPendingMetrics('conv1', { eval_count: 1 });
-    setPendingMetrics('conv2', { eval_count: 2 });
+    setPendingMetrics('conv1', { evalCount: 1 });
+    setPendingMetrics('conv2', { evalCount: 2 });
 
     clearStream('conv1');
 
@@ -92,7 +110,7 @@ describe('Streaming Store', () => {
   it('clearAll resets all state', () => {
     const { appendToken, setPendingMetrics, startStream, clearAll } = useStreamingStore.getState();
     appendToken('conv1', 'text');
-    setPendingMetrics('conv1', { eval_count: 1 });
+    setPendingMetrics('conv1', { evalCount: 1 });
     startStream('conv1', 'req123');
 
     clearAll();

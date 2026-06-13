@@ -16,6 +16,8 @@ export interface StreamingState {
   pendingMetrics: Record<string, Partial<Message>>;
   /** Track which conversations are actively streaming. */
   activeStreams: Record<string, string>;
+  /** Track which conversations have been flushed to prevent duplicate flushes. */
+  flushedStreams: Set<string>;
 
   appendToken: (conversationId: string, token: string) => void;
   setPendingMetrics: (conversationId: string, metrics: Partial<Message>) => void;
@@ -25,6 +27,7 @@ export interface StreamingState {
   startStream: (conversationId: string, requestId: string) => void;
   stopStream: (conversationId: string) => void;
   clearStream: (conversationId: string) => void;
+  markFlushed: (conversationId: string) => void;
   clearAll: () => void;
 }
 
@@ -33,6 +36,7 @@ export const useStreamingStore = createWithEqualityFn<StreamingState>()(
     liveContent: {},
     pendingMetrics: {},
     activeStreams: {},
+    flushedStreams: new Set(),
 
     appendToken: (conversationId, token) => {
       set((state) => {
@@ -58,7 +62,13 @@ export const useStreamingStore = createWithEqualityFn<StreamingState>()(
     },
 
     flushToConversation: (conversationId) => {
-      const { liveContent, pendingMetrics } = get();
+      const { liveContent, pendingMetrics, flushedStreams } = get();
+
+      // Prevent duplicate flushes (idempotency guard)
+      if (flushedStreams.has(conversationId)) {
+        return null;
+      }
+
       const buffer = liveContent[conversationId];
       if (!buffer) return null;
       const content = buffer.chunks.join('');
@@ -72,6 +82,12 @@ export const useStreamingStore = createWithEqualityFn<StreamingState>()(
       });
 
       return { content, metrics };
+    },
+
+    markFlushed: (conversationId) => {
+      set((state) => ({
+        flushedStreams: new Set(state.flushedStreams).add(conversationId),
+      }));
     },
 
     startStream: (conversationId, requestId) => {
@@ -92,15 +108,19 @@ export const useStreamingStore = createWithEqualityFn<StreamingState>()(
         const { [conversationId]: _content, ...remainingContent } = state.liveContent;
         const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
         const { [conversationId]: _stream, ...remainingStreams } = state.activeStreams;
+        const remainingFlushed = new Set(state.flushedStreams);
+        remainingFlushed.delete(conversationId);
         return {
           liveContent: remainingContent,
           pendingMetrics: remainingMetrics,
           activeStreams: remainingStreams,
+          flushedStreams: remainingFlushed,
         };
       });
     },
 
-    clearAll: () => set({ liveContent: {}, pendingMetrics: {}, activeStreams: {} }),
+    clearAll: () =>
+      set({ liveContent: {}, pendingMetrics: {}, activeStreams: {}, flushedStreams: new Set() }),
   }),
   shallow
 );

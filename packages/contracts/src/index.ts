@@ -176,6 +176,8 @@ export const sanitizeError = (error: unknown): BackendError => {
     code,
     message,
     requestId,
+    context: null,
+    isRetryable: false,
   };
 };
 

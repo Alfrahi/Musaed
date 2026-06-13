@@ -32,6 +32,8 @@ export function coordinateStartStream(conversationId: string, requestId: string)
  *
  * This ensures buffered tokens are persisted before abort/stop so no content
  * is silently discarded.
+ *
+ * Idempotent: calling multiple times for the same conversationId is safe.
  */
 export function flushAndStop(conversationId: string): void {
   const streamingStore = useStreamingStore.getState();
@@ -51,6 +53,9 @@ export function flushAndStop(conversationId: string): void {
       };
       messageStore.setMessages(conversationId, [...messages.slice(0, -1), updatedMsg]);
     }
+
+    // Mark as flushed to prevent duplicate flushes (race condition guard)
+    streamingStore.markFlushed(conversationId);
   }
 
   streamingStore.stopStream(conversationId);

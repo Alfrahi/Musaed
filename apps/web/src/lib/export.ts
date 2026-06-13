@@ -38,10 +38,10 @@ export const exportToMarkdown = async (conversation: Conversation, context: Expo
     if (cleanContent) {
       markdown += `### ${role}\n\n${cleanContent}\n\n`;
 
-      if (msg.eval_count && msg.total_duration) {
-        const speed = msg.eval_count / (msg.total_duration / 1e9);
+      if (msg.evalCount && msg.totalDuration) {
+        const speed = msg.evalCount / (msg.totalDuration / 1e9);
         const speedStr = formatNumber(speed, { maximumFractionDigits: 1 });
-        markdown += `*${t('export.stats')}: ${formatNumber(msg.eval_count)} ${t('export.tokens')}, ${speedStr} ${t('export.ts')}*\n\n`;
+        markdown += `*${t('export.stats')}: ${formatNumber(msg.evalCount)} ${t('export.tokens')}, ${speedStr} ${t('export.ts')}*\n\n`;
       }
     }
   });

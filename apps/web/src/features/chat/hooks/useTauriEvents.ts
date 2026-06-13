@@ -45,9 +45,9 @@ const handleToken = (payload: OllamaToken) => {
 
   // Stash metrics so they're included in the next flush
   const metrics: Partial<Message> = {};
-  if (payload.eval_count != null) metrics.eval_count = payload.eval_count;
-  if (payload.eval_duration != null) metrics.eval_duration = payload.eval_duration;
-  if (payload.total_duration != null) metrics.total_duration = payload.total_duration;
+  if (payload.evalCount != null) metrics.evalCount = payload.evalCount;
+  if (payload.evalDuration != null) metrics.evalDuration = payload.evalDuration;
+  if (payload.totalDuration != null) metrics.totalDuration = payload.totalDuration;
   if (Object.keys(metrics).length > 0) {
     streamingStore.setPendingMetrics(convId, metrics);
   }
