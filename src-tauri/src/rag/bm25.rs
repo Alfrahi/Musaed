@@ -61,7 +61,13 @@ impl BM25 {
     }
 
     /// Compute BM25 score for a query against a document.
+    /// Returns 0.0 if no documents were indexed (avg_doc_len == 0.0).
     pub fn score(&self, query: &str, chunk_id: usize) -> f32 {
+        // Guard against division by zero when no documents or all empty documents
+        if self.avg_doc_len == 0.0 {
+            return 0.0;
+        }
+
         let terms = tokenize(query);
         let mut score = 0.0;
         let doc_len = self.doc_len.get(&chunk_id).copied().unwrap_or(0) as f32;
@@ -127,5 +133,17 @@ mod tests {
         assert!(score2 > score3); // Document 2 should score higher for "hello"
         assert!(score1 > 0.0); // Non-zero score for matching document
         assert_eq!(score3, 0.0); // Zero score for non-matching document
+    }
+
+    #[test]
+    fn test_bm25_empty_documents_returns_zero() {
+        // Regression test for division by zero bug
+        let documents: Vec<(usize, String)> = vec![];
+        let bm25 = BM25::new(&documents);
+
+        // Should return 0.0, not panic or return NaN
+        let score = bm25.score("query", 1);
+        assert_eq!(score, 0.0);
+        assert!(!score.is_nan(), "Score should not be NaN");
     }
 }
