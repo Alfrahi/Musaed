@@ -40,19 +40,13 @@ export function flushAndStop(conversationId: string): void {
   const result = streamingStore.flushToConversation(conversationId);
 
   if (result) {
-    const messageStore = useMessageStore.getState();
-    const messages = messageStore.messages[conversationId] ?? [];
-
-    if (messages.length > 0) {
-      const lastMsg = messages[messages.length - 1];
-      const updatedMsg: Message = {
-        ...lastMsg,
-        content: lastMsg.content + result.content,
-        ...result.metrics,
-        done: true,
-      };
-      messageStore.setMessages(conversationId, [...messages.slice(0, -1), updatedMsg]);
-    }
+    // Use atomic update to avoid stale closure race condition
+    // where messages added during flush would be lost
+    useMessageStore.getState().updateLastMessage(conversationId, {
+      content: result.content,
+      ...result.metrics,
+      done: true,
+    });
 
     // Mark as flushed to prevent duplicate flushes (race condition guard)
     streamingStore.markFlushed(conversationId);
