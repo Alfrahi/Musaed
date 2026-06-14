@@ -306,6 +306,17 @@ export const OllamaModelSchema = z.object({
 
 export type OllamaModel = z.infer<typeof OllamaModelSchema>;
 
+/** Persists the user's last selected model across sessions. */
+export const ModelStateSchema = z.object({
+  selectedModel: z.string().default(''),
+});
+
+export type ModelState = z.infer<typeof ModelStateSchema>;
+
+export const DEFAULT_MODEL_STATE: ModelState = {
+  selectedModel: '',
+};
+
 export const ChatMessageSchema = z.object({
   role: z.string(),
   content: z.string(),

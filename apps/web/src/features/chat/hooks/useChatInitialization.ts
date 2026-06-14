@@ -38,11 +38,19 @@ export function useChatInitialization() {
       runCleanup();
 
       try {
-        // Fetch models and handle smart selection
+        // Fetch models and restore persisted model selection
         await fetchModels();
 
         const modelState = useModelStore.getState();
+        // If a model was persisted and is still available, keep it selected
+        // Otherwise, fall back to the first available model
         if (!modelState.selectedModel && modelState.models.length > 0) {
+          modelState.setSelectedModel(modelState.models[0].name);
+        } else if (
+          modelState.selectedModel &&
+          !modelState.models.some((m) => m.name === modelState.selectedModel)
+        ) {
+          // Persisted model no longer exists, reset to first available
           modelState.setSelectedModel(modelState.models[0].name);
         }
       } catch (fetchErr) {

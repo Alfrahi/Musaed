@@ -4,6 +4,7 @@ import { useStreamingStore } from './stores/streaming-store';
 import { useUIStore } from './stores/ui-store';
 import { useSettingsStore } from './stores/settings-store';
 import { useRagStore } from './stores/rag-store';
+import { useModelStore } from './stores/model-store';
 import { useMessageStore } from './stores/message-store';
 
 /**
@@ -78,7 +79,7 @@ export function stopBatching(conversationId: string): void {
   useStreamingStore.getState().clearStream(conversationId);
 }
 
-const STORES_TO_HYDRATE = 2;
+const STORES_TO_HYDRATE = 3;
 
 /**
  * Triggers async rehydration for all persisted stores that use skipHydration.
@@ -94,6 +95,7 @@ export function registerHydrationCoordination(): () => void {
     useUIStore.getState().setPendingRehydrations(STORES_TO_HYDRATE);
     useSettingsStore.persist.rehydrate();
     useRagStore.persist.rehydrate();
+    useModelStore.persist.rehydrate();
   }
 
   return () => {
