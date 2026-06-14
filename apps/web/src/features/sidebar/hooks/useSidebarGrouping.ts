@@ -52,11 +52,13 @@ export function useSidebarGrouping(
   }, [filtered, loadedCount]);
 
   // Memoize the grouped conversations to avoid recalculating when only `t` changes.
-  const groupedItems = useMemo(() => {
+  const groupedItems = useMemo((): SidebarItem[] => {
     if (searchQuery) {
       return [
-        { type: 'header', group: 'search', id: 'header-search' },
-        ...loadedConversations.map((conv) => ({ type: 'conversation', data: conv, id: conv.id })),
+        { type: 'header' as const, group: 'search', id: 'header-search' },
+        ...loadedConversations.map(
+          (conv): SidebarItem => ({ type: 'conversation' as const, data: conv, id: conv.id })
+        ),
       ];
     }
 
@@ -84,8 +86,10 @@ export function useSidebarGrouping(
     return (['today', 'yesterday', 'lastWeek', 'older'] as TimeGroup[]).flatMap((groupKey) => {
       if (groups[groupKey].length === 0) return [];
       return [
-        { type: 'header', group: groupKey, id: `header-${groupKey}` },
-        ...groups[groupKey].map((conv) => ({ type: 'conversation', data: conv, id: conv.id })),
+        { type: 'header' as const, group: groupKey, id: `header-${groupKey}` },
+        ...groups[groupKey].map(
+          (conv): SidebarItem => ({ type: 'conversation' as const, data: conv, id: conv.id })
+        ),
       ];
     });
   }, [loadedConversations, searchQuery]);
