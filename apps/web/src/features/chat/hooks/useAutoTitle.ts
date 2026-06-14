@@ -22,15 +22,51 @@ export function useAutoTitle() {
   const generateTitle = useCallback(async (conversationId: string) => {
     if (pendingRef.current.has(conversationId)) return;
 
-    const state = useConversationStore.getState();
-    const conversation = state.conversations[conversationId];
-    if (!conversation) return;
-    if (!isDefaultTitle(conversation.title)) return;
+    // Retry conversation lookup to handle race conditions during initialization
+    let conversation:
+      | ReturnType<typeof useConversationStore.getState>['conversations'][string]
+      | undefined;
+    let attempts = 0;
+    const maxAttempts = 5; // Increased from 3 to 5 for slower initialization scenarios
+
+    while (attempts < maxAttempts) {
+      const state = useConversationStore.getState();
+      conversation = state.conversations[conversationId];
+      if (conversation) break;
+      attempts++;
+      logger.warn('Auto-title: conversation not found in store, retrying', {
+        conversationId,
+        attempt: attempts,
+        totalAttempts: maxAttempts,
+        availableConversationIds: Object.keys(state.conversations),
+      });
+      if (attempts < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 150)); // Increased from 100ms
+      }
+    }
+
+    if (!conversation) {
+      logger.error('Auto-title: conversation never appeared in store', { conversationId });
+      return;
+    }
+    if (!isDefaultTitle(conversation.title)) {
+      logger.info('Auto-title: conversation already has custom title', {
+        conversationId,
+        title: conversation.title,
+      });
+      return;
+    }
 
     const messages = useMessageStore.getState().messages[conversationId] || [];
     const hasUser = messages.some((m) => m.role === 'user');
     const hasAssistant = messages.some((m) => m.role === 'assistant');
-    if (!hasUser || !hasAssistant) return;
+    if (!hasUser || !hasAssistant) {
+      logger.warn('Auto-title: missing user or assistant messages', {
+        conversationId,
+        messageCount: messages.length,
+      });
+      return;
+    }
 
     pendingRef.current.add(conversationId);
 
@@ -64,31 +100,77 @@ export function useAutoTitle() {
 /**
  * Imperative version of auto-title generation for use outside React components
  * (e.g. event listeners). Shares the same deduplication set as `useAutoTitle`.
+ * Retries conversation lookup up to 5 times with 150ms delay to handle
+ * race conditions during app initialization.
  */
 export async function triggerAutoTitle(conversationId: string): Promise<void> {
   if (pendingAutoTitles.has(conversationId)) return;
 
-  const state = useConversationStore.getState();
-  const conversation = state.conversations[conversationId];
-  if (!conversation) return;
-  if (!isDefaultTitle(conversation.title)) return;
+  // Retry conversation lookup to handle race conditions during initialization
+  let conversation:
+    | ReturnType<typeof useConversationStore.getState>['conversations'][string]
+    | undefined;
+  let attempts = 0;
+  const maxAttempts = 5;
+
+  while (attempts < maxAttempts) {
+    const state = useConversationStore.getState();
+    conversation = state.conversations[conversationId];
+    if (conversation) break;
+    attempts++;
+    logger.warn('Auto-title: conversation not found in store, retrying', {
+      conversationId,
+      attempt: attempts,
+      totalAttempts: maxAttempts,
+      availableConversationIds: Object.keys(state.conversations),
+    });
+    if (attempts < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+  }
+
+  if (!conversation) {
+    logger.error('Auto-title: conversation never appeared in store', { conversationId });
+    return;
+  }
+  if (!isDefaultTitle(conversation.title)) {
+    logger.info('Auto-title: conversation already has custom title', {
+      conversationId,
+      title: conversation.title,
+    });
+    return;
+  }
 
   const messages = useMessageStore.getState().messages[conversationId] || [];
   const hasUser = messages.some((m) => m.role === 'user');
   const hasAssistant = messages.some((m) => m.role === 'assistant');
-  if (!hasUser || !hasAssistant) return;
+  if (!hasUser || !hasAssistant) {
+    logger.warn('Auto-title: missing user or assistant messages', {
+      conversationId,
+      messageCount: messages.length,
+    });
+    return;
+  }
 
   pendingAutoTitles.add(conversationId);
 
   try {
     const settings = useSettingsStore.getState().globalSettings;
+    logger.info('Auto-title: starting title generation', {
+      conversationId,
+      model: conversation.model,
+      language: settings.language,
+    });
     const title = await generateConversationTitle(
       conversation,
       messages,
       settings.ollamaUrl,
       settings.language
     );
-    if (!title) return;
+    if (!title) {
+      logger.warn('Auto-title: title generation returned null', { conversationId });
+      return;
+    }
 
     const current = useConversationStore.getState().conversations[conversationId];
     if (!current || !isDefaultTitle(current.title)) return;
