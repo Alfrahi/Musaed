@@ -35,6 +35,12 @@ import {
   type Conversation,
   type Message,
   ConversationSchema,
+  // Structured logging types
+  TraceEntrySchema,
+  TraceContextSchema,
+  type TraceEntry,
+  type TraceContext,
+  type TraceStatus,
 } from '@musaed/contracts';
 import type {
   RagProject,
@@ -94,6 +100,23 @@ export interface CommandMap {
   cmd_logs_append: { args: { entry: string }; return: void };
   cmd_logs_request_clear_token: { args: Record<string, never>; return: string };
   cmd_logs_clear: { args: { token: string }; return: void };
+
+  // Tracing commands
+  cmd_trace_append: { args: { input: TraceEntry }; return: void };
+  cmd_trace_start: {
+    args: { traceId: string; feature: string; action: string };
+    return: TraceContext;
+  };
+  cmd_trace_complete: {
+    args: {
+      traceId: string;
+      status: TraceStatus;
+      message?: string;
+      context?: Record<string, unknown>;
+    };
+    return: void;
+  };
+  cmd_trace_get_context: { args: { traceId: string }; return: TraceContext };
 
   // Dialog commands
   cmd_dialog_ask: { args: { title: string; message: string; kind?: string }; return: boolean };
@@ -193,6 +216,21 @@ const CommandInputSchemas: {
   cmd_logs_append: z.object({ entry: LogEntrySchema }),
   cmd_logs_request_clear_token: undefined,
   cmd_logs_clear: z.object({ token: LogClearTokenSchema }),
+
+  // Tracing command input schemas
+  cmd_trace_append: z.object({ input: TraceEntrySchema }),
+  cmd_trace_start: z.object({
+    traceId: z.string().uuid('Invalid traceId format'),
+    feature: z.string().min(1).max(VALIDATION_LIMITS.MAX_FEATURE_NAME_LEN),
+    action: z.string().min(1).max(VALIDATION_LIMITS.MAX_ACTION_NAME_LEN),
+  }),
+  cmd_trace_complete: z.object({
+    traceId: z.string().uuid('Invalid traceId format'),
+    status: z.enum(['success', 'error', 'cancelled', 'timeout']),
+    message: z.string().optional(),
+    context: z.record(z.string(), z.unknown()).optional(),
+  }),
+  cmd_trace_get_context: z.object({ traceId: z.string().uuid('Invalid traceId format') }),
 
   // Dialog command input schemas
   cmd_dialog_ask: z.object({
@@ -334,6 +372,12 @@ const CommandReturnSchemas: {
   cmd_logs_append: voidSchema,
   cmd_logs_request_clear_token: z.string(),
   cmd_logs_clear: voidSchema,
+
+  // Tracing command return schemas
+  cmd_trace_append: voidSchema,
+  cmd_trace_start: TraceContextSchema,
+  cmd_trace_complete: voidSchema,
+  cmd_trace_get_context: TraceContextSchema,
 
   // Dialog command return schemas
   cmd_dialog_ask: z.boolean(),
@@ -604,6 +648,47 @@ export const logApi = {
     if (!token) return null;
     return callInternal('cmd_logs_clear', { token });
   },
+};
+
+/**
+ * Structured Tracing API - propagates trace context across IPC boundaries.
+ * Implements the observability model from QWEN.md §14.
+ */
+export const traceApi = {
+  /**
+   * Appends a complete trace entry to the persistent log stream.
+   * @param input - Structured trace entry with all required fields
+   */
+  append: (input: CommandMap['cmd_trace_append']['args']['input']) =>
+    callInternal('cmd_trace_append', { input }),
+  /**
+   * Starts a new trace span and registers it for context propagation.
+   * @param traceId - Unique trace identifier (UUID v4)
+   * @param feature - Feature domain (e.g., "chat", "rag", "ollama")
+   * @param action - Action name (e.g., "sendMessage", "indexProject")
+   * @returns Trace context for IPC propagation
+   */
+  start: (traceId: string, feature: string, action: string) =>
+    callInternal('cmd_trace_start', { traceId, feature, action }),
+  /**
+   * Completes an active trace span with status.
+   * @param traceId - The trace identifier
+   * @param status - Completion status (success, error, cancelled, timeout)
+   * @param message - Optional human-readable message
+   * @param context - Optional contextual metadata
+   */
+  complete: (
+    traceId: string,
+    status: CommandMap['cmd_trace_complete']['args']['status'],
+    message?: string,
+    context?: Record<string, unknown>
+  ) => callInternal('cmd_trace_complete', { traceId, status, message, context }),
+  /**
+   * Gets the current trace context for an active trace.
+   * @param traceId - The trace identifier
+   * @returns Trace context with current span information
+   */
+  getContext: (traceId: string) => callInternal('cmd_trace_get_context', { traceId }),
 };
 
 /**

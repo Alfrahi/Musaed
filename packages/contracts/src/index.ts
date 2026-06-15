@@ -290,6 +290,48 @@ export const LogClearTokenSchema = z
   .min(1)
   .max(VALIDATION_LIMITS.MAX_LOG_CLEAR_TOKEN_LEN, 'Clear token exceeds size limit');
 
+// ====================== STRUCTURED LOGGING TYPES ======================
+
+/** Log level for structured tracing. */
+export const LogLevelSchema = z.enum(['DEBUG', 'INFO', 'WARN', 'ERROR']);
+export type LogLevel = z.infer<typeof LogLevelSchema>;
+
+/** Trace status for structured logging. */
+export const TraceStatusSchema = z.enum(['success', 'error', 'cancelled', 'timeout']);
+export type TraceStatus = z.infer<typeof TraceStatusSchema>;
+
+/** Trace context for propagating trace metadata across IPC boundaries. */
+export const TraceContextSchema = z.object({
+  traceId: z.string().uuid('Invalid traceId format'),
+  parentSpanId: z.string().uuid('Invalid spanId format').optional(),
+  feature: z
+    .string()
+    .min(1)
+    .max(VALIDATION_LIMITS.MAX_FEATURE_NAME_LEN, 'Feature name exceeds limit'),
+  action: z.string().min(1).max(VALIDATION_LIMITS.MAX_ACTION_NAME_LEN, 'Action name exceeds limit'),
+});
+export type TraceContext = z.infer<typeof TraceContextSchema>;
+
+/** Structured trace entry for observability. */
+export const TraceEntrySchema = z.object({
+  timestamp: z.string().datetime('Invalid timestamp format'),
+  traceId: z.string().uuid('Invalid traceId format'),
+  spanId: z.string().uuid('Invalid spanId format'),
+  parentSpanId: z.string().uuid('Invalid spanId format').optional(),
+  feature: z
+    .string()
+    .min(1)
+    .max(VALIDATION_LIMITS.MAX_FEATURE_NAME_LEN, 'Feature name exceeds limit'),
+  action: z.string().min(1).max(VALIDATION_LIMITS.MAX_ACTION_NAME_LEN, 'Action name exceeds limit'),
+  level: LogLevelSchema,
+  status: TraceStatusSchema.optional(),
+  latencyMs: z.number().int().min(0).optional(),
+  message: z.string().max(VALIDATION_LIMITS.MAX_TRACE_MESSAGE_LEN, 'Message exceeds size limit'),
+  source: z.enum(['frontend', 'backend', 'ipc']),
+  context: z.record(z.string(), z.unknown()).optional(),
+});
+export type TraceEntry = z.infer<typeof TraceEntrySchema>;
+
 export const OllamaModelDetailsSchema = z.object({
   format: z.string().nullish(),
   family: z.string().nullish(),
@@ -659,6 +701,12 @@ export const COMMAND_VERSIONS = {
   cmd_logs_append: 1,
   cmd_logs_request_clear_token: 1,
   cmd_logs_clear: 1,
+
+  // Tracing
+  cmd_trace_append: 1,
+  cmd_trace_start: 1,
+  cmd_trace_complete: 1,
+  cmd_trace_get_context: 1,
 
   // RAG
   cmd_rag_add_project: 1,

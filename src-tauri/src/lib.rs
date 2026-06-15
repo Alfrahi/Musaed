@@ -17,6 +17,7 @@ pub mod payloads;
 pub mod rag;
 pub mod rate_limiter;
 pub mod shared;
+pub mod trace_domain;
 pub mod validation;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -29,7 +30,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
-            tracing::info!(
+            log::info!(
                 "Second instance attempted with args: {:?} and cwd: {:?}",
                 args,
                 cwd
@@ -40,9 +41,9 @@ pub fn run() {
                 let _ = window.set_focus();
                 let _ = window.unminimize();
                 let _ = window.show();
-                tracing::info!("Focused existing main window");
+                log::info!("Focused existing main window");
             } else {
-                tracing::warn!("Main window not found when attempting to focus");
+                log::warn!("Main window not found when attempting to focus");
             }
         }));
 
@@ -92,7 +93,7 @@ pub fn run() {
             .map_err(|e| format!("Failed to initialize RAG store: {}", e))?;
         app.manage(Arc::new(Mutex::new(rag_store)));
 
-        tracing::info!("RAG store initialized at {:?}", db_path);
+        log::info!("RAG store initialized at {:?}", db_path);
 
         Ok(())
     });
@@ -112,6 +113,11 @@ pub fn run() {
             logging::cmd_logs_append,
             logging::cmd_logs_request_clear_token,
             logging::cmd_logs_clear,
+            // Trace domain commands
+            trace_domain::commands::cmd_trace_append,
+            trace_domain::commands::cmd_trace_start,
+            trace_domain::commands::cmd_trace_complete,
+            trace_domain::commands::cmd_trace_get_context,
             rag::commands::cmd_rag_add_project,
             rag::commands::cmd_rag_remove_project,
             rag::commands::cmd_rag_update_project,

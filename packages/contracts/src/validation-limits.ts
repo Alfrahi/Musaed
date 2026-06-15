@@ -46,6 +46,23 @@ export const MAX_TITLE_INPUT_LEN = 10 * 1024;
 /** Maximum length for a role string. */
 export const MAX_ROLE_LEN = 32;
 
+// ====================== STRUCTURED LOGGING LIMITS ======================
+
+/** Maximum length for a feature name in structured logging. */
+export const MAX_FEATURE_NAME_LEN = 64;
+
+/** Maximum length for an action name in structured logging. */
+export const MAX_ACTION_NAME_LEN = 128;
+
+/** Maximum length for a trace context message. */
+export const MAX_TRACE_MESSAGE_LEN = 10 * 1024;
+
+/** Maximum number of context fields in a trace entry. */
+export const MAX_TRACE_CONTEXT_FIELDS = 50;
+
+/** Maximum length of a single context field value. */
+export const MAX_TRACE_CONTEXT_VALUE_LEN = 2048;
+
 /** Allowed range for temperature: [min, max]. */
 export const TEMPERATURE_RANGE = [0, 2] as const;
 
@@ -130,6 +147,12 @@ export const VALIDATION_LIMITS = {
   MAX_LOG_CLEAR_TOKEN_LEN,
   MAX_TITLE_INPUT_LEN,
   MAX_ROLE_LEN,
+  // Structured logging
+  MAX_FEATURE_NAME_LEN,
+  MAX_ACTION_NAME_LEN,
+  MAX_TRACE_MESSAGE_LEN,
+  MAX_TRACE_CONTEXT_FIELDS,
+  MAX_TRACE_CONTEXT_VALUE_LEN,
   TEMPERATURE_RANGE,
   TOP_K_RANGE,
   TOP_P_RANGE,
