@@ -35,5 +35,5 @@ export default {
     conversation: 'musaed-conversation-storage-v2',
     message: 'musaed-message-storage-v1',
   },
-  dependencies: ['library', 'rag', 'settings'],
+  dependencies: [], // Access to library/rag/settings is via IPC/store hooks, not direct imports
 } as const;

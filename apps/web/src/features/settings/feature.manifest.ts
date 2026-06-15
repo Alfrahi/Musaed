@@ -40,5 +40,5 @@ export default {
     settings: 'musaed-settings-storage',
     logs: 'logs.json',
   },
-  dependencies: [],
+  dependencies: ['library'], // Settings accesses library functionality via lib/useModelActions abstraction
 } as const;
