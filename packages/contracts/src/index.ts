@@ -676,6 +676,16 @@ export const COMMAND_VERSIONS = {
   cmd_rag_set_embedding_model: 1,
   cmd_rag_validate_embedding_model: 1,
   cmd_rag_assemble_context: 1,
+
+  // Dialog
+  cmd_dialog_ask: 1,
+
+  // Export
+  cmd_export_markdown: 1,
+
+  // Opener
+  cmd_opener_open_url: 1,
+
   // Conversations
   cmd_conversations_list: 1,
   cmd_conversation_get: 1,

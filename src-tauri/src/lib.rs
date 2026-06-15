@@ -4,12 +4,15 @@ use tokio::sync::Mutex;
 use tracing_subscriber::layer::SubscriberExt;
 
 pub mod conversation;
+pub mod dialog;
 pub mod error_codes;
+pub mod export;
 pub mod generated_validation;
 pub mod logger;
 pub mod logging;
 pub mod ollama;
 pub mod ollama_url;
+pub mod opener;
 pub mod payloads;
 pub mod rag;
 pub mod rate_limiter;
@@ -131,6 +134,9 @@ pub fn run() {
             conversation::commands::cmd_conversation_delete,
             conversation::commands::cmd_conversations_clear,
             conversation::commands::cmd_conversation_update,
+            dialog::cmd_dialog_ask,
+            export::cmd_export_markdown,
+            opener::cmd_opener_open_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

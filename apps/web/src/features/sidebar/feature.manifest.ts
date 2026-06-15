@@ -18,7 +18,7 @@ export default {
     hooks: ['useSidebarActions', 'useSidebarGrouping'],
     utils: [],
   },
-  ipcEndpoints: ['cmd_dialog_ask', 'cmd_export_markdown'],
+  ipcEndpoints: ['cmd_dialog_ask', 'cmd_export_markdown'], // Both commands now implemented
   stateSchemas: {
     conversationStore: 3,
     messageStore: 1,

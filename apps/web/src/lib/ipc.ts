@@ -29,6 +29,7 @@ import {
   sanitizeError,
   COMMAND_VERSIONS,
   IPC_VERSION as _IPC_VERSION,
+  MessageSchema,
   type CommandName,
   AssembledContextSchema,
   type Conversation,
@@ -93,6 +94,15 @@ export interface CommandMap {
   cmd_logs_append: { args: { entry: string }; return: void };
   cmd_logs_request_clear_token: { args: Record<string, never>; return: string };
   cmd_logs_clear: { args: { token: string }; return: void };
+
+  // Dialog commands
+  cmd_dialog_ask: { args: { title: string; message: string; kind?: string }; return: boolean };
+
+  // Export commands
+  cmd_export_markdown: { args: { conversationId: string; path: string }; return: boolean };
+
+  // Opener commands
+  cmd_opener_open_url: { args: { url: string }; return: boolean };
 
   // RAG commands
   cmd_rag_add_project: {
@@ -184,6 +194,24 @@ const CommandInputSchemas: {
   cmd_logs_request_clear_token: undefined,
   cmd_logs_clear: z.object({ token: LogClearTokenSchema }),
 
+  // Dialog command input schemas
+  cmd_dialog_ask: z.object({
+    title: z.string().min(1).max(VALIDATION_LIMITS.MAX_TITLE_INPUT_LEN),
+    message: z.string().min(1).max(VALIDATION_LIMITS.MAX_MESSAGE_CONTENT_LEN),
+    kind: z.string().optional(),
+  }),
+
+  // Export command input schemas
+  cmd_export_markdown: z.object({
+    conversationId: z.string().min(1),
+    path: z.string().min(1).max(RAG_VALIDATION_LIMITS.MAX_FILE_PATH_LEN),
+  }),
+
+  // Opener command input schemas
+  cmd_opener_open_url: z.object({
+    url: z.string().min(1).max(VALIDATION_LIMITS.MAX_MESSAGE_CONTENT_LEN),
+  }),
+
   // RAG command input schemas
   cmd_rag_add_project: z.object({
     name: z.string().min(1).max(RAG_VALIDATION_LIMITS.MAX_PROJECT_NAME_LEN),
@@ -271,12 +299,12 @@ const CommandInputSchemas: {
       settings: z.any(),
       createdAt: z.number(),
       updatedAt: z.number(),
-      messages: z.array(z.any()),
+      messages: z.array(MessageSchema),
     }),
   }),
   cmd_message_append: z.object({
     conversationId: z.string().min(1),
-    message: z.any(),
+    message: MessageSchema,
   }),
   cmd_conversation_delete: z.object({ id: z.string().min(1) }),
   cmd_conversations_clear: undefined,
@@ -306,6 +334,15 @@ const CommandReturnSchemas: {
   cmd_logs_append: voidSchema,
   cmd_logs_request_clear_token: z.string(),
   cmd_logs_clear: voidSchema,
+
+  // Dialog command return schemas
+  cmd_dialog_ask: z.boolean(),
+
+  // Export command return schemas
+  cmd_export_markdown: z.boolean(),
+
+  // Opener command return schemas
+  cmd_opener_open_url: z.boolean(),
 
   // RAG command return schemas
   cmd_rag_add_project: RagProjectSchema,
@@ -567,6 +604,47 @@ export const logApi = {
     if (!token) return null;
     return callInternal('cmd_logs_clear', { token });
   },
+};
+
+/**
+ * Dialog API - manages user dialog interactions.
+ */
+export const dialogApi = {
+  /**
+   * Shows a dialog to the user and returns their response.
+   * @param title - The dialog title
+   * @param message - The dialog message
+   * @param kind - Optional dialog kind (e.g., 'info', 'warning', 'error')
+   * @returns true if user confirmed, false if cancelled
+   */
+  ask: (title: string, message: string, kind?: string) =>
+    callInternal('cmd_dialog_ask', { title, message, kind }),
+};
+
+/**
+ * Export API - handles data export functionality.
+ */
+export const exportApi = {
+  /**
+   * Exports a conversation to Markdown format.
+   * @param conversationId - The conversation ID to export
+   * @param path - The file path to save to
+   * @returns true if export succeeded, false otherwise
+   */
+  markdown: (conversationId: string, path: string) =>
+    callInternal('cmd_export_markdown', { conversationId, path }),
+};
+
+/**
+ * Opener API - handles external URL opening.
+ */
+export const openerApi = {
+  /**
+   * Opens a URL in the user's default browser.
+   * @param url - The URL to open
+   * @returns true if URL was opened successfully, false otherwise
+   */
+  openUrl: (url: string) => callInternal('cmd_opener_open_url', { url }),
 };
 
 /**
