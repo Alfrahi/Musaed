@@ -153,7 +153,7 @@ pub async fn cmd_rag_remove_project(
     let store = state.inner();
     let s = store.lock().await;
 
-    Ok(match s.delete_project(&project_id) {
+    Ok(match s.delete_project(&project_id).await {
         Ok(()) => ApiResponse {
             success: true,
             data: Some(true),
@@ -181,8 +181,9 @@ pub async fn cmd_rag_update_project(
     let store = state.inner();
     let s = store.lock().await;
 
-    if let Err(e) =
-        s.update_project_metadata(&project_id, name.as_deref(), ignore_patterns.as_deref())
+    if let Err(e) = s
+        .update_project_metadata(&project_id, name.as_deref(), ignore_patterns.as_deref())
+        .await
     {
         return Ok(ApiResponse {
             success: false,
@@ -191,7 +192,7 @@ pub async fn cmd_rag_update_project(
         });
     }
 
-    Ok(match s.get_project(&project_id) {
+    Ok(match s.get_project(&project_id).await {
         Ok(Some(project)) => ApiResponse {
             success: true,
             data: Some(project),
@@ -217,7 +218,7 @@ pub async fn cmd_rag_list_projects(
     let store = state.inner();
     let s = store.lock().await;
 
-    Ok(match s.list_projects() {
+    Ok(match s.list_projects().await {
         Ok(projects) => ApiResponse {
             success: true,
             data: Some(projects),
@@ -243,7 +244,7 @@ pub async fn cmd_rag_get_project(
     let store = state.inner();
     let s = store.lock().await;
 
-    Ok(match s.get_project(&project_id) {
+    Ok(match s.get_project(&project_id).await {
         Ok(Some(project)) => ApiResponse {
             success: true,
             data: Some(project),
@@ -291,7 +292,7 @@ pub async fn cmd_rag_index_project<R: Runtime>(
 
     let project = {
         let s = store.lock().await;
-        match s.get_project(&project_id) {
+        match s.get_project(&project_id).await {
             Ok(Some(p)) => p,
             Ok(None) => {
                 return Ok(ApiResponse {
@@ -366,7 +367,7 @@ pub async fn cmd_rag_index_project<R: Runtime>(
             let _ = app_handle_for_callback.emit(crate::shared::EVENT_RAG_INDEX_ERROR, &error);
         } else {
             let s = store_clone.lock().await;
-            let stats = s.get_project_stats(&project_id_clone).ok();
+            let stats = s.get_project_stats(&project_id_clone).await.ok();
             let complete = crate::rag::types::IndexComplete {
                 project_id: project_id_clone.clone(),
                 indexed_at: chrono::Utc::now().to_rfc3339(),
@@ -463,7 +464,7 @@ pub async fn cmd_rag_search(
 
     let project = {
         let s = store.lock().await;
-        match s.get_project(&project_id) {
+        match s.get_project(&project_id).await {
             Ok(Some(p)) => p,
             Ok(None) => {
                 return Ok(ApiResponse {
@@ -528,6 +529,7 @@ pub async fn cmd_rag_get_file_chunks(
     let s = store.lock().await;
     let project = s
         .get_project(&project_id)
+        .await
         .map_err(|e| format!("Failed to fetch project: {}", e))?;
     let project = project.ok_or("Project not found")?;
 
@@ -536,10 +538,13 @@ pub async fn cmd_rag_get_file_chunks(
         .map_err(|e| format!("Invalid file path: {}", e))?;
 
     Ok(
-        match s.get_file_by_path(&project_id, &canonical_path.to_string_lossy()) {
+        match s
+            .get_file_by_path(&project_id, &canonical_path.to_string_lossy())
+            .await
+        {
             Ok(Some(file)) => {
                 if let Some(file_id) = file.id {
-                    match s.get_file_chunks(file_id) {
+                    match s.get_file_chunks(file_id).await {
                         Ok(chunks) => ApiResponse {
                             success: true,
                             data: Some(chunks),
@@ -585,7 +590,7 @@ pub async fn cmd_rag_get_project_stats(
     let store = state.inner();
     let s = store.lock().await;
 
-    Ok(match s.get_project_stats(&project_id) {
+    Ok(match s.get_project_stats(&project_id).await {
         Ok(stats) => ApiResponse {
             success: true,
             data: Some(stats),
@@ -623,7 +628,7 @@ pub async fn cmd_rag_assemble_context(
 
     let project = {
         let s = store.lock().await;
-        match s.get_project(&project_id) {
+        match s.get_project(&project_id).await {
             Ok(Some(p)) => p,
             Ok(None) => {
                 return Ok(ApiResponse {
@@ -698,7 +703,7 @@ pub async fn cmd_rag_set_embedding_model(
     let store = state.inner();
     let s = store.lock().await;
 
-    if let Err(e) = s.update_embedding_model(&project_id, &model_name) {
+    if let Err(e) = s.update_embedding_model(&project_id, &model_name).await {
         return Ok(ApiResponse {
             success: false,
             data: None,

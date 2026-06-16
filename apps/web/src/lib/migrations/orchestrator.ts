@@ -359,6 +359,6 @@ export function extractData<T>(persistedState: unknown): T | undefined {
 
   // Unwrapped format (old / Zustand default)
   // Remove metadata keys to get actual data
-  const { version, metadata, ...data } = state;
+  const { version: _version, metadata: _metadata, ...data } = state;
   return data as T;
 }

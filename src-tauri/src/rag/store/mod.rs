@@ -22,9 +22,9 @@ use projects::*;
 use search_internal::*;
 use stats::*;
 use std::path::Path;
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
-/// The RAG store. Provides thread-safe access via `std::sync::Mutex`.
+/// The RAG store. Provides async-safe access via `tokio::sync::Mutex`.
 pub struct RagStore {
     conn: Mutex<rusqlite::Connection>,
     /// Whether the sqlite-vec extension loaded successfully.
@@ -68,10 +68,16 @@ impl RagStore {
         self.rag_enabled
     }
 
+    /// Acquires a lock on the database connection.
+    /// Use this for operations that need direct connection access.
+    pub async fn lock_conn(&self) -> tokio::sync::MutexGuard<'_, rusqlite::Connection> {
+        self.conn.lock().await
+    }
+
     // ====================== PROJECT OPERATIONS ======================
 
-    pub fn create_project(&self, project: &RagProject) -> Result<(), String> {
-        create_project(self, project)
+    pub async fn create_project(&self, project: &RagProject) -> Result<(), String> {
+        create_project(self, project).await
     }
 
     pub async fn create_project_with_params(
@@ -84,28 +90,28 @@ impl RagStore {
         create_project_with_params(self, name, path, embedding_model, ignore_patterns).await
     }
 
-    pub fn get_project(&self, id: &str) -> Result<Option<RagProject>, String> {
-        get_project(self, id)
+    pub async fn get_project(&self, id: &str) -> Result<Option<RagProject>, String> {
+        get_project(self, id).await
     }
 
-    pub fn list_projects(&self) -> Result<Vec<RagProject>, String> {
-        list_projects(self)
+    pub async fn list_projects(&self) -> Result<Vec<RagProject>, String> {
+        list_projects(self).await
     }
 
-    pub fn delete_project(&self, id: &str) -> Result<(), String> {
-        delete_project(self, id)
+    pub async fn delete_project(&self, id: &str) -> Result<(), String> {
+        delete_project(self, id).await
     }
 
-    pub fn update_project_metadata(
+    pub async fn update_project_metadata(
         &self,
         id: &str,
         name: Option<&str>,
         ignore_patterns: Option<&[String]>,
     ) -> Result<(), String> {
-        update_project_metadata(self, id, name, ignore_patterns)
+        update_project_metadata(self, id, name, ignore_patterns).await
     }
 
-    pub fn update_project_stats(
+    pub async fn update_project_stats(
         &self,
         id: &str,
         file_count: u64,
@@ -113,67 +119,67 @@ impl RagStore {
         total_bytes: u64,
         indexed_at: Option<&str>,
     ) -> Result<(), String> {
-        update_project_stats(self, id, file_count, chunk_count, total_bytes, indexed_at)
+        update_project_stats(self, id, file_count, chunk_count, total_bytes, indexed_at).await
     }
 
-    pub fn get_embedding_dimension(&self, id: &str) -> Result<usize, String> {
-        get_embedding_dimension(self, id)
+    pub async fn get_embedding_dimension(&self, id: &str) -> Result<usize, String> {
+        get_embedding_dimension(self, id).await
     }
 
-    pub fn set_embedding_dimension(&self, id: &str, dimension: usize) -> Result<(), String> {
-        set_embedding_dimension(self, id, dimension)
+    pub async fn set_embedding_dimension(&self, id: &str, dimension: usize) -> Result<(), String> {
+        set_embedding_dimension(self, id, dimension).await
     }
 
-    pub fn set_status(&self, id: &str, status: &ProjectStatus) -> Result<(), String> {
-        set_status(self, id, status)
+    pub async fn set_status(&self, id: &str, status: &ProjectStatus) -> Result<(), String> {
+        set_status(self, id, status).await
     }
 
-    pub fn update_embedding_model(&self, id: &str, model: &str) -> Result<(), String> {
-        update_embedding_model(self, id, model)
+    pub async fn update_embedding_model(&self, id: &str, model: &str) -> Result<(), String> {
+        update_embedding_model(self, id, model).await
     }
 
     // ====================== FILE OPERATIONS ======================
 
-    pub fn upsert_file(&self, file: &FileRecord) -> Result<i64, String> {
-        upsert_file(self, file)
+    pub async fn upsert_file(&self, file: &FileRecord) -> Result<i64, String> {
+        upsert_file(self, file).await
     }
 
-    pub fn delete_file(&self, file_id: i64) -> Result<(), String> {
-        delete_file(self, file_id)
+    pub async fn delete_file(&self, file_id: i64) -> Result<(), String> {
+        delete_file(self, file_id).await
     }
 
-    pub fn get_file_by_path(
+    pub async fn get_file_by_path(
         &self,
         project_id: &str,
         relative_path: &str,
     ) -> Result<Option<FileRecord>, String> {
-        get_file_by_path(self, project_id, relative_path)
+        get_file_by_path(self, project_id, relative_path).await
     }
 
-    pub fn get_project_files(&self, project_id: &str) -> Result<Vec<FileRecord>, String> {
-        get_project_files(self, project_id)
+    pub async fn get_project_files(&self, project_id: &str) -> Result<Vec<FileRecord>, String> {
+        get_project_files(self, project_id).await
     }
 
-    pub fn get_stale_files(&self, project_id: &str) -> Result<Vec<FileRecord>, String> {
-        get_stale_files(self, project_id)
+    pub async fn get_stale_files(&self, project_id: &str) -> Result<Vec<FileRecord>, String> {
+        get_stale_files(self, project_id).await
     }
 
     // ====================== CHUNK OPERATIONS ======================
 
-    pub fn insert_chunk(&self, chunk: &ChunkRow) -> Result<i64, String> {
-        insert_chunk(self, chunk)
+    pub async fn insert_chunk(&self, chunk: &ChunkRow) -> Result<i64, String> {
+        insert_chunk(self, chunk).await
     }
 
-    pub fn insert_chunks_batch(&self, chunks: &[ChunkRow]) -> Result<(), String> {
-        insert_chunks_batch(self, chunks)
+    pub async fn insert_chunks_batch(&self, chunks: &[ChunkRow]) -> Result<(), String> {
+        insert_chunks_batch(self, chunks).await
     }
 
-    pub fn get_file_chunks(&self, file_id: i64) -> Result<Vec<ChunkRecord>, String> {
-        get_file_chunks(self, file_id)
+    pub async fn get_file_chunks(&self, file_id: i64) -> Result<Vec<ChunkRecord>, String> {
+        get_file_chunks(self, file_id).await
     }
 
-    pub fn delete_file_chunks(&self, file_id: i64) -> Result<(), String> {
-        delete_file_chunks(self, file_id)
+    pub async fn delete_file_chunks(&self, file_id: i64) -> Result<(), String> {
+        delete_file_chunks(self, file_id).await
     }
 
     // ====================== EMBEDDING OPERATIONS ======================
@@ -183,11 +189,11 @@ impl RagStore {
     /// # Errors
     ///
     /// Returns an error if the sqlite-vec extension is not loaded.
-    pub fn insert_embedding(&self, chunk_id: i64, embedding: &[f32]) -> Result<(), String> {
+    pub async fn insert_embedding(&self, chunk_id: i64, embedding: &[f32]) -> Result<(), String> {
         if !self.rag_enabled {
             return Err("RAG features are disabled: sqlite-vec extension not loaded".to_string());
         }
-        insert_embedding(self, chunk_id, embedding)
+        insert_embedding(self, chunk_id, embedding).await
     }
 
     /// Inserts multiple embedding vectors in a batch.
@@ -195,7 +201,7 @@ impl RagStore {
     /// # Errors
     ///
     /// Returns an error if the sqlite-vec extension is not loaded.
-    pub fn insert_embeddings_batch(
+    pub async fn insert_embeddings_batch(
         &self,
         chunk_ids: &[i64],
         embeddings: &[Vec<f32>],
@@ -203,7 +209,7 @@ impl RagStore {
         if !self.rag_enabled {
             return Err("RAG features are disabled: sqlite-vec extension not loaded".to_string());
         }
-        insert_embeddings_batch(self, chunk_ids, embeddings)
+        insert_embeddings_batch(self, chunk_ids, embeddings).await
     }
 
     // ====================== SEARCH OPERATIONS ======================
@@ -213,7 +219,7 @@ impl RagStore {
     /// # Errors
     ///
     /// Returns an error if the sqlite-vec extension is not loaded.
-    pub fn search_similar(
+    pub async fn search_similar(
         &self,
         project_id: &str,
         query_embedding: &[f32],
@@ -223,13 +229,13 @@ impl RagStore {
         if !self.rag_enabled {
             return Err("RAG features are disabled: sqlite-vec extension not loaded".to_string());
         }
-        search_similar(self, project_id, query_embedding, top_k, threshold)
+        search_similar(self, project_id, query_embedding, top_k, threshold).await
     }
 
     // ====================== STATS ======================
 
-    pub fn get_project_stats(&self, project_id: &str) -> Result<ProjectStats, String> {
-        get_project_stats(self, project_id)
+    pub async fn get_project_stats(&self, project_id: &str) -> Result<ProjectStats, String> {
+        get_project_stats(self, project_id).await
     }
 }
 
@@ -276,13 +282,13 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_create_and_get_project() {
+    #[tokio::test]
+    async fn test_create_and_get_project() {
         let store = test_store();
         let project = make_test_project("proj-1", "My Project", "/tmp/proj");
-        store.create_project(&project).unwrap();
+        store.create_project(&project).await.unwrap();
 
-        let fetched = store.get_project("proj-1").unwrap();
+        let fetched = store.get_project("proj-1").await.unwrap();
         assert!(fetched.is_some());
         let fetched = fetched.unwrap();
         assert_eq!(fetched.id, "proj-1");
@@ -291,65 +297,73 @@ mod tests {
         assert_eq!(fetched.ignore_patterns, vec!["node_modules"]);
     }
 
-    #[test]
-    fn test_list_projects() {
+    #[tokio::test]
+    async fn test_list_projects() {
         let store = test_store();
         store
             .create_project(&make_test_project("p1", "A", "/a"))
+            .await
             .unwrap();
         store
             .create_project(&make_test_project("p2", "B", "/b"))
+            .await
             .unwrap();
 
-        let projects = store.list_projects().unwrap();
+        let projects = store.list_projects().await.unwrap();
         assert_eq!(projects.len(), 2);
     }
 
-    #[test]
-    fn test_delete_project() {
+    #[tokio::test]
+    async fn test_delete_project() {
         let store = test_store();
         store
             .create_project(&make_test_project("p1", "A", "/a"))
+            .await
             .unwrap();
-        store.delete_project("p1").unwrap();
-        assert!(store.get_project("p1").unwrap().is_none());
+        store.delete_project("p1").await.unwrap();
+        assert!(store.get_project("p1").await.unwrap().is_none());
     }
 
-    #[test]
-    fn test_update_project_metadata() {
+    #[tokio::test]
+    async fn test_update_project_metadata() {
         let store = test_store();
         store
             .create_project(&make_test_project("p1", "A", "/a"))
+            .await
             .unwrap();
         store
             .update_project_metadata("p1", Some("Updated"), Some(&["dist".to_string()]))
+            .await
             .unwrap();
 
-        let project = store.get_project("p1").unwrap().unwrap();
+        let project = store.get_project("p1").await.unwrap().unwrap();
         assert_eq!(project.name, "Updated");
         assert_eq!(project.ignore_patterns, vec!["dist"]);
     }
 
-    #[test]
-    fn test_update_project_stats() {
+    #[tokio::test]
+    async fn test_update_project_stats() {
         let store = test_store();
         store
             .create_project(&make_test_project("p1", "A", "/a"))
+            .await
             .unwrap();
         store
             .update_project_stats("p1", 100, 500, 1024000, Some("2024-06-01T00:00:00Z"))
+            .await
             .unwrap();
 
-        let project = store.get_project("p1").unwrap().unwrap();
+        let project = store.get_project("p1").await.unwrap().unwrap();
         assert_eq!(project.file_count, 100);
         assert_eq!(project.chunk_count, 500);
     }
 
-    #[test]
-    fn test_upsert_file() {
+    #[tokio::test]
+    async fn test_upsert_file() {
         let store = test_store();
         store
             .create_project(&make_test_project("p1", "A", "/a"))
+            .await
             .unwrap();
 
         let file = FileRecord {
@@ -362,7 +376,7 @@ mod tests {
             chunk_count: 3,
         };
 
-        let file_id = store.upsert_file(&file).unwrap();
+        let file_id = store.upsert_file(&file).await.unwrap();
         assert!(file_id > 0);
 
         // Upsert same file (update)
@@ -372,22 +386,24 @@ mod tests {
             file_size: 2048,
             ..file.clone()
         };
-        let same_id = store.upsert_file(&updated).unwrap();
+        let same_id = store.upsert_file(&updated).await.unwrap();
         assert_eq!(file_id, same_id);
 
         let fetched = store
             .get_file_by_path("p1", "src/main.rs")
+            .await
             .unwrap()
             .unwrap();
         assert_eq!(fetched.file_hash, "def456");
         assert_eq!(fetched.file_size, 2048);
     }
 
-    #[test]
-    fn test_insert_and_search_chunks() {
+    #[tokio::test]
+    async fn test_insert_and_search_chunks() {
         let store = test_store();
         store
             .create_project(&make_test_project("p1", "A", "/a"))
+            .await
             .unwrap();
 
         let file = FileRecord {
@@ -399,7 +415,7 @@ mod tests {
             modified_at: "2024-01-01".to_string(),
             chunk_count: 1,
         };
-        let file_id = store.upsert_file(&file).unwrap();
+        let file_id = store.upsert_file(&file).await.unwrap();
 
         let chunk = ChunkRow {
             id: None,
@@ -414,28 +430,29 @@ mod tests {
             metadata: serde_json::json!({"names": ["main"]}),
         };
 
-        let chunk_id = store.insert_chunk(&chunk).unwrap();
+        let chunk_id = store.insert_chunk(&chunk).await.unwrap();
         assert!(chunk_id > 0);
 
         // Insert a dummy embedding (768-dim, non-zero for testing)
         let mut embedding = vec![0.0f32; 768];
         embedding[0] = 1.0;
-        store.insert_embedding(chunk_id, &embedding).unwrap();
+        store.insert_embedding(chunk_id, &embedding).await.unwrap();
 
         // Search with the same vector query
         let mut query = vec![0.0f32; 768];
         query[0] = 1.0;
-        let results = store.search_similar("p1", &query, 10, 0.0).unwrap();
+        let results = store.search_similar("p1", &query, 10, 0.0).await.unwrap();
         // With identical vectors, distance should be 0 (perfect match)
         assert!(!results.is_empty());
         assert_eq!(results[0].file_path, "src/main.rs");
     }
 
-    #[test]
-    fn test_delete_file_cascades() {
+    #[tokio::test]
+    async fn test_delete_file_cascades() {
         let store = test_store();
         store
             .create_project(&make_test_project("p1", "A", "/a"))
+            .await
             .unwrap();
 
         let file = FileRecord {
@@ -447,7 +464,7 @@ mod tests {
             modified_at: "2024-01-01".to_string(),
             chunk_count: 1,
         };
-        let file_id = store.upsert_file(&file).unwrap();
+        let file_id = store.upsert_file(&file).await.unwrap();
 
         let chunk = ChunkRow {
             id: None,
@@ -462,51 +479,54 @@ mod tests {
             metadata: serde_json::json!({}),
         };
 
-        let chunk_id = store.insert_chunk(&chunk).unwrap();
+        let chunk_id = store.insert_chunk(&chunk).await.unwrap();
         let embedding = vec![0.0f32; 768];
-        store.insert_embedding(chunk_id, &embedding).unwrap();
+        store.insert_embedding(chunk_id, &embedding).await.unwrap();
 
-        store.delete_file(file_id).unwrap();
+        store.delete_file(file_id).await.unwrap();
 
-        let chunks = store.get_file_chunks(file_id).unwrap();
+        let chunks = store.get_file_chunks(file_id).await.unwrap();
         assert!(chunks.is_empty());
     }
 
-    #[test]
-    fn test_get_project_stats() {
+    #[tokio::test]
+    async fn test_get_project_stats() {
         let store = test_store();
         store
             .create_project(&make_test_project("p1", "A", "/a"))
+            .await
             .unwrap();
 
-        let stats = store.get_project_stats("p1").unwrap();
+        let stats = store.get_project_stats("p1").await.unwrap();
         assert_eq!(stats.file_count, 0);
         assert_eq!(stats.chunk_count, 0);
     }
 
-    #[test]
-    fn test_embedding_dimension() {
+    #[tokio::test]
+    async fn test_embedding_dimension() {
         let store = test_store();
         store
             .create_project(&make_test_project("p1", "A", "/a"))
+            .await
             .unwrap();
 
-        let dim = store.get_embedding_dimension("p1").unwrap();
+        let dim = store.get_embedding_dimension("p1").await.unwrap();
         assert_eq!(dim, DEFAULT_EMBEDDING_DIMENSION);
 
-        store.set_embedding_dimension("p1", 1024).unwrap();
-        let dim = store.get_embedding_dimension("p1").unwrap();
+        store.set_embedding_dimension("p1", 1024).await.unwrap();
+        let dim = store.get_embedding_dimension("p1").await.unwrap();
         assert_eq!(dim, 1024);
     }
 
     /// Regression test for BUG-001: delete_file must not deadlock when
     /// deleting embeddings, chunks, and the file row under a single Mutex
     /// lock acquisition. std::sync::Mutex is non-recursive on Linux.
-    #[test]
-    fn test_delete_file_no_deadlock() {
+    #[tokio::test]
+    async fn test_delete_file_no_deadlock() {
         let store = test_store();
         store
             .create_project(&make_test_project("p1", "A", "/a"))
+            .await
             .unwrap();
 
         let file = FileRecord {
@@ -518,7 +538,7 @@ mod tests {
             modified_at: "2024-01-01".to_string(),
             chunk_count: 2,
         };
-        let file_id = store.upsert_file(&file).unwrap();
+        let file_id = store.upsert_file(&file).await.unwrap();
 
         // Insert chunks and embeddings
         for i in 0..2 {
@@ -534,31 +554,34 @@ mod tests {
                 end_line: i * 10 + 10,
                 metadata: serde_json::json!({}),
             };
-            let chunk_id = store.insert_chunk(&chunk).unwrap();
+            let chunk_id = store.insert_chunk(&chunk).await.unwrap();
             let embedding = vec![0.0f32; 768];
-            store.insert_embedding(chunk_id, &embedding).unwrap();
+            store.insert_embedding(chunk_id, &embedding).await.unwrap();
         }
 
         // This call would previously deadlock (BUG-001).
         store
             .delete_file(file_id)
+            .await
             .expect("delete_file should succeed");
 
         // Verify all data is gone
-        assert!(store.get_file_chunks(file_id).unwrap().is_empty());
+        assert!(store.get_file_chunks(file_id).await.unwrap().is_empty());
         assert!(store
             .get_file_by_path("p1", "src/deadlock_test.rs")
+            .await
             .unwrap()
             .is_none());
     }
 
     /// Regression test for BUG-001: delete_file_chunks must not deadlock
     /// when deleting embeddings and chunks under a single Mutex lock.
-    #[test]
-    fn test_delete_file_chunks_no_deadlock() {
+    #[tokio::test]
+    async fn test_delete_file_chunks_no_deadlock() {
         let store = test_store();
         store
             .create_project(&make_test_project("p1", "A", "/a"))
+            .await
             .unwrap();
 
         let file = FileRecord {
@@ -570,7 +593,7 @@ mod tests {
             modified_at: "2024-01-01".to_string(),
             chunk_count: 1,
         };
-        let file_id = store.upsert_file(&file).unwrap();
+        let file_id = store.upsert_file(&file).await.unwrap();
 
         let chunk = ChunkRow {
             id: None,
@@ -584,15 +607,16 @@ mod tests {
             end_line: 1,
             metadata: serde_json::json!({}),
         };
-        let chunk_id = store.insert_chunk(&chunk).unwrap();
+        let chunk_id = store.insert_chunk(&chunk).await.unwrap();
         let embedding = vec![0.0f32; 768];
-        store.insert_embedding(chunk_id, &embedding).unwrap();
+        store.insert_embedding(chunk_id, &embedding).await.unwrap();
 
         // This call would previously deadlock (BUG-001).
         store
             .delete_file_chunks(file_id)
+            .await
             .expect("delete_file_chunks should succeed");
 
-        assert!(store.get_file_chunks(file_id).unwrap().is_empty());
+        assert!(store.get_file_chunks(file_id).await.unwrap().is_empty());
     }
 }

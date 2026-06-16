@@ -1,10 +1,10 @@
 use crate::conversation::models::{Conversation, Message};
 use rusqlite::{params, Connection, Result as SqlResult};
 use std::path::Path;
-use std::sync::{Arc, Mutex};
+use tokio::sync::Mutex;
 
 pub struct ConversationStore {
-    conn: Arc<Mutex<Connection>>, // Mutex provides Sync + Send
+    conn: Mutex<Connection>,
 }
 
 impl ConversationStore {
@@ -43,18 +43,16 @@ impl ConversationStore {
         )?;
 
         Ok(ConversationStore {
-            conn: Arc::new(Mutex::new(conn)),
+            conn: Mutex::new(conn),
         })
     }
 
-    fn lock_conn(&self) -> std::sync::MutexGuard<'_, Connection> {
-        self.conn.lock().expect("Failed to lock DB connection")
+    async fn lock_conn(&self) -> tokio::sync::MutexGuard<'_, Connection> {
+        self.conn.lock().await
     }
 
-    // Synchronous methods (tauri commands are async wrappers)
-
-    pub fn list_conversations(&self) -> SqlResult<Vec<Conversation>> {
-        let conn = self.lock_conn();
+    pub async fn list_conversations(&self) -> SqlResult<Vec<Conversation>> {
+        let conn = self.lock_conn().await;
         let mut stmt = conn.prepare(
             "SELECT id, title, model, settings, created_at, updated_at FROM conversations",
         )?;
@@ -75,8 +73,8 @@ impl ConversationStore {
         Ok(conversations)
     }
 
-    pub fn get_conversation(&self, id: &str) -> SqlResult<Conversation> {
-        let conn = self.lock_conn();
+    pub async fn get_conversation(&self, id: &str) -> SqlResult<Conversation> {
+        let conn = self.lock_conn().await;
         let mut stmt = conn.prepare(
             "SELECT id, title, model, settings, created_at, updated_at FROM conversations WHERE id = ?1",
         )?;
@@ -93,8 +91,8 @@ impl ConversationStore {
         })
     }
 
-    pub fn create_conversation(&self, conv: &Conversation) -> SqlResult<()> {
-        let conn = self.lock_conn();
+    pub async fn create_conversation(&self, conv: &Conversation) -> SqlResult<()> {
+        let conn = self.lock_conn().await;
         conn.execute(
             "INSERT INTO conversations (id, title, model, settings, created_at, updated_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
@@ -110,8 +108,8 @@ impl ConversationStore {
         Ok(())
     }
 
-    pub fn get_conversation_with_messages(&self, id: &str) -> SqlResult<Conversation> {
-        let conn = self.lock_conn();
+    pub async fn get_conversation_with_messages(&self, id: &str) -> SqlResult<Conversation> {
+        let conn = self.lock_conn().await;
         let mut stmt = conn.prepare(
             "SELECT id, title, model, settings, created_at, updated_at FROM conversations WHERE id = ?1",
         )?;
@@ -159,8 +157,8 @@ impl ConversationStore {
         Ok(conv)
     }
 
-    pub fn delete_conversation(&self, id: &str) -> SqlResult<()> {
-        let conn = self.lock_conn();
+    pub async fn delete_conversation(&self, id: &str) -> SqlResult<()> {
+        let conn = self.lock_conn().await;
         conn.execute(
             "DELETE FROM messages WHERE conversation_id = ?1",
             params![id],
@@ -169,15 +167,20 @@ impl ConversationStore {
         Ok(())
     }
 
-    pub fn clear_all_conversations(&self) -> SqlResult<()> {
-        let conn = self.lock_conn();
+    pub async fn clear_all_conversations(&self) -> SqlResult<()> {
+        let conn = self.lock_conn().await;
         conn.execute("DELETE FROM messages", params![])?;
         conn.execute("DELETE FROM conversations", params![])?;
         Ok(())
     }
 
-    pub fn update_conversation(&self, id: &str, title: &str, updated_at: i64) -> SqlResult<()> {
-        let conn = self.lock_conn();
+    pub async fn update_conversation(
+        &self,
+        id: &str,
+        title: &str,
+        updated_at: i64,
+    ) -> SqlResult<()> {
+        let conn = self.lock_conn().await;
         conn.execute(
             "UPDATE conversations SET title = ?1, updated_at = ?2 WHERE id = ?3",
             params![title, updated_at, id],
@@ -185,8 +188,8 @@ impl ConversationStore {
         Ok(())
     }
 
-    pub fn add_message(&self, conversation_id: &str, msg: &Message) -> SqlResult<()> {
-        let conn = self.lock_conn();
+    pub async fn add_message(&self, conversation_id: &str, msg: &Message) -> SqlResult<()> {
+        let conn = self.lock_conn().await;
         conn.execute(
             "INSERT INTO messages (id, conversation_id, role, content, timestamp, model, done,
                                   request_id, images, eval_count, total_duration, eval_duration, rag_sources)

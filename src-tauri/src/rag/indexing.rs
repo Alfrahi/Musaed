@@ -49,7 +49,7 @@ pub async fn index_project(
     // Mark project as indexing
     {
         let s = store.lock().await;
-        s.set_status(project_id, &ProjectStatus::Indexing)?;
+        s.set_status(project_id, &ProjectStatus::Indexing).await?;
     }
 
     // === Phase 1: Discover files ===
@@ -90,7 +90,7 @@ pub async fn index_project(
 
     let tracked_files = {
         let s = store.lock().await;
-        s.get_project_files(project_id)?
+        s.get_project_files(project_id).await?
     };
 
     // Build a map of tracked file paths -> (hash, file_id)
@@ -177,7 +177,7 @@ pub async fn index_project(
             if cancel_token.is_cancelled() {
                 return Err("Indexing cancelled".to_string());
             }
-            s.delete_file(*file_id)?;
+            s.delete_file(*file_id).await?;
             if i % 100 == 0 {
                 emit_progress(
                     &app_handle,
@@ -278,7 +278,7 @@ pub async fn index_project(
     // Store detected dimension
     {
         let s = store.lock().await;
-        s.set_embedding_dimension(project_id, dimension)?;
+        s.set_embedding_dimension(project_id, dimension).await?;
     }
 
     // Collect all chunk texts for batch embedding
@@ -358,10 +358,10 @@ pub async fn index_project(
                 chunk_count: chunks.len(),
             };
 
-            let file_id = s.upsert_file(&file_record)?;
+            let file_id = s.upsert_file(&file_record).await?;
 
             // Delete old chunks for this file (if re-indexing)
-            let _ = s.delete_file_chunks(file_id);
+            let _ = s.delete_file_chunks(file_id).await;
 
             // Insert chunks and embeddings
             for (chunk_idx, chunk) in chunks.iter().enumerate() {
@@ -378,11 +378,12 @@ pub async fn index_project(
                     metadata: chunk.metadata.clone(),
                 };
 
-                let chunk_id = s.insert_chunk(&chunk_row)?;
+                let chunk_id = s.insert_chunk(&chunk_row).await?;
 
                 // Insert corresponding embedding
                 if embedding_idx < all_embeddings.len() {
-                    s.insert_embedding(chunk_id, &all_embeddings[embedding_idx])?;
+                    s.insert_embedding(chunk_id, &all_embeddings[embedding_idx])
+                        .await?;
                 }
 
                 embedding_idx += 1;
@@ -404,14 +405,15 @@ pub async fn index_project(
         // Update project stats
         let file_count = discovered.len() as u64;
         // Get total chunk count from store
-        let stats = s.get_project_stats(project_id)?;
+        let stats = s.get_project_stats(project_id).await?;
         s.update_project_stats(
             project_id,
             file_count,
             stats.chunk_count,
             total_bytes,
             Some(&chrono::Utc::now().to_rfc3339()),
-        )?;
+        )
+        .await?;
     }
 
     // === Phase 7: Complete ===
@@ -427,7 +429,7 @@ pub async fn index_project(
     // Mark project as ready
     {
         let s = store.lock().await;
-        s.set_status(project_id, &ProjectStatus::Ready)?;
+        s.set_status(project_id, &ProjectStatus::Ready).await?;
     }
 
     tracing::info!(

@@ -55,7 +55,9 @@ impl RagSearchEngine {
 
         // Vector search in SQLite
         let s = store.lock().await;
-        let candidates = s.search_similar(project_id, &query_embedding, top_k * 2, threshold)?;
+        let candidates = s
+            .search_similar(project_id, &query_embedding, top_k * 2, threshold)
+            .await?;
 
         tracing::debug!("RAG Search: found {} vector candidates", candidates.len());
 

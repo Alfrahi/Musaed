@@ -3,12 +3,12 @@
 use super::connection::MAX_EMBEDDING_DIMENSION;
 
 /// Insert a single embedding vector for a chunk.
-pub(super) fn insert_embedding(
+pub(super) async fn insert_embedding(
     store: &super::RagStore,
     chunk_id: i64,
     embedding: &[f32],
 ) -> Result<(), String> {
-    let conn = store.conn.lock().map_err(|e| e.to_string())?;
+    let conn = store.lock_conn().await;
 
     // Zero-pad embedding to MAX_EMBEDDING_DIMENSION
     let mut padded = vec![0.0f32; MAX_EMBEDDING_DIMENSION];
@@ -28,12 +28,12 @@ pub(super) fn insert_embedding(
 }
 
 /// Insert multiple embeddings in a single transaction.
-pub(super) fn insert_embeddings_batch(
+pub(super) async fn insert_embeddings_batch(
     store: &super::RagStore,
     chunk_ids: &[i64],
     embeddings: &[Vec<f32>],
 ) -> Result<(), String> {
-    let conn = store.conn.lock().map_err(|e| e.to_string())?;
+    let conn = store.lock_conn().await;
     let tx = conn
         .unchecked_transaction()
         .map_err(|e| format!("Failed to begin transaction: {}", e))?;

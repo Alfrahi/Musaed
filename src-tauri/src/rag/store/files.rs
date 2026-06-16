@@ -3,11 +3,11 @@
 use rusqlite::OptionalExtension;
 
 /// Upsert a file record. Returns the file ID.
-pub(super) fn upsert_file(
+pub(super) async fn upsert_file(
     store: &super::RagStore,
     file: &crate::rag::types::FileRecord,
 ) -> Result<i64, String> {
-    let conn = store.conn.lock().map_err(|e| e.to_string())?;
+    let conn = store.lock_conn().await;
 
     // Check if file already exists for this project
     let existing_id: Option<i64> = conn
@@ -41,10 +41,9 @@ pub(super) fn upsert_file(
 /// Delete a file and all its associated chunks and embeddings.
 ///
 /// All three deletions (embeddings, chunks, file) must happen under a **single**
-/// lock acquisition. Calling the per-table helpers would re-lock the Mutex and
-/// deadlock on Linux where `std::sync::Mutex` is non-recursive (BUG-001).
-pub(super) fn delete_file(store: &super::RagStore, file_id: i64) -> Result<(), String> {
-    let conn = store.conn.lock().map_err(|e| e.to_string())?;
+/// lock acquisition to prevent race conditions.
+pub(super) async fn delete_file(store: &super::RagStore, file_id: i64) -> Result<(), String> {
+    let conn = store.lock_conn().await;
 
     // Delete embeddings first (via subquery)
     conn.execute(
@@ -71,12 +70,12 @@ pub(super) fn delete_file(store: &super::RagStore, file_id: i64) -> Result<(), S
 }
 
 /// Get a file by project ID and relative path.
-pub(super) fn get_file_by_path(
+pub(super) async fn get_file_by_path(
     store: &super::RagStore,
     project_id: &str,
     relative_path: &str,
 ) -> Result<Option<crate::rag::types::FileRecord>, String> {
-    let conn = store.conn.lock().map_err(|e| e.to_string())?;
+    let conn = store.lock_conn().await;
 
     let mut stmt = conn
         .prepare("SELECT id, project_id, relative_path, file_hash, file_size, modified_at, chunk_count FROM files WHERE project_id = ?1 AND relative_path = ?2")
@@ -101,11 +100,11 @@ pub(super) fn get_file_by_path(
 }
 
 /// Get all files for a project.
-pub(super) fn get_project_files(
+pub(super) async fn get_project_files(
     store: &super::RagStore,
     project_id: &str,
 ) -> Result<Vec<crate::rag::types::FileRecord>, String> {
-    let conn = store.conn.lock().map_err(|e| e.to_string())?;
+    let conn = store.lock_conn().await;
 
     let mut stmt = conn
         .prepare("SELECT id, project_id, relative_path, file_hash, file_size, modified_at, chunk_count FROM files WHERE project_id = ?1 ORDER BY relative_path")
@@ -131,10 +130,10 @@ pub(super) fn get_project_files(
 }
 
 /// Get tracked files for a project (used for stale file detection).
-pub(super) fn get_stale_files(
+pub(super) async fn get_stale_files(
     store: &super::RagStore,
     project_id: &str,
 ) -> Result<Vec<crate::rag::types::FileRecord>, String> {
     // Simply return all tracked files; diff logic is in indexing.rs.
-    get_project_files(store, project_id)
+    get_project_files(store, project_id).await
 }

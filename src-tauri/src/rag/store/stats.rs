@@ -5,11 +5,11 @@ use crate::rag::types::ProjectStats;
 use rusqlite::OptionalExtension;
 
 /// Compute statistics for a project.
-pub(super) fn get_project_stats(
+pub(super) async fn get_project_stats(
     store: &super::RagStore,
     project_id: &str,
 ) -> Result<ProjectStats, String> {
-    let conn = store.conn.lock().map_err(|e| e.to_string())?;
+    let conn = store.lock_conn().await;
 
     let file_count: i64 = conn
         .query_row(

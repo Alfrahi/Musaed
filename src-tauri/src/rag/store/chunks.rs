@@ -4,8 +4,8 @@ use crate::rag::types::ChunkRow;
 use rusqlite::params;
 
 /// Insert a single chunk and return its ID.
-pub(super) fn insert_chunk(store: &super::RagStore, chunk: &ChunkRow) -> Result<i64, String> {
-    let conn = store.conn.lock().map_err(|e| e.to_string())?;
+pub(super) async fn insert_chunk(store: &super::RagStore, chunk: &ChunkRow) -> Result<i64, String> {
+    let conn = store.lock_conn().await;
     conn.execute(
         "INSERT INTO chunks (project_id, file_id, chunk_index, content, chunk_type, language, start_line, end_line, metadata) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         params![
@@ -25,11 +25,11 @@ pub(super) fn insert_chunk(store: &super::RagStore, chunk: &ChunkRow) -> Result<
 }
 
 /// Insert multiple chunks in a single transaction.
-pub(super) fn insert_chunks_batch(
+pub(super) async fn insert_chunks_batch(
     store: &super::RagStore,
     chunks: &[ChunkRow],
 ) -> Result<(), String> {
-    let conn = store.conn.lock().map_err(|e| e.to_string())?;
+    let conn = store.lock_conn().await;
     let tx = conn
         .unchecked_transaction()
         .map_err(|e| format!("Failed to begin transaction: {}", e))?;
@@ -59,11 +59,11 @@ pub(super) fn insert_chunks_batch(
 }
 
 /// Get all chunks for a specific file.
-pub(super) fn get_file_chunks(
+pub(super) async fn get_file_chunks(
     store: &super::RagStore,
     file_id: i64,
 ) -> Result<Vec<crate::rag::types::ChunkRecord>, String> {
-    let conn = store.conn.lock().map_err(|e| e.to_string())?;
+    let conn = store.lock_conn().await;
     let mut stmt = conn
         .prepare("SELECT id, chunk_index, content, chunk_type, language, start_line, end_line, metadata FROM chunks WHERE file_id = ?1 ORDER BY chunk_index")
         .map_err(|e| format!("Failed to prepare query: {}", e))?;
@@ -89,10 +89,13 @@ pub(super) fn get_file_chunks(
 
 /// Delete all chunks for a given file (and their embeddings).
 ///
-/// Both deletions must happen under a **single** lock acquisition to avoid
-/// deadlocking on Linux where `std::sync::Mutex` is non-recursive (BUG-001).
-pub(super) fn delete_file_chunks(store: &super::RagStore, file_id: i64) -> Result<(), String> {
-    let conn = store.conn.lock().map_err(|e| e.to_string())?;
+/// Both deletions must happen under a **single** lock acquisition to prevent
+/// race conditions.
+pub(super) async fn delete_file_chunks(
+    store: &super::RagStore,
+    file_id: i64,
+) -> Result<(), String> {
+    let conn = store.lock_conn().await;
 
     // Delete embeddings first (via subquery)
     conn.execute(

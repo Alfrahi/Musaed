@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex as StdMutex};
+use std::sync::Arc;
 use tauri::Manager;
 use tokio::sync::Mutex;
 use tracing_subscriber::layer::SubscriberExt;
@@ -78,7 +78,7 @@ pub fn run() {
 
         let conversation_store = crate::conversation::store::ConversationStore::new(&db_path)
             .map_err(|e| format!("Failed to initialize conversation store: {}", e))?;
-        app.manage(Arc::new(StdMutex::new(conversation_store)));
+        app.manage(Arc::new(Mutex::new(conversation_store)));
 
         // Initialize RAG store
         let app_data_dir = app

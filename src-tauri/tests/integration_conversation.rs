@@ -5,13 +5,13 @@ use musaed_lib::conversation::{
 use std::path::PathBuf;
 
 fn get_test_store() -> ConversationStore {
-    // Use in‑memory SQLite for tests
+    // Use in-memory SQLite for tests
     let db_path = PathBuf::from(":memory:");
     ConversationStore::new(&db_path).expect("Failed to create store")
 }
 
-#[test]
-fn test_create_and_fetch_conversation() {
+#[tokio::test]
+async fn test_create_and_fetch_conversation() {
     let store = get_test_store();
     let conv = Conversation {
         id: "test1".into(),
@@ -22,14 +22,17 @@ fn test_create_and_fetch_conversation() {
         updated_at: 0,
         messages: vec![],
     };
-    store.create_conversation(&conv).expect("Create failed");
-    let fetched = store.get_conversation("test1").expect("Fetch failed");
+    store
+        .create_conversation(&conv)
+        .await
+        .expect("Create failed");
+    let fetched = store.get_conversation("test1").await.expect("Fetch failed");
     assert_eq!(fetched.id, conv.id);
     assert_eq!(fetched.title, conv.title);
 }
 
-#[test]
-fn test_append_message() {
+#[tokio::test]
+async fn test_append_message() {
     let store = get_test_store();
     let conv = Conversation {
         id: "c2".into(),
@@ -40,7 +43,7 @@ fn test_append_message() {
         updated_at: 0,
         messages: vec![],
     };
-    store.create_conversation(&conv).unwrap();
+    store.create_conversation(&conv).await.unwrap();
     let msg = Message {
         id: "m1".into(),
         role: "user".into(),
@@ -55,16 +58,20 @@ fn test_append_message() {
         eval_duration: None,
         rag_sources: None,
     };
-    store.add_message(&conv.id, &msg).expect("Append failed");
+    store
+        .add_message(&conv.id, &msg)
+        .await
+        .expect("Append failed");
     let conv_with_msgs = store
         .get_conversation_with_messages(&conv.id)
+        .await
         .expect("Fetch with msgs");
     assert_eq!(conv_with_msgs.messages.len(), 1);
     assert_eq!(conv_with_msgs.messages[0].content, "Hello");
 }
 
-#[test]
-fn test_delete_conversation() {
+#[tokio::test]
+async fn test_delete_conversation() {
     let store = get_test_store();
     let conv = Conversation {
         id: "del".into(),
@@ -75,8 +82,11 @@ fn test_delete_conversation() {
         updated_at: 0,
         messages: vec![],
     };
-    store.create_conversation(&conv).unwrap();
-    store.delete_conversation(&conv.id).expect("Delete failed");
-    let res = store.get_conversation(&conv.id);
+    store.create_conversation(&conv).await.unwrap();
+    store
+        .delete_conversation(&conv.id)
+        .await
+        .expect("Delete failed");
+    let res = store.get_conversation(&conv.id).await;
     assert!(res.is_err(), "Conversation should be gone");
 }

@@ -4,14 +4,14 @@ use super::connection::MAX_EMBEDDING_DIMENSION;
 use crate::rag::types::SearchResult;
 
 /// Search for similar chunks using vector similarity.
-pub(super) fn search_similar(
+pub(super) async fn search_similar(
     store: &super::RagStore,
     project_id: &str,
     query_embedding: &[f32],
     top_k: usize,
     threshold: f32,
 ) -> Result<Vec<SearchResult>, String> {
-    let conn = store.conn.lock().map_err(|e| e.to_string())?;
+    let conn = store.lock_conn().await;
 
     // Zero-pad query embedding
     let mut padded = vec![0.0f32; MAX_EMBEDDING_DIMENSION];
