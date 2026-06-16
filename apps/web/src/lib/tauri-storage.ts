@@ -4,14 +4,15 @@ import { type StateStorage } from 'zustand/middleware';
 import { z } from 'zod';
 import { checkIsTauri, store } from './ipc';
 import { logger } from './logger';
+import {
+  runMigrations as runStoreMigrations,
+  type MigrationFn,
+  type MigrationResult,
+  MigrationError,
+  MigrationErrorCode,
+} from './migrations';
 
-export type MigrationFn = (data: unknown) => unknown;
-export type Migrations = Record<number, MigrationFn>;
-
-interface StorageData {
-  conversations?: Record<string, unknown> | Array<unknown>;
-  [key: string]: unknown;
-}
+export type { MigrationFn };
 
 /**
  * Minimal interface for a Tauri Store instance used during migrations.
@@ -24,49 +25,91 @@ interface TauriStoreLike {
 }
 
 /**
- * Runs sequential migrations on stored data to maintain schema integrity.
+ * Runs sequential migrations on stored data with enhanced error handling and logging.
+ * Uses the new migration framework for better tracking and rollback support.
  */
 async function runMigrations(
   filename: string,
   appStore: TauriStoreLike,
   storageKey: string,
   currentVersion: number,
-  migrations?: Migrations
-): Promise<void> {
+  migrations?: Record<number, MigrationFn>
+): Promise<MigrationResult<unknown>> {
+  const versionKey = `__musaed_store_version_${filename}`;
+
   try {
-    const versionKey = `__musaed_store_version_${filename}`;
     const rawVersion = await appStore.get<number>(versionKey);
     const storedVersion = z.number().catch(0).parse(rawVersion);
 
-    if (storedVersion < currentVersion) {
-      const rawData = await appStore.get<string>(storageKey);
-      if (!rawData) {
-        await appStore.set(versionKey, currentVersion);
-        await appStore.save();
-        return;
-      }
+    // No migration needed
+    if (storedVersion >= currentVersion) {
+      logger.debug(`[${filename}] Already at version ${currentVersion}`);
+      return {
+        success: true,
+        fromVersion: storedVersion,
+        toVersion: currentVersion,
+      };
+    }
 
-      let migratedData = (
-        typeof rawData === 'string' ? JSON.parse(rawData) : rawData
-      ) as StorageData;
-      let currentV = storedVersion;
+    logger.info(`[${filename}] Migrating from v${storedVersion} to v${currentVersion}`);
 
-      // Sequential application of migrations guarantees schema integrity
-      if (migrations) {
-        while (currentV < currentVersion) {
-          currentV++;
-          if (migrations[currentV]) {
-            migratedData = migrations[currentV](migratedData) as StorageData;
-          }
-        }
-      }
-
-      await appStore.set(storageKey, JSON.stringify(migratedData));
+    const rawData = await appStore.get<string>(storageKey);
+    if (!rawData) {
+      logger.debug(`[${filename}] No data to migrate, initializing at v${currentVersion}`);
       await appStore.set(versionKey, currentVersion);
       await appStore.save();
+      return {
+        success: true,
+        fromVersion: 0,
+        toVersion: currentVersion,
+      };
     }
+
+    const parsedData = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+
+    // Use the new migration framework
+    const result = await runStoreMigrations(parsedData, {
+      currentVersion,
+      migrations: migrations ?? {},
+      validate: (data: unknown) => data,
+      defaultState: {},
+      storeName: filename,
+    });
+
+    if (result.success && result.data) {
+      await appStore.set(storageKey, JSON.stringify(result.data));
+      await appStore.set(versionKey, result.toVersion);
+      await appStore.save();
+      logger.info(
+        `[${filename}] Migration successful: v${result.fromVersion} → v${result.toVersion}`
+      );
+    } else if (result.error) {
+      logger.error(`[${filename}] Migration failed`, {
+        error: result.error.toJSON?.() ?? result.error.message,
+        fromVersion: result.fromVersion,
+        toVersion: result.toVersion,
+      });
+    }
+
+    return result;
   } catch (err) {
-    logger.error(`Migration failed for ${filename}`, { error: err });
+    const error = err instanceof Error ? err : new Error(String(err));
+    logger.error(`[${filename}] Migration system error`, {
+      error: error.message,
+      stack: error.stack,
+    });
+    return {
+      success: false,
+      fromVersion: 0,
+      toVersion: currentVersion,
+      error: new MigrationError(
+        MigrationErrorCode.MIGRATION_FAILED,
+        0,
+        currentVersion,
+        `Migration system error: ${error.message}`,
+        err
+      ),
+    };
   }
 }
 
@@ -82,7 +125,7 @@ async function runMigrations(
 export const createTauriStorage = (
   filename: string,
   version: number = 1,
-  migrations?: Migrations
+  migrations?: Record<number, MigrationFn>
 ): StateStorage => ({
   getItem: async (name: string): Promise<string | null> => {
     if (!checkIsTauri()) {

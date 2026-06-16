@@ -20,7 +20,8 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@musaed/contracts": ["../../packages/contracts/src"]
+      "@musaed/contracts": ["../../packages/contracts/src"],
+      "@musaed/contracts/*": ["../../packages/contracts/src/*"]
     }
   },
   "include": [

@@ -10,6 +10,7 @@ pub mod export;
 pub mod generated_validation;
 pub mod logger;
 pub mod logging;
+pub mod migrations;
 pub mod ollama;
 pub mod ollama_url;
 pub mod opener;
@@ -118,6 +119,12 @@ pub fn run() {
             trace_domain::commands::cmd_trace_start,
             trace_domain::commands::cmd_trace_complete,
             trace_domain::commands::cmd_trace_get_context,
+            // Migration commands
+            migrations::cmd_run_migrations,
+            migrations::cmd_rollback_migrations,
+            migrations::cmd_get_migration_status,
+            migrations::cmd_list_migrations,
+            // RAG commands
             rag::commands::cmd_rag_add_project,
             rag::commands::cmd_rag_remove_project,
             rag::commands::cmd_rag_update_project,
@@ -133,6 +140,7 @@ pub fn run() {
             rag::commands::cmd_rag_set_embedding_model,
             rag::commands::cmd_rag_validate_embedding_model,
             rag::commands::cmd_rag_assemble_context,
+            // Conversation commands
             conversation::commands::cmd_conversations_list,
             conversation::commands::cmd_conversation_get,
             conversation::commands::cmd_conversation_create,
@@ -140,6 +148,7 @@ pub fn run() {
             conversation::commands::cmd_conversation_delete,
             conversation::commands::cmd_conversations_clear,
             conversation::commands::cmd_conversation_update,
+            // Other commands
             dialog::cmd_dialog_ask,
             export::cmd_export_markdown,
             opener::cmd_opener_open_url,
