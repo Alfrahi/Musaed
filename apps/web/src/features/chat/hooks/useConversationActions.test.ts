@@ -25,7 +25,7 @@ vi.mock('@/store/coordination', () => ({
   flushAndStop: vi.fn(),
 }));
 
-vi.mock('@/store/stores/ui-store', () => {
+vi.mock('@/store/ui-store', () => {
   const getState = vi.fn(() => ({
     isStreaming: false,
     isHydrated: true,
