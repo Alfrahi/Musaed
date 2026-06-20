@@ -1,9 +1,9 @@
 'use client';
 
 import { useUIStore } from './stores/ui-store';
-import { useSettingsStore } from './stores/settings-store';
+import { useSettingsStore } from '../features/settings/store/settings-store';
 import { useRagStore } from '../features/rag/store/rag-store';
-import { useModelStore } from './stores/model-store';
+import { useModelStore } from '../features/settings/store/model-store';
 import { useStreamingStore } from '../features/chat/store/streaming-store';
 import { useMessageStore } from '../features/chat/store/message-store';
 
