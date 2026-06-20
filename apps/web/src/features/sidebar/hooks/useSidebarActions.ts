@@ -7,8 +7,8 @@ import { dialog } from '@/lib/ipc';
 import { exportToMarkdown } from '@/lib/export';
 import { useConversationActions } from '@/lib/useConversationActions';
 import { logger } from '@/lib/logger';
-import { useMessageStore } from '@/store/stores/message-store';
-import type { ConversationMetadata } from '@/store/stores/conversation-store';
+import { useMessageStore } from '@/features/chat/store/message-store';
+import type { ConversationMetadata } from '@/features/chat/store/conversation-store';
 
 export function useSidebarActions() {
   const language = useLanguage();

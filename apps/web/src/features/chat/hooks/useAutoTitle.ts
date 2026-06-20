@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useRef } from 'react';
-import { useConversationStore } from '../../../store/stores/conversation-store';
-import { useMessageStore } from '../../../store/stores/message-store';
+import { useConversationStore } from '../store/conversation-store';
+import { useMessageStore } from '../store/message-store';
 import { useSettingsStore } from '../../../store/stores/settings-store';
 import { updateConversation as backendUpdateConversation } from '../../../lib/conversation-backend';
 import { generateConversationTitle, isDefaultTitle } from '../utils/title-generator';

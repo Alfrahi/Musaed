@@ -1,11 +1,11 @@
 'use client';
 
-import { useStreamingStore } from './stores/streaming-store';
 import { useUIStore } from './stores/ui-store';
 import { useSettingsStore } from './stores/settings-store';
 import { useRagStore } from './stores/rag-store';
 import { useModelStore } from './stores/model-store';
-import { useMessageStore } from './stores/message-store';
+import { useStreamingStore } from '../features/chat/store/streaming-store';
+import { useMessageStore } from '../features/chat/store/message-store';
 
 /**
  * Coordinates streaming start/stop between the streaming store

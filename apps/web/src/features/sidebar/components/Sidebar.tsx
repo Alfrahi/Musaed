@@ -8,7 +8,7 @@ import {
   useConversationStore,
   selectFilteredConversations,
   type ConversationMetadata,
-} from '@/store/stores/conversation-store';
+} from '@/features/chat/store/conversation-store';
 import { useTranslation } from '@/lib/i18n';
 import { ProjectList, AddProjectDialog } from '@/components/rag';
 import { useConversationActions } from '@/lib/useConversationActions';

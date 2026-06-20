@@ -8,7 +8,7 @@ import { useUpdatePullStatus, useSetModels } from '../../../store/hooks';
 import { listen, ollamaApi } from '../../../lib/ipc';
 import { flushAndStop } from '../../../store/batch-manager';
 import { coordinateStopStream } from '../../../store/coordination';
-import { useMessageStore } from '../../../store/stores/message-store';
+import { useMessageStore } from '../store/message-store';
 import { triggerAutoTitle } from './useAutoTitle';
 import { persistMessage } from '../../../lib/message-persistence';
 import {

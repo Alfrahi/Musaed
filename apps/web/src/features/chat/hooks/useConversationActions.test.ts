@@ -4,9 +4,9 @@ import { useConversationActions } from './useConversationActions';
 import { useBatchUpdate, useUpdateConversation } from '@/store/hooks';
 import { coordinateStopStream } from '@/store/coordination';
 import { chatApi } from '@/lib/ipc';
-import { useStreamingStore } from '@/store/stores/streaming-store';
-import { useMessageStore } from '@/store/stores/message-store';
-import { useConversationStore } from '@/store/stores/conversation-store';
+import { useStreamingStore } from '../store/streaming-store';
+import { useMessageStore } from '../store/message-store';
+import { useConversationStore } from '../store/conversation-store';
 
 // Mock hooks
 vi.mock('@/store/hooks', () => ({
@@ -67,7 +67,7 @@ vi.mock('@/lib/i18n', () => ({
 }));
 
 // Store mocks with getState/setState as needed
-vi.mock('@/store/stores/settings-store', () => {
+vi.mock('../store/settings-store', () => {
   const getState = vi.fn(() => ({
     globalSettings: { language: 'en' },
     setGlobalSettings: vi.fn(),
@@ -77,7 +77,7 @@ vi.mock('@/store/stores/settings-store', () => {
   return { useSettingsStore };
 });
 
-vi.mock('@/store/stores/conversation-store', () => {
+vi.mock('../store/conversation-store', () => {
   const getState = vi.fn(() => ({
     conversations: {},
     conversationIds: [],
@@ -92,7 +92,7 @@ vi.mock('@/store/stores/conversation-store', () => {
   return { useConversationStore };
 });
 
-vi.mock('@/store/stores/message-store', () => {
+vi.mock('../store/message-store', () => {
   const getState = vi.fn(() => ({
     messages: {},
     clearMessages: vi.fn(),
@@ -104,7 +104,7 @@ vi.mock('@/store/stores/message-store', () => {
   return { useMessageStore };
 });
 
-vi.mock('@/store/stores/model-store', () => {
+vi.mock('../store/model-store', () => {
   const getState = vi.fn(() => ({
     selectedModel: 'llama3',
   }));
@@ -113,7 +113,7 @@ vi.mock('@/store/stores/model-store', () => {
   return { useModelStore };
 });
 
-vi.mock('@/store/stores/streaming-store', () => {
+vi.mock('../store/streaming-store', () => {
   const getState = vi.fn(() => ({
     activeStreams: {},
     startStream: vi.fn(),

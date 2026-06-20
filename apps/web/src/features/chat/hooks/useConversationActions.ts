@@ -2,13 +2,9 @@
 
 import { useCallback } from 'react';
 
-import {
-  useConversationStore,
-  useModelStore,
-  useSettingsStore,
-  useStreamingStore,
-  useMessageStore,
-} from '../../../store';
+import { useStreamingStore, useMessageStore, useConversationStore } from '../store';
+import { useModelStore } from '../../../store/stores/model-store';
+import { useSettingsStore } from '../../../store/stores/settings-store';
 import { useUpdateConversation, useBatchUpdate } from '../../../store/hooks';
 import { chatApi, conversationApi } from '../../../lib/ipc';
 import {
@@ -18,10 +14,7 @@ import {
 } from '../../../store/coordination';
 import { useTranslation } from '../../../lib/i18n';
 import { updateConversation as backendUpdateConversation } from '../../../lib/conversation-backend';
-import type {
-  ConversationMetadata,
-  ConversationState,
-} from '../../../store/stores/conversation-store';
+import type { ConversationMetadata, ConversationState } from '../store/conversation-store';
 
 /**
  * Abort active streaming for a conversation.

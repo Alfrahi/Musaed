@@ -1,14 +1,14 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useUIStore, useConversationStore, useSettingsStore, useModelStore } from '@/store';
+import { useUIStore, useSettingsStore, useModelStore, useConversationStore } from '@/store';
 import { useSetInitialized, useSetUIError } from '@/store/hooks';
 import { useModelActions } from '@/lib/useModelActions';
 import { useConversationActions } from './useConversationActions';
 import { useSettingsActions } from '@/lib/useSettingsActions';
 import { useStorageCleanup } from '@/lib/useStorageCleanup';
 import { initializeConversations } from '@/lib/conversation-backend';
-import { useMessageStore } from '@/store/stores/message-store';
+import { useMessageStore } from '../store/message-store';
 import { conversationApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
 import { getSystemLanguage } from '@/lib/i18n';

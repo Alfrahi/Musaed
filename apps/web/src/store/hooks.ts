@@ -1,16 +1,20 @@
 'use client';
 
-import { useConversationStore } from './stores/conversation-store';
-import { useMessageStore } from './stores/message-store';
 import { useUIStore } from './stores/ui-store';
 import { useSettingsStore } from './stores/settings-store';
 import { useModelStore } from './stores/model-store';
+import { useRagStore } from './stores/rag-store';
+import {
+  useConversationStore,
+  type ConversationState,
+  type ConversationMetadata,
+} from '../features/chat/store/conversation-store';
+import { useMessageStore } from '../features/chat/store/message-store';
 import {
   useStreamingStore,
   selectLiveContent,
   selectIsLiveStreaming,
-} from './stores/streaming-store';
-import { useRagStore } from './stores/rag-store';
+} from '../features/chat/store/streaming-store';
 import { coordinateStartStream, coordinateStopStream } from './coordination';
 import type {
   Message,
@@ -18,9 +22,8 @@ import type {
   OllamaModel,
   RagProject,
   SearchResult,
+  IndexProgress,
 } from '@musaed/contracts';
-import type { ConversationState, ConversationMetadata } from './stores/conversation-store';
-import type { IndexProgress } from '@musaed/contracts';
 
 // ---------------------------------------------------------------------------
 // useConversationStore selectors

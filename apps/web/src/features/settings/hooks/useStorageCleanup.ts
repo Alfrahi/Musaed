@@ -7,7 +7,7 @@ import {
   useSetConversations,
   useChatRetentionDays,
 } from '../../../store/hooks';
-import { useMessageStore } from '../../../store/stores/message-store';
+import { useMessageStore } from '@/features/chat/store/message-store';
 import { logger } from '../../../lib/logger';
 
 export function useStorageCleanup() {

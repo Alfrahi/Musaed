@@ -13,8 +13,8 @@ import { checkIsTauri, dialog, fs } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
 import { ConversationSchema, type OllamaModel, type Message } from '@musaed/contracts';
-import { useMessageStore } from '../../../store/stores/message-store';
-import { type ConversationMetadata } from '../../../store/stores/conversation-store';
+import { useMessageStore } from '@/features/chat/store/message-store';
+import { type ConversationMetadata } from '@/features/chat/store/conversation-store';
 
 const useSizeCalculations = (
   conversations: Record<string, ConversationMetadata>,

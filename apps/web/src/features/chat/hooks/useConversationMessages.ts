@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useCurrentConversationId } from '../../../store/hooks';
-import { useMessageStore } from '../../../store/stores/message-store';
+import { useMessageStore } from '../store/message-store';
 import { conversationApi } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
 

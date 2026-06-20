@@ -10,11 +10,8 @@ import {
   useCurrentConversationId,
   useMessages,
 } from '../../../store/hooks';
-import {
-  useConversationStore,
-  selectCurrentConversation,
-} from '../../../store/stores/conversation-store';
-import { useStreamingStore, selectLiveContent } from '../../../store/stores/streaming-store';
+import { useConversationStore, selectCurrentConversation } from '../store/conversation-store';
+import { useStreamingStore, selectLiveContent } from '../store/streaming-store';
 import MessageBubble from './MessageBubble';
 import ChatWindowSkeleton from './ChatWindowSkeleton';
 import EmptyState from './EmptyState';

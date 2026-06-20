@@ -19,7 +19,7 @@ import toast from 'react-hot-toast';
 import { flushAndStop } from '../../../store/batch-manager';
 import { useConversationActions } from './useConversationActions';
 import { type FileAttachment } from './useAttachmentUtils';
-import { useMessageStore } from '../../../store/stores/message-store';
+import { useMessageStore } from '../store/message-store';
 import type { Citation } from '@musaed/contracts';
 import { persistMessage } from '../../../lib/message-persistence';
 
