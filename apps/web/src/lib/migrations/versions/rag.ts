@@ -5,7 +5,7 @@
  * Handles both Zustand state migrations and coordinates with backend SQLite migrations.
  */
 
-import type { RagState } from '../../../store/stores/rag-store';
+import type { RagState } from '../../../features/rag/store/rag-store';
 import { RagProjectSchema, type RagProject, SearchResultSchema } from '@musaed/contracts';
 import { z } from 'zod';
 

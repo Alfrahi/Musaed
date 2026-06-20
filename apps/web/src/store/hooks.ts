@@ -3,7 +3,7 @@
 import { useUIStore } from './stores/ui-store';
 import { useSettingsStore } from './stores/settings-store';
 import { useModelStore } from './stores/model-store';
-import { useRagStore } from './stores/rag-store';
+import { useRagStore } from '../features/rag/store/rag-store';
 import {
   useConversationStore,
   type ConversationState,
