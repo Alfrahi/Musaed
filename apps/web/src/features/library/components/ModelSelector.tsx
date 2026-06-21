@@ -2,13 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Settings2, RefreshCw, ChevronDown, Check } from 'lucide-react';
-import {
-  useSelectedModel,
-  useModels,
-  useSetSelectedModel,
-  useIsStreaming,
-  useGlobalSettings,
-} from '../../../store/hooks';
+import { useUIStore } from '../../../store/ui-store';
+import { useModelStore } from '../../settings/store/model-store';
+import { useSettingsStore } from '../../settings/store/settings-store';
 import { cn } from '../../../lib/utils';
 import { useTranslation } from '../../../lib/i18n';
 import { useModelActions } from '../hooks/useModelActions';
@@ -141,13 +137,13 @@ const ModelDropdown = ({
 const ModelSelector = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const selectedModel = useSelectedModel();
-  const models = useModels();
-  const setSelectedModel = useSetSelectedModel();
-  const isStreaming = useIsStreaming();
-  const globalSettings = useGlobalSettings();
+  const selectedModel = useModelStore((s) => s.selectedModel);
+  const models = useModelStore((s) => s.models);
+  const setSelectedModel = useModelStore((s) => s.setSelectedModel);
+  const isStreaming = useUIStore((s) => s.isStreaming);
+  const language = useSettingsStore((s) => s.globalSettings.language);
   const { fetchModels } = useModelActions();
-  const { t } = useTranslation(globalSettings.language);
+  const { t } = useTranslation(language);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

@@ -65,3 +65,22 @@ export const useUIStore = createWithEqualityFn<UIState>()(
   }),
   shallow
 );
+
+// UI Store hooks - these are the ONLY store hooks that should be in the shared layer
+export const useIsStreaming = () => useUIStore((s) => s.isStreaming);
+export const useIsInitialized = () => useUIStore((s) => s.isInitialized);
+export const useIsHydrated = () => useUIStore((s) => s.isHydrated);
+export const useIsOllamaConnected = () => useUIStore((s) => s.isOllamaConnected);
+export const useUIError = () => useUIStore((s) => s.errorMessage);
+export const useIsSettingsOpen = () => useUIStore((s) => s.isSettingsOpen);
+export const useIsLibraryOpen = () => useUIStore((s) => s.isLibraryOpen);
+export const useIsInfoOpen = () => useUIStore((s) => s.isInfoOpen);
+
+export const useSetStreaming = () => useUIStore((s) => s.setStreaming);
+export const useSetInitialized = () => useUIStore((s) => s.setInitialized);
+export const useSetHydrated = () => useUIStore((s) => s.setHydrated);
+export const useSetOllamaConnected = () => useUIStore((s) => s.setOllamaConnected);
+export const useSetUIError = () => useUIStore((s) => s.setErrorMessage);
+export const useSetSettingsOpen = () => useUIStore((s) => s.setSettingsOpen);
+export const useSetLibraryOpen = () => useUIStore((s) => s.setLibraryOpen);
+export const useSetInfoOpen = () => useUIStore((s) => s.setInfoOpen);

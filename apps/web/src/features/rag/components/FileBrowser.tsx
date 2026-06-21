@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRagFileBrowser } from '../hooks/useRagFileBrowser';
-import { useActiveRagProject, useLanguage } from '../../../store/hooks';
+import { useActiveRagProject } from '../store/rag-store';
+import { useLanguage } from '../../settings/store/settings-store';
 import { Loader2, Folder, File, RefreshCw } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { useTranslation } from '@/lib/i18n';

@@ -1,13 +1,14 @@
 'use client';
 
 import { FolderOpen, X } from 'lucide-react';
-import { useActiveRagProject, useSetActiveRagProjectId, useLanguage } from '@/store/hooks';
+import { useActiveRagProject, useSetActiveRagProjectId } from '../store/rag-store';
+import { useSettingsStore } from '../../settings/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 
 export const RagContextBadge = () => {
   const activeProject = useActiveRagProject();
   const setActiveProjectId = useSetActiveRagProjectId();
-  const language = useLanguage();
+  const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
 
   if (!activeProject) return null;

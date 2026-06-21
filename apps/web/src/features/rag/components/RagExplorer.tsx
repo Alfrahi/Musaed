@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import { FileBrowser } from './FileBrowser';
 import { FileChunkViewer } from './FileChunkViewer';
-import { useLanguage } from '@/store/hooks';
+import { useSettingsStore } from '../../settings/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 
 const RagExplorer = () => {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const language = useLanguage();
+  const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
 
   return (

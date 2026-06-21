@@ -9,7 +9,7 @@ import {
   detectUnsupportedDiagram,
   preprocessMermaidContent,
 } from '../utils/mermaid-utils';
-import { useLanguage } from '../../../store/hooks';
+import { useSettingsStore } from '../../settings/store/settings-store';
 import { useTranslation } from '../../../lib/i18n';
 
 interface MermaidRendererProps {
@@ -117,7 +117,7 @@ const useMermaidRender = (mermaidContent: string | null, theme: MermaidRendererP
   const [svg, setSvg] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
-  const language = useLanguage();
+  const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
 
   const renderDiagram = useCallback(async () => {

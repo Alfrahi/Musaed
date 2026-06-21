@@ -99,3 +99,7 @@ export const useModelStore = createWithEqualityFn<ModelState>()(
   ),
   shallow
 );
+
+// Selector hooks for external access (e.g., settings feature)
+export const useModels = () => useModelStore((state) => state.models);
+export const useSelectedModel = () => useModelStore((state) => state.selectedModel);

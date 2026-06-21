@@ -81,3 +81,21 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
   }),
   shallow
 );
+
+/** Hook for batch updating conversation state. */
+export const useBatchUpdate = () => useConversationStore((state) => state.batchUpdate);
+
+/** Hook for updating a single conversation. */
+export const useUpdateConversation = () =>
+  useConversationStore((state) => state.updateConversation);
+
+// Selector hooks for external access (e.g., settings feature)
+export const useConversations = () => useConversationStore((state) => state.conversations);
+export const useConversationIds = () => useConversationStore((state) => state.conversationIds);
+export const useSetConversations = () => useConversationStore((state) => state.setConversations);
+export const useCurrentConversationId = () =>
+  useConversationStore((state) => state.currentConversationId);
+export const useSetCurrentConversationId = () =>
+  useConversationStore((state) => state.setCurrentConversationId);
+export const useSearchQuery = () => useConversationStore((state) => state.searchQuery);
+export const useSetSearchQuery = () => useConversationStore((state) => state.setSearchQuery);

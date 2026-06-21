@@ -5,7 +5,7 @@ import {
   useActiveRagProject,
   useSetActiveRagProjectId,
   useRagSearchResults,
-} from '../../../store/hooks';
+} from '../store/rag-store';
 import { ragApi } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
 

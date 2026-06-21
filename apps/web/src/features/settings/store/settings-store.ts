@@ -77,3 +77,11 @@ export const useSettingsStore = createWithEqualityFn<SettingsState>()(
   ),
   shallow
 );
+
+// Selector hooks for settings
+export const useOllamaUrl = () => useSettingsStore((state) => state.globalSettings.ollamaUrl);
+export const useGlobalSettings = () => useSettingsStore((state) => state.globalSettings);
+export const useLanguage = () => useSettingsStore((state) => state.globalSettings.language);
+export const useChatRetentionDays = () =>
+  useSettingsStore((state) => state.globalSettings.chatRetentionDays);
+export const useSetGlobalSettings = () => useSettingsStore((state) => state.setGlobalSettings);

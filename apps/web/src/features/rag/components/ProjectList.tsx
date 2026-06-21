@@ -4,7 +4,8 @@ import { Plus } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import { useRagProjects as useRagProjectsHook } from '../hooks/useRagProjects';
 import { useRagIndexing } from '../hooks/useRagIndexing';
-import { useActiveRagProjectId, useSetActiveRagProjectId, useLanguage } from '@/store/hooks';
+import { useActiveRagProjectId, useSetActiveRagProjectId } from '../store/rag-store';
+import { useSettingsStore } from '../../settings/store/settings-store';
 import ProjectCard from './ProjectCard';
 import { AddProjectDialog } from './AddProjectDialog';
 import { useState, useEffect } from 'react';
@@ -15,7 +16,7 @@ export const ProjectList = ({ hideHeaderAction = false }: { hideHeaderAction?: b
   const { startIndexing, abortIndexing, startIndexEventListeners } = useRagIndexing();
   const activeProjectId = useActiveRagProjectId();
   const setActiveProjectId = useSetActiveRagProjectId();
-  const language = useLanguage();
+  const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
   const [showAddDialog, setShowAddDialog] = useState(false);
 

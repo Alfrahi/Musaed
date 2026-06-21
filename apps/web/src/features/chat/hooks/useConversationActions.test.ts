@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useConversationActions } from './useConversationActions';
-import { useBatchUpdate, useUpdateConversation } from '@/store/hooks';
+import { useBatchUpdate, useUpdateConversation } from '../store/conversation-store';
 import { coordinateStopStream } from '@/store/coordination';
 import { chatApi } from '@/lib/ipc';
 import { useStreamingStore } from '../store/streaming-store';
@@ -9,11 +9,30 @@ import { useMessageStore } from '../store/message-store';
 import { useConversationStore } from '../store/conversation-store';
 
 // Mock hooks
-vi.mock('@/store/hooks', () => ({
-  useUpdateConversation: vi.fn(() => vi.fn()),
-  useBatchUpdate: vi.fn(() => vi.fn()),
-  useLanguage: vi.fn(() => 'en'),
-}));
+vi.mock('../store/conversation-store', () => {
+  const getState = vi.fn(() => ({
+    conversations: {},
+    conversationIds: [],
+    currentConversationId: null,
+  }));
+  const useConversationStore: any = vi.fn(() => getState());
+  useConversationStore.getState = getState;
+  return {
+    useUpdateConversation: vi.fn(() => vi.fn()),
+    useBatchUpdate: vi.fn(() => vi.fn()),
+    useConversationStore,
+  };
+});
+
+vi.mock('../../settings/store/settings-store', () => {
+  const getState = vi.fn(() => ({
+    globalSettings: { language: 'en' },
+    setGlobalSettings: vi.fn(),
+  }));
+  const useSettingsStore: any = vi.fn(() => getState());
+  useSettingsStore.getState = getState;
+  return { useSettingsStore };
+});
 
 vi.mock('@/store/batch-manager', () => ({
   stopBatching: vi.fn(),
@@ -67,31 +86,6 @@ vi.mock('@/lib/i18n', () => ({
 }));
 
 // Store mocks with getState/setState as needed
-vi.mock('../store/settings-store', () => {
-  const getState = vi.fn(() => ({
-    globalSettings: { language: 'en' },
-    setGlobalSettings: vi.fn(),
-  }));
-  const useSettingsStore: any = vi.fn(() => getState());
-  useSettingsStore.getState = getState;
-  return { useSettingsStore };
-});
-
-vi.mock('../store/conversation-store', () => {
-  const getState = vi.fn(() => ({
-    conversations: {},
-    conversationIds: [],
-    currentConversationId: null,
-    addConversation: vi.fn(),
-    updateConversation: vi.fn(),
-    removeConversation: vi.fn(),
-    batchUpdate: vi.fn(),
-  }));
-  const useConversationStore: any = vi.fn(() => getState());
-  useConversationStore.getState = getState;
-  return { useConversationStore };
-});
-
 vi.mock('../store/message-store', () => {
   const getState = vi.fn(() => ({
     messages: {},

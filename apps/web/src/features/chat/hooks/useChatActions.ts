@@ -1,16 +1,6 @@
 'use client';
 
 import { useCallback } from 'react';
-import {
-  useCurrentConversationId,
-  useConversations,
-  useAddMessages,
-  useUpdateLastMessage,
-  useSelectedModel,
-  useGlobalSettings,
-  useSetUIError,
-  useActiveRagProject,
-} from '../../../store/hooks';
 import { type Message } from '@musaed/contracts';
 import { useTranslation } from '../../../lib/i18n';
 import { chatApi, ragApi } from '../../../lib/ipc';
@@ -22,6 +12,11 @@ import { type FileAttachment } from './useAttachmentUtils';
 import { useMessageStore } from '../store/message-store';
 import type { Citation } from '@musaed/contracts';
 import { persistMessage } from '../../../lib/message-persistence';
+import { useConversationStore } from '../store/conversation-store';
+import { useSettingsStore } from '../../settings/store/settings-store';
+import { useModelStore } from '../../settings/store/model-store';
+import { useRagStore } from '../../rag/store/rag-store';
+import { useUIStore } from '../../../store/ui-store';
 
 /** Build prompt with file context injected. */
 function buildPromptWithContext(
@@ -151,7 +146,16 @@ const prepareChatPayload = (
   fullPrompt: string,
   images: string[],
   t: (key: string, values?: Record<string, string | number | boolean>) => string,
-  settings: ReturnType<typeof useGlobalSettings>,
+  settings: {
+    ollamaUrl: string;
+    systemPrompt: string;
+    temperature: number;
+    num_predict: number;
+    num_ctx: number;
+    top_k: number;
+    top_p: number;
+    stop: string[];
+  },
   ragContext?: string
 ) => {
   const { ollamaUrl, ...params } = settings;
@@ -220,21 +224,24 @@ function persistUserMessage(conversationId: string, userMsg: Message) {
  * Sends a message to Ollama with proper error handling and streaming setup.
  */
 export const useChatActions = () => {
-  const currentConversationId = useCurrentConversationId();
-  const conversations = useConversations();
-  const addMessages = useAddMessages();
-  const updateLastMessage = useUpdateLastMessage();
-  const selectedModel = useSelectedModel();
-  const globalSettings = useGlobalSettings();
-  const setError = useSetUIError();
-  const activeRagProject = useActiveRagProject();
+  const language = useSettingsStore((s) => s.globalSettings.language);
+  const { t } = useTranslation(language);
   const { initiateStreaming, stopStreaming } = useConversationActions();
-  const { t } = useTranslation(globalSettings.language);
 
   const sendMessage = useCallback(
     async (input: string, images: string[], files: FileAttachment[] = []) => {
       const trimmedInput = input.trim();
       const hasAttachments = images.length > 0 || files.length > 0;
+
+      const currentConversationId = useConversationStore.getState().currentConversationId;
+      const selectedModel = useModelStore.getState().selectedModel;
+      const conversations = useConversationStore.getState().conversations;
+      const globalSettings = useSettingsStore.getState().globalSettings;
+      const activeRagProjectId = useRagStore.getState().activeProjectId;
+      const activeRagProject = activeRagProjectId
+        ? useRagStore.getState().projects[activeRagProjectId]
+        : null;
+
       if (!currentConversationId || !selectedModel) {
         if (!selectedModel) toast.error(t('chat.noModelSelected'));
         return;
@@ -266,7 +273,7 @@ export const useChatActions = () => {
         requestId,
         ragSources
       );
-      addMessages(currentConversationId, [userMsg, assistantMsg]);
+      useMessageStore.getState().addMessages(currentConversationId, [userMsg, assistantMsg]);
       persistUserMessage(currentConversationId, userMsg);
 
       try {
@@ -282,30 +289,24 @@ export const useChatActions = () => {
         const success = await chatApi.chat({ ...payload, model: selectedModel, requestId });
         if (success !== true) throw new Error(t('chat.connectionFailed'));
       } catch (err) {
-        handleStreamError(
-          err,
-          currentConversationId,
-          requestId,
-          updateLastMessage,
-          stopStreaming,
-          setError,
-          t
-        );
+        const convId = useConversationStore.getState().currentConversationId;
+        if (convId) {
+          handleStreamError(
+            err,
+            convId,
+            requestId,
+            (id, update, replace) =>
+              useMessageStore.getState().updateLastMessage(id, update, replace),
+            stopStreaming,
+            (msg) => {
+              useUIStore.getState().setErrorMessage(msg);
+            },
+            t
+          );
+        }
       }
     },
-    [
-      currentConversationId,
-      conversations,
-      selectedModel,
-      globalSettings,
-      t,
-      addMessages,
-      updateLastMessage,
-      initiateStreaming,
-      stopStreaming,
-      setError,
-      activeRagProject,
-    ]
+    [t, initiateStreaming, stopStreaming]
   );
 
   return { sendMessage };

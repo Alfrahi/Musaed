@@ -1,7 +1,10 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useUIStore, useSettingsStore, useModelStore, useConversationStore } from '@/store';
+import { useUIStore } from '@/store/ui-store';
+import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { useModelStore } from '@/features/settings/store/model-store';
+import { useConversationStore } from '../store/conversation-store';
 import { useSetInitialized, useSetUIError } from '@/store/hooks';
 import { useModelActions } from '@/lib/useModelActions';
 import { useConversationActions } from './useConversationActions';

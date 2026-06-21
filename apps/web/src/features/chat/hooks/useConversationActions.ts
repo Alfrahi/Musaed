@@ -2,10 +2,15 @@
 
 import { useCallback } from 'react';
 
-import { useStreamingStore, useMessageStore, useConversationStore } from '../store';
+import {
+  useStreamingStore,
+  useMessageStore,
+  useConversationStore,
+  useUpdateConversation,
+  useBatchUpdate,
+} from '../store';
 import { useModelStore } from '../../settings/store/model-store';
 import { useSettingsStore } from '../../settings/store/settings-store';
-import { useUpdateConversation, useBatchUpdate } from '../../../store/hooks';
 import { chatApi, conversationApi } from '../../../lib/ipc';
 import {
   coordinateStartStream,

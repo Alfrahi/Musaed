@@ -1,7 +1,8 @@
 'use client';
 
 import { Info } from 'lucide-react';
-import { useSetInfoOpen, useLanguage } from '../../../store/hooks';
+import { useSetInfoOpen } from '@/store/hooks';
+import { useLanguage } from '../../settings/store/settings-store';
 import { useTranslation } from '../../../lib/i18n';
 
 const SidebarInfo = () => {

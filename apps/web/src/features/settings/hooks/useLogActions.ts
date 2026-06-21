@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useTranslation } from '../../../lib/i18n';
-import { useLanguage } from '../../../store/hooks';
+import { useLanguage } from '../store/settings-store';
 import { checkIsTauri, logApi, store, dialog } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';

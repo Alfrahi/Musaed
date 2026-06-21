@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Activity } from 'lucide-react';
-import { useLanguage } from '../../../store/hooks';
+import { useLanguage } from '../store/settings-store';
 import { useTranslation } from '../../../lib/i18n';
 import LogViewer from './LogViewer';
 

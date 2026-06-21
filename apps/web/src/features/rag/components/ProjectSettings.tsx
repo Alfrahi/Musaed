@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRagProjects } from '../hooks/useRagProjects';
 import { Loader2, Save, X } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useActiveRagProject, useLanguage, useOllamaUrl } from '../../../store/hooks';
+import { useActiveRagProject } from '../store/rag-store';
+import { useLanguage, useOllamaUrl } from '../../settings/store/settings-store';
 import { ollamaApi, ragApi } from '@/lib/ipc';
 import { useTranslation } from '@/lib/i18n';
 

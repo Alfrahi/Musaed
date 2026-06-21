@@ -3,7 +3,9 @@
 import { useState, useMemo, useCallback } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
-import { useModels, usePullStatus, useIsOllamaConnected, useLanguage } from '../../../store/hooks';
+import { useUIStore } from '../../../store/ui-store';
+import { useModelStore } from '../../settings/store/model-store';
+import { useSettingsStore } from '../../settings/store/settings-store';
 import { useTranslation } from '../../../lib/i18n';
 import ModelCard from './ModelCard';
 import LibrarySearchHeader from './LibrarySearchHeader';
@@ -150,10 +152,10 @@ const LibraryFooter = ({
 );
 
 const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
-  const models = useModels();
-  const pullStatus = usePullStatus();
-  const isOllamaConnected = useIsOllamaConnected();
-  const language = useLanguage();
+  const models = useModelStore((s) => s.models);
+  const pullStatus = useModelStore((s) => s.pullStatus);
+  const isOllamaConnected = useUIStore((s) => s.isOllamaConnected);
+  const language = useSettingsStore((s) => s.globalSettings.language);
   const { fetchModels, deleteModel } = useModelActions();
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing] = useState(false);
@@ -188,7 +190,10 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
   );
 
   const filteredInstalled = useMemo(
-    () => models.filter((m) => m.name.toLowerCase().includes(searchQuery.toLowerCase())),
+    () =>
+      models.filter((m: { name: string }) =>
+        m.name.toLowerCase().includes(searchQuery.toLowerCase())
+      ),
     [models, searchQuery]
   );
 

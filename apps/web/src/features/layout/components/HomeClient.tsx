@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import {
-  useGlobalSettings,
   useIsHydrated,
   useIsLibraryOpen,
   useIsSettingsOpen,
@@ -13,6 +12,7 @@ import {
   useSetSettingsOpen,
   useSetInfoOpen,
 } from '@/store/hooks';
+import { useGlobalSettings } from '@/features/settings/store/settings-store';
 import { registerHydrationCoordination } from '@/store/coordination';
 import { Sliders, Library } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';

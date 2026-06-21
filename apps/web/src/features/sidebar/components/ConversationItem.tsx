@@ -5,8 +5,8 @@ import { MessageSquare, Trash2, Download, Edit2 } from 'lucide-react';
 import {
   useCurrentConversationId,
   useSetCurrentConversationId,
-  useLanguage,
-} from '../../../store/hooks';
+} from '@/features/chat/store/conversation-store';
+import { useLanguage } from '../../settings/store/settings-store';
 import { cn } from '../../../lib/utils';
 import { useSidebarActions } from '../hooks/useSidebarActions';
 import { useTranslation } from '../../../lib/i18n';

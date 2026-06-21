@@ -9,7 +9,7 @@ import { listen } from '@/lib/ipc';
 import { IndexProgressSchema } from '@musaed/contracts';
 import { truncateFilePath } from '../utils/project-helpers';
 import { formatFileSize } from '@/lib/formatFileSize';
-import { useLanguage } from '@/store/hooks';
+import { useSettingsStore } from '../../settings/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 
 interface ProjectCardProps {
@@ -54,7 +54,7 @@ const ProjectCard = ({
 }: ProjectCardProps) => {
   const isIndexing = project.status === 'indexing';
   const indexProgress = useProjectIndexProgress(project.id);
-  const language = useLanguage();
+  const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
 
   return (

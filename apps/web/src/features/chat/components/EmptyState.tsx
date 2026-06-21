@@ -1,15 +1,15 @@
 'use client';
 
 import { Bot, Plus, Sparkles, Shield } from 'lucide-react';
-import { useGlobalSettings } from '../../../store/hooks';
+import { useSettingsStore } from '../../settings/store/settings-store';
 import { useConversationActions } from '../hooks/useConversationActions';
 import { useTranslation } from '../../../lib/i18n';
 
 /** Welcome screen shown when no conversation is active. */
 const EmptyState = () => {
   const { createNewConversation } = useConversationActions();
-  const globalSettings = useGlobalSettings();
-  const { t } = useTranslation(globalSettings.language);
+  const language = useSettingsStore((s) => s.globalSettings.language);
+  const { t } = useTranslation(language);
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50/30 ps-8 pe-8 dark:bg-zinc-950">

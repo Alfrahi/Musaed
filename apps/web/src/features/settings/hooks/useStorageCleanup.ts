@@ -5,8 +5,8 @@ import {
   useConversations,
   useConversationIds,
   useSetConversations,
-  useChatRetentionDays,
-} from '../../../store/hooks';
+} from '@/features/chat/store/conversation-store';
+import { useChatRetentionDays } from '../store/settings-store';
 import { useMessageStore } from '@/features/chat/store/message-store';
 import { logger } from '../../../lib/logger';
 

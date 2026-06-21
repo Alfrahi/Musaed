@@ -3,13 +3,13 @@
 import { useOllamaConnection } from '@/hooks/useOllamaConnection';
 import { ConnectionState } from '@/lib/connection-manager';
 import { useTranslation } from '@/lib/i18n';
-import { useLanguage } from '@/store/hooks';
+import { useSettingsStore } from '@/features/settings/store/settings-store';
 import { AlertCircle, CheckCircle2, Loader2, WifiOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const OllamaConnectionStatus = () => {
   const { connectionState, health, isHealthy, isChecking, reconnect } = useOllamaConnection();
-  const language = useLanguage();
+  const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
 
   if (isHealthy && !isChecking) {

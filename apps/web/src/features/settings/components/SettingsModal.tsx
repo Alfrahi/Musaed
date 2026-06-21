@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { X, Settings2, RotateCcw, Cpu, HardDrive, Terminal, Layout } from 'lucide-react';
-import { useGlobalSettings } from '../../../store/hooks';
+import { useGlobalSettings } from '../store/settings-store';
 import { useSettingsActions } from '../hooks/useSettingsActions';
 import LanguageSettings from './LanguageSettings';
 import ThemeSettings from './ThemeSettings';

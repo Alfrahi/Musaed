@@ -3,6 +3,8 @@
 
 export {
   useConversationStore,
+  useUpdateConversation,
+  useBatchUpdate,
   selectCurrentConversation,
   selectFilteredConversations,
   type ConversationState,

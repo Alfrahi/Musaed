@@ -1,14 +1,15 @@
 'use client';
 
-import { usePullStatus, useLanguage } from '@/store/hooks';
+import { useModelStore } from '@/features/settings/store/model-store';
+import { useSettingsStore } from '@/features/settings/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 import { Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMemo } from 'react';
 
 const TaskStatus = () => {
-  const pullStatus = usePullStatus();
-  const language = useLanguage();
+  const pullStatus = useModelStore((s) => s.pullStatus);
+  const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
 
   const activeTasks = useMemo(() => {

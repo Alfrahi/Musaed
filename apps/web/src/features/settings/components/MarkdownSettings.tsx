@@ -1,7 +1,7 @@
 'use client';
 
 import { FileText, Cpu, Layout, type LucideIcon } from 'lucide-react';
-import { useGlobalSettings, useLanguage } from '../../../store/hooks';
+import { useGlobalSettings, useLanguage } from '../store/settings-store';
 import { useSettingsActions } from '../hooks/useSettingsActions';
 import { useTranslation, type TranslationKey } from '../../../lib/i18n';
 import { type ChatSettings } from '@musaed/contracts';

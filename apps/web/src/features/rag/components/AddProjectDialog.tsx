@@ -5,7 +5,8 @@ import { X, FolderOpen, Loader2 } from 'lucide-react';
 import { dialog } from '@/lib/ipc';
 import { useRagProjects as useRagProjectsHook } from '../hooks/useRagProjects';
 import { useTranslation } from '@/lib/i18n';
-import { useLanguage, useModels } from '@/store/hooks';
+import { useSettingsStore } from '../../settings/store/settings-store';
+import { useModelStore } from '../../settings/store/model-store';
 
 interface AddProjectDialogProps {
   onClose: () => void;
@@ -102,9 +103,9 @@ function useHandleAdd(
 export const AddProjectDialog = ({ onClose, onAdded }: AddProjectDialogProps) => {
   const form = useFormState();
   const { addNewProject } = useRagProjectsHook();
-  const models = useModels();
+  const models = useModelStore((s) => s.models);
   const embeddingModels = filterEmbeddingModels(models);
-  const language = useLanguage();
+  const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
   const handleAdd = useHandleAdd(form, addNewProject, onAdded, t);
 

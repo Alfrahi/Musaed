@@ -1,14 +1,9 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useModelStore, useSettingsStore } from '../../../store';
-import {
-  useSetModels,
-  useSetSelectedModel,
-  useSetUIError,
-  useSetOllamaConnected,
-  useGlobalSettings,
-} from '../../../store/hooks';
+import { useModelStore } from '../../settings/store/model-store';
+import { useSettingsStore } from '../../settings/store/settings-store';
+import { useUIStore } from '../../../store/ui-store';
 import { ollamaApi } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
 import toast from 'react-hot-toast';
@@ -18,12 +13,12 @@ import { useTranslation } from '../../../lib/i18n';
  * Hook providing actions for fetching and deleting Ollama models.
  */
 export function useModelActions() {
-  const setModels = useSetModels();
-  const setSelectedModel = useSetSelectedModel();
-  const globalSettings = useGlobalSettings();
-  const setError = useSetUIError();
-  const setOllamaConnected = useSetOllamaConnected();
-  const { t } = useTranslation(globalSettings.language);
+  const setModels = useModelStore((s) => s.setModels);
+  const setSelectedModel = useModelStore((s) => s.setSelectedModel);
+  const language = useSettingsStore((s) => s.globalSettings.language);
+  const setErrorMessage = useUIStore((s) => s.setErrorMessage);
+  const setOllamaConnected = useUIStore((s) => s.setOllamaConnected);
+  const { t } = useTranslation(language);
 
   /**
    * Fetches the list of available models from the configured Ollama server.
@@ -43,21 +38,21 @@ export function useModelActions() {
           const { selectedModel: currentSelected } = useModelStore.getState();
           if (!currentSelected && data.length > 0) setSelectedModel(data[0].name);
 
-          setError(null);
+          setErrorMessage(null);
           if (isManual) toast.success(t('library.status.success'), { id: 'fetch-models' });
         } else {
           setOllamaConnected(false);
-          setError('error.failedToFetchModels');
+          setErrorMessage('error.failedToFetchModels');
           if (isManual) toast.error(t('error.failedToFetchModels'), { id: 'fetch-models' });
         }
       } catch (err) {
         setOllamaConnected(false);
         logger.error('Exception during model fetch', { error: err });
-        setError('error.failedToFetchModels');
+        setErrorMessage('error.failedToFetchModels');
         if (isManual) toast.error(t('error.failedToFetchModels'), { id: 'fetch-models' });
       }
     },
-    [setModels, setSelectedModel, setError, setOllamaConnected, t]
+    [setModels, setSelectedModel, setErrorMessage, setOllamaConnected, t]
   );
 
   /**

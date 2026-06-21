@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { ragApi } from '@/lib/ipc';
-import * as storeHooks from '@/store/hooks';
+import * as ragStoreHooks from '../store/rag-store';
 import { useRagProjects } from './useRagProjects';
 import type { RagProject } from '@musaed/contracts';
 
@@ -14,7 +14,7 @@ vi.mock('@/lib/ipc', () => ({
   },
 }));
 
-vi.mock('@/store/hooks', () => ({
+vi.mock('../store/rag-store', () => ({
   useRagProjects: vi.fn(),
   useRagProjectIds: vi.fn(),
   useSetRagProjects: vi.fn(),
@@ -45,9 +45,9 @@ describe('useRagProjects', () => {
   });
 
   it('loads projects on mount', async () => {
-    (storeHooks.useRagProjects as any).mockReturnValue({});
-    (storeHooks.useRagProjectIds as any).mockReturnValue([]);
-    (storeHooks.useSetRagProjects as any).mockReturnValue(vi.fn());
+    (ragStoreHooks.useRagProjects as any).mockReturnValue({});
+    (ragStoreHooks.useRagProjectIds as any).mockReturnValue([]);
+    (ragStoreHooks.useSetRagProjects as any).mockReturnValue(vi.fn());
     (ragApi.listProjects as any).mockResolvedValue([mockProject]);
 
     const { result } = renderHook(() => useRagProjects());
@@ -60,12 +60,12 @@ describe('useRagProjects', () => {
   });
 
   it('addNewProject calls API and updates store', async () => {
-    (storeHooks.useRagProjects as any).mockReturnValue({});
-    (storeHooks.useRagProjectIds as any).mockReturnValue([]);
+    (ragStoreHooks.useRagProjects as any).mockReturnValue({});
+    (ragStoreHooks.useRagProjectIds as any).mockReturnValue([]);
     const mockSetProjects = vi.fn();
-    (storeHooks.useSetRagProjects as any).mockReturnValue(mockSetProjects);
+    (ragStoreHooks.useSetRagProjects as any).mockReturnValue(mockSetProjects);
     const mockAddRagProject = vi.fn();
-    (storeHooks.useAddRagProject as any).mockReturnValue(mockAddRagProject);
+    (ragStoreHooks.useAddRagProject as any).mockReturnValue(mockAddRagProject);
     (ragApi.addProject as any).mockResolvedValue(mockProject);
 
     const { result } = renderHook(() => useRagProjects());
@@ -91,11 +91,11 @@ describe('useRagProjects', () => {
   });
 
   it('removeProjectById calls API and removes from store', async () => {
-    (storeHooks.useRagProjects as any).mockReturnValue({ [mockProject.id]: mockProject });
-    (storeHooks.useRagProjectIds as any).mockReturnValue([mockProject.id]);
-    (storeHooks.useSetRagProjects as any).mockReturnValue(vi.fn());
+    (ragStoreHooks.useRagProjects as any).mockReturnValue({ [mockProject.id]: mockProject });
+    (ragStoreHooks.useRagProjectIds as any).mockReturnValue([mockProject.id]);
+    (ragStoreHooks.useSetRagProjects as any).mockReturnValue(vi.fn());
     const mockRemoveRagProject = vi.fn();
-    (storeHooks.useRemoveRagProject as any).mockReturnValue(mockRemoveRagProject);
+    (ragStoreHooks.useRemoveRagProject as any).mockReturnValue(mockRemoveRagProject);
     (ragApi.removeProject as any).mockResolvedValue(true);
 
     const { result } = renderHook(() => useRagProjects());
@@ -111,11 +111,11 @@ describe('useRagProjects', () => {
   });
 
   it('updateProjectById calls API and updates store', async () => {
-    (storeHooks.useRagProjects as any).mockReturnValue({ [mockProject.id]: mockProject });
-    (storeHooks.useRagProjectIds as any).mockReturnValue([mockProject.id]);
-    (storeHooks.useSetRagProjects as any).mockReturnValue(vi.fn());
+    (ragStoreHooks.useRagProjects as any).mockReturnValue({ [mockProject.id]: mockProject });
+    (ragStoreHooks.useRagProjectIds as any).mockReturnValue([mockProject.id]);
+    (ragStoreHooks.useSetRagProjects as any).mockReturnValue(vi.fn());
     const mockUpdateRagProject = vi.fn();
-    (storeHooks.useUpdateRagProject as any).mockReturnValue(mockUpdateRagProject);
+    (ragStoreHooks.useUpdateRagProject as any).mockReturnValue(mockUpdateRagProject);
     const updated = { ...mockProject, name: 'Updated' };
     (ragApi.updateProject as any).mockResolvedValue(updated);
 
@@ -134,9 +134,9 @@ describe('useRagProjects', () => {
   });
 
   it('handles API errors during loadProjects gracefully', async () => {
-    (storeHooks.useRagProjects as any).mockReturnValue({});
-    (storeHooks.useRagProjectIds as any).mockReturnValue([]);
-    (storeHooks.useSetRagProjects as any).mockReturnValue(vi.fn());
+    (ragStoreHooks.useRagProjects as any).mockReturnValue({});
+    (ragStoreHooks.useRagProjectIds as any).mockReturnValue([]);
+    (ragStoreHooks.useSetRagProjects as any).mockReturnValue(vi.fn());
     (ragApi.listProjects as any).mockRejectedValue(new Error('Network error'));
 
     const { result } = renderHook(() => useRagProjects());

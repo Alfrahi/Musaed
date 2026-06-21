@@ -2,8 +2,7 @@
 
 import { useCallback } from 'react';
 import { DEFAULT_SETTINGS, type ChatSettings } from '@musaed/contracts';
-import { useSettingsStore } from '../../../store';
-import { useSetGlobalSettings } from '../../../store/hooks';
+import { useSettingsStore, useSetGlobalSettings } from '../store/settings-store';
 import { logger } from '../../../lib/logger';
 
 /**

@@ -5,8 +5,12 @@
  * Handles both Zustand state migrations and coordinates with backend SQLite migrations.
  */
 
-import type { RagState } from '../../../features/rag/store/rag-store';
-import { RagProjectSchema, type RagProject, SearchResultSchema } from '@musaed/contracts';
+import {
+  RagProjectSchema,
+  type RagProject,
+  SearchResultSchema,
+  type SearchResult,
+} from '@musaed/contracts';
 import { z } from 'zod';
 
 /**
@@ -28,6 +32,17 @@ export const RagStateWrapperSchema = z.object({
 });
 
 /**
+ * RAG state shape for migration purposes (avoids circular import).
+ */
+export interface RagStateShape {
+  projects: Record<string, RagProject>;
+  projectIds: string[];
+  activeProjectId: string | null;
+  searchResults: SearchResult[];
+  isSearching: boolean;
+}
+
+/**
  * Migration v1 → v2 (2026-06-15)
  * Adds status field tracking from backend to sync project state properly.
  * Ensures projectIds array stays in sync with projects map.
@@ -36,7 +51,7 @@ export const RagStateWrapperSchema = z.object({
  * Why: Prevent desync between projects map and projectIds array (observed in prod)
  * Rollback: Safe (metadata-only changes)
  */
-export const migrateRagToV2 = (data: unknown): Partial<RagState> => {
+export const migrateRagToV2 = (data: unknown): Partial<RagStateShape> => {
   const wrapped = RagStateWrapperSchema.parse(data);
 
   // Ensure all projects have valid status (migrate from legacy if needed)
@@ -64,7 +79,7 @@ export const migrateRagToV2 = (data: unknown): Partial<RagState> => {
  * Rollback v2 → v1
  * Removes status normalization (field remains in data, just skips migration logic).
  */
-export const rollbackRagToV1 = (data: RagState): RagState => {
+export const rollbackRagToV1 = (data: RagStateShape): RagStateShape => {
   // No destructive changes - rollback is identity
   // Status field can safely remain
   return data;
@@ -73,7 +88,7 @@ export const rollbackRagToV1 = (data: RagState): RagState => {
 /**
  * Validation function for RAG state.
  */
-export const validateRag = (data: unknown): Partial<RagState> => {
+export const validateRag = (data: unknown): Partial<RagStateShape> => {
   const parsed = RagStateWrapperSchema.parse(data);
   return {
     projects: parsed.projects,

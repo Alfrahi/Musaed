@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useLanguage } from '../../../store/hooks';
+import { useSettingsStore } from '../../settings/store/settings-store';
 import { useTranslation } from '../../../lib/i18n';
 import {
   type FileAttachment,
@@ -16,8 +16,8 @@ import {
 export function useAttachmentManager() {
   const [images, setImages] = useState<string[]>([]);
   const [files, setFiles] = useState<FileAttachment[]>([]);
-
-  const { t } = useTranslation(useLanguage());
+  const language = useSettingsStore((s) => s.globalSettings.language);
+  const { t } = useTranslation(language);
 
   const clearAttachments = useCallback(() => {
     setImages([]);

@@ -80,7 +80,7 @@ vi.mock('@/store/stores/streaming-store', () => {
   return { useStreamingStore };
 });
 
-vi.mock('@/store/stores/model-store', () => {
+vi.mock('../../settings/store/model-store', () => {
   const getState = vi.fn(() => ({
     selectedModel: 'llama3',
   }));
@@ -89,62 +89,188 @@ vi.mock('@/store/stores/model-store', () => {
   return { useModelStore };
 });
 
-// Hooks mock
-vi.mock('@/store/hooks', () => ({
-  useCurrentConversationId: vi.fn(() => 'conv1'),
-  useConversations: vi.fn(() => ({
-    conv1: {
-      id: 'conv1',
-      title: 'Test',
-      model: 'llama3',
-      settings: {
-        ollamaUrl: 'http://localhost:11434',
-        systemPrompt: '',
-        temperature: 0.7,
-        top_k: 40,
-        top_p: 0.9,
-        stop: [],
-        num_predict: 2048,
-        num_ctx: 4096,
-        language: 'en',
-        theme: 'system',
-        hasDetectedLanguage: false,
-        enterToSend: true,
-        chatRetentionDays: 0,
-        enableLatex: false,
-        enableMermaid: true,
-        density: 1.0,
+// Conversation store hooks mock
+vi.mock('../store/conversation-store', () => {
+  const getState = vi.fn(() => ({
+    conversations: {
+      conv1: {
+        id: 'conv1',
+        title: 'Test',
+        model: 'llama3',
+        settings: {
+          ollamaUrl: 'http://localhost:11434',
+          systemPrompt: '',
+          temperature: 0.7,
+          top_k: 40,
+          top_p: 0.9,
+          stop: [],
+          num_predict: 2048,
+          num_ctx: 4096,
+          language: 'en',
+          theme: 'system',
+          hasDetectedLanguage: false,
+          enterToSend: true,
+          chatRetentionDays: 0,
+          enableLatex: false,
+          enableMermaid: true,
+          density: 1.0,
+        },
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
       },
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
     },
-  })),
-  useAddMessages: vi.fn(() => vi.fn()),
-  useUpdateLastMessage: vi.fn(() => vi.fn()),
-  useSelectedModel: vi.fn(() => 'llama3'),
-  useGlobalSettings: vi.fn(() => ({
-    ollamaUrl: 'http://localhost:11434',
-    systemPrompt: '',
-    temperature: 0.7,
-    top_k: 40,
-    top_p: 0.9,
-    stop: [],
-    num_predict: 100,
-    num_ctx: 2048,
-    language: 'en',
-    theme: 'system',
-    hasDetectedLanguage: false,
-    enterToSend: true,
-    chatRetentionDays: 0,
-    enableLatex: false,
-    enableMermaid: true,
-    density: 1.0,
-  })),
-  useSetUIError: vi.fn(() => vi.fn()),
-  useActiveRagProject: vi.fn(() => null),
-  useSetConversations: vi.fn(() => vi.fn()),
-  useUpdateConversation: vi.fn(() => vi.fn()),
-  useBatchUpdate: vi.fn(() => vi.fn()),
+    conversationIds: ['conv1'],
+    currentConversationId: 'conv1',
+  }));
+  const useConversationStore: any = vi.fn(() => getState());
+  useConversationStore.getState = getState;
+  return {
+    useCurrentConversationId: vi.fn(() => 'conv1'),
+    useConversations: vi.fn(() => ({
+      conv1: {
+        id: 'conv1',
+        title: 'Test',
+        model: 'llama3',
+        settings: {
+          ollamaUrl: 'http://localhost:11434',
+          systemPrompt: '',
+          temperature: 0.7,
+          top_k: 40,
+          top_p: 0.9,
+          stop: [],
+          num_predict: 2048,
+          num_ctx: 4096,
+          language: 'en',
+          theme: 'system',
+          hasDetectedLanguage: false,
+          enterToSend: true,
+          chatRetentionDays: 0,
+          enableLatex: false,
+          enableMermaid: true,
+          density: 1.0,
+        },
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+    })),
+    useSetConversations: vi.fn(() => vi.fn()),
+    useUpdateConversation: vi.fn(() => vi.fn()),
+    useBatchUpdate: vi.fn(() => vi.fn()),
+    useConversationStore,
+  };
+});
+
+// Message store hooks mock
+vi.mock('../store/message-store', () => {
+  const getState = vi.fn(() => ({
+    messages: {},
+    addMessages: vi.fn(),
+    updateLastMessage: vi.fn(),
+  }));
+  const useMessageStore: any = vi.fn(() => getState());
+  useMessageStore.getState = getState;
+  return {
+    useMessageStore,
+    useAddMessages: vi.fn(() => vi.fn()),
+    useUpdateLastMessage: vi.fn(() => vi.fn()),
+  };
+});
+
+// Settings store hooks mock - model-store
+vi.mock('../../settings/store/model-store', () => {
+  const getState = vi.fn(() => ({
+    selectedModel: 'llama3',
+    models: [],
+  }));
+  const useModelStore: any = vi.fn(() => getState());
+  useModelStore.getState = getState;
+  return {
+    useModelStore,
+    useSelectedModel: vi.fn(() => 'llama3'),
+  };
+});
+
+// Settings store hooks mock - settings-store
+vi.mock('../../settings/store/settings-store', () => {
+  const getState = vi.fn(() => ({
+    globalSettings: {
+      ollamaUrl: 'http://localhost:11434',
+      systemPrompt: '',
+      temperature: 0.7,
+      top_k: 40,
+      top_p: 0.9,
+      stop: [],
+      num_predict: 100,
+      num_ctx: 2048,
+      language: 'en',
+      theme: 'system',
+      hasDetectedLanguage: false,
+      enterToSend: true,
+      chatRetentionDays: 0,
+      enableLatex: false,
+      enableMermaid: true,
+      density: 1.0,
+    },
+  }));
+  const useSettingsStore: any = vi.fn(() => getState());
+  useSettingsStore.getState = getState;
+  return {
+    useSettingsStore,
+    useGlobalSettings: vi.fn(() => ({
+      ollamaUrl: 'http://localhost:11434',
+      systemPrompt: '',
+      temperature: 0.7,
+      top_k: 40,
+      top_p: 0.9,
+      stop: [],
+      num_predict: 100,
+      num_ctx: 2048,
+      language: 'en',
+      theme: 'system',
+      hasDetectedLanguage: false,
+      enterToSend: true,
+      chatRetentionDays: 0,
+      enableLatex: false,
+      enableMermaid: true,
+      density: 1.0,
+    })),
+  };
+});
+
+// UI store hooks mock
+vi.mock('@/store/ui-store', () => {
+  const getState = vi.fn(() => ({
+    isStreaming: false,
+    isHydrated: true,
+    setStreaming: vi.fn(),
+    setHydrated: vi.fn(),
+    errorMessage: null,
+    setErrorMessage: vi.fn(),
+  }));
+  const useUIStore: any = vi.fn(() => getState());
+  useUIStore.getState = getState;
+  return {
+    useUIStore,
+    useSetUIError: vi.fn(() => vi.fn()),
+  };
+});
+
+// RAG store hooks mock
+vi.mock('../../rag/store/rag-store', () => {
+  const getState = vi.fn(() => ({
+    activeProjectId: null,
+    projects: {},
+  }));
+  const useRagStore: any = vi.fn(() => getState());
+  useRagStore.getState = getState;
+  return {
+    useRagStore,
+    useActiveRagProject: vi.fn(() => null),
+  };
+});
+
+// Chat actions hook mock (recursive - mock itself)
+vi.mock('./useConversationActions', () => ({
   useConversationActions: vi.fn(() => ({
     initiateStreaming: vi.fn().mockImplementation((conversationId, requestId, onStreamUpdate) => {
       if (onStreamUpdate) onStreamUpdate('streaming-content');
@@ -157,7 +283,8 @@ vi.mock('@/store/hooks', () => ({
 // Import the hook under test after vi.mock (hoisted)
 import { useChatActions } from './useChatActions';
 import { chatApi } from '@/lib/ipc';
-import { useCurrentConversationId, useSelectedModel, useConversations } from '@/store/hooks';
+import { useCurrentConversationId, useConversations } from '../store/conversation-store';
+import { useSelectedModel } from '../../settings/store/model-store';
 
 describe('useChatActions', () => {
   beforeEach(() => {

@@ -4,7 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import { Globe, Terminal } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { DEFAULT_SETTINGS } from '@musaed/contracts';
-import { useGlobalSettings, useLanguage } from '@/store/hooks';
+import { useSettingsStore } from '../store/settings-store';
 import { useSettingsActions } from '../hooks/useSettingsActions';
 import { useModelActions } from '@/lib/useModelActions';
 import { useTranslation } from '@/lib/i18n';
@@ -52,8 +52,8 @@ const handleOllamaUrlBlurFactory = (
 };
 
 const OllamaSettings = () => {
-  const globalSettings = useGlobalSettings();
-  const language = useLanguage();
+  const globalSettings = useSettingsStore((s) => s.globalSettings);
+  const language = useSettingsStore((s) => s.globalSettings.language);
   const { updateGlobalSettings } = useSettingsActions();
   const { fetchModels } = useModelActions();
   const { t } = useTranslation(language);

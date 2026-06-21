@@ -9,7 +9,7 @@ import {
   useAddRagProject,
   useRemoveRagProject,
   useUpdateRagProject,
-} from '../../../store/hooks';
+} from '../store/rag-store';
 
 export function useRagProjects() {
   const projects = useRagProjectsFromStore();

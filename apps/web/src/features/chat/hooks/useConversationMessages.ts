@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useCurrentConversationId } from '../../../store/hooks';
+import { useConversationStore } from '../store/conversation-store';
 import { useMessageStore } from '../store/message-store';
 import { conversationApi } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';
@@ -12,10 +12,10 @@ import { logger } from '../../../lib/logger';
  * cached in the message store.
  */
 export function useConversationMessages() {
-  const currentConversationId = useCurrentConversationId();
   const loadedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    const currentConversationId = useConversationStore.getState().currentConversationId;
     if (!currentConversationId) return;
 
     // Skip if already loaded in this session
@@ -47,5 +47,5 @@ export function useConversationMessages() {
     return () => {
       cancelled = true;
     };
-  }, [currentConversationId]);
+  }, []);
 }

@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { ragApi } from '../../../lib/ipc';
-import { useOllamaUrl } from '../../../store/hooks';
+import { useOllamaUrl } from '../../settings/store/settings-store';
 
 interface FileNode {
   name: string;

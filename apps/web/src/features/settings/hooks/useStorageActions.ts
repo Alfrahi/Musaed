@@ -5,9 +5,9 @@ import {
   useConversations,
   useConversationIds,
   useSetConversations,
-  useModels,
-  useGlobalSettings,
-} from '../../../store/hooks';
+} from '@/features/chat/store/conversation-store';
+import { useModels } from '../store/model-store';
+import { useGlobalSettings } from '../store/settings-store';
 import { useTranslation } from '../../../lib/i18n';
 import { checkIsTauri, dialog, fs } from '../../../lib/ipc';
 import { logger } from '../../../lib/logger';

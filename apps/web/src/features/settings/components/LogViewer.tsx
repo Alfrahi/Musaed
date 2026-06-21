@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { X, Terminal, RefreshCw, Trash2 } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import { cn } from '../../../lib/utils';
-import { useLanguage } from '../../../store/hooks';
+import { useLanguage } from '../store/settings-store';
 import { useTranslation } from '../../../lib/i18n';
 import { useLogActions } from '../hooks/useLogActions';
 import { ModalLayout } from '@/components/ui';

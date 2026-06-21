@@ -1,7 +1,8 @@
 'use client';
 
 import { FileText, Code, FileCode, File } from 'lucide-react';
-import { useRagSearchResults, useGlobalSettings } from '@/store/hooks';
+import { useRagSearchResults } from '../store/rag-store';
+import { useSettingsStore } from '../../settings/store/settings-store';
 import { useTranslation } from '../../../lib/i18n';
 import type { SearchResult } from '@musaed/contracts';
 
@@ -20,7 +21,7 @@ const chunkTypeIcon = (type: string) => {
 
 export const SearchResults = () => {
   const results = useRagSearchResults();
-  const globalSettings = useGlobalSettings();
+  const globalSettings = useSettingsStore((s) => s.globalSettings);
   const { t } = useTranslation(globalSettings.language);
 
   if (results.length === 0) return null;

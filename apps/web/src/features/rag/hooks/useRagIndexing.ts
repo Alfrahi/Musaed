@@ -2,7 +2,8 @@
 
 import { useCallback } from 'react';
 import { ragApi, listen } from '../../../lib/ipc';
-import { useSetRagIndexProgress, useUpdateRagProject, useOllamaUrl } from '../../../store/hooks';
+import { useSetRagIndexProgress, useUpdateRagProject } from '../store/rag-store';
+import { useOllamaUrl } from '../../settings/store/settings-store';
 import { IndexProgressSchema, IndexCompleteSchema, IndexErrorSchema } from '@musaed/contracts';
 import type { IndexProgress, IndexComplete, IndexError } from '@musaed/contracts';
 

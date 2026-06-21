@@ -3,15 +3,11 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { ArrowDown } from 'lucide-react';
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
-import {
-  useGlobalSettings,
-  useIsHydrated,
-  useActiveStreams,
-  useCurrentConversationId,
-  useMessages,
-} from '../../../store/hooks';
+import { useUIStore } from '../../../store/ui-store';
 import { useConversationStore, selectCurrentConversation } from '../store/conversation-store';
 import { useStreamingStore, selectLiveContent } from '../store/streaming-store';
+import { useMessageStore } from '../store/message-store';
+import { useSettingsStore } from '../../settings/store/settings-store';
 import MessageBubble from './MessageBubble';
 import ChatWindowSkeleton from './ChatWindowSkeleton';
 import EmptyState from './EmptyState';
@@ -58,13 +54,15 @@ const ScrollButton = ({ onClick, label }: { onClick: () => void; label: string }
  */
 const ChatWindow = () => {
   const currentConversation = useConversationStore(selectCurrentConversation);
-  const currentConversationId = useCurrentConversationId();
-  const storedMessages = useMessages(currentConversationId || '');
-  const activeStreams = useActiveStreams();
-  const globalSettings = useGlobalSettings();
-  const isHydrated = useIsHydrated();
+  const currentConversationId = useConversationStore((s) => s.currentConversationId);
+  const storedMessages = useMessageStore((s) =>
+    currentConversationId ? s.messages[currentConversationId] : []
+  );
+  const activeStreams = useStreamingStore((s) => s.activeStreams);
+  const isHydrated = useUIStore((s) => s.isHydrated);
+  const language = useSettingsStore((s) => s.globalSettings.language);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
-  const { t, formatNumber } = useTranslation(globalSettings.language);
+  const { t, formatNumber } = useTranslation(language);
   const messageLabels = useMessageLabels(t);
   const [showScrollButton, setShowScrollButton] = useState(false);
 

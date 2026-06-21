@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { useLanguage } from '@/store/hooks';
+import { useSettingsStore } from '@/features/settings/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 
 interface SidebarHeaderProps {
@@ -10,7 +10,7 @@ interface SidebarHeaderProps {
 }
 
 const SidebarHeader = ({ activeTab, onCreateNew }: SidebarHeaderProps) => {
-  const language = useLanguage();
+  const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
 
   return (

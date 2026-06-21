@@ -1,7 +1,7 @@
 'use client';
 
 import type { IndexProgress } from '@musaed/contracts';
-import { useGlobalSettings } from '../../../store/hooks';
+import { useGlobalSettings } from '../../settings/store/settings-store';
 import { useTranslation } from '../../../lib/i18n';
 
 interface IndexingProgressProps {

@@ -1,12 +1,10 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import {
-  useCurrentConversationId,
-  useGlobalSettings,
-  useIsLiveStreaming,
-  useSelectedModel,
-} from '../../../store/hooks';
+import { useConversationStore } from '../store/conversation-store';
+import { useSettingsStore } from '../../settings/store/settings-store';
+import { useModelStore } from '../../settings/store/model-store';
+import { useStreamingStore } from '../store/streaming-store';
 import { useChatActions } from './useChatActions';
 import { useAttachmentManager } from './useAttachmentManager';
 import { useTranslation } from '../../../lib/i18n';
@@ -15,14 +13,9 @@ export const useChatInput = () => {
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const currentConversationId = useCurrentConversationId();
-  const isStreaming = useIsLiveStreaming(currentConversationId || '');
-  const globalSettings = useGlobalSettings();
-  const selectedModel = useSelectedModel();
-
+  const language = useSettingsStore((s) => s.globalSettings.language);
+  const { t } = useTranslation(language);
   const { sendMessage } = useChatActions();
-  const { t } = useTranslation(globalSettings.language);
-
   const {
     images,
     files,
@@ -36,24 +29,26 @@ export const useChatInput = () => {
   useEffect(() => {
     clearAttachments();
     setInput('');
-  }, [currentConversationId, clearAttachments]);
+  }, [clearAttachments]);
 
   const onSend = useCallback(async () => {
     if (!input.trim() && images.length === 0 && files.length === 0) return;
+    const currentConversationId = useConversationStore.getState().currentConversationId;
     if (!currentConversationId) return;
 
     await sendMessage(input, images, files);
     setInput('');
     clearAttachments();
     textareaRef.current?.focus();
-  }, [input, images, files, currentConversationId, sendMessage, clearAttachments]);
+  }, [input, images, files, sendMessage, clearAttachments]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       const isModEnter = (e.metaKey || e.ctrlKey) && e.key === 'Enter';
       const isPlainEnter = e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey;
+      const enterToSend = useSettingsStore.getState().globalSettings.enterToSend;
 
-      if (globalSettings.enterToSend) {
+      if (enterToSend) {
         if (isPlainEnter) {
           e.preventDefault();
           onSend();
@@ -63,8 +58,15 @@ export const useChatInput = () => {
         onSend();
       }
     },
-    [globalSettings.enterToSend, onSend]
+    [onSend]
   );
+
+  const currentConversationId = useConversationStore.getState().currentConversationId;
+  const isStreaming = currentConversationId
+    ? useStreamingStore.getState().activeStreams[currentConversationId] != null
+    : false;
+  const selectedModel = useModelStore.getState().selectedModel;
+  const enterToSend = useSettingsStore.getState().globalSettings.enterToSend;
 
   return {
     input,
@@ -82,6 +84,6 @@ export const useChatInput = () => {
     removeFile,
     t,
     currentConversationId,
-    enterToSend: globalSettings.enterToSend,
+    enterToSend,
   };
 };

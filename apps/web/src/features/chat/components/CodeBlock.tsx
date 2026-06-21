@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Check, Copy } from 'lucide-react';
 import { useTranslation } from '../../../lib/i18n';
-import { useLanguage } from '../../../store/hooks';
+import { useSettingsStore } from '../../settings/store/settings-store';
 
 interface CodeBlockProps {
   language?: string;
@@ -30,7 +30,7 @@ function extractText(node: React.ReactNode): string {
 
 const CodeBlock = ({ language, value }: CodeBlockProps) => {
   const [copied, setCopied] = useState(false);
-  const languageSetting = useLanguage();
+  const languageSetting = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(languageSetting);
 
   const cleanCode = useMemo(() => {

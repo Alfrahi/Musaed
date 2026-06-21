@@ -10,7 +10,7 @@ import { attachmentImageSrc } from '../imageAttachment';
 import { useMessageActions } from '../hooks/useMessageActions';
 import { MessageAvatar } from './MessageAvatar';
 import { MessageStats } from './MessageStats';
-import { useGlobalSettings } from '../../../store/hooks';
+import { useSettingsStore } from '../../settings/store/settings-store';
 import { useTranslation } from '../../../lib/i18n';
 
 interface MessageBubbleProps {
@@ -87,8 +87,8 @@ const MessageBubble = ({ message, labels, formatNumber }: MessageBubbleProps) =>
   const sourceReferences = (message.ragSources ?? []) as SourceReference[];
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const globalSettings = useGlobalSettings();
-  const { t } = useTranslation(globalSettings.language);
+  const language = useSettingsStore((s) => s.globalSettings.language);
+  const { t } = useTranslation(language);
 
   return (
     <div

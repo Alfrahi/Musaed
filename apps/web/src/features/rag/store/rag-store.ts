@@ -144,3 +144,22 @@ export const useRagStore = createWithEqualityFn<RagState>()(
   ),
   shallow
 );
+
+// Export selector hooks for RAG store
+export const useRagProjects = () => useRagStore((state) => state.projects);
+export const useRagProjectIds = () => useRagStore((state) => state.projectIds);
+export const useSetRagProjects = () => useRagStore((state) => state.setProjects);
+export const useAddRagProject = () => useRagStore((state) => state.addProject);
+export const useRemoveRagProject = () => useRagStore((state) => state.removeProject);
+export const useUpdateRagProject = () => useRagStore((state) => state.updateProject);
+export const useActiveRagProjectId = () => useRagStore((state) => state.activeProjectId);
+export const useSetActiveRagProjectId = () => useRagStore((state) => state.setActiveProjectId);
+export const useActiveRagProject = () => {
+  const activeProjectId = useRagStore((state) => state.activeProjectId);
+  const projects = useRagStore((state) => state.projects);
+  return activeProjectId ? projects[activeProjectId] : null;
+};
+export const useRagSearchResults = () => useRagStore((state) => state.searchResults);
+export const useSetRagSearchResults = () => useRagStore((state) => state.setSearchResults);
+export const useSetIsRagSearching = () => useRagStore((state) => state.setIsSearching);
+export const useSetRagIndexProgress = () => useRagStore((state) => state.setIndexProgress);

@@ -2,7 +2,8 @@
 
 import { useCallback } from 'react';
 import { ragApi } from '../../../lib/ipc';
-import { useSetRagSearchResults, useSetIsRagSearching, useOllamaUrl } from '../../../store/hooks';
+import { useSetRagSearchResults, useSetIsRagSearching } from '../store/rag-store';
+import { useOllamaUrl } from '../../settings/store/settings-store';
 import type { SearchResult } from '@musaed/contracts';
 
 export function useRagSearch() {

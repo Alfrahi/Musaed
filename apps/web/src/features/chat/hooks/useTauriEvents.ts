@@ -3,8 +3,9 @@
 import { useEffect } from 'react';
 import { type z } from 'zod';
 
-import { useSettingsStore, useStreamingStore } from '../../../store';
-import { useUpdatePullStatus, useSetModels } from '../../../store/hooks';
+import { useSettingsStore } from '../../settings/store/settings-store';
+import { useStreamingStore } from '../store/streaming-store';
+import { useModelStore } from '../../settings/store/model-store';
 import { listen, ollamaApi } from '../../../lib/ipc';
 import { flushAndStop } from '../../../store/batch-manager';
 import { coordinateStopStream } from '../../../store/coordination';
@@ -109,57 +110,38 @@ const handleError = (payload: BackendError) => {
 
 /** Create pull-progress event handler. */
 const createPullProgressHandler =
-  (
-    updatePullStatus: (key: string, status: { status: string; progress?: number } | null) => void,
-    setModels: (
-      models: {
-        name: string;
-        size?: number | null;
-        digest?: string | null;
-        details?: {
-          format?: string | null;
-          family?: string | null;
-          parameterSize?: string | null;
-          quantizationLevel?: string | null;
-        } | null;
-      }[]
-    ) => void,
-    isMountedRef: () => boolean
-  ) =>
-  async (payload: PullProgress) => {
+  (isMountedRef: () => boolean) => async (payload: PullProgress) => {
     const modelKey = payload.name || 'current';
     const progress =
       payload.total && payload.completed != null
         ? Math.round((payload.completed / payload.total) * 100)
         : undefined;
-    updatePullStatus(modelKey, { status: payload.status, progress });
+    useModelStore.getState().updatePullStatus(modelKey, { status: payload.status, progress });
     if (payload.status === 'success') {
       const data = await ollamaApi.getModels(useSettingsStore.getState().globalSettings.ollamaUrl);
-      if (data) setModels(data);
-      setTimeout(() => isMountedRef() && updatePullStatus(modelKey, null), 3000);
+      if (data) useModelStore.getState().setModels(data);
+      setTimeout(
+        () => isMountedRef() && useModelStore.getState().updatePullStatus(modelKey, null),
+        3000
+      );
     }
   };
 
 /** Create pull-error event handler. */
-const createPullErrorHandler =
-  (
-    updatePullStatus: (key: string, status: { status: string } | null) => void,
-    isMountedRef: () => boolean
-  ) =>
-  (payload: PullError) => {
-    const modelKey = payload.name || 'current';
-    updatePullStatus(modelKey, { status: 'error' });
-    toast.error(payload.error || 'Model pull failed');
-    setTimeout(() => isMountedRef() && updatePullStatus(modelKey, null), 8000);
-  };
+const createPullErrorHandler = (isMountedRef: () => boolean) => (payload: PullError) => {
+  const modelKey = payload.name || 'current';
+  useModelStore.getState().updatePullStatus(modelKey, { status: 'error' });
+  toast.error(payload.error || 'Model pull failed');
+  setTimeout(
+    () => isMountedRef() && useModelStore.getState().updatePullStatus(modelKey, null),
+    8000
+  );
+};
 
 /**
  * Hook to listen for native Tauri events from the Rust backend.
  */
 export function useTauriEvents() {
-  const updatePullStatus = useUpdatePullStatus();
-  const setModels = useSetModels();
-
   useEffect(() => {
     const unlisteners: (() => void)[] = [];
     let isMounted = true;
@@ -181,13 +163,9 @@ export function useTauriEvents() {
         await register(
           'pull-progress',
           PullProgressSchema,
-          createPullProgressHandler(updatePullStatus, setModels, isMountedRef)
+          createPullProgressHandler(isMountedRef)
         );
-        await register(
-          'pull-error',
-          PullErrorSchema,
-          createPullErrorHandler(updatePullStatus, isMountedRef)
-        );
+        await register('pull-error', PullErrorSchema, createPullErrorHandler(isMountedRef));
       } catch (err) {
         logger.error('IPC initialization failure', { error: err });
       }
@@ -199,5 +177,5 @@ export function useTauriEvents() {
       isMounted = false;
       unlisteners.forEach((un) => un());
     };
-  }, [updatePullStatus, setModels]);
+  }, []);
 }

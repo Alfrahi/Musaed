@@ -1,7 +1,7 @@
 'use client';
 
 import { HardDrive, Download, Upload, FileText, Trash2 } from 'lucide-react';
-import { useGlobalSettings, useLanguage } from '../../../store/hooks';
+import { useGlobalSettings, useLanguage } from '../store/settings-store';
 import { useTranslation } from '../../../lib/i18n';
 import { useStorageActions } from '../hooks/useStorageActions';
 import { useSettingsActions } from '../hooks/useSettingsActions';

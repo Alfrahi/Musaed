@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { Eraser, MessageSquare, Briefcase } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
-import { useSearchQuery, useIsHydrated, useLanguage } from '@/store/hooks';
+import { useSearchQuery } from '@/features/chat/store/conversation-store';
+import { useIsHydrated } from '@/store/hooks';
+import { useSettingsStore } from '@/features/settings/store/settings-store';
 import {
   useConversationStore,
   selectFilteredConversations,
@@ -90,7 +92,7 @@ const Sidebar = () => {
 
   const filteredConversations = useConversationStore(selectFilteredConversations);
   const searchQuery = useSearchQuery();
-  const language = useLanguage();
+  const language = useSettingsStore((s) => s.globalSettings.language);
   const isHydrated = useIsHydrated();
   const { t } = useTranslation(language);
   const { handleClearAll } = useSidebarActions();

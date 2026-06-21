@@ -13,7 +13,7 @@ import 'katex/dist/katex.min.css';
 
 import CodeBlock from './CodeBlock';
 import { opener } from '../../../lib/ipc';
-import { useGlobalSettings } from '../../../store/hooks';
+import { useSettingsStore } from '../../settings/store/settings-store';
 import { useTranslation } from '../../../lib/i18n';
 
 const MermaidRenderer = dynamic(() => import('./MermaidRenderer'), {
@@ -197,7 +197,7 @@ const useMarkdownComponents = (
   );
 
 const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
-  const globalSettings = useGlobalSettings();
+  const globalSettings = useSettingsStore((s) => s.globalSettings);
   const { t } = useTranslation(globalSettings.language);
 
   const processedContent = useProcessedContent(content, globalSettings.enableLatex);
