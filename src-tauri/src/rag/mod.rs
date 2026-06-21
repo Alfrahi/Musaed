@@ -30,5 +30,6 @@ pub mod types;
 pub mod validation;
 
 // Re-export key types
+pub use store::connection::DEFAULT_EMBEDDING_DIMENSION;
 pub use store::RagStore;
 pub use types::*;

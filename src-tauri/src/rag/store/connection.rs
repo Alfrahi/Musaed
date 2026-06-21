@@ -5,11 +5,11 @@ use std::path::Path;
 
 /// Default embedding vector dimension. Will be overridden per-project after
 /// the first embedding call detects the actual dimension.
-pub(super) const DEFAULT_EMBEDDING_DIMENSION: usize = 768;
+pub const DEFAULT_EMBEDDING_DIMENSION: usize = 768;
 
 /// Maximum embedding dimension supported by the vec_chunks virtual table.
 /// Shorter vectors are zero-padded to this length.
-pub(super) const MAX_EMBEDDING_DIMENSION: usize = 4096;
+pub(crate) const MAX_EMBEDDING_DIMENSION: usize = 4096;
 
 pub(super) const SCHEMA_SQL: &str = r#"
 CREATE TABLE IF NOT EXISTS projects (
