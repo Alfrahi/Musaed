@@ -13,7 +13,7 @@ import {
 } from '@/features/chat/store/conversation-store';
 import { useTranslation } from '@/lib/i18n';
 import { ProjectList, AddProjectDialog } from '@/components/rag';
-import { useConversationActions } from '@/lib/useConversationActions';
+import { useConversationActions } from '@/features/chat';
 import SearchInput from './SearchInput';
 import ConversationItem from './ConversationItem';
 import SidebarHeader from './SidebarHeader';
