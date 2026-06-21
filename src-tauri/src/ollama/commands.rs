@@ -5,17 +5,14 @@
 
 use crate::payloads::{ApiResponse, ChatMessage, ChatOptions, OllamaHealth};
 use crate::rate_limiter::RATE_LIMITER;
-use crate::validation::{is_valid_request_id, validation_error};
-use std::time::Instant;
 use tauri::{AppHandle, Runtime};
-use tracing;
 
-use super::client::ABORT_HANDLES;
-use super::client::REQUEST_CACHE;
 use super::service::OllamaChatService;
 
 // Service instance (could be made injectable if needed)
-static OLLAMA_SERVICE: OllamaChatService = OllamaChatService;
+// The service is instantiated per call to avoid static globals.
+// This keeps the command a thin adapter while allowing easy testing.
+// No state is stored in the service, so creating a new instance has negligible cost.
 
 // ==================== CHAT ====================
 
@@ -38,7 +35,9 @@ pub async fn cmd_ollama_chat<R: Runtime>(
         };
     }
 
-    match OLLAMA_SERVICE
+    // Instantiate the service locally; no shared mutable state.
+    let service = OllamaChatService;
+    match service
         .chat(app, base_url, model, messages, options, request_id)
         .await
     {
@@ -59,53 +58,14 @@ pub async fn cmd_ollama_chat<R: Runtime>(
 
 #[tauri::command]
 pub async fn cmd_ollama_abort_chat(request_id: String) -> ApiResponse<()> {
-    tracing::info!("Aborting chat request: {}", request_id);
-
-    if !is_valid_request_id(&request_id) {
-        return validation_error(
-            "INVALID_INPUT",
-            format!("Invalid request_id: {:?}", request_id),
-        );
-    }
-
-    if let Some((_, token)) = ABORT_HANDLES.remove(&request_id) {
-        token.cancel();
-        tracing::info!("Chat request {} cancelled successfully", request_id);
-    } else {
-        tracing::warn!("No active chat found for request_id: {}", request_id);
-    }
-
-    REQUEST_CACHE.remove(&request_id);
-
-    ApiResponse {
-        success: true,
-        data: Some(()),
-        error: None,
-    }
+    // Thin adapter – delegate to domain service
+    crate::ollama::abort_service::abort_chat(request_id).await
 }
 
 // ==================== HEALTH CHECK ====================
 
 #[tauri::command]
 pub async fn cmd_ollama_check_health(base_url: String) -> ApiResponse<OllamaHealth> {
-    let start = Instant::now();
-    match OLLAMA_SERVICE.health_check(base_url).await {
-        Ok(health) => ApiResponse {
-            success: true,
-            data: Some(health),
-            error: None,
-        },
-        Err(e) => {
-            let elapsed = start.elapsed().as_millis() as u64;
-            ApiResponse {
-                success: false,
-                data: Some(OllamaHealth {
-                    is_running: false,
-                    version: None,
-                    response_time_ms: elapsed,
-                }),
-                error: Some(e),
-            }
-        }
-    }
+    // Thin adapter – delegate to domain service
+    crate::ollama::health_service::check_health(base_url).await
 }
