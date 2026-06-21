@@ -25,6 +25,7 @@ pub mod embedder;
 pub mod ignore;
 pub mod indexing;
 pub mod search;
+pub mod service;
 pub mod store;
 pub mod types;
 pub mod validation;

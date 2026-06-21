@@ -8,7 +8,6 @@
 use crate::payloads::{ApiResponse, BackendError};
 use crate::rag::context_assembler;
 use crate::rag::embedder::OllamaEmbedder;
-use crate::rag::indexing;
 use crate::rag::search::RagSearchEngine;
 use crate::rag::store::RagStore;
 use crate::rag::types::{
@@ -20,10 +19,8 @@ use crate::validation::is_valid_model_name;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tauri::{Emitter, Runtime};
+use tauri::Runtime;
 use tokio::sync::Mutex;
-use tokio_util::sync::CancellationToken;
-use tracing;
 
 // ====================== PATH SECURITY HELPERS ======================
 
@@ -274,117 +271,17 @@ pub async fn cmd_rag_index_project<R: Runtime>(
     state: tauri::State<'_, Arc<Mutex<RagStore>>>,
     app_handle: tauri::AppHandle,
 ) -> Result<ApiResponse<bool>, String> {
-    // Check rate limiting first
-    if let Err(e) =
-        crate::rate_limiter::RATE_LIMITER.check_rate_limit(window.label(), "cmd_rag_index_project")
-    {
-        return Ok(ApiResponse {
-            success: false,
-            data: None,
-            error: Some(e),
-        });
-    }
-    if let Err(e) = validation::validate_project_id(&project_id) {
-        return Ok(validation::rag_validation_error(e));
-    }
-
-    let store = state.inner();
-
-    let project = {
-        let s = store.lock().await;
-        match s.get_project(&project_id).await {
-            Ok(Some(p)) => p,
-            Ok(None) => {
-                return Ok(ApiResponse {
-                    success: false,
-                    data: None,
-                    error: Some(BackendError::new("RAG_NOT_FOUND", "Project not found")),
-                })
-            }
-            Err(e) => {
-                return Ok(ApiResponse {
-                    success: false,
-                    data: None,
-                    error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
-                })
-            }
-        }
+    // Build the request struct expected by the service.
+    let req = crate::rag::service::IndexRequest {
+        window,
+        project_id,
+        force,
+        base_url,
+        state,
+        app_handle,
     };
-
-    if RAG_INDEX_ABORT_HANDLES.contains_key(&project_id) {
-        return Ok(ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new(
-                "RAG_ALREADY_INDEXING",
-                "Project is already being indexed",
-            )),
-        });
-    }
-
-    let cancel_token = Arc::new(CancellationToken::new());
-    RAG_INDEX_ABORT_HANDLES.insert(project_id.clone(), cancel_token.clone());
-
-    let project_id_for_spawn = project_id.clone();
-    let project_path = project.path.clone();
-    let embedding_model = project.embedding_model.clone();
-    let ignore_patterns = project.ignore_patterns.clone();
-    let force_val = force.unwrap_or(false);
-    let base_url_val = match base_url {
-        Some(url) => crate::ollama_url::parse_ollama_base_url(&url)?.to_string(),
-        None => "http://localhost:11434".to_string(),
-    };
-
-    let store_clone = store.clone();
-    let app_handle_for_index = app_handle.clone();
-    let app_handle_for_callback = app_handle.clone();
-    let project_id_clone = project_id.clone();
-
-    tauri::async_runtime::spawn(async move {
-        let result = indexing::index_project(
-            store_clone.clone(),
-            indexing::IndexOptions {
-                project_id: &project_id_for_spawn,
-                project_path: &project_path,
-                embedding_model: &embedding_model,
-                base_url: &base_url_val,
-                ignore_patterns: &ignore_patterns,
-                force: force_val,
-            },
-            cancel_token,
-            app_handle_for_index,
-        )
-        .await;
-
-        RAG_INDEX_ABORT_HANDLES.remove(&project_id_clone);
-
-        if let Err(e) = result {
-            tracing::error!("Indexing failed for project {}: {}", project_id_clone, e);
-            let error = crate::rag::types::IndexError {
-                project_id: project_id_clone.clone(),
-                message: e.clone(),
-            };
-            let _ = app_handle_for_callback.emit(crate::shared::EVENT_RAG_INDEX_ERROR, &error);
-        } else {
-            let s = store_clone.lock().await;
-            let stats = s.get_project_stats(&project_id_clone).await.ok();
-            let complete = crate::rag::types::IndexComplete {
-                project_id: project_id_clone.clone(),
-                indexed_at: chrono::Utc::now().to_rfc3339(),
-                file_count: stats.as_ref().map(|s| s.file_count).unwrap_or(0),
-                chunk_count: stats.as_ref().map(|s| s.chunk_count).unwrap_or(0),
-                total_bytes: stats.as_ref().map(|s| s.total_bytes).unwrap_or(0),
-            };
-            let _ =
-                app_handle_for_callback.emit(crate::shared::EVENT_RAG_INDEX_COMPLETE, &complete);
-        }
-    });
-
-    Ok(ApiResponse {
-        success: true,
-        data: Some(true),
-        error: None,
-    })
+    // Delegate to the thin service.
+    crate::rag::service::start_indexing(req).await
 }
 
 #[tauri::command]
