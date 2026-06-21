@@ -14,6 +14,7 @@ use super::client::{
 use super::streaming::process_chat_stream;
 use crate::error_codes;
 use crate::payloads::{BackendError, ChatMessage, ChatOptions, OllamaHealth};
+use crate::rate_limiter::RATE_LIMITER;
 use crate::validation::{
     is_valid_model_name, is_valid_request_id, validate_chat_message, validate_chat_options,
     MAX_MESSAGES_COUNT,
@@ -29,6 +30,21 @@ use tracing;
 
 pub struct OllamaChatService;
 
+/// Parameters required for an Ollama chat operation. Bundles arguments that were
+/// previously passed individually to `OllamaChatService::chat`.
+///
+/// Using a struct reduces the function signature length and makes future
+/// extensions (e.g., adding new fields) easier without breaking callers.
+pub struct OllamaChatRequest<R: Runtime> {
+    pub app: AppHandle<R>,
+    pub window_label: String,
+    pub base_url: String,
+    pub model: String,
+    pub messages: Vec<ChatMessage>,
+    pub options: ChatOptions,
+    pub request_id: String,
+}
+
 impl OllamaChatService {
     /// Executes an Ollama chat request with full business logic:
     /// - Validation
@@ -39,56 +55,50 @@ impl OllamaChatService {
     ///
     /// Returns `Ok(())` on successful spawn of the streaming task.
     /// Returns `Err(BackendError)` on any failure before or during HTTP request.
-    pub async fn chat<R: Runtime>(
-        &self,
-        app: AppHandle<R>,
-        base_url: String,
-        model: String,
-        messages: Vec<ChatMessage>,
-        options: ChatOptions,
-        request_id: String,
-    ) -> Result<(), BackendError> {
+    pub async fn chat<R: Runtime>(&self, req: OllamaChatRequest<R>) -> Result<(), BackendError> {
+        // Rate limiting check moved from command to service (thin‑adapter rule)
+        RATE_LIMITER.check_rate_limit(&req.window_label, "cmd_ollama_chat")?;
         tracing::info!(
             "Starting chat request: request_id={}, model={}",
-            request_id,
-            model
+            req.request_id,
+            req.model
         );
         let start = Instant::now();
-
         // --- Input validation ---
-        if !is_valid_model_name(&model) {
+        if !is_valid_model_name(&req.model) {
             return Err(BackendError::new(
                 error_codes::INVALID_INPUT,
-                format!("Invalid model name: {:?}", model),
+                format!("Invalid model name: {:?}", req.model),
             ));
         }
-        if !is_valid_request_id(&request_id) {
+        if !is_valid_request_id(&req.request_id) {
             return Err(BackendError::new(
                 error_codes::INVALID_INPUT,
-                format!("Invalid request_id: {:?}", request_id),
+                format!("Invalid request_id: {:?}", req.request_id),
             ));
         }
-        if messages.len() > MAX_MESSAGES_COUNT {
+        if req.messages.len() > MAX_MESSAGES_COUNT {
             return Err(BackendError::new(
                 "INVALID_INPUT",
                 format!(
                     "Too many messages: {} (max {})",
-                    messages.len(),
+                    req.messages.len(),
                     MAX_MESSAGES_COUNT
                 ),
             ));
         }
-        for msg in &messages {
+        for msg in &req.messages {
             if let Err(e) = validate_chat_message(msg) {
                 return Err(BackendError::new(error_codes::INVALID_INPUT, e));
             }
         }
-        if let Err(e) = validate_chat_options(&options) {
+        if let Err(e) = validate_chat_options(&req.options) {
             return Err(BackendError::new(error_codes::INVALID_INPUT, e));
         }
 
         // Image size safety check
-        let total_b64_len: usize = messages
+        let total_b64_len: usize = req
+            .messages
             .iter()
             .filter_map(|m| m.images.as_ref())
             .flatten()
@@ -105,7 +115,7 @@ impl OllamaChatService {
             ));
         }
 
-        let url = match ollama_endpoint(&base_url, "api/chat") {
+        let url = match ollama_endpoint(&req.base_url, "api/chat") {
             Ok(u) => u,
             Err(msg) => return Err(BackendError::new(error_codes::INVALID_URL, msg)),
         };
@@ -118,19 +128,19 @@ impl OllamaChatService {
         };
 
         // Atomic duplicate check (bounded insert with LRU eviction)
-        if !request_cache_try_insert(request_id.clone()) {
-            tracing::warn!("Duplicate request detected: {}", request_id);
+        if !request_cache_try_insert(req.request_id.clone()) {
+            tracing::warn!("Duplicate request detected: {}", req.request_id);
             return Err(BackendError::new(
                 error_codes::DUPLICATE_REQUEST,
                 "Request already in progress",
             )
-            .with_request_id(request_id));
+            .with_request_id(req.request_id));
         }
 
         let permit = match CONCURRENT_SEMAPHORE.acquire().await {
             Ok(p) => p,
             Err(_) => {
-                REQUEST_CACHE.remove(&request_id);
+                REQUEST_CACHE.remove(&req.request_id);
                 return Err(BackendError::new(
                     "RATE_LIMITED",
                     "Too many concurrent requests",
@@ -139,12 +149,13 @@ impl OllamaChatService {
         };
 
         let cancel_token = Arc::new(CancellationToken::new());
-        ABORT_HANDLES.insert(request_id.clone(), cancel_token.clone());
+        ABORT_HANDLES.insert(req.request_id.clone(), cancel_token.clone());
+        // Remaining code unchanged, using `req` fields where appropriate.
 
         let payload = json!({
-            "model": model,
-            "messages": messages,
-            "options": options,
+            "model": req.model,
+            "messages": req.messages,
+            "options": req.options,
             "stream": true
         });
 
@@ -170,11 +181,11 @@ impl OllamaChatService {
             Ok(resp) => resp,
             Err(e) => {
                 tracing::error!("Failed to send chat request: {}", e);
-                ABORT_HANDLES.remove(&request_id);
-                REQUEST_CACHE.remove(&request_id);
+                ABORT_HANDLES.remove(&req.request_id);
+                REQUEST_CACHE.remove(&req.request_id);
                 return Err(
                     BackendError::new(error_codes::INTERNAL_ERROR, e.to_string())
-                        .with_request_id(request_id)
+                        .with_request_id(req.request_id.clone())
                         .with_context("Failed to connect to Ollama chat endpoint".to_string())
                         .retryable(),
                 );
@@ -186,15 +197,15 @@ impl OllamaChatService {
             let error_text = response.text().await.unwrap_or_default();
             tracing::error!("Ollama returned error status {}: {}", status, error_text);
 
-            ABORT_HANDLES.remove(&request_id);
-            REQUEST_CACHE.remove(&request_id);
+            ABORT_HANDLES.remove(&req.request_id);
+            REQUEST_CACHE.remove(&req.request_id);
             return Err(BackendError::new(error_codes::OLLAMA_ERROR, error_text)
-                .with_request_id(request_id)
+                .with_request_id(req.request_id.clone())
                 .with_context(format!("HTTP Status: {}", status)));
         }
 
-        let request_id_clone = request_id.clone();
-        let app_clone = app.clone();
+        let request_id_clone = req.request_id.clone();
+        let app_clone = req.app.clone();
 
         tokio::spawn(async move {
             // Hold both permits for the entire lifetime of the stream

@@ -4,10 +4,10 @@
 //! an active chat session or when probing server status.
 
 use crate::payloads::{ApiResponse, ChatMessage, ChatOptions, OllamaHealth};
-use crate::rate_limiter::RATE_LIMITER;
+// RATE_LIMITER moved into service; removed from command
 use tauri::{AppHandle, Runtime};
 
-use super::service::OllamaChatService;
+use super::service::{OllamaChatRequest, OllamaChatService};
 
 // Service instance (could be made injectable if needed)
 // The service is instantiated per call to avoid static globals.
@@ -26,21 +26,19 @@ pub async fn cmd_ollama_chat<R: Runtime>(
     options: ChatOptions,
     request_id: String,
 ) -> ApiResponse<bool> {
-    // Check rate limiting first
-    if let Err(e) = RATE_LIMITER.check_rate_limit(window.label(), "cmd_ollama_chat") {
-        return ApiResponse {
-            success: false,
-            data: None,
-            error: Some(e),
-        };
-    }
-
     // Instantiate the service locally; no shared mutable state.
     let service = OllamaChatService;
-    match service
-        .chat(app, base_url, model, messages, options, request_id)
-        .await
-    {
+    // Forward request to service, which now handles rate limiting.
+    let req = OllamaChatRequest {
+        app,
+        window_label: window.label().to_string(),
+        base_url,
+        model,
+        messages,
+        options,
+        request_id,
+    };
+    match service.chat(req).await {
         Ok(()) => ApiResponse {
             success: true,
             data: Some(true),
