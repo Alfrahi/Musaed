@@ -10,7 +10,7 @@ import { useModelActions } from '@/lib/useModelActions';
 import { useConversationActions } from './useConversationActions';
 import { useSettingsActions } from '@/lib/useSettingsActions';
 import { useStorageCleanup } from '@/lib/useStorageCleanup';
-import { initializeConversations } from '@/lib/conversation-backend';
+import { initializeConversations } from '../utils/conversation-backend';
 import { useMessageStore } from '../store/message-store';
 import { conversationApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';

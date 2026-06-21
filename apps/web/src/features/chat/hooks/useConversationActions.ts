@@ -18,7 +18,7 @@ import {
   flushAndStop,
 } from '../../../store/coordination';
 import { useTranslation } from '../../../lib/i18n';
-import { updateConversation as backendUpdateConversation } from '../../../lib/conversation-backend';
+import { updateConversation as backendUpdateConversation } from '../utils/conversation-backend';
 import type { ConversationMetadata, ConversationState } from '../store/conversation-store';
 
 /**

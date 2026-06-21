@@ -4,7 +4,7 @@ import { useCallback, useRef } from 'react';
 import { useConversationStore } from '../store/conversation-store';
 import { useMessageStore } from '../store/message-store';
 import { useSettingsStore } from '../../settings/store/settings-store';
-import { updateConversation as backendUpdateConversation } from '../../../lib/conversation-backend';
+import { updateConversation as backendUpdateConversation } from '../utils/conversation-backend';
 import { generateConversationTitle, isDefaultTitle } from '../utils/title-generator';
 import { logger } from '../../../lib/logger';
 
