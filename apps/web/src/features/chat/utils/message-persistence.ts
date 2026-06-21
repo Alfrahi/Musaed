@@ -1,8 +1,8 @@
 'use client';
 
 import type { Message } from '@musaed/contracts';
-import { conversationApi } from './ipc';
-import { logger } from './logger';
+import { conversationApi } from '../../../lib/ipc';
+import { logger } from '../../../lib/logger';
 
 /**
  * Message Persistence Manager

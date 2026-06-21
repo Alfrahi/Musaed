@@ -11,7 +11,7 @@ import { flushAndStop } from '../../../store/batch-manager';
 import { coordinateStopStream } from '../../../store/coordination';
 import { useMessageStore } from '../store/message-store';
 import { triggerAutoTitle } from './useAutoTitle';
-import { persistMessage } from '../../../lib/message-persistence';
+import { persistMessage } from '../utils/message-persistence';
 import {
   sanitizeError,
   BackendErrorSchema,

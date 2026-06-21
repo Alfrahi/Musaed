@@ -11,7 +11,7 @@ import { useConversationActions } from './useConversationActions';
 import { type FileAttachment } from './useAttachmentUtils';
 import { useMessageStore } from '../store/message-store';
 import type { Citation } from '@musaed/contracts';
-import { persistMessage } from '../../../lib/message-persistence';
+import { persistMessage } from '../utils/message-persistence';
 import { useConversationStore } from '../store/conversation-store';
 import { useSettingsStore } from '../../settings/store/settings-store';
 import { useModelStore } from '../../settings/store/model-store';
