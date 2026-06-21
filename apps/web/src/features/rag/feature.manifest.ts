@@ -26,7 +26,7 @@ export default {
       'useRagContext',
       'useRagFileBrowser',
     ],
-    utils: ['formatFileSize', 'fileNameFromPath', 'truncateFilePath', 'getRelativeFilePath'],
+    utils: ['fileNameFromPath', 'truncateFilePath', 'getRelativeFilePath'],
   },
   ipcEndpoints: [
     'cmd_rag_add_project',

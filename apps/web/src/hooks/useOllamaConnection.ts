@@ -6,7 +6,7 @@ import {
   ConnectionState,
   type OllamaHealth,
   getConnectionManager,
-} from '@/lib/connection-manager';
+} from '@/lib';
 import { useSettingsStore } from '@/features/settings/store/settings-store';
 import { useSetOllamaConnected } from '@/store/ui-store';
 import { checkIsTauri, ollamaApi } from '@/lib/ipc';

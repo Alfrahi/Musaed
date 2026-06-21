@@ -1,7 +1,7 @@
 'use client';
 
 import { type Conversation, stripThinkingBlocks } from '@musaed/contracts';
-import { dialog, fs, checkIsTauri } from './ipc';
+import { dialog, fs, checkIsTauri } from '@/lib/ipc';
 
 interface ExportContext {
   t: (key: string) => string;

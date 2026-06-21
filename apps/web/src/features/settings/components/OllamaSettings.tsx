@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { DEFAULT_SETTINGS } from '@musaed/contracts';
 import { useSettingsStore } from '../store/settings-store';
 import { useSettingsActions } from '../hooks/useSettingsActions';
-import { useModelActions } from '@/lib/useModelActions';
+import { useModelActions } from '@/features/library';
 import { useTranslation } from '@/lib/i18n';
 import { isValidOllamaUrl, sanitizeOllamaUrl, ollamaApi } from '@/lib/ipc';
 

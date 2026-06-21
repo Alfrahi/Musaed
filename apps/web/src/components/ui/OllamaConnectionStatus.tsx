@@ -1,7 +1,7 @@
 'use client';
 
 import { useOllamaConnection } from '@/hooks/useOllamaConnection';
-import { ConnectionState } from '@/lib/connection-manager';
+import { ConnectionState } from '@/lib';
 import { useTranslation } from '@/lib/i18n';
 import { useSettingsStore } from '@/features/settings/store/settings-store';
 import { AlertCircle, CheckCircle2, Loader2, WifiOff } from 'lucide-react';

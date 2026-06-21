@@ -6,3 +6,4 @@ export { default as SearchInput } from './components/SearchInput';
 export { default as ConversationItem } from './components/ConversationItem';
 export { useSidebarActions } from './hooks/useSidebarActions';
 export { useSidebarGrouping, type SidebarItem, type TimeGroup } from './hooks/useSidebarGrouping';
+export { exportToMarkdown } from './utils/export';

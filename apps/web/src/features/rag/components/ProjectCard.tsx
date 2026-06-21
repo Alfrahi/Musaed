@@ -8,7 +8,6 @@ import type { RagProject, IndexProgress as IndexProgressType } from '@musaed/con
 import { listen } from '@/lib/ipc';
 import { IndexProgressSchema } from '@musaed/contracts';
 import { truncateFilePath } from '../utils/project-helpers';
-import { formatFileSize } from '@/lib/formatFileSize';
 import { useSettingsStore } from '../../settings/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 
@@ -121,6 +120,9 @@ const ProjectStats = ({
   project: RagProject;
   t: (key: string, values?: Record<string, string | number | boolean>) => string;
 }) => {
+  const language = useSettingsStore((s) => s.globalSettings.language);
+  const { formatFileSize } = useTranslation(language);
+
   return (
     <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
       {project.chunkCount > 0 && (
