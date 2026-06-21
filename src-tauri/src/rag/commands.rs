@@ -1,95 +1,14 @@
-//! RAG Tauri commands — all 13 IPC endpoints.
-//!
-//! Each command follows the existing pattern: validate inputs, acquire rate
-//! limit permit, execute, return `Result<ApiResponse<T>, String>`.
-//!
-//! SECURITY: All filesystem paths are canonicalized to prevent symlink traversal attacks.
-
-use crate::payloads::{ApiResponse, BackendError};
-use crate::rag::context_assembler;
-use crate::rag::embedder::OllamaEmbedder;
-use crate::rag::search::RagSearchEngine;
+use crate::payloads::ApiResponse;
+use crate::rag::services::*;
 use crate::rag::store::RagStore;
 use crate::rag::types::{
     AssembledContext, ChunkRecord, IndexStatus, ModelValidation, ProjectStats, RagProject,
+    SearchResult,
 };
-use crate::rag::validation;
-use crate::shared::RAG_INDEX_ABORT_HANDLES;
-use crate::validation::is_valid_model_name;
-use serde::Deserialize;
-use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tauri::Runtime;
+use tauri::State;
+use tauri::{AppHandle, Runtime};
 use tokio::sync::Mutex;
-
-// ====================== PATH SECURITY HELPERS ======================
-
-/// Canonicalizes a path and verifies it stays within the project root.
-/// Returns the canonical path on success, or an error message on failure.
-///
-/// Security measures:
-/// - Resolves symlinks to prevent symlink traversal attacks
-/// - Verifies the resolved path is within the project root directory
-/// - Rejects any path that escapes the project boundary
-fn canonicalize_path_within_project(
-    project_root: &Path,
-    target_path: &Path,
-) -> Result<PathBuf, String> {
-    // Canonicalize the project root (resolves any symlinks)
-    let canonical_root = project_root
-        .canonicalize()
-        .map_err(|e| format!("Failed to resolve project root: {}", e))?;
-
-    // Canonicalize the target path
-    let canonical_target = target_path
-        .canonicalize()
-        .map_err(|e| format!("Target path does not exist or is inaccessible: {}", e))?;
-
-    // Add trailing separator to prevent prefix matching issues (e.g., /home vs /homeuser)
-    let canonical_root_with_sep = format!("{}/", canonical_root.to_string_lossy());
-    let canonical_target_with_sep = format!("{}/", canonical_target.to_string_lossy());
-
-    if !canonical_target_with_sep.starts_with(&canonical_root_with_sep) {
-        return Err(format!(
-            "Path escapes project boundary: {:?} is not within {:?}",
-            canonical_target, canonical_root
-        ));
-    }
-
-    Ok(canonical_target)
-}
-
-/// Validates a relative path and returns the canonical path within the project root.
-/// Used for file queries within an indexed project.
-#[allow(dead_code)]
-fn validate_and_canonicalize_file_path(
-    project_root: &Path,
-    relative_path: &str,
-) -> Result<PathBuf, String> {
-    // Reject any path that could escape the project directory
-    if relative_path.contains("..") {
-        return Err("Path traversal not allowed".to_string());
-    }
-    if relative_path.starts_with('/') || relative_path.starts_with('\\') {
-        return Err("Absolute paths not allowed".to_string());
-    }
-
-    // Construct the full path (still potentially a symlink)
-    let full_path = project_root.join(relative_path);
-
-    // Canonicalize and verify it's within the project
-    canonicalize_path_within_project(project_root, &full_path)
-}
-
-// ====================== COMMAND PAYLOADS ======================
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct UpdateProjectArgs {
-    pub project_id: String,
-    pub name: Option<String>,
-    pub ignore_patterns: Option<Vec<String>>,
-}
 
 // ====================== PROJECT MANAGEMENT COMMANDS ======================
 
@@ -99,69 +18,27 @@ pub async fn cmd_rag_add_project(
     path: String,
     embedding_model: String,
     ignore_patterns: Vec<String>,
-    state: tauri::State<'_, Arc<Mutex<RagStore>>>,
-    _app_handle: tauri::AppHandle,
+    state: State<'_, Arc<Mutex<RagStore>>>,
+    _app_handle: AppHandle,
 ) -> Result<ApiResponse<RagProject>, String> {
-    if let Err(e) =
-        validation::validate_add_project(&name, &path, &embedding_model, &ignore_patterns)
-    {
-        return Ok(validation::rag_validation_error(e));
-    }
-
-    // Canonicalize the path and ensure it is a valid directory
-    let canonical_path = Path::new(&path)
-        .canonicalize()
-        .map_err(|e| format!("Failed to resolve project path: {}", e))?;
-    if !canonical_path.is_dir() {
-        return Ok(validation::rag_validation_error(
-            "Project path must be a valid directory".to_string(),
-        ));
-    }
-
-    let store = state.inner();
-    let s = store.lock().await;
-
-    match s
-        .create_project_with_params(&name, &path, &embedding_model, &ignore_patterns)
-        .await
-    {
-        Ok(project) => Ok(ApiResponse {
-            success: true,
-            data: Some(project),
-            error: None,
-        }),
-        Err(e) => Ok(ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new("RAG_CREATE_ERROR", e)),
-        }),
-    }
+    let req = AddProjectRequest {
+        name,
+        path,
+        embedding_model,
+        ignore_patterns,
+        state,
+        app_handle: _app_handle,
+    };
+    add_project(req).await
 }
 
 #[tauri::command]
 pub async fn cmd_rag_remove_project(
     project_id: String,
-    state: tauri::State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<Mutex<RagStore>>>,
 ) -> Result<ApiResponse<bool>, String> {
-    if let Err(e) = validation::validate_project_id(&project_id) {
-        return Ok(validation::rag_validation_error(e));
-    }
-
-    let store = state.inner();
-    let s = store.lock().await;
-
-    Ok(match s.delete_project(&project_id).await {
-        Ok(()) => ApiResponse {
-            success: true,
-            data: Some(true),
-            error: None,
-        },
-        Err(e) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new("RAG_DELETE_ERROR", e)),
-        },
-    })
+    let req = RemoveProjectRequest { project_id, state };
+    remove_project(req).await
 }
 
 #[tauri::command]
@@ -169,95 +46,32 @@ pub async fn cmd_rag_update_project(
     project_id: String,
     name: Option<String>,
     ignore_patterns: Option<Vec<String>>,
-    state: tauri::State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<Mutex<RagStore>>>,
 ) -> Result<ApiResponse<RagProject>, String> {
-    if let Err(e) = validation::validate_project_id(&project_id) {
-        return Ok(validation::rag_validation_error(e));
-    }
-
-    let store = state.inner();
-    let s = store.lock().await;
-
-    if let Err(e) = s
-        .update_project_metadata(&project_id, name.as_deref(), ignore_patterns.as_deref())
-        .await
-    {
-        return Ok(ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new("RAG_UPDATE_ERROR", e)),
-        });
-    }
-
-    Ok(match s.get_project(&project_id).await {
-        Ok(Some(project)) => ApiResponse {
-            success: true,
-            data: Some(project),
-            error: None,
-        },
-        Ok(None) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new("RAG_NOT_FOUND", "Project not found")),
-        },
-        Err(e) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
-        },
-    })
+    let req = UpdateProjectRequest {
+        project_id,
+        name,
+        ignore_patterns,
+        state,
+    };
+    update_project(req).await
 }
 
 #[tauri::command]
 pub async fn cmd_rag_list_projects(
-    state: tauri::State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<Mutex<RagStore>>>,
 ) -> Result<ApiResponse<Vec<RagProject>>, String> {
-    let store = state.inner();
-    let s = store.lock().await;
-
-    Ok(match s.list_projects().await {
-        Ok(projects) => ApiResponse {
-            success: true,
-            data: Some(projects),
-            error: None,
-        },
-        Err(e) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new("RAG_LIST_ERROR", e)),
-        },
-    })
+    let req = ListProjectsRequest { state };
+    list_projects(req).await
 }
 
 #[tauri::command]
 pub async fn cmd_rag_get_project(
     project_id: String,
-    state: tauri::State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<Mutex<RagStore>>>,
 ) -> Result<ApiResponse<RagProject>, String> {
-    if let Err(e) = validation::validate_project_id(&project_id) {
-        return Ok(validation::rag_validation_error(e));
-    }
-
-    let store = state.inner();
-    let s = store.lock().await;
-
-    Ok(match s.get_project(&project_id).await {
-        Ok(Some(project)) => ApiResponse {
-            success: true,
-            data: Some(project),
-            error: None,
-        },
-        Ok(None) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new("RAG_NOT_FOUND", "Project not found")),
-        },
-        Err(e) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
-        },
-    })
+    let req = GetProjectRequest { project_id, state };
+    get_project(req).await
 }
 
 // ====================== INDEXING COMMANDS ======================
@@ -268,11 +82,10 @@ pub async fn cmd_rag_index_project<R: Runtime>(
     project_id: String,
     force: Option<bool>,
     base_url: Option<String>,
-    state: tauri::State<'_, Arc<Mutex<RagStore>>>,
-    app_handle: tauri::AppHandle,
+    state: State<'_, Arc<Mutex<RagStore>>>,
+    app_handle: AppHandle,
 ) -> Result<ApiResponse<bool>, String> {
-    // Build the request struct expected by the service.
-    let req = crate::rag::service::IndexRequest {
+    let req = IndexRequest {
         window,
         project_id,
         force,
@@ -280,32 +93,13 @@ pub async fn cmd_rag_index_project<R: Runtime>(
         state,
         app_handle,
     };
-    // Delegate to the thin service.
-    crate::rag::service::start_indexing(req).await
+    start_indexing(req).await
 }
 
 #[tauri::command]
 pub async fn cmd_rag_abort_index(project_id: String) -> Result<ApiResponse<bool>, String> {
-    if let Err(e) = validation::validate_project_id(&project_id) {
-        return Ok(validation::rag_validation_error(e));
-    }
-
-    Ok(
-        if let Some((_, token)) = RAG_INDEX_ABORT_HANDLES.remove(&project_id) {
-            token.cancel();
-            ApiResponse {
-                success: true,
-                data: Some(true),
-                error: None,
-            }
-        } else {
-            ApiResponse {
-                success: true,
-                data: Some(false),
-                error: None,
-            }
-        },
-    )
+    let req = AbortIndexRequest { project_id };
+    abort_index(req).await
 }
 
 #[tauri::command]
@@ -313,32 +107,26 @@ pub async fn cmd_rag_reindex_project<R: Runtime>(
     window: tauri::Window<R>,
     project_id: String,
     base_url: Option<String>,
-    state: tauri::State<'_, Arc<Mutex<RagStore>>>,
-    app_handle: tauri::AppHandle,
+    state: State<'_, Arc<Mutex<RagStore>>>,
+    app_handle: AppHandle,
 ) -> Result<ApiResponse<bool>, String> {
-    cmd_rag_index_project(window, project_id, Some(true), base_url, state, app_handle).await
+    let req = IndexRequest {
+        window,
+        project_id,
+        force: Some(true),
+        base_url,
+        state,
+        app_handle,
+    };
+    start_indexing(req).await
 }
 
 #[tauri::command]
 pub async fn cmd_rag_get_index_status(
     project_id: String,
 ) -> Result<ApiResponse<IndexStatus>, String> {
-    if let Err(e) = validation::validate_project_id(&project_id) {
-        return Ok(validation::rag_validation_error(e));
-    }
-
-    let is_indexing = RAG_INDEX_ABORT_HANDLES.contains_key(&project_id);
-    let status = IndexStatus {
-        project_id,
-        is_indexing,
-        progress: None,
-    };
-
-    Ok(ApiResponse {
-        success: true,
-        data: Some(status),
-        error: None,
-    })
+    let req = GetIndexStatusRequest { project_id };
+    get_index_status(req).await
 }
 
 // ====================== SEARCH COMMANDS ======================
@@ -350,158 +138,71 @@ pub async fn cmd_rag_search(
     top_k: Option<usize>,
     threshold: Option<f32>,
     base_url: Option<String>,
-    state: tauri::State<'_, Arc<Mutex<RagStore>>>,
-    _app_handle: tauri::AppHandle,
-) -> Result<ApiResponse<Vec<crate::rag::types::SearchResult>>, String> {
-    if let Err(e) = validation::validate_search(&project_id, &query, top_k, threshold) {
-        return Ok(validation::rag_validation_error(e));
-    }
-
-    let store = state.inner();
-
-    let project = {
-        let s = store.lock().await;
-        match s.get_project(&project_id).await {
-            Ok(Some(p)) => p,
-            Ok(None) => {
-                return Ok(ApiResponse {
-                    success: false,
-                    data: None,
-                    error: Some(BackendError::new("RAG_NOT_FOUND", "Project not found")),
-                })
-            }
-            Err(e) => {
-                return Ok(ApiResponse {
-                    success: false,
-                    data: None,
-                    error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
-                })
-            }
-        }
+    state: State<'_, Arc<Mutex<RagStore>>>,
+    _app_handle: AppHandle,
+) -> Result<ApiResponse<Vec<SearchResult>>, String> {
+    let req = SearchRequest {
+        project_id,
+        query,
+        top_k,
+        threshold,
+        base_url,
+        state,
     };
-
-    let base_url_val = match base_url {
-        Some(url) => crate::ollama_url::parse_ollama_base_url(&url)?.to_string(),
-        None => "http://localhost:11434".to_string(),
-    };
-
-    Ok(
-        match RagSearchEngine::search(
-            store.clone(),
-            &project_id,
-            &query,
-            &base_url_val,
-            &project.embedding_model,
-            top_k,
-            threshold,
-        )
-        .await
-        {
-            Ok(results) => ApiResponse {
-                success: true,
-                data: Some(results),
-                error: None,
-            },
-            Err(e) => ApiResponse {
-                success: false,
-                data: None,
-                error: Some(BackendError::new("RAG_SEARCH_ERROR", e)),
-            },
-        },
-    )
+    search(req).await
 }
 
 #[tauri::command]
 pub async fn cmd_rag_get_file_chunks(
     project_id: String,
     file_path: String,
-    state: tauri::State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<Mutex<RagStore>>>,
 ) -> Result<ApiResponse<Vec<ChunkRecord>>, String> {
-    if let Err(e) = validation::validate_project_id(&project_id) {
-        return Ok(validation::rag_validation_error(e));
-    }
-
-    // Get the project to access its root path
-    let store = state.inner();
-    let s = store.lock().await;
-    let project = s
-        .get_project(&project_id)
-        .await
-        .map_err(|e| format!("Failed to fetch project: {}", e))?;
-    let project = project.ok_or("Project not found")?;
-
-    // Validate and canonicalize the file path
-    let canonical_path = validate_and_canonicalize_file_path(Path::new(&project.path), &file_path)
-        .map_err(|e| format!("Invalid file path: {}", e))?;
-
-    Ok(
-        match s
-            .get_file_by_path(&project_id, &canonical_path.to_string_lossy())
-            .await
-        {
-            Ok(Some(file)) => {
-                if let Some(file_id) = file.id {
-                    match s.get_file_chunks(file_id).await {
-                        Ok(chunks) => ApiResponse {
-                            success: true,
-                            data: Some(chunks),
-                            error: None,
-                        },
-                        Err(e) => ApiResponse {
-                            success: false,
-                            data: None,
-                            error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
-                        },
-                    }
-                } else {
-                    ApiResponse {
-                        success: true,
-                        data: Some(vec![]),
-                        error: None,
-                    }
-                }
-            }
-            Ok(None) => ApiResponse {
-                success: true,
-                data: Some(vec![]),
-                error: None,
-            },
-            Err(e) => ApiResponse {
-                success: false,
-                data: None,
-                error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
-            },
-        },
-    )
+    let req = GetFileChunksRequest {
+        project_id,
+        file_path,
+        state,
+    };
+    get_file_chunks(req).await
 }
 
 #[tauri::command]
 pub async fn cmd_rag_get_project_stats(
     project_id: String,
-    state: tauri::State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<Mutex<RagStore>>>,
 ) -> Result<ApiResponse<ProjectStats>, String> {
-    if let Err(e) = validation::validate_project_id(&project_id) {
-        return Ok(validation::rag_validation_error(e));
-    }
-
-    let store = state.inner();
-    let s = store.lock().await;
-
-    Ok(match s.get_project_stats(&project_id).await {
-        Ok(stats) => ApiResponse {
-            success: true,
-            data: Some(stats),
-            error: None,
-        },
-        Err(e) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new("RAG_STATS_ERROR", e)),
-        },
-    })
+    let req = GetProjectStatsRequest { project_id, state };
+    get_project_stats(req).await
 }
 
 // ====================== EMBEDDING MODEL COMMANDS ======================
+
+#[tauri::command]
+pub async fn cmd_rag_set_embedding_model(
+    project_id: String,
+    model_name: String,
+    state: State<'_, Arc<Mutex<RagStore>>>,
+) -> Result<ApiResponse<bool>, String> {
+    let req = SetEmbeddingModelRequest {
+        project_id,
+        model_name,
+        state,
+    };
+    set_embedding_model(req).await
+}
+
+#[tauri::command]
+pub async fn cmd_rag_validate_embedding_model(
+    base_url: Option<String>,
+    model_name: String,
+    _app_handle: AppHandle,
+) -> Result<ApiResponse<ModelValidation>, String> {
+    let req = ValidateEmbeddingModelRequest {
+        base_url,
+        model_name,
+    };
+    validate_embedding_model(req).await
+}
 
 // ====================== CONTEXT ASSEMBLY COMMANDS ======================
 
@@ -513,140 +214,62 @@ pub async fn cmd_rag_assemble_context(
     threshold: Option<f32>,
     max_chars: Option<usize>,
     base_url: Option<String>,
-    state: tauri::State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<Mutex<RagStore>>>,
 ) -> Result<ApiResponse<AssembledContext>, String> {
-    if let Err(e) =
-        validation::validate_assemble_context(&project_id, &query, top_k, threshold, max_chars)
-    {
-        return Ok(validation::rag_validation_error(e));
-    }
-
-    let store = state.inner();
-
-    let project = {
-        let s = store.lock().await;
-        match s.get_project(&project_id).await {
-            Ok(Some(p)) => p,
-            Ok(None) => {
-                return Ok(ApiResponse {
-                    success: false,
-                    data: None,
-                    error: Some(BackendError::new("RAG_NOT_FOUND", "Project not found")),
-                })
-            }
-            Err(e) => {
-                return Ok(ApiResponse {
-                    success: false,
-                    data: None,
-                    error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
-                })
-            }
-        }
-    };
-
-    let base_url_val = match base_url {
-        Some(url) => crate::ollama_url::parse_ollama_base_url(&url)?.to_string(),
-        None => "http://localhost:11434".to_string(),
-    };
-
-    // Step 1: Search
-    let results = match RagSearchEngine::search(
-        store.clone(),
-        &project_id,
-        &query,
-        &base_url_val,
-        &project.embedding_model,
+    let req = AssembleContextRequest {
+        project_id,
+        query,
         top_k,
         threshold,
-    )
-    .await
-    {
-        Ok(r) => r,
-        Err(e) => {
-            return Ok(ApiResponse {
-                success: false,
-                data: None,
-                error: Some(BackendError::new("RAG_SEARCH_ERROR", e)),
-            })
-        }
+        max_chars,
+        base_url,
+        state,
     };
-
-    // Step 2: Assemble context
-    let assembled = context_assembler::assemble_context(&results, &project.path, max_chars);
-
-    Ok(ApiResponse {
-        success: true,
-        data: Some(assembled),
-        error: None,
-    })
+    assemble_context(req).await
 }
 
-#[tauri::command]
-pub async fn cmd_rag_set_embedding_model(
-    project_id: String,
-    model_name: String,
-    state: tauri::State<'_, Arc<Mutex<RagStore>>>,
-) -> Result<ApiResponse<bool>, String> {
-    if let Err(e) = validation::validate_project_id(&project_id) {
-        return Ok(validation::rag_validation_error(e));
-    }
-    if !is_valid_model_name(&model_name) {
-        return Ok(validation::rag_validation_error(format!(
-            "Invalid model name: {:?}",
-            model_name
-        )));
-    }
+// ====================== PATH SECURITY HELPERS ======================
 
-    let store = state.inner();
-    let s = store.lock().await;
-
-    if let Err(e) = s.update_embedding_model(&project_id, &model_name).await {
-        return Ok(ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new("RAG_UPDATE_ERROR", e)),
-        });
+#[cfg(test)]
+/// Canonicalizes a path and verifies it stays within the project root.
+fn canonicalize_path_within_project(
+    project_root: &std::path::Path,
+    target_path: &std::path::Path,
+) -> Result<std::path::PathBuf, String> {
+    let canonical_root = project_root
+        .canonicalize()
+        .map_err(|e| format!("Failed to resolve project root: {}", e))?;
+    let canonical_target = target_path
+        .canonicalize()
+        .map_err(|e| format!("Target path does not exist or is inaccessible: {}", e))?;
+    let root_with_sep = format!("{}/", canonical_root.to_string_lossy());
+    let target_with_sep = format!("{}/", canonical_target.to_string_lossy());
+    if !target_with_sep.starts_with(&root_with_sep) {
+        return Err(format!(
+            "Path escapes project boundary: {:?} is not within {:?}",
+            canonical_target, canonical_root
+        ));
     }
-
-    Ok(ApiResponse {
-        success: true,
-        data: Some(true),
-        error: None,
-    })
+    Ok(canonical_target)
 }
 
-#[tauri::command]
-pub async fn cmd_rag_validate_embedding_model(
-    base_url: Option<String>,
-    model_name: String,
-    _app_handle: tauri::AppHandle,
-) -> Result<ApiResponse<ModelValidation>, String> {
-    if !is_valid_model_name(&model_name) {
-        return Ok(validation::rag_validation_error(format!(
-            "Invalid model name: {:?}",
-            model_name
-        )));
+#[cfg(test)]
+/// Validates a relative file path and returns the canonical path within the project root.
+fn validate_and_canonicalize_file_path(
+    project_root: &std::path::Path,
+    relative_path: &str,
+) -> Result<std::path::PathBuf, String> {
+    if relative_path.contains("..") {
+        return Err("Path traversal not allowed".to_string());
     }
-
-    let ollama_url = match base_url {
-        Some(url) => crate::ollama_url::parse_ollama_base_url(&url)?.to_string(),
-        None => "http://localhost:11434".to_string(),
-    };
-    let embedder = OllamaEmbedder::new(&ollama_url, &model_name);
-
-    Ok(match embedder.validate().await {
-        Ok(validation) => ApiResponse {
-            success: true,
-            data: Some(validation),
-            error: None,
-        },
-        Err(e) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new("RAG_VALIDATION_ERROR", e)),
-        },
-    })
+    if relative_path.starts_with('/') || relative_path.starts_with('\\') {
+        return Err("Absolute paths not allowed".to_string());
+    }
+    let full_path = project_root.join(relative_path);
+    canonicalize_path_within_project(project_root, &full_path)
 }
+
+// ====================== TESTS (unchanged) ======================
 
 #[cfg(test)]
 mod path_security_tests {
@@ -697,7 +320,6 @@ mod path_security_tests {
     fn test_validate_and_canonicalize_file_path_valid() {
         let dir = tempdir().unwrap();
         let project_root = dir.path();
-        // Ensure the parent directory exists
         fs::create_dir_all(project_root.join("src")).unwrap();
         fs::write(project_root.join("src/main.rs"), "fn main() {}").unwrap();
 
@@ -709,7 +331,6 @@ mod path_security_tests {
     fn test_validate_and_canonicalize_file_path_traversal_blocked() {
         let dir = tempdir().unwrap();
         let project_root = dir.path();
-
         let result = validate_and_canonicalize_file_path(project_root, "../etc/passwd");
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("traversal"));
@@ -719,7 +340,6 @@ mod path_security_tests {
     fn test_validate_and_canonicalize_file_path_absolute_blocked() {
         let dir = tempdir().unwrap();
         let project_root = dir.path();
-
         let result = validate_and_canonicalize_file_path(project_root, "/etc/passwd");
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Absolute"));
@@ -729,7 +349,6 @@ mod path_security_tests {
     fn test_validate_and_canonicalize_file_path_windows_traversal_blocked() {
         let dir = tempdir().unwrap();
         let project_root = dir.path();
-
         let result = validate_and_canonicalize_file_path(project_root, "..\\..\\Windows\\System32");
         assert!(result.is_err());
     }
