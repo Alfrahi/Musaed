@@ -12,3 +12,4 @@ export { useSettingsActions } from './hooks/useSettingsActions';
 export { useLogActions } from './hooks/useLogActions';
 export { useStorageActions } from './hooks/useStorageActions';
 export { useStorageCleanup } from './hooks/useStorageCleanup';
+export { default as SettingsFeature } from './feature.manifest';

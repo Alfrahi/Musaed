@@ -9,3 +9,4 @@ export { useChatInitialization } from './hooks/useChatInitialization';
 export { useAutoTitle, triggerAutoTitle } from './hooks/useAutoTitle';
 export { useConversationMessages } from './hooks/useConversationMessages';
 export { isDefaultTitle, generateConversationTitle } from './utils/title-generator';
+export { default as ChatFeature } from './feature.manifest';
