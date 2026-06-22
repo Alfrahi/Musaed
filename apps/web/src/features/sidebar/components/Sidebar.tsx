@@ -3,17 +3,17 @@
 import { useState } from 'react';
 import { Eraser, MessageSquare, Briefcase } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
-import { useSearchQuery } from '@/features/chat/store/conversation-store';
+import { useSearchQuery } from '@/features/conversation/store/conversation-store';
 import { useIsHydrated } from '@/store/hooks';
 import { useSettingsStore } from '@/features/settings/store/settings-store';
 import {
   useConversationStore,
   selectFilteredConversations,
   type ConversationMetadata,
-} from '@/features/chat/store/conversation-store';
+} from '@/features/conversation/store/conversation-store';
 import { useTranslation } from '@/lib/i18n';
 import { ProjectList, AddProjectDialog } from '@/components/Rag';
-import { useConversationActions } from '@/features/chat';
+import { useConversationActions } from '@/features/conversation';
 import SearchInput from './SearchInput';
 import ConversationItem from './ConversationItem';
 import SidebarHeader from './SidebarHeader';

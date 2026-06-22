@@ -5,12 +5,12 @@ import { MessageSquare, Trash2, Download, Edit2 } from 'lucide-react';
 import {
   useCurrentConversationId,
   useSetCurrentConversationId,
-} from '@/features/chat/store/conversation-store';
+} from '@/features/conversation/store/conversation-store';
 import { useLanguage } from '../../settings/store/settings-store';
 import { cn } from '../../../lib/utils';
 import { useSidebarActions } from '../hooks/useSidebarActions';
 import { useTranslation } from '../../../lib/i18n';
-import type { ConversationMetadata } from '@/features/chat/store/conversation-store';
+import type { ConversationMetadata } from '@/features/conversation/store/conversation-store';
 
 interface ConversationItemProps {
   conversation: ConversationMetadata;

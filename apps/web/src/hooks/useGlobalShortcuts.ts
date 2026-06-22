@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useConversationActions } from '../features/chat';
+import { useConversationActions } from '../features/conversation';
 import { useSetSettingsOpen, useSetLibraryOpen } from '../store/hooks';
 
 /**

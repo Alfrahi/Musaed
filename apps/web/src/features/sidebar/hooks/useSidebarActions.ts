@@ -5,10 +5,10 @@ import { useSettingsStore } from '@/features/settings/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 import { dialog } from '@/lib/ipc';
 import { exportToMarkdown } from '../utils/export';
-import { useConversationActions } from '@/features/chat';
+import { useConversationActions } from '@/features/conversation';
 import { logger } from '@/lib/logger';
-import { useMessageStore } from '@/features/chat/store/message-store';
-import type { ConversationMetadata } from '@/features/chat/store/conversation-store';
+import { useMessageStore } from '@/features/conversation/store/message-store';
+import type { ConversationMetadata } from '@/features/conversation/store/conversation-store';
 
 export function useSidebarActions() {
   const language = useSettingsStore((s) => s.globalSettings.language);

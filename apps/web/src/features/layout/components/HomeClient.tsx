@@ -21,7 +21,11 @@ import { useGlobalShortcuts } from '@/hooks/useGlobalShortcuts';
 import { cn } from '@/lib/utils';
 import { checkIsTauri } from '@/lib/ipc';
 
-import { useChatInitialization, useTauriEvents, useConversationMessages } from '@/features/chat';
+import {
+  useChatInitialization,
+  useTauriEvents,
+  useConversationMessages,
+} from '@/features/conversation';
 import TaskStatus from '@/components/ui/TaskStatus';
 import OllamaConnectionStatus from '@/components/ui/OllamaConnectionStatus';
 
@@ -32,7 +36,7 @@ const Sidebar = dynamic(() => import('@/features/sidebar').then((m) => m.Sidebar
   ),
 });
 
-const ChatWindow = dynamic(() => import('@/features/chat').then((m) => m.ChatWindow), {
+const ChatWindow = dynamic(() => import('@/features/conversation').then((m) => m.ChatWindow), {
   ssr: false,
   loading: () => (
     <div className="flex flex-1 items-center justify-center bg-zinc-50/30 dark:bg-zinc-950">
@@ -41,7 +45,7 @@ const ChatWindow = dynamic(() => import('@/features/chat').then((m) => m.ChatWin
   ),
 });
 
-const InputArea = dynamic(() => import('@/features/chat').then((m) => m.InputArea), {
+const InputArea = dynamic(() => import('@/features/conversation').then((m) => m.InputArea), {
   ssr: false,
   loading: () => (
     <div className="border-sidebar-border bg-background animate-pulse border-t p-4">

@@ -16,7 +16,7 @@ module.exports = {
     {
       name: 'no-chat-to-other-features',
       comment: 'chat feature must not import other features — use IPC or shared lib.',
-      from: { path: '^apps/web/src/features/chat/' },
+      from: { path: '^apps/web/src/features/conversation/' },
       to: { path: '^apps/web/src/features/(?!chat/)' },
       severity: 'error',
     },
