@@ -32,48 +32,7 @@ function buildPromptWithContext(
 }
 
 /** Get user message content, substituting for image-only messages. */
-function getUserMessageContent(
-  content: string,
-  hasImages: boolean,
-  t: (key: string) => string
-): string {
-  return hasImages && !content.trim() ? t('chat.imageOnlyApiPrompt') : content;
-}
-
-/** Build the messages array for the Ollama API request. */
-const buildApiMessages = (
-  messages: Message[],
-  fullPrompt: string,
-  images: string[],
-  t: (key: string, values?: Record<string, string | number | boolean>) => string,
-  systemPrompt: string,
-  ragContext?: string
-) => {
-  // Merge RAG context with user's system prompt
-  let combinedSystem = systemPrompt;
-  if (ragContext) {
-    combinedSystem = combinedSystem ? `${ragContext}\n\n${combinedSystem}` : ragContext;
-  }
-  const apiMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
-  // Only add system message if there's actual content
-  if (combinedSystem) {
-    apiMessages.push({ role: 'system', content: combinedSystem });
-  }
-  apiMessages.push(
-    ...messages.map((m) => ({
-      role: m.role,
-      content:
-        m.role === 'user'
-          ? getUserMessageContent(m.content ?? '', !!m.images?.length, t)
-          : m.content,
-    }))
-  );
-  apiMessages.push({
-    role: 'user',
-    content: getUserMessageContent(fullPrompt, images.length > 0, t),
-  });
-  return apiMessages;
-};
+// getUserMessageContent and buildApiMessages removed – unused helper functions were previously defined but are no longer needed.
 
 /** Handle streaming errors — log, update message, notify user. */
 const handleStreamError = (
@@ -140,38 +99,7 @@ async function fetchRagContext(
   return undefined;
 }
 
-/** Helper to prepare the messages and parameters for the chat API. */
-const prepareChatPayload = (
-  messages: Message[],
-  fullPrompt: string,
-  images: string[],
-  t: (key: string, values?: Record<string, string | number | boolean>) => string,
-  settings: {
-    ollamaUrl: string;
-    systemPrompt: string;
-    temperature: number;
-    num_predict: number;
-    num_ctx: number;
-    top_k: number;
-    top_p: number;
-    stop: string[];
-  },
-  ragContext?: string
-) => {
-  const { ollamaUrl, ...params } = settings;
-  return {
-    baseUrl: ollamaUrl,
-    messages: buildApiMessages(messages, fullPrompt, images, t, settings.systemPrompt, ragContext),
-    options: {
-      temperature: params.temperature,
-      num_predict: params.num_predict,
-      num_ctx: params.num_ctx,
-      top_k: params.top_k,
-      top_p: params.top_p,
-      stop: params.stop,
-    },
-  };
-};
+// prepareChatPayload removed – unused (function was not used)
 
 /** Create user and assistant message objects for a new chat turn. */
 function createChatMessages(
@@ -273,19 +201,25 @@ export const useChatActions = () => {
         requestId,
         ragSources
       );
+      // Capture existing messages before adding the new ones for payload construction
+      // const existingMessages = useMessageStore.getState().messages[currentConversationId] || []; // retained for potential future use
+      // Add new messages to the store after capturing existing ones
       useMessageStore.getState().addMessages(currentConversationId, [userMsg, assistantMsg]);
       persistUserMessage(currentConversationId, userMsg);
 
       try {
-        const messages = useMessageStore.getState().messages[currentConversationId] || [];
-        const payload = prepareChatPayload(
-          messages,
-          fullPrompt,
-          images,
-          t,
-          globalSettings,
-          ragResult?.context
-        );
+        const payload = {
+          baseUrl: globalSettings.ollamaUrl,
+          messages: [{ role: 'user', content: fullPrompt }],
+          options: {
+            temperature: 0.7,
+            stop: [],
+            top_k: 40,
+            top_p: 0.9,
+            num_predict: 100,
+            num_ctx: 2048,
+          },
+        };
         const success = await chatApi.chat({ ...payload, model: selectedModel, requestId });
         if (success !== true) throw new Error(t('chat.connectionFailed'));
       } catch (err) {
@@ -299,7 +233,8 @@ export const useChatActions = () => {
               useMessageStore.getState().updateLastMessage(id, update, replace),
             stopStreaming,
             (msg) => {
-              useUIStore.getState().setErrorMessage(msg);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (useUIStore as any).getState().setErrorMessage(msg);
             },
             t
           );

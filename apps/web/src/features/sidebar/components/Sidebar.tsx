@@ -12,7 +12,7 @@ import {
   type ConversationMetadata,
 } from '@/features/chat/store/conversation-store';
 import { useTranslation } from '@/lib/i18n';
-import { ProjectList, AddProjectDialog } from '@/components/rag';
+import { ProjectList, AddProjectDialog } from '@/components/Rag';
 import { useConversationActions } from '@/features/chat';
 import SearchInput from './SearchInput';
 import ConversationItem from './ConversationItem';

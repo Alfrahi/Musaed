@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useConversationActions } from './useConversationActions';
-import { useBatchUpdate, useUpdateConversation } from '../store/conversation-store';
+import { useConversationActions } from '../useConversationActions';
+import { useBatchUpdate, useUpdateConversation } from '../../store/conversation-store';
 import { coordinateStopStream } from '@/store/coordination';
 import { chatApi } from '@/lib/ipc';
-import { useStreamingStore } from '../store/streaming-store';
-import { useMessageStore } from '../store/message-store';
-import { useConversationStore } from '../store/conversation-store';
+import { useStreamingStore } from '../../store/streaming-store';
+import { useMessageStore } from '../../store/message-store';
+import { useConversationStore } from '../../store/conversation-store';
 
 // Mock hooks
-vi.mock('../store/conversation-store', () => {
+vi.mock('../../store/conversation-store', () => {
   const getState = vi.fn(() => ({
     conversations: {},
     conversationIds: [],
@@ -24,7 +24,7 @@ vi.mock('../store/conversation-store', () => {
   };
 });
 
-vi.mock('../../settings/store/settings-store', () => {
+vi.mock('../../../settings/store/settings-store', () => {
   const getState = vi.fn(() => ({
     globalSettings: { language: 'en' },
     setGlobalSettings: vi.fn(),
@@ -86,7 +86,7 @@ vi.mock('@/lib/i18n', () => ({
 }));
 
 // Store mocks with getState/setState as needed
-vi.mock('../store/message-store', () => {
+vi.mock('../../store/message-store', () => {
   const getState = vi.fn(() => ({
     messages: {},
     clearMessages: vi.fn(),
@@ -98,7 +98,7 @@ vi.mock('../store/message-store', () => {
   return { useMessageStore };
 });
 
-vi.mock('../store/model-store', () => {
+vi.mock('../../store/model-store', () => {
   const getState = vi.fn(() => ({
     selectedModel: 'llama3',
   }));
@@ -107,7 +107,7 @@ vi.mock('../store/model-store', () => {
   return { useModelStore };
 });
 
-vi.mock('../store/streaming-store', () => {
+vi.mock('../../store/streaming-store', () => {
   const getState = vi.fn(() => ({
     activeStreams: {},
     startStream: vi.fn(),
@@ -119,7 +119,6 @@ vi.mock('../store/streaming-store', () => {
   return { useStreamingStore };
 });
 
-// Get references to the mock functions for configuration
 const mockUseBatchUpdate = useBatchUpdate as any;
 const mockUseUpdateConversation = useUpdateConversation as any;
 const mockCoordinateStopStream = coordinateStopStream as any;
@@ -130,19 +129,14 @@ const mockUseConversationStore = useConversationStore as any;
 describe('useConversationActions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default implementations
     mockUseBatchUpdate.mockReturnValue(vi.fn());
     mockUseUpdateConversation.mockReturnValue(vi.fn());
-
-    // Streaming store default
     mockUseStreamingStore.getState.mockReturnValue({
       activeStreams: {},
       startStream: vi.fn(),
       stopStream: vi.fn(),
       clearStream: vi.fn(),
     });
-
-    // Message store default
     mockUseMessageStore.getState.mockReturnValue({
       messages: {},
       clearMessages: vi.fn(),
@@ -164,7 +158,6 @@ describe('useConversationActions', () => {
 
     await act(async () => {
       result.current.createNewConversation();
-      // Flush microtasks for the async createConversation call
       await new Promise((r) => setTimeout(r, 0));
     });
 
