@@ -8,12 +8,12 @@ vi.mock('@tauri-apps/api/core', () => ({
 }));
 
 // Opt out of the global ipc mock so we can test the real implementation
-vi.unmock('./ipc');
+vi.unmock('@/lib/ipc');
 
 // Import the mocked Tauri invoke function (from mocked module)
 import { invoke } from '@tauri-apps/api/core';
 // Import the real IPC bridge implementation to test
-import { checkIsTauri, ollamaApi } from './ipc';
+import { checkIsTauri, ollamaApi } from '@/lib/ipc';
 import { BackendErrorCode } from '@musaed/contracts';
 
 describe('IPC Bridge', () => {

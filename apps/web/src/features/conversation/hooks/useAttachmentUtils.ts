@@ -1,7 +1,7 @@
 'use client';
 
-import { checkIsTauri, dialog, fs } from '../../../lib/ipc';
-import { logger } from '../../../lib/logger';
+import { checkIsTauri, dialog, fs } from '@/lib/ipc';
+import { logger } from '@/lib/logger';
 import toast from 'react-hot-toast';
 
 export interface FileAttachment {

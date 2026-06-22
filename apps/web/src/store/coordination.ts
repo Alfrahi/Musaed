@@ -1,11 +1,11 @@
 'use client';
 
-import { useUIStore } from './ui-store';
-import { useSettingsStore } from '../features/settings/store/settings-store';
-import { useRagStore } from '../features/rag/store/rag-store';
-import { useModelStore } from '../features/settings/store/model-store';
-import { useStreamingStore } from '../features/conversation/store/streaming-store';
-import { useMessageStore } from '../features/conversation/store/message-store';
+import { useUIStore } from '@/store/ui-store';
+import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { useRagStore } from '@/features/rag/store/rag-store';
+import { useModelStore } from '@/features/settings/store/model-store';
+import { useStreamingStore } from '@/features/conversation/store/streaming-store';
+import { useMessageStore } from '@/features/conversation/store/message-store';
 
 /**
  * Coordinates streaming start/stop between the streaming store

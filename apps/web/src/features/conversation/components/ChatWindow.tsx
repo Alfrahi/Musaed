@@ -3,16 +3,22 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { ArrowDown } from 'lucide-react';
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
-import { useUIStore } from '../../../store/ui-store';
-import { useConversationStore, selectCurrentConversation } from '../store/conversation-store';
-import { useStreamingStore, selectLiveContent } from '../store/streaming-store';
-import { useMessageStore } from '../store/message-store';
-import { useSettingsStore } from '../../settings/store/settings-store';
+import { useUIStore } from '@/store/ui-store';
+import {
+  useConversationStore,
+  selectCurrentConversation,
+} from '@/features/conversation/store/conversation-store';
+import {
+  useStreamingStore,
+  selectLiveContent,
+} from '@/features/conversation/store/streaming-store';
+import { useMessageStore } from '@/features/conversation/store/message-store';
+import { useSettingsStore } from '@/features/settings';
 import MessageBubble from './MessageBubble';
 import ChatWindowSkeleton from './ChatWindowSkeleton';
 import EmptyState from './EmptyState';
-import { useTranslation, type TranslationKey } from '../../../lib/i18n';
-import { cn } from '../../../lib/utils';
+import { useTranslation, type TranslationKey } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import { type Message } from '@musaed/contracts';
 
 interface MessageLabels {

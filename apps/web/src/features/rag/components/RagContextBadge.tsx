@@ -1,8 +1,8 @@
 'use client';
 
 import { FolderOpen, X } from 'lucide-react';
-import { useActiveRagProject, useSetActiveRagProjectId } from '../store/rag-store';
-import { useSettingsStore } from '../../settings/store/settings-store';
+import { useActiveRagProject, useSetActiveRagProjectId } from '@/features/rag/store/rag-store';
+import { useSettingsStore } from '@/features/settings';
 import { useTranslation } from '@/lib/i18n';
 
 export const RagContextBadge = () => {

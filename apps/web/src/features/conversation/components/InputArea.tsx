@@ -2,8 +2,8 @@
 
 import { useCallback } from 'react';
 import { Send, Square, ImageIcon, Paperclip } from 'lucide-react';
-import { useChatInput } from '../hooks/useChatInput';
-import { abortStreaming } from '../hooks/useConversationActions';
+import { useChatInput } from '@/features/conversation/hooks/useChatInput';
+import { abortStreaming } from '@/features/conversation/hooks/useConversationActions';
 import AttachmentPreview from './AttachmentPreview';
 import { ModelSelector } from '@/components/ModelSelector';
 import { RagContextBadge } from '@/components/RagContextBadge';

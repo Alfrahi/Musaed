@@ -5,9 +5,9 @@ import {
   useActiveRagProject,
   useSetActiveRagProjectId,
   useRagSearchResults,
-} from '../store/rag-store';
-import { ragApi } from '../../../lib/ipc';
-import { logger } from '../../../lib/logger';
+} from '@/features/rag/store/rag-store';
+import { ragApi } from '@/lib/ipc';
+import { logger } from '@/lib/logger';
 
 export function useRagContext() {
   const activeProject = useActiveRagProject();

@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { Search, ExternalLink, RefreshCw, X, HardDrive, Plus, Terminal } from 'lucide-react';
-import { cn } from '../../../lib/utils';
-import { useTranslation } from '../../../lib/i18n';
+import { cn } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
 import { type Language } from '@musaed/contracts';
-import { opener } from '../../../lib/ipc';
+import { opener } from '@/lib/ipc';
 
 interface LibrarySearchHeaderProps {
   language: Language;

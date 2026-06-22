@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Brain, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
-import { useSettingsStore } from '../../settings/store/settings-store';
-import { useTranslation } from '../../../lib/i18n';
+import { useSettingsStore } from '@/features/settings';
+import { useTranslation } from '@/lib/i18n';
 
 interface ThinkingBlockProps {
   content: string;

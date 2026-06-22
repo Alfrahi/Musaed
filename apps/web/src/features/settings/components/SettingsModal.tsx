@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { X, Settings2, RotateCcw, Cpu, HardDrive, Terminal, Layout } from 'lucide-react';
-import { useGlobalSettings } from '../store/settings-store';
-import { useSettingsActions } from '../hooks/useSettingsActions';
+import { useGlobalSettings } from '@/features/settings/store/settings-store';
+import { useSettingsActions } from '@/features/settings/hooks/useSettingsActions';
 import LanguageSettings from './LanguageSettings';
 import ThemeSettings from './ThemeSettings';
 import OllamaSettings from './OllamaSettings';
@@ -12,10 +12,10 @@ import DiagnosticsSettings from './DiagnosticsSettings';
 import InputSettings from './InputSettings';
 import StorageSettings from './StorageSettings';
 import MarkdownSettings from './MarkdownSettings';
-import { useTranslation } from '../../../lib/i18n';
-import { dialog } from '../../../lib/ipc';
+import { useTranslation } from '@/lib/i18n';
+import { dialog } from '@/lib/ipc';
 import { ModalLayout } from '@/components/ui';
-import { cn } from '../../../lib/utils';
+import { cn } from '@/lib/utils';
 
 interface SettingsModalProps {
   isOpen: boolean;

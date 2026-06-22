@@ -3,16 +3,16 @@
 import { useState, useMemo, useCallback } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
-import { useUIStore } from '../../../store/ui-store';
-import { useModelStore } from '../../settings/store/model-store';
-import { useSettingsStore } from '../../settings/store/settings-store';
-import { useTranslation } from '../../../lib/i18n';
+import { useUIStore } from '@/store/ui-store';
+import { useModelStore } from '@/features/settings';
+import { useSettingsStore } from '@/features/settings';
+import { useTranslation } from '@/lib/i18n';
 import ModelCard from './ModelCard';
 import LibrarySearchHeader from './LibrarySearchHeader';
-import { useModelPulling } from '../hooks/useModelPulling';
-import { useModelActions } from '../hooks/useModelActions';
-import { dialog } from '../../../lib/ipc';
-import { cn } from '../../../lib/utils';
+import { useModelPulling } from '@/features/library/hooks/useModelPulling';
+import { useModelActions } from '@/features/library/hooks/useModelActions';
+import { dialog } from '@/lib/ipc';
+import { cn } from '@/lib/utils';
 import { ModalLayout } from '@/components/ui';
 import type { Language } from '@musaed/contracts';
 

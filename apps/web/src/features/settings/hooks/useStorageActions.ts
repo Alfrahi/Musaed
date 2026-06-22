@@ -6,11 +6,11 @@ import {
   useConversationIds,
   useSetConversations,
 } from '@/features/conversation/store/conversation-store';
-import { useModels } from '../store/model-store';
-import { useGlobalSettings } from '../store/settings-store';
-import { useTranslation } from '../../../lib/i18n';
-import { checkIsTauri, dialog, fs } from '../../../lib/ipc';
-import { logger } from '../../../lib/logger';
+import { useModels } from '@/features/settings/store/model-store';
+import { useGlobalSettings } from '@/features/settings/store/settings-store';
+import { useTranslation } from '@/lib/i18n';
+import { checkIsTauri, dialog, fs } from '@/lib/ipc';
+import { logger } from '@/lib/logger';
 import toast from 'react-hot-toast';
 import { ConversationSchema, type OllamaModel, type Message } from '@musaed/contracts';
 import { useMessageStore } from '@/features/conversation/store/message-store';

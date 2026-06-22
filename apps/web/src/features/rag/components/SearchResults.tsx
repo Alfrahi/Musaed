@@ -1,9 +1,9 @@
 'use client';
 
 import { FileText, Code, FileCode, File } from 'lucide-react';
-import { useRagSearchResults } from '../store/rag-store';
-import { useSettingsStore } from '../../settings/store/settings-store';
-import { useTranslation } from '../../../lib/i18n';
+import { useRagSearchResults } from '@/features/rag/store/rag-store';
+import { useSettingsStore } from '@/features/settings';
+import { useTranslation } from '@/lib/i18n';
 import type { SearchResult } from '@musaed/contracts';
 
 const chunkTypeIcon = (type: string) => {

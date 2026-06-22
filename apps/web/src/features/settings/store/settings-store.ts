@@ -4,8 +4,8 @@ import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { ChatSettingsSchema, type ChatSettings, DEFAULT_SETTINGS } from '@musaed/contracts';
-import { createTauriStorage } from '../../../lib/tauri-storage';
-import { useUIStore } from '../../../store/ui-store';
+import { createTauriStorage } from '@/lib/tauri-storage';
+import { useUIStore } from '@/store/ui-store';
 
 /**
  * Migration registry for settings-store. Add handlers as schema evolves.

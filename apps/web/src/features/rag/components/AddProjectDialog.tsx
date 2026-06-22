@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { X, FolderOpen, Loader2 } from 'lucide-react';
 import { dialog } from '@/lib/ipc';
-import { useRagProjects as useRagProjectsHook } from '../hooks/useRagProjects';
+import { useRagProjects as useRagProjectsHook } from '@/features/rag/hooks/useRagProjects';
 import { useTranslation } from '@/lib/i18n';
-import { useSettingsStore } from '../../settings/store/settings-store';
-import { useModelStore } from '../../settings/store/model-store';
+import { useSettingsStore } from '@/features/settings';
+import { useModelStore } from '@/features/settings';
 
 interface AddProjectDialogProps {
   onClose: () => void;

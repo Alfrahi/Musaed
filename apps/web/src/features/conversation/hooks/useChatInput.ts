@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useConversationStore } from '../store/conversation-store';
-import { useSettingsStore } from '../../settings/store/settings-store';
-import { useModelStore } from '../../settings/store/model-store';
-import { useStreamingStore } from '../store/streaming-store';
+import { useConversationStore } from '@/features/conversation/store/conversation-store';
+import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { useModelStore } from '@/features/settings/store/model-store';
+import { useStreamingStore } from '@/features/conversation/store/streaming-store';
 import { useChatActions } from './useChatActions';
 import { useAttachmentManager } from './useAttachmentManager';
-import { useTranslation } from '../../../lib/i18n';
+import { useTranslation } from '@/lib/i18n';
 
 export const useChatInput = () => {
   const [input, setInput] = useState('');

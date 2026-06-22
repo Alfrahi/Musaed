@@ -1,10 +1,10 @@
-import { handleTauriImageUploadInternal } from '../useAttachmentUtils';
+import { handleTauriImageUploadInternal } from './useAttachmentUtils';
 import { describe, expect, it, vi } from 'vitest';
-import { dialog, fs } from '../../../../lib/ipc';
+import { dialog, fs } from '@/lib/ipc';
 import toast from 'react-hot-toast';
 
 // Mock the Tauri IPC functions
-vi.mock('../../../../lib/ipc', () => ({
+vi.mock('@/lib/ipc', () => ({
   checkIsTauri: vi.fn(() => true),
   dialog: {
     open: vi.fn(),
@@ -15,7 +15,7 @@ vi.mock('../../../../lib/ipc', () => ({
 }));
 
 // Mock the logger
-vi.mock('../../../lib/logger', () => ({
+vi.mock('@/lib/logger', () => ({
   logger: {
     error: vi.fn((message, context) => {
       console.log('Logger error called with:', message, context);

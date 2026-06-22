@@ -2,8 +2,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { Check, Copy } from 'lucide-react';
-import { useTranslation } from '../../../lib/i18n';
-import { useSettingsStore } from '../../settings/store/settings-store';
+import { useTranslation } from '@/lib/i18n';
+import { useSettingsStore } from '@/features/settings';
 
 interface CodeBlockProps {
   language?: string;

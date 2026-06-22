@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { Trash2, Zap, ShieldCheck, Code, BrainCircuit, HardDrive } from 'lucide-react';
-import { cn } from '../../../lib/utils';
-import { useTranslation } from '../../../lib/i18n';
+import { cn } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
 import { type Language } from '@musaed/contracts';
-import { useModelCapabilities } from '../hooks/useModelCapabilities';
+import { useModelCapabilities } from '@/features/library/hooks/useModelCapabilities';
 
 interface InstalledModelCardProps {
   name: string;

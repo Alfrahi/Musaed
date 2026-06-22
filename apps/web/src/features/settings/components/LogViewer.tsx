@@ -3,10 +3,10 @@
 import { useEffect } from 'react';
 import { X, Terminal, RefreshCw, Trash2 } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
-import { cn } from '../../../lib/utils';
-import { useLanguage } from '../store/settings-store';
-import { useTranslation } from '../../../lib/i18n';
-import { useLogActions } from '../hooks/useLogActions';
+import { cn } from '@/lib/utils';
+import { useLanguage } from '@/features/settings/store/settings-store';
+import { useTranslation } from '@/lib/i18n';
+import { useLogActions } from '@/features/settings/hooks/useLogActions';
 import { ModalLayout } from '@/components/ui';
 
 interface ParsedLog {

@@ -2,12 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Settings2, RefreshCw, ChevronDown, Check } from 'lucide-react';
-import { useUIStore } from '../../../store/ui-store';
-import { useModelStore } from '../../settings/store/model-store';
-import { useSettingsStore } from '../../settings/store/settings-store';
-import { cn } from '../../../lib/utils';
-import { useTranslation } from '../../../lib/i18n';
-import { useModelActions } from '../hooks/useModelActions';
+import { useUIStore } from '@/store/ui-store';
+import { useModelStore } from '@/features/settings';
+import { useSettingsStore } from '@/features/settings';
+import { cn } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
+import { useModelActions } from '@/features/library/hooks/useModelActions';
 
 /** Dropdown trigger button with selected model name. */
 const SelectorTrigger = ({

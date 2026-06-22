@@ -4,14 +4,14 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { Copy, Check, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { type Message } from '@musaed/contracts';
-import { cn } from '../../../lib/utils';
+import { cn } from '@/lib/utils';
 import MessageContent from './MessageContent';
 import { attachmentImageSrc } from '../image-attachment';
-import { useMessageActions } from '../hooks/useMessageActions';
+import { useMessageActions } from '@/features/conversation/hooks/useMessageActions';
 import { MessageAvatar } from './MessageAvatar';
 import { MessageStats } from './MessageStats';
-import { useSettingsStore } from '../../settings/store/settings-store';
-import { useTranslation } from '../../../lib/i18n';
+import { useSettingsStore } from '@/features/settings';
+import { useTranslation } from '@/lib/i18n';
 
 interface MessageBubbleProps {
   message: Message;

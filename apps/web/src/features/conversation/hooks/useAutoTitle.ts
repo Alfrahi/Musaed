@@ -1,12 +1,15 @@
 'use client';
 
 import { useCallback, useRef } from 'react';
-import { useConversationStore } from '../store/conversation-store';
-import { useMessageStore } from '../store/message-store';
-import { useSettingsStore } from '../../settings/store/settings-store';
-import { updateConversation as backendUpdateConversation } from '../utils/conversation-backend';
-import { generateConversationTitle, isDefaultTitle } from '../utils/title-generator';
-import { logger } from '../../../lib/logger';
+import { useConversationStore } from '@/features/conversation/store/conversation-store';
+import { useMessageStore } from '@/features/conversation/store/message-store';
+import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { updateConversation as backendUpdateConversation } from '@/features/conversation/utils/conversation-backend';
+import {
+  generateConversationTitle,
+  isDefaultTitle,
+} from '@/features/conversation/utils/title-generator';
+import { logger } from '@/lib/logger';
 
 /** Module-level set tracking in-flight auto-title requests across all hook instances. */
 const pendingAutoTitles = new Set<string>();

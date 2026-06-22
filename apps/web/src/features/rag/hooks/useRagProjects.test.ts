@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { ragApi } from '@/lib/ipc';
-import * as ragStoreHooks from '../../store/rag-store';
-import { useRagProjects } from '../useRagProjects';
+import * as ragStoreHooks from '@/features/rag/store/rag-store';
+import { useRagProjects } from './useRagProjects';
 import type { RagProject } from '@musaed/contracts';
 
 vi.mock('@/lib/ipc', () => ({
@@ -14,7 +14,7 @@ vi.mock('@/lib/ipc', () => ({
   },
 }));
 
-vi.mock('../../store/rag-store', () => ({
+vi.mock('@/features/rag/store/rag-store', () => ({
   useRagProjects: vi.fn(),
   useRagProjectIds: vi.fn(),
   useSetRagProjects: vi.fn(),
@@ -42,6 +42,7 @@ describe('useRagProjects', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   it('loads projects on mount', async () => {

@@ -12,9 +12,9 @@ import 'highlight.js/styles/github-dark.css';
 import 'katex/dist/katex.min.css';
 
 import CodeBlock from './CodeBlock';
-import { opener } from '../../../lib/ipc';
-import { useSettingsStore } from '../../settings/store/settings-store';
-import { useTranslation } from '../../../lib/i18n';
+import { opener } from '@/lib/ipc';
+import { useSettingsStore } from '@/features/settings';
+import { useTranslation } from '@/lib/i18n';
 
 const MermaidRenderer = dynamic(() => import('./MermaidRenderer'), {
   ssr: false,

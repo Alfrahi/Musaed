@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useTranslation } from './i18n';
+import { useTranslation } from '@/lib/i18n';
 
 describe('Internationalization Utility', () => {
   it('resolves nested keys correctly in English', () => {

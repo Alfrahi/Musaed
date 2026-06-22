@@ -1,4 +1,7 @@
 export { default as ChatWindow } from './components/ChatWindow';
+export * from './store/conversation-store';
+export * from './store/message-store';
+export * from './store/streaming-store';
 export { default as MessageBubble } from './components/MessageBubble';
 export { default as InputArea } from './components/InputArea';
 export { useChatActions } from './hooks/useChatActions';

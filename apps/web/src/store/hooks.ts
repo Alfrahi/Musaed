@@ -20,7 +20,7 @@ export {
   useSetSettingsOpen,
   useSetLibraryOpen,
   useSetInfoOpen,
-} from './ui-store';
+} from '@/store/ui-store';
 
 // Coordination hooks
-export { coordinateStartStream, coordinateStopStream, flushAndStop } from './coordination';
+export { coordinateStartStream, coordinateStopStream, flushAndStop } from '@/store/coordination';

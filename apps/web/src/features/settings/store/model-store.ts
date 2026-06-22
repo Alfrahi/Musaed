@@ -4,8 +4,8 @@ import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { type OllamaModel, ModelStateSchema, DEFAULT_MODEL_STATE } from '@musaed/contracts';
-import { createTauriStorage } from '../../../lib/tauri-storage';
-import { useUIStore } from '../../../store/ui-store';
+import { createTauriStorage } from '@/lib/tauri-storage';
+import { useUIStore } from '@/store/ui-store';
 
 // Migration for model state: ensure schema integrity on rehydration
 const MODEL_MIGRATIONS: Record<number, (data: unknown) => unknown> = {

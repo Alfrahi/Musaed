@@ -1,4 +1,4 @@
-import { conversationApi } from '../../../lib/ipc';
+import { conversationApi } from '@/lib/ipc';
 import type { Conversation, Message } from '@musaed/contracts';
 
 /**

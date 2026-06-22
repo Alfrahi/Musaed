@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { ragApi } from '../../../lib/ipc';
-import { useOllamaUrl } from '../../settings/store/settings-store';
+import { ragApi } from '@/lib/ipc';
+import { useOllamaUrl } from '@/features/settings/store/settings-store';
 
 interface FileNode {
   name: string;

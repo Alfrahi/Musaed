@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 import { useSettingsStore } from '@/features/settings/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 import { dialog } from '@/lib/ipc';
-import { exportToMarkdown } from '../utils/export';
+import { exportToMarkdown } from '@/features/sidebar/utils/export';
 import { useConversationActions } from '@/features/conversation';
 import { logger } from '@/lib/logger';
 import { useMessageStore } from '@/features/conversation/store/message-store';

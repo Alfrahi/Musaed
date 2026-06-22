@@ -3,15 +3,15 @@
 import { useEffect } from 'react';
 import { type z } from 'zod';
 
-import { useSettingsStore } from '../../settings/store/settings-store';
-import { useStreamingStore } from '../store/streaming-store';
-import { useModelStore } from '../../settings/store/model-store';
-import { listen, ollamaApi } from '../../../lib/ipc';
-import { flushAndStop } from '../../../store/batch-manager';
-import { coordinateStopStream } from '../../../store/coordination';
-import { useMessageStore } from '../store/message-store';
+import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { useStreamingStore } from '@/features/conversation/store/streaming-store';
+import { useModelStore } from '@/features/settings/store/model-store';
+import { listen, ollamaApi } from '@/lib/ipc';
+import { flushAndStop } from '@/store/batch-manager';
+import { coordinateStopStream } from '@/store/coordination';
+import { useMessageStore } from '@/features/conversation/store/message-store';
 import { triggerAutoTitle } from './useAutoTitle';
-import { persistMessage } from '../utils/message-persistence';
+import { persistMessage } from '@/features/conversation/utils/message-persistence';
 import {
   sanitizeError,
   BackendErrorSchema,
@@ -25,7 +25,7 @@ import {
   type PullError,
 } from '@musaed/contracts';
 import toast from 'react-hot-toast';
-import { logger } from '../../../lib/logger';
+import { logger } from '@/lib/logger';
 
 /** Handle incoming Ollama token events (streaming responses). */
 const handleToken = (payload: OllamaToken) => {

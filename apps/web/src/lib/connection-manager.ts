@@ -1,4 +1,4 @@
-import { isValidOllamaUrl, checkIsTauri } from './ipc';
+import { isValidOllamaUrl, checkIsTauri } from '@/lib/ipc';
 
 export enum ConnectionState {
   DISCONNECTED = 'disconnected',

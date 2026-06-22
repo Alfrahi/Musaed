@@ -1,10 +1,10 @@
 'use client';
 
 import { HardDrive, Download, Upload, FileText, Trash2 } from 'lucide-react';
-import { useGlobalSettings, useLanguage } from '../store/settings-store';
-import { useTranslation } from '../../../lib/i18n';
-import { useStorageActions } from '../hooks/useStorageActions';
-import { useSettingsActions } from '../hooks/useSettingsActions';
+import { useGlobalSettings, useLanguage } from '@/features/settings/store/settings-store';
+import { useTranslation } from '@/lib/i18n';
+import { useStorageActions } from '@/features/settings/hooks/useStorageActions';
+import { useSettingsActions } from '@/features/settings/hooks/useSettingsActions';
 
 /** Storage size display card. */
 const SizeCard = ({ label, value }: { label: string; value: string }) => (

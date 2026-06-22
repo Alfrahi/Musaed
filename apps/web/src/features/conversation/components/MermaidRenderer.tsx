@@ -8,9 +8,9 @@ import {
   extractMermaidContent,
   detectUnsupportedDiagram,
   preprocessMermaidContent,
-} from '../utils/mermaid-utils';
-import { useSettingsStore } from '../../settings/store/settings-store';
-import { useTranslation } from '../../../lib/i18n';
+} from '@/features/conversation/utils/mermaid-utils';
+import { useSettingsStore } from '@/features/settings';
+import { useTranslation } from '@/lib/i18n';
 
 interface MermaidRendererProps {
   content: string;

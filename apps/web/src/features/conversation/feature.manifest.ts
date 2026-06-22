@@ -4,7 +4,7 @@
  */
 
 export default {
-  name: 'chat',
+  name: 'conversation',
   version: '1.0.0',
   publicApi: {
     components: ['ChatWindow', 'MessageBubble', 'InputArea'],

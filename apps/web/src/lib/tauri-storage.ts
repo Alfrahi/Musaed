@@ -2,15 +2,15 @@
 
 import { type StateStorage } from 'zustand/middleware';
 import { z } from 'zod';
-import { checkIsTauri, store } from './ipc';
-import { logger } from './logger';
+import { checkIsTauri, store } from '@/lib/ipc';
+import { logger } from '@/lib/logger';
 import {
   runMigrations as runStoreMigrations,
   type MigrationFn,
   type MigrationResult,
   MigrationError,
   MigrationErrorCode,
-} from './migrations';
+} from '@/lib/migrations';
 
 export type { MigrationFn };
 

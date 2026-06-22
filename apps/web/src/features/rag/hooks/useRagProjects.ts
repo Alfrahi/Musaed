@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useCallback } from 'react';
-import { ragApi } from '../../../lib/ipc';
+import { ragApi } from '@/lib/ipc';
 import {
   useRagProjects as useRagProjectsFromStore,
   useRagProjectIds,
@@ -9,7 +9,7 @@ import {
   useAddRagProject,
   useRemoveRagProject,
   useUpdateRagProject,
-} from '../store/rag-store';
+} from '@/features/rag/store/rag-store';
 
 export function useRagProjects() {
   const projects = useRagProjectsFromStore();

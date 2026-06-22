@@ -1,13 +1,13 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useModelStore } from '../../settings/store/model-store';
-import { useSettingsStore } from '../../settings/store/settings-store';
-import { useUIStore } from '../../../store/ui-store';
-import { ollamaApi } from '../../../lib/ipc';
-import { logger } from '../../../lib/logger';
+import { useModelStore } from '@/features/settings/store/model-store';
+import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { useUIStore } from '@/store/ui-store';
+import { ollamaApi } from '@/lib/ipc';
+import { logger } from '@/lib/logger';
 import toast from 'react-hot-toast';
-import { useTranslation } from '../../../lib/i18n';
+import { useTranslation } from '@/lib/i18n';
 
 /**
  * Hook providing actions for fetching and deleting Ollama models.

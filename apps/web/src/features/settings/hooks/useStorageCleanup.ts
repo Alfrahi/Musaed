@@ -6,9 +6,9 @@ import {
   useConversationIds,
   useSetConversations,
 } from '@/features/conversation/store/conversation-store';
-import { useChatRetentionDays } from '../store/settings-store';
+import { useChatRetentionDays } from '@/features/settings/store/settings-store';
 import { useMessageStore } from '@/features/conversation/store/message-store';
-import { logger } from '../../../lib/logger';
+import { logger } from '@/lib/logger';
 
 export function useStorageCleanup() {
   const conversations = useConversations();

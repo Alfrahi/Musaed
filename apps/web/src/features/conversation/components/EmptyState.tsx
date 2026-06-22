@@ -1,9 +1,9 @@
 'use client';
 
 import { Bot, Plus, Sparkles, Shield } from 'lucide-react';
-import { useSettingsStore } from '../../settings/store/settings-store';
-import { useConversationActions } from '../hooks/useConversationActions';
-import { useTranslation } from '../../../lib/i18n';
+import { useSettingsStore } from '@/features/settings';
+import { useConversationActions } from '@/features/conversation/hooks/useConversationActions';
+import { useTranslation } from '@/lib/i18n';
 
 /** Welcome screen shown when no conversation is active. */
 const EmptyState = () => {

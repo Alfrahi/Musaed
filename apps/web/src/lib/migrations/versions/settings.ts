@@ -8,7 +8,7 @@
  * Migration path: v0 → v1 (initial schema) → v2 (add density field)
  */
 
-import { createIdempotentMigration } from '../orchestrator';
+import { createIdempotentMigration } from '@/lib/migrations/orchestrator';
 import { DEFAULT_SETTINGS, type ChatSettings } from '@musaed/contracts';
 import { ChatSettingsSchema } from '@musaed/contracts';
 

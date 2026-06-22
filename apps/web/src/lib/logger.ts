@@ -1,8 +1,8 @@
 'use client';
 
-import { checkIsTauri, store, logApi } from './ipc';
+import { checkIsTauri, store, logApi } from '@/lib/ipc';
 import { sanitizeError } from '@musaed/contracts';
-import { config } from './config';
+import { config } from '@/lib/config';
 
 type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 

@@ -12,7 +12,7 @@ import {
   useSetSettingsOpen,
   useSetInfoOpen,
 } from '@/store/hooks';
-import { useGlobalSettings } from '@/features/settings/store/settings-store';
+import { useGlobalSettings } from '@/features/settings';
 import { registerHydrationCoordination } from '@/store/coordination';
 import { Sliders, Library } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
@@ -54,7 +54,7 @@ const InputArea = dynamic(() => import('@/features/conversation').then((m) => m.
   ),
 });
 
-const SettingsModal = dynamic(() => import('@/features/settings').then((m) => m.SettingsModal), {
+const SettingsModal = dynamic(() => import('@/features/settings/components/SettingsModal'), {
   ssr: false,
 });
 const ModelLibrary = dynamic(() => import('@/features/library').then((m) => m.ModelLibrary), {

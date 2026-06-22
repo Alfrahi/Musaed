@@ -2,21 +2,21 @@
 
 import { useCallback } from 'react';
 import { type Message } from '@musaed/contracts';
-import { useTranslation } from '../../../lib/i18n';
-import { chatApi, ragApi } from '../../../lib/ipc';
-import { logger } from '../../../lib/logger';
+import { useTranslation } from '@/lib/i18n';
+import { chatApi, ragApi } from '@/lib/ipc';
+import { logger } from '@/lib/logger';
 import toast from 'react-hot-toast';
-import { flushAndStop } from '../../../store/batch-manager';
+import { flushAndStop } from '@/store/batch-manager';
 import { useConversationActions } from './useConversationActions';
 import { type FileAttachment } from './useAttachmentUtils';
-import { useMessageStore } from '../store/message-store';
+import { useMessageStore } from '@/features/conversation/store/message-store';
 import type { Citation } from '@musaed/contracts';
-import { persistMessage } from '../utils/message-persistence';
-import { useConversationStore } from '../store/conversation-store';
-import { useSettingsStore } from '../../settings/store/settings-store';
-import { useModelStore } from '../../settings/store/model-store';
-import { useRagStore } from '../../rag/store/rag-store';
-import { useUIStore } from '../../../store/ui-store';
+import { persistMessage } from '@/features/conversation/utils/message-persistence';
+import { useConversationStore } from '@/features/conversation/store/conversation-store';
+import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { useModelStore } from '@/features/settings/store/model-store';
+import { useRagStore } from '@/features/rag/store/rag-store';
+import { useUIStore } from '@/store/ui-store';
 
 /** Build prompt with file context injected. */
 function buildPromptWithContext(

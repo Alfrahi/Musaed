@@ -2,12 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
-import {
-  useSearchQuery,
-  useSetSearchQuery,
-} from '@/features/conversation/store/conversation-store';
-import { useLanguage } from '../../settings/store/settings-store';
-import { useTranslation } from '../../../lib/i18n';
+import { useSearchQuery, useSetSearchQuery } from '@/features/conversation';
+import { useLanguage } from '@/features/settings';
+import { useTranslation } from '@/lib/i18n';
 
 const SearchInput = () => {
   const searchQuery = useSearchQuery();

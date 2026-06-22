@@ -4,8 +4,8 @@ import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { RagProject, IndexProgress, SearchResult } from '@musaed/contracts';
-import { createTauriStorage } from '../../../lib/tauri-storage';
-import { useUIStore } from '../../../store/ui-store';
+import { createTauriStorage } from '@/lib/tauri-storage';
+import { useUIStore } from '@/store/ui-store';
 
 const RAG_STORE_VERSION = 1;
 

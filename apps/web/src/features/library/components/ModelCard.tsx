@@ -13,8 +13,8 @@ import {
   BrainCircuit,
   HardDrive,
 } from 'lucide-react';
-import { cn } from '../../../lib/utils';
-import { useTranslation } from '../../../lib/i18n';
+import { cn } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
 import { type Language } from '@musaed/contracts';
 
 interface ModelCardProps {

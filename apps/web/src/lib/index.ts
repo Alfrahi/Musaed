@@ -29,31 +29,31 @@ export {
   traceApi,
   titleApi,
   conversationApi,
-} from './ipc';
-export type { CommandMap } from './ipc';
+} from '@/lib/ipc';
+export type { CommandMap } from '@/lib/ipc';
 
 // I18n - shared internationalization
-export { useTranslation, getSystemLanguage } from './i18n';
-export type { TranslationKey } from './i18n';
+export { useTranslation, getSystemLanguage } from '@/lib/i18n';
+export type { TranslationKey } from '@/lib/i18n';
 
 // Logging & observability - shared infrastructure
-export { logger } from './logger';
-export { traceLogger, structuredLogger, traceAsync } from './trace-logger';
-export type { TraceSpan, TraceOptions, TraceCompleteOptions } from './trace-logger';
+export { logger } from '@/lib/logger';
+export { traceLogger, structuredLogger, traceAsync } from '@/lib/trace-logger';
+export type { TraceSpan, TraceOptions, TraceCompleteOptions } from '@/lib/trace-logger';
 
 // Utilities - pure functions
-export { cn } from './utils';
+export { cn } from '@/lib/utils';
 
 // Configuration - environment abstraction
-export { config } from './config';
+export { config } from '@/lib/config';
 
 // Storage - Tauri-backed Zustand persistence
-export { createTauriStorage } from './tauri-storage';
-export type { MigrationFn } from './tauri-storage';
+export { createTauriStorage } from '@/lib/tauri-storage';
+export type { MigrationFn } from '@/lib/tauri-storage';
 
 // Migrations - shared migration framework
-export { runMigrations, MigrationError, MigrationErrorCode } from './migrations';
-export type { MigrationFn as StoreMigrationFn, MigrationResult } from './migrations';
+export { runMigrations, MigrationError, MigrationErrorCode } from '@/lib/migrations';
+export type { MigrationFn as StoreMigrationFn, MigrationResult } from '@/lib/migrations';
 
 // Connection management - shared Ollama connection manager
 export {
@@ -62,4 +62,4 @@ export {
   ConnectionState,
   type OllamaHealth,
   type ConnectionManagerConfig,
-} from './connection-manager';
+} from '@/lib/connection-manager';

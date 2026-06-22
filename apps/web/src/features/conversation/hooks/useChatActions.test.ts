@@ -61,16 +61,18 @@ vi.mock('@/lib/i18n', () => ({
 }));
 
 // Store mocks: provide getState on the hook itself
-vi.mock('@/store/stores/message-store', () => {
+vi.mock('@/features/conversation/store/message-store', () => {
   const getState = vi.fn(() => ({
     messages: {},
+    addMessages: vi.fn(),
+    updateLastMessage: vi.fn(),
   }));
   const useMessageStore: any = vi.fn(() => getState());
   useMessageStore.getState = getState;
   return { useMessageStore };
 });
 
-vi.mock('@/store/stores/streaming-store', () => {
+vi.mock('@/features/conversation/store/streaming-store', () => {
   const getState = vi.fn(() => ({
     activeStreams: {},
     startStream: vi.fn(),
@@ -82,7 +84,7 @@ vi.mock('@/store/stores/streaming-store', () => {
   return { useStreamingStore };
 });
 
-vi.mock('../../settings/store/model-store', () => {
+vi.mock('@/features/settings/store/model-store', () => {
   const getState = vi.fn(() => ({
     selectedModel: 'llama3',
   }));
@@ -92,7 +94,7 @@ vi.mock('../../settings/store/model-store', () => {
 });
 
 // Conversation store hooks mock
-vi.mock('../store/conversation-store', () => {
+vi.mock('@/features/conversation/store/conversation-store', () => {
   const getState = vi.fn(() => ({
     conversations: {
       conv1: {
@@ -162,19 +164,8 @@ vi.mock('../store/conversation-store', () => {
   };
 });
 
-// Message store hooks mock
-vi.mock('../store/message-store', () => ({
-  useMessageStore: vi.fn(() => ({
-    messages: {},
-    addMessages: vi.fn(),
-    updateLastMessage: vi.fn(),
-  })),
-  useAddMessages: vi.fn(() => vi.fn()),
-  useUpdateLastMessage: vi.fn(() => vi.fn()),
-}));
-
 // Settings store hooks mock - model-store
-vi.mock('../../settings/store/model-store', () => ({
+vi.mock('@/features/settings/store/model-store', () => ({
   useModelStore: vi.fn(() => ({
     selectedModel: 'llama3',
     models: [],
@@ -183,8 +174,8 @@ vi.mock('../../settings/store/model-store', () => ({
 }));
 
 // Settings store hooks mock - settings-store
-vi.mock('../../settings/store/settings-store', () => ({
-  useSettingsStore: vi.fn(() => ({
+vi.mock('@/features/settings/store/settings-store', () => {
+  const getState = vi.fn(() => ({
     globalSettings: {
       ollamaUrl: 'http://localhost:11434',
       systemPrompt: '',
@@ -203,26 +194,11 @@ vi.mock('../../settings/store/settings-store', () => ({
       enableMermaid: true,
       density: 1.0,
     },
-  })),
-  useGlobalSettings: vi.fn(() => ({
-    ollamaUrl: 'http://localhost:11434',
-    systemPrompt: '',
-    temperature: 0.7,
-    top_k: 40,
-    top_p: 0.9,
-    stop: [],
-    num_predict: 100,
-    num_ctx: 2048,
-    language: 'en',
-    theme: 'system',
-    hasDetectedLanguage: false,
-    enterToSend: true,
-    chatRetentionDays: 0,
-    enableLatex: false,
-    enableMermaid: true,
-    density: 1.0,
-  })),
-}));
+  }));
+  const useSettingsStore: any = vi.fn(() => getState());
+  useSettingsStore.getState = getState;
+  return { useSettingsStore, useGlobalSettings: vi.fn(() => getState().globalSettings) };
+});
 
 // UI store hooks mock
 vi.mock('@/store/ui-store', () => {
@@ -240,13 +216,15 @@ vi.mock('@/store/ui-store', () => {
 });
 
 // RAG store hooks mock
-vi.mock('../../rag/store/rag-store', () => ({
-  useRagStore: vi.fn(() => ({
+vi.mock('@/features/rag/store/rag-store', () => {
+  const getState = vi.fn(() => ({
     activeProjectId: null,
     projects: {},
-  })),
-  useActiveRagProject: vi.fn(() => null),
-}));
+  }));
+  const useRagStore: any = vi.fn(() => getState());
+  useRagStore.getState = getState;
+  return { useRagStore, useActiveRagProject: vi.fn(() => null) };
+});
 
 // Chat actions hook mock (recursive - mock itself)
 vi.mock('./useConversationActions', () => ({
@@ -260,12 +238,15 @@ vi.mock('./useConversationActions', () => ({
 }));
 
 // Import the hook under test after vi.mock (hoisted)
-import { useChatActions } from '../useChatActions';
+import { useChatActions } from './useChatActions';
 import { chatApi } from '@/lib/ipc';
-import { useCurrentConversationId, useConversations } from '../../store/conversation-store';
-import { useSelectedModel } from '../../../settings/store/model-store';
+import {
+  useCurrentConversationId,
+  useConversations,
+} from '@/features/conversation/store/conversation-store';
+import { useSelectedModel } from '@/features/settings/store/model-store';
 
-vi.mock('../../store/conversation-store', () => {
+vi.mock('@/features/conversation/store/conversation-store', () => {
   const getState = vi.fn(() => ({
     conversations: {
       conv1: {
@@ -308,7 +289,7 @@ vi.mock('../../store/conversation-store', () => {
   };
 });
 
-vi.mock('../../../settings/store/model-store', () => {
+vi.mock('@/features/settings/store/model-store', () => {
   const getState = vi.fn(() => ({
     selectedModel: 'llama3',
     models: [],

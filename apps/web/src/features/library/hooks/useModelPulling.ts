@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useModelStore } from '../../settings/store/model-store';
-import { useSettingsStore } from '../../settings/store/settings-store';
-import { useTranslation } from '../../../lib/i18n';
-import { ollamaApi, checkIsTauri } from '../../../lib/ipc';
-import { logger } from '../../../lib/logger';
+import { useModelStore } from '@/features/settings/store/model-store';
+import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { useTranslation } from '@/lib/i18n';
+import { ollamaApi, checkIsTauri } from '@/lib/ipc';
+import { logger } from '@/lib/logger';
 import toast from 'react-hot-toast';
 
 /**

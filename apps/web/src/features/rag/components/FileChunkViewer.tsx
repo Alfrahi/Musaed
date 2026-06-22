@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRagFileBrowser } from '../hooks/useRagFileBrowser';
-import { useActiveRagProject } from '../store/rag-store';
-import { useLanguage } from '../../settings/store/settings-store';
+import { useRagFileBrowser } from '@/features/rag/hooks/useRagFileBrowser';
+import { useActiveRagProject } from '@/features/rag/store/rag-store';
+import { useLanguage } from '@/features/settings';
 import { Loader2, AlertCircle } from 'lucide-react';
-import { useTranslation } from '../../../lib/i18n';
+import { useTranslation } from '@/lib/i18n';
 import type { ChunkRecord } from '@musaed/contracts';
 
 interface FileChunkViewerProps {

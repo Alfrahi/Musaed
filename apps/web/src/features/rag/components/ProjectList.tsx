@@ -2,10 +2,10 @@
 
 import { Plus } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
-import { useRagProjects as useRagProjectsHook } from '../hooks/useRagProjects';
-import { useRagIndexing } from '../hooks/useRagIndexing';
-import { useActiveRagProjectId, useSetActiveRagProjectId } from '../store/rag-store';
-import { useSettingsStore } from '../../settings/store/settings-store';
+import { useRagProjects as useRagProjectsHook } from '@/features/rag/hooks/useRagProjects';
+import { useRagIndexing } from '@/features/rag/hooks/useRagIndexing';
+import { useActiveRagProjectId, useSetActiveRagProjectId } from '@/features/rag/store/rag-store';
+import { useSettingsStore } from '@/features/settings';
 import ProjectCard from './ProjectCard';
 import { AddProjectDialog } from './AddProjectDialog';
 import { useState, useEffect } from 'react';

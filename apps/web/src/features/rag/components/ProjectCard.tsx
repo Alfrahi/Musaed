@@ -7,8 +7,8 @@ import { IndexingProgress } from './IndexingProgress';
 import type { RagProject, IndexProgress as IndexProgressType } from '@musaed/contracts';
 import { listen } from '@/lib/ipc';
 import { IndexProgressSchema } from '@musaed/contracts';
-import { truncateFilePath } from '../utils/project-helpers';
-import { useSettingsStore } from '../../settings/store/settings-store';
+import { truncateFilePath } from '@/features/rag/utils/project-helpers';
+import { useSettingsStore } from '@/features/settings';
 import { useTranslation } from '@/lib/i18n';
 
 interface ProjectCardProps {

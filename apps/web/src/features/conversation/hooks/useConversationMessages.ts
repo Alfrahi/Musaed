@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useConversationStore } from '../store/conversation-store';
-import { useMessageStore } from '../store/message-store';
-import { conversationApi } from '../../../lib/ipc';
-import { logger } from '../../../lib/logger';
+import { useConversationStore } from '@/features/conversation/store/conversation-store';
+import { useMessageStore } from '@/features/conversation/store/message-store';
+import { conversationApi } from '@/lib/ipc';
+import { logger } from '@/lib/logger';
 
 /**
  * Hook that loads messages from the Rust backend when the user switches

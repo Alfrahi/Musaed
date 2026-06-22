@@ -2,8 +2,8 @@
 
 import { useCallback } from 'react';
 import { DEFAULT_SETTINGS, type ChatSettings } from '@musaed/contracts';
-import { useSettingsStore, useSetGlobalSettings } from '../store/settings-store';
-import { logger } from '../../../lib/logger';
+import { useSettingsStore, useSetGlobalSettings } from '@/features/settings/store/settings-store';
+import { logger } from '@/lib/logger';
 
 /**
  * Provides actions for managing global application settings.

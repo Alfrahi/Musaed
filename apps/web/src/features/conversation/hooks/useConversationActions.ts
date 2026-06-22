@@ -8,18 +8,17 @@ import {
   useConversationStore,
   useUpdateConversation,
   useBatchUpdate,
-} from '../store';
-import { useModelStore } from '../../settings/store/model-store';
-import { useSettingsStore } from '../../settings/store/settings-store';
-import { chatApi, conversationApi } from '../../../lib/ipc';
-import {
-  coordinateStartStream,
-  coordinateStopStream,
-  flushAndStop,
-} from '../../../store/coordination';
-import { useTranslation } from '../../../lib/i18n';
-import { updateConversation as backendUpdateConversation } from '../utils/conversation-backend';
-import type { ConversationMetadata, ConversationState } from '../store/conversation-store';
+} from '@/features/conversation/store';
+import { useModelStore } from '@/features/settings/store/model-store';
+import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { chatApi, conversationApi } from '@/lib/ipc';
+import { coordinateStartStream, coordinateStopStream, flushAndStop } from '@/store/coordination';
+import { useTranslation } from '@/lib/i18n';
+import { updateConversation as backendUpdateConversation } from '@/features/conversation/utils/conversation-backend';
+import type {
+  ConversationMetadata,
+  ConversationState,
+} from '@/features/conversation/store/conversation-store';
 
 /**
  * Abort active streaming for a conversation.

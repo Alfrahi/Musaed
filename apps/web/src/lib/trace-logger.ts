@@ -7,7 +7,7 @@ import {
   type TraceStatus,
   TraceEntrySchema,
 } from '@musaed/contracts';
-import { logApi } from './ipc';
+import { logApi } from '@/lib/ipc';
 
 /**
  * Generates a new UUID v4 for trace/span IDs using native crypto API.

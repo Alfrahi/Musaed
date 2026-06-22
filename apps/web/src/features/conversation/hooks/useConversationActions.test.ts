@@ -1,15 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useConversationActions } from '../useConversationActions';
-import { useBatchUpdate, useUpdateConversation } from '../../store/conversation-store';
+import { useConversationActions } from './useConversationActions';
+import {
+  useBatchUpdate,
+  useUpdateConversation,
+} from '@/features/conversation/store/conversation-store';
 import { coordinateStopStream } from '@/store/coordination';
 import { chatApi } from '@/lib/ipc';
-import { useStreamingStore } from '../../store/streaming-store';
-import { useMessageStore } from '../../store/message-store';
-import { useConversationStore } from '../../store/conversation-store';
+import { useStreamingStore } from '@/features/conversation/store/streaming-store';
+import { useMessageStore } from '@/features/conversation/store/message-store';
+import { useConversationStore } from '@/features/conversation/store/conversation-store';
 
 // Mock hooks
-vi.mock('../../store/conversation-store', () => {
+vi.mock('@/features/conversation/store/conversation-store', () => {
   const getState = vi.fn(() => ({
     conversations: {},
     conversationIds: [],
@@ -24,7 +27,7 @@ vi.mock('../../store/conversation-store', () => {
   };
 });
 
-vi.mock('../../../settings/store/settings-store', () => {
+vi.mock('@/features/settings/store/settings-store', () => {
   const getState = vi.fn(() => ({
     globalSettings: { language: 'en' },
     setGlobalSettings: vi.fn(),
@@ -86,7 +89,7 @@ vi.mock('@/lib/i18n', () => ({
 }));
 
 // Store mocks with getState/setState as needed
-vi.mock('../../store/message-store', () => {
+vi.mock('@/features/conversation/store/message-store', () => {
   const getState = vi.fn(() => ({
     messages: {},
     clearMessages: vi.fn(),
@@ -98,7 +101,7 @@ vi.mock('../../store/message-store', () => {
   return { useMessageStore };
 });
 
-vi.mock('../../store/model-store', () => {
+vi.mock('@/features/conversation/store/model-store', () => {
   const getState = vi.fn(() => ({
     selectedModel: 'llama3',
   }));
@@ -107,7 +110,7 @@ vi.mock('../../store/model-store', () => {
   return { useModelStore };
 });
 
-vi.mock('../../store/streaming-store', () => {
+vi.mock('@/features/conversation/store/streaming-store', () => {
   const getState = vi.fn(() => ({
     activeStreams: {},
     startStream: vi.fn(),

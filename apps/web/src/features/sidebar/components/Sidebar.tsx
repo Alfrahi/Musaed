@@ -3,14 +3,14 @@
 import { useState } from 'react';
 import { Eraser, MessageSquare, Briefcase } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
-import { useSearchQuery } from '@/features/conversation/store/conversation-store';
+import { useSearchQuery } from '@/features/conversation';
 import { useIsHydrated } from '@/store/hooks';
-import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { useSettingsStore } from '@/features/settings';
 import {
   useConversationStore,
   selectFilteredConversations,
   type ConversationMetadata,
-} from '@/features/conversation/store/conversation-store';
+} from '@/features/conversation';
 import { useTranslation } from '@/lib/i18n';
 import { ProjectList, AddProjectDialog } from '@/components/Rag';
 import { useConversationActions } from '@/features/conversation';
@@ -19,8 +19,8 @@ import ConversationItem from './ConversationItem';
 import SidebarHeader from './SidebarHeader';
 import SidebarSkeleton from './SidebarSkeleton';
 import SidebarInfo from './SidebarInfo';
-import { useSidebarActions } from '../hooks/useSidebarActions';
-import { useSidebarGrouping, type SidebarItem } from '../hooks/useSidebarGrouping';
+import { useSidebarActions } from '@/features/sidebar/hooks/useSidebarActions';
+import { useSidebarGrouping, type SidebarItem } from '@/features/sidebar/hooks/useSidebarGrouping';
 
 /** Group header (Today, Yesterday, etc.) with optional clear-all button. */
 const GroupHeader = ({

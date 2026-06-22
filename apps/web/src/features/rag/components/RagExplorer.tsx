@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { FileBrowser } from './FileBrowser';
 import { FileChunkViewer } from './FileChunkViewer';
-import { useSettingsStore } from '../../settings/store/settings-store';
+import { useSettingsStore } from '@/features/settings';
 import { useTranslation } from '@/lib/i18n';
 
 const RagExplorer = () => {

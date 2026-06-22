@@ -1,4 +1,4 @@
-export * as Chat from './conversation';
+export * as Conversation from './conversation';
 export * as Rag from './rag';
 export * as Library from './library';
 export * as Info from './info';

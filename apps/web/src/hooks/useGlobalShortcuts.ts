@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useConversationActions } from '../features/conversation';
-import { useSetSettingsOpen, useSetLibraryOpen } from '../store/hooks';
+import { useConversationActions } from '@/features/conversation';
+import { useSetSettingsOpen, useSetLibraryOpen } from '@/store/hooks';
 
 /**
  * Hook to register global keyboard shortcuts for primary application actions.

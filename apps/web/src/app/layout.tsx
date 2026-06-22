@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { DirectionProvider, ToastProvider, ErrorBoundary } from '../components/ui';
+import { DirectionProvider, ToastProvider, ErrorBoundary } from '@/components/ui';
 
 export const metadata: Metadata = {
   title: 'Musaed',

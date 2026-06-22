@@ -2,9 +2,9 @@
 
 import Image from 'next/image';
 import { X, FileText } from 'lucide-react';
-import { useTranslation } from '../../../lib/i18n';
-import { useSettingsStore } from '../../settings/store/settings-store';
-import { type FileAttachment } from '../hooks/useAttachmentUtils';
+import { useTranslation } from '@/lib/i18n';
+import { useSettingsStore } from '@/features/settings';
+import { type FileAttachment } from '@/features/conversation/hooks/useAttachmentUtils';
 import { attachmentImageSrc } from '../image-attachment';
 
 interface AttachmentPreviewProps {

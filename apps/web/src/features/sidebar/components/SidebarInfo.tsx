@@ -2,8 +2,8 @@
 
 import { Info } from 'lucide-react';
 import { useSetInfoOpen } from '@/store/hooks';
-import { useLanguage } from '../../settings/store/settings-store';
-import { useTranslation } from '../../../lib/i18n';
+import { useLanguage } from '@/features/settings';
+import { useTranslation } from '@/lib/i18n';
 
 const SidebarInfo = () => {
   const setInfoOpen = useSetInfoOpen();
