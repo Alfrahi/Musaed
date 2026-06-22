@@ -5,7 +5,7 @@ import { X, FileText } from 'lucide-react';
 import { useTranslation } from '../../../lib/i18n';
 import { useSettingsStore } from '../../settings/store/settings-store';
 import { type FileAttachment } from '../hooks/useAttachmentUtils';
-import { attachmentImageSrc } from '../imageAttachment';
+import { attachmentImageSrc } from '../image-attachment';
 
 interface AttachmentPreviewProps {
   images: string[];

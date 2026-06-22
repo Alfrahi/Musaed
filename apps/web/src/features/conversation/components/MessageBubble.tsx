@@ -6,7 +6,7 @@ import { Copy, Check, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { type Message } from '@musaed/contracts';
 import { cn } from '../../../lib/utils';
 import MessageContent from './MessageContent';
-import { attachmentImageSrc } from '../imageAttachment';
+import { attachmentImageSrc } from '../image-attachment';
 import { useMessageActions } from '../hooks/useMessageActions';
 import { MessageAvatar } from './MessageAvatar';
 import { MessageStats } from './MessageStats';
