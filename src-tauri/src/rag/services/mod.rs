@@ -26,7 +26,7 @@ use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 
 /// Canonicalizes a path and verifies it stays within the project root.
-fn canonicalize_path_within_project(
+pub(crate) fn canonicalize_path_within_project(
     project_root: &Path,
     target_path: &Path,
 ) -> Result<PathBuf, String> {
@@ -48,7 +48,7 @@ fn canonicalize_path_within_project(
 }
 
 /// Validates a relative file path and returns the canonical path within the project.
-fn validate_and_canonicalize_file_path(
+pub(crate) fn validate_and_canonicalize_file_path(
     project_root: &Path,
     relative_path: &str,
 ) -> Result<PathBuf, String> {

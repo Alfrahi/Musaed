@@ -228,52 +228,13 @@ pub async fn cmd_rag_assemble_context(
     assemble_context(req).await
 }
 
-// ====================== PATH SECURITY HELPERS ======================
-
-#[cfg(test)]
-/// Canonicalizes a path and verifies it stays within the project root.
-fn canonicalize_path_within_project(
-    project_root: &std::path::Path,
-    target_path: &std::path::Path,
-) -> Result<std::path::PathBuf, String> {
-    let canonical_root = project_root
-        .canonicalize()
-        .map_err(|e| format!("Failed to resolve project root: {}", e))?;
-    let canonical_target = target_path
-        .canonicalize()
-        .map_err(|e| format!("Target path does not exist or is inaccessible: {}", e))?;
-    let root_with_sep = format!("{}/", canonical_root.to_string_lossy());
-    let target_with_sep = format!("{}/", canonical_target.to_string_lossy());
-    if !target_with_sep.starts_with(&root_with_sep) {
-        return Err(format!(
-            "Path escapes project boundary: {:?} is not within {:?}",
-            canonical_target, canonical_root
-        ));
-    }
-    Ok(canonical_target)
-}
-
-#[cfg(test)]
-/// Validates a relative file path and returns the canonical path within the project root.
-fn validate_and_canonicalize_file_path(
-    project_root: &std::path::Path,
-    relative_path: &str,
-) -> Result<std::path::PathBuf, String> {
-    if relative_path.contains("..") {
-        return Err("Path traversal not allowed".to_string());
-    }
-    if relative_path.starts_with('/') || relative_path.starts_with('\\') {
-        return Err("Absolute paths not allowed".to_string());
-    }
-    let full_path = project_root.join(relative_path);
-    canonicalize_path_within_project(project_root, &full_path)
-}
-
 // ====================== TESTS (unchanged) ======================
 
 #[cfg(test)]
 mod path_security_tests {
-    use super::*;
+    use crate::rag::services::{
+        canonicalize_path_within_project, validate_and_canonicalize_file_path,
+    };
     use std::fs;
     use tempfile::tempdir;
 

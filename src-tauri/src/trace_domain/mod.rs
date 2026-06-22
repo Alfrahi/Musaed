@@ -24,9 +24,11 @@
 
 pub mod commands;
 
-pub use commands::{
-    cmd_trace_append, cmd_trace_complete, cmd_trace_get_context, cmd_trace_start, emit_trace,
-};
+pub mod service;
+
+pub use service::emit_trace;
+
+pub use commands::{cmd_trace_append, cmd_trace_complete, cmd_trace_get_context, cmd_trace_start};
 
 use chrono::{SecondsFormat, Utc};
 use dashmap::DashMap;

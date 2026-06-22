@@ -5,6 +5,7 @@
 
 pub mod commands;
 pub mod models;
+pub mod service;
 pub mod store;
 
 pub use store::ConversationStore;

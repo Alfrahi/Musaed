@@ -39,6 +39,7 @@
 
 pub mod commands;
 pub mod rollback;
+pub mod service;
 pub mod traits;
 pub mod version_tracker;
 
