@@ -38,7 +38,7 @@ export const mockConversationActions = {
   clearAllConversations: vi.fn(),
 };
 
-// Store mocks (avoid top-level usage)
+// Helper to create store mocks object
 export const createStoreMocks = () => ({
   useCurrentConversationId: mockUseCurrentConversationId,
   useConversations: mockUseConversations,

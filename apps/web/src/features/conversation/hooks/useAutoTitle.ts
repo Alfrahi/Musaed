@@ -12,7 +12,7 @@ import {
 import { logger } from '@/lib/logger';
 
 /** Module-level set tracking in-flight auto-title requests across all hook instances. */
-const pendingAutoTitles = new Set<string>();
+export const pendingAutoTitles = new Set<string>();
 
 /**
  * Hook that provides a function to auto-generate a conversation title.

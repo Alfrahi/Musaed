@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-syntax */
 /**
  * Typed configuration layer for application-wide environment variables.
  * Use this instead of direct process.env calls to comply with security policies.

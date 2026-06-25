@@ -13,6 +13,7 @@ import {
   selectLiveContent,
 } from '@/features/conversation/store/streaming-store';
 import { useMessageStore } from '@/features/conversation/store/message-store';
+import type { StreamingState } from '@/features/conversation/store/streaming-store';
 import { useSettingsStore } from '@/features/settings';
 import MessageBubble from './MessageBubble';
 import ChatWindowSkeleton from './ChatWindowSkeleton';
@@ -64,7 +65,7 @@ const ChatWindow = () => {
   const storedMessages = useMessageStore((s) =>
     currentConversationId ? s.messages[currentConversationId] : []
   );
-  const activeStreams = useStreamingStore((s) => s.activeStreams);
+  const activeStreams = useStreamingStore((s: StreamingState) => s.activeStreams);
   const isHydrated = useUIStore((s) => s.isHydrated);
   const language = useSettingsStore((s) => s.globalSettings.language);
   const virtuosoRef = useRef<VirtuosoHandle>(null);

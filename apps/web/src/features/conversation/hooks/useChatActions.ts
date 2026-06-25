@@ -16,7 +16,7 @@ import { useConversationStore } from '@/features/conversation/store/conversation
 import { useSettingsStore } from '@/features/settings/store/settings-store';
 import { useModelStore } from '@/features/settings/store/model-store';
 import { useRagStore } from '@/features/rag/store/rag-store';
-import { useUIStore } from '@/store/ui-store';
+import { useSetUIError } from '@/store/ui-store';
 
 /** Build prompt with file context injected. */
 function buildPromptWithContext(
@@ -154,6 +154,7 @@ function persistUserMessage(conversationId: string, userMsg: Message) {
 export const useChatActions = () => {
   const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
+  const setErrorMessage = useSetUIError();
   const { initiateStreaming, stopStreaming } = useConversationActions();
 
   const sendMessage = useCallback(
@@ -233,15 +234,14 @@ export const useChatActions = () => {
               useMessageStore.getState().updateLastMessage(id, update, replace),
             stopStreaming,
             (msg) => {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (useUIStore as any).getState().setErrorMessage(msg);
+              setErrorMessage(msg);
             },
             t
           );
         }
       }
     },
-    [t, initiateStreaming, stopStreaming]
+    [t, initiateStreaming, stopStreaming, setErrorMessage]
   );
 
   return { sendMessage };

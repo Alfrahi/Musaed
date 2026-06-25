@@ -125,7 +125,8 @@ vi.mock('@/features/conversation/store/streaming-store', () => {
 const mockUseBatchUpdate = useBatchUpdate as any;
 const mockUseUpdateConversation = useUpdateConversation as any;
 const mockCoordinateStopStream = coordinateStopStream as any;
-const mockUseStreamingStore = useStreamingStore as any;
+
+const mockUseStreamingStore = useStreamingStore;
 const mockUseMessageStore = useMessageStore as any;
 const mockUseConversationStore = useConversationStore as any;
 

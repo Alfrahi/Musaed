@@ -16,6 +16,25 @@ interface LogEntry {
 const MAX_LOG_MESSAGE_LENGTH = 2048;
 
 /**
+ * Safely serializes an object, handling circular references by omitting them.
+ */
+function safeSerialize(obj: Record<string, unknown>): Record<string, unknown> | undefined {
+  try {
+    const seen = new WeakSet();
+    const serialized = JSON.stringify(obj, (_key, value) => {
+      if (typeof value === 'object' && value !== null) {
+        if (seen.has(value)) return undefined;
+        seen.add(value);
+      }
+      return value;
+    });
+    return JSON.parse(serialized);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Application-wide logging utility that persists to disk and backend log buffer.
  */
 export const logger = {
@@ -38,13 +57,14 @@ export const logger = {
       } else if (level === 'warn') {
         console.warn(`[${level.toUpperCase()}] ${finalMessage}`, context || '');
       }
+      // info and debug levels are not printed to console per lint rules
     }
 
     const entry: LogEntry = {
       level,
       message: finalMessage,
       timestamp: new Date().toISOString(),
-      context: context ? JSON.parse(JSON.stringify(context)) : undefined,
+      context: context ? safeSerialize(context) : undefined,
     };
 
     const logString = JSON.stringify(entry);

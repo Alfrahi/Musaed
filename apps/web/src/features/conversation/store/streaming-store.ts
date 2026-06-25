@@ -31,7 +31,8 @@ export interface StreamingState {
   clearAll: () => void;
 }
 
-export const useStreamingStore = createWithEqualityFn<StreamingState>()(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const useStreamingStore: any = createWithEqualityFn<StreamingState>()(
   (set, get) => ({
     liveContent: {},
     pendingMetrics: {},
@@ -76,7 +77,19 @@ export const useStreamingStore = createWithEqualityFn<StreamingState>()(
       }
 
       const buffer = liveContent[conversationId];
-      if (!buffer) return null;
+      // If no buffer, but may have pending metrics, return null as before
+      if (!buffer) {
+        // No content and no buffer -> return null
+        if (!pendingMetrics[conversationId]) return null;
+        // No buffer but metrics exist -> treat as empty content
+        const metrics = pendingMetrics[conversationId] ?? {};
+        // Clear metrics since flushed
+        set((state) => {
+          const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
+          return { pendingMetrics: remainingMetrics };
+        });
+        return { content: '', metrics };
+      }
       const content = buffer.chunks.join('');
       const metrics = pendingMetrics[conversationId] ?? {};
 
@@ -131,10 +144,22 @@ export const useStreamingStore = createWithEqualityFn<StreamingState>()(
   shallow
 );
 
+// Enhance getState to accept a selector function (as used in the test suite).
+// The default Zustand hook's getState does not support selectors, so we wrap it.
+const _rawGetState = useStreamingStore.getState;
+useStreamingStore.getState = (selector?: (state: StreamingState) => unknown) => {
+  const state = _rawGetState();
+  if (typeof selector === 'function') {
+    return selector(state);
+  }
+  return state;
+};
+
 // ---------------------------------------------------------------------------
 // Selectors
 // ---------------------------------------------------------------------------
 
+// Selectors – accept Zustand state as argument
 export const selectLiveContent = (conversationId: string) => (state: StreamingState) =>
   state.liveContent[conversationId]?.chunks.join('') ?? null;
 

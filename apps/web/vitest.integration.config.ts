@@ -10,7 +10,7 @@ export default defineConfig({
     passWithNoTests: true,
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./src/test/setup.ts'],
+    setupFiles: ['./src/tests/setup.ts'],
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@musaed/contracts': path.resolve(__dirname, '../../packages/contracts/src'),

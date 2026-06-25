@@ -11,7 +11,7 @@ Object.defineProperty(window, '__TAURI_INTERNALS__', {
 
 // Mock Tauri store, ipc and logger modules
 vi.mock('./src/lib/ipc', async () => {
-  const actual = await vi.importActual('./src/__mocks__/lib/ipc');
+  const actual = await vi.importActual('./src/lib/__mocks__/ipc');
   return actual;
 });
 

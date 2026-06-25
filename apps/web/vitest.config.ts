@@ -11,7 +11,7 @@ export default defineConfig({
     ],
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./src/test/setup.ts', './vitest.setup.ts'],
+    setupFiles: ['./src/tests/setup.ts', './vitest.setup.ts'],
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@musaed/contracts/migrations': path.resolve(
@@ -23,7 +23,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      exclude: ['node_modules/', 'src/test/setup.ts'],
+      exclude: ['node_modules/', 'src/tests/setup.ts'],
     },
   },
 });

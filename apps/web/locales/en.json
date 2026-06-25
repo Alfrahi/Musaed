@@ -138,10 +138,10 @@
       "calculating": "Calculating...",
       "autoDelete": "Auto-delete Old Chats",
       "retention": {
-        "never": "Never",
         "30": "After 30 days",
         "90": "After 90 days",
-        "180": "After 6 months"
+        "180": "After 6 months",
+        "never": "Never"
       }
     }
   },

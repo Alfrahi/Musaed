@@ -1,5 +1,11 @@
-import { handleTauriImageUploadInternal } from './useAttachmentUtils';
-import { describe, expect, it, vi } from 'vitest';
+import {
+  fileNameFromPath,
+  mimeFromExtension,
+  validateFileSize,
+  handleTauriFileUploadInternal,
+  handleTauriImageUploadInternal,
+} from './useAttachmentUtils';
+import { describe, it, expect, vi } from 'vitest';
 import { dialog, fs } from '@/lib/ipc';
 import toast from 'react-hot-toast';
 
@@ -11,6 +17,7 @@ vi.mock('@/lib/ipc', () => ({
   },
   fs: {
     readFile: vi.fn(),
+    readTextFile: vi.fn(),
   },
 }));
 
@@ -31,6 +38,61 @@ vi.mock('react-hot-toast', () => ({
     }),
   },
 }));
+
+describe('utility functions', () => {
+  it('fileNameFromPath extracts name', () => {
+    expect(fileNameFromPath('C:/folder/file.txt')).toBe('file.txt');
+    expect(fileNameFromPath('/unix/path/to/file.md')).toBe('file.md');
+    expect(fileNameFromPath('no/slash')).toBe('slash');
+  });
+
+  it('mimeFromExtension returns correct types', () => {
+    expect(mimeFromExtension('image.png')).toBe('image/png');
+    expect(mimeFromExtension('doc.pdf')).toBe('application/pdf');
+    expect(mimeFromExtension('unknown.xyz')).toBe('application/octet-stream');
+  });
+
+  it('validateFileSize returns false and shows toast on oversized files', () => {
+    const mockT = vi.fn((k) => k);
+    const result = validateFileSize(11 * 1024 * 1024, mockT);
+    expect(result).toBe(false);
+    expect(toast.error).toHaveBeenCalledWith('error.fileTooLarge');
+  });
+});
+
+describe('handleTauriFileUploadInternal', () => {
+  it('uploads files and respects size limit', async () => {
+    const mockDialogOpen = vi.fn().mockResolvedValue(['/path/file.txt']);
+    vi.mocked(dialog.open).mockImplementation(mockDialogOpen);
+
+    const fileContent = 'hello world';
+    const mockReadTextFile = vi.fn().mockResolvedValue(fileContent);
+    vi.mocked(fs.readTextFile).mockImplementation(mockReadTextFile);
+
+    const mockT = vi.fn((k) => k);
+    const result = await handleTauriFileUploadInternal(mockT);
+
+    expect(result).toHaveLength(1);
+    const att = result[0];
+    expect(att.name).toBe('file.txt');
+    expect(att.content).toBe(fileContent);
+    expect(att.type).toBe('text/plain');
+    // size should be >0 and less than MAX_FILE_SIZE
+    expect(att.size).toBeGreaterThan(0);
+  });
+
+  it('skips files larger than limit', async () => {
+    const mockDialogOpen = vi.fn().mockResolvedValue(['/path/large.txt']);
+    vi.mocked(dialog.open).mockImplementation(mockDialogOpen);
+    const largeContent = 'a'.repeat(11 * 1024 * 1024); // >10MB
+    const mockReadTextFile = vi.fn().mockResolvedValue(largeContent);
+    vi.mocked(fs.readTextFile).mockImplementation(mockReadTextFile);
+    const mockT = vi.fn((k) => k);
+    const result = await handleTauriFileUploadInternal(mockT);
+    expect(result).toHaveLength(0);
+    expect(toast.error).toHaveBeenCalledWith('error.fileTooLarge');
+  });
+});
 
 describe('handleTauriImageUploadInternal', () => {
   it('should handle image uploads correctly', async () => {

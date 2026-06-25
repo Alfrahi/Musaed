@@ -53,8 +53,12 @@ vi.mock('@/store/ui-store', () => {
   };
   const useUIStore: any = vi.fn(() => uiState);
   useUIStore.getState = vi.fn(() => uiState);
-  return { useUIStore };
+  return { useUIStore, useSetUIError: vi.fn(() => vi.fn()) };
 });
+
+vi.mock('@/features/conversation/utils/message-persistence', () => ({
+  persistMessage: vi.fn().mockResolvedValue({ success: true, retries: 0, error: null }),
+}));
 
 vi.mock('@/lib/i18n', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -212,7 +216,7 @@ vi.mock('@/store/ui-store', () => {
   };
   const useUIStore: any = vi.fn(() => uiState);
   useUIStore.getState = vi.fn(() => uiState);
-  return { useUIStore };
+  return { useUIStore, useSetUIError: vi.fn(() => vi.fn()) };
 });
 
 // RAG store hooks mock
@@ -239,12 +243,17 @@ vi.mock('./useConversationActions', () => ({
 
 // Import the hook under test after vi.mock (hoisted)
 import { useChatActions } from './useChatActions';
+import { logger } from '@/lib/logger';
+import { useRagStore } from '@/features/rag/store/rag-store';
 import { chatApi } from '@/lib/ipc';
+import { persistMessage } from '@/features/conversation/utils/message-persistence';
 import {
   useCurrentConversationId,
   useConversations,
 } from '@/features/conversation/store/conversation-store';
 import { useSelectedModel } from '@/features/settings/store/model-store';
+
+vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 
 vi.mock('@/features/conversation/store/conversation-store', () => {
   const getState = vi.fn(() => ({
@@ -415,6 +424,18 @@ describe('useChatActions', () => {
     expect(chatApi.chat).toHaveBeenCalled();
   });
 
+  it('logs error when persisting failed assistant message fails', async () => {
+    // Mock chatApi to fail
+    vi.mocked(chatApi.chat).mockRejectedValue(new Error('Connection failed'));
+    // Mock persistMessage to return failure
+    vi.mocked(persistMessage).mockResolvedValue({ success: false, retries: 2, error: 'db error' });
+    const { result } = renderHook(() => useChatActions());
+    await act(async () => {
+      await result.current.sendMessage('test', [], []);
+    });
+    expect(logger.error).toHaveBeenCalled();
+  });
+
   it('does not send if conversation does not exist', () => {
     vi.mocked(useConversations).mockReturnValue({});
     const { result } = renderHook(() => useChatActions());
@@ -422,5 +443,22 @@ describe('useChatActions', () => {
       result.current.sendMessage('test', [], []);
     });
     expect(chatApi.chat).not.toHaveBeenCalled();
+  });
+
+  it('continues when RAG context assembly fails', async () => {
+    // Enable RAG project
+    vi.mocked(useRagStore).mockReturnValue({
+      activeProjectId: 'proj1',
+      projects: { proj1: { id: 'proj1', path: '/some/path' } },
+      getState: vi.fn(),
+    });
+    // Mock ragApi.assembleContext to reject
+    const { ragApi } = await import('@/lib/ipc');
+    vi.mocked(ragApi).assembleContext = vi.fn().mockRejectedValue(new Error('RAG fail'));
+    const { result } = renderHook(() => useChatActions());
+    await act(async () => {
+      await result.current.sendMessage('hello', [], []);
+    });
+    expect(chatApi.chat).toHaveBeenCalled();
   });
 });

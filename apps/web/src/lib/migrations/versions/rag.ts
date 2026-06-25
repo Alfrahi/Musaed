@@ -32,6 +32,29 @@ export const RagStateWrapperSchema = z.object({
 });
 
 /**
+ * Partial schema for v1 projects (before migration to v2).
+ * Allows missing fields that will be added during migration.
+ */
+const RagProjectV1Schema = RagProjectSchema.partial().extend({
+  id: z.string(),
+  name: z.string(),
+  path: z.string(),
+  embeddingModel: z.string(),
+  ignorePatterns: z.array(z.string()),
+});
+
+/**
+ * Partial schema for v1 data (before migration).
+ */
+const RagStateV1Schema = z
+  .object({
+    projects: z.record(z.string(), RagProjectV1Schema),
+    projectIds: z.array(z.string()),
+    activeProjectId: z.string().nullable(),
+  })
+  .passthrough();
+
+/**
  * RAG state shape for migration purposes (avoids circular import).
  */
 export interface RagStateShape {
@@ -52,26 +75,42 @@ export interface RagStateShape {
  * Rollback: Safe (metadata-only changes)
  */
 export const migrateRagToV2 = (data: unknown): Partial<RagStateShape> => {
-  const wrapped = RagStateWrapperSchema.parse(data);
+  // Use v1 schema to allow partial data, then transform to v2
+  const parsed = RagStateV1Schema.parse(data);
 
-  // Ensure all projects have valid status (migrate from legacy if needed)
+  // Ensure all projects have all required fields and status
   const migratedProjects: Record<string, RagProject> = {};
-  for (const [id, project] of Object.entries(wrapped.projects)) {
+  for (const [id, project] of Object.entries(parsed.projects)) {
     migratedProjects[id] = {
-      ...project,
-      status: project.status ?? 'idle', // Default status if missing
+      id: project.id,
+      name: project.name,
+      path: project.path,
+      embeddingModel: project.embeddingModel,
+      ignorePatterns: project.ignorePatterns ?? [],
+      createdAt: project.createdAt ?? new Date().toISOString(),
+      updatedAt: project.updatedAt ?? new Date().toISOString(),
+      indexedAt: project.indexedAt ?? null,
+      fileCount: project.fileCount ?? 0,
+      chunkCount: project.chunkCount ?? 0,
+      totalBytes: project.totalBytes ?? 0,
+      status: project.status ?? 'idle',
     };
   }
 
   // Normalize projectIds to match actual project keys
   const normalizedIds = Object.keys(migratedProjects);
 
+  const parsedRecord = parsed as unknown as {
+    searchResults?: SearchResult[];
+    isSearching?: boolean;
+  };
+
   return {
     projects: migratedProjects,
     projectIds: normalizedIds,
-    activeProjectId: wrapped.activeProjectId,
-    searchResults: wrapped.searchResults ?? [],
-    isSearching: wrapped.isSearching ?? false,
+    activeProjectId: parsed.activeProjectId,
+    searchResults: parsedRecord.searchResults ?? [],
+    isSearching: parsedRecord.isSearching ?? false,
   };
 };
 

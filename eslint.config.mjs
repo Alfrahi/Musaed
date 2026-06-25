@@ -185,7 +185,6 @@ export default tseslint.config(
     files: [
       '**/*.{test,spec}.ts',
       '**/*.{test,spec}.tsx',
-      'apps/web/src/test/**/*',
       'apps/web/src/tests/**/*',
       'apps/web/src/__mocks__/**/*',
     ],
@@ -223,5 +222,9 @@ export default tseslint.config(
       'no-restricted-syntax': 'off',
       'no-restricted-imports': 'off',
     },
+  },
+  {
+    files: ['apps/web/src/lib/config.ts'],
+    rules: { 'no-restricted-syntax': 'off' },
   },
 );
