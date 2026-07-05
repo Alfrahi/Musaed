@@ -24,11 +24,13 @@
 
 pub mod commands;
 
+pub mod logger;
+
 pub mod service;
 
-pub use service::emit_trace;
+pub use logger::{get_log_path, init_file_logger, ChannelLogger, TracingLayer};
 
-pub use commands::{cmd_trace_append, cmd_trace_complete, cmd_trace_get_context, cmd_trace_start};
+pub use service::emit_trace;
 
 use chrono::{SecondsFormat, Utc};
 use dashmap::DashMap;

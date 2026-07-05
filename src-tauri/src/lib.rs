@@ -8,8 +8,6 @@ pub mod dialog;
 pub mod error_codes;
 pub mod export;
 pub mod generated_validation;
-pub mod logger;
-pub mod logging;
 pub mod migrations;
 pub mod ollama;
 pub mod ollama_url;
@@ -55,11 +53,11 @@ pub fn run() {
 
     builder = builder.setup(|app| -> Result<(), Box<dyn std::error::Error>> {
         // Initialize file logger and get the channel sender for tracing
-        let log_tx = logger::init_file_logger(app.handle())
+        let log_tx = trace_domain::init_file_logger(app.handle())
             .map_err(|e| format!("Failed to initialize file logger: {}", e))?;
 
         // Create a tracing layer that forwards events to the log channel
-        let tracing_layer = logger::TracingLayer::new(log_tx);
+        let tracing_layer = trace_domain::TracingLayer::new(log_tx);
         let subscriber = tracing_subscriber::Registry::default().with(tracing_layer);
         tracing::subscriber::set_global_default(subscriber)
             .map_err(|e| format!("Failed to set tracing subscriber: {}", e))?;
@@ -111,9 +109,10 @@ pub fn run() {
             ollama::models::cmd_ollama_delete_model,
             ollama::models::cmd_ollama_verify_service,
             ollama::title::cmd_ollama_generate_title,
-            logging::cmd_logs_append,
-            logging::cmd_logs_request_clear_token,
-            logging::cmd_logs_clear,
+            // Logging commands
+            trace_domain::commands::cmd_logs_append,
+            trace_domain::commands::cmd_logs_request_clear_token,
+            trace_domain::commands::cmd_logs_clear,
             // Trace domain commands
             trace_domain::commands::cmd_trace_append,
             trace_domain::commands::cmd_trace_start,

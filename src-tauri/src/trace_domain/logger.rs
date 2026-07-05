@@ -1,7 +1,13 @@
+//! Core logger implementation for Musaed's structured tracing domain.
+//!
+//! This module provides the channel-based logging infrastructure that
+//! supports both `log` and `tracing` crates through a unified backend.
+
 use chrono;
 use log::LevelFilter;
 use std::fs::OpenOptions;
 use std::io::Write;
+use std::path::PathBuf;
 use std::sync::mpsc;
 use std::sync::OnceLock;
 use tauri::Manager;
@@ -85,7 +91,7 @@ impl ChannelLogger {
     }
 
     /// Send a pre-formatted line directly through the channel.
-    /// Used by `logging.rs` to route frontend entries through the same writer.
+    /// Used by logging commands to route frontend entries through the same writer.
     pub fn log_direct(line: String) {
         if let Some(logger) = LOGGER.get() {
             let _ = logger.tx.send(LogMsg::Line(line));
@@ -149,11 +155,8 @@ fn writer_thread(mut file: std::fs::File, rx: mpsc::Receiver<LogMsg>) {
     }
 }
 
-/// Initializes the file logger and returns the channel sender.
-/// This sender can be used to create a tracing layer.
-pub fn init_file_logger<R: tauri::Runtime>(
-    app: &tauri::AppHandle<R>,
-) -> Result<mpsc::Sender<LogMsg>, String> {
+/// Resolves the path to the application log file, creating directories if needed.
+pub fn get_log_path<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<PathBuf, String> {
     let data_dir = app
         .path()
         .app_data_dir()
@@ -161,8 +164,15 @@ pub fn init_file_logger<R: tauri::Runtime>(
 
     let log_dir = data_dir.join("musaed").join("logs");
     std::fs::create_dir_all(&log_dir).map_err(|e| e.to_string())?;
+    Ok(log_dir.join("musaed.log"))
+}
 
-    let log_path = log_dir.join("musaed.log");
+/// Initializes the file logger and returns the channel sender.
+/// This sender can be used to create a tracing layer.
+pub fn init_file_logger<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+) -> Result<mpsc::Sender<LogMsg>, String> {
+    let log_path = get_log_path(app)?;
 
     let file = OpenOptions::new()
         .create(true)

@@ -97,7 +97,7 @@ pub fn emit_trace(entry: TraceEntry) {
     };
 
     // Log through the channel logger (project‑wide logger)
-    crate::logger::ChannelLogger::log_direct(format!("{}\n", json));
+    crate::trace_domain::logger::ChannelLogger::log_direct(format!("{}\n", json));
 
     // Optionally echo to console in debug builds
     #[cfg(debug_assertions)]
