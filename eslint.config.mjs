@@ -116,6 +116,18 @@ export default tseslint.config(
           message: 'Direct invoke() is forbidden. Use src/lib/ipc.ts only.',
         },
 
+        // WINDOW.__TAURI__ GLOBAL FORBIDDEN
+        {
+          selector: "MemberExpression[object.name='window'][property.name='__TAURI__']",
+          message: 'Direct window.__TAURI__ access is forbidden. Use IPC bridge (src/lib/ipc.ts) only.',
+        },
+
+        // WINDOW.__TAURI_INTERNALS__ GLOBAL FORBIDDEN
+        {
+          selector: "MemberExpression[object.name='window'][property.name='__TAURI_INTERNALS__']",
+          message: 'Direct window.__TAURI_INTERNALS__ access is forbidden. Use IPC bridge (src/lib/ipc.ts) only.',
+        },
+
         // DIRECT TAURI API FORBIDDEN
         {
           selector: "ImportDeclaration[source.value=/^@tauri-apps\\/api/]",
