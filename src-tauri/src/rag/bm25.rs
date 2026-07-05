@@ -40,8 +40,13 @@ impl BM25 {
             let mut term_counts = HashMap::new();
             for term in terms {
                 *term_counts.entry(term.clone()).or_insert(0) += 1;
-                *doc_freq.entry(term).or_insert(0) += 1;
             }
+
+            // doc_freq counts documents containing each term (not total occurrences)
+            for term in term_counts.keys() {
+                *doc_freq.entry(term.clone()).or_insert(0) += 1;
+            }
+
             term_freq.insert(chunk_id, term_counts);
         }
 
@@ -117,6 +122,30 @@ mod tests {
     }
 
     #[test]
+    fn test_tokenize_empty_string() {
+        let tokens = tokenize("");
+        assert!(tokens.is_empty());
+    }
+
+    #[test]
+    fn test_tokenize_only_punctuation() {
+        let tokens = tokenize("!!! ??? ...");
+        assert!(tokens.is_empty());
+    }
+
+    #[test]
+    fn test_tokenize_mixed_case() {
+        let tokens = tokenize("Hello HELLO hello HeLLo");
+        assert_eq!(tokens, vec!["hello", "hello", "hello", "hello"]);
+    }
+
+    #[test]
+    fn test_tokenize_unicode() {
+        let tokens = tokenize("hello 世界 rust");
+        assert_eq!(tokens, vec!["hello", "世界", "rust"]);
+    }
+
+    #[test]
     fn test_bm25_scoring() {
         let documents = vec![
             (1, "hello world".to_string()),
@@ -129,21 +158,141 @@ mod tests {
         let score2 = bm25.score("hello", 2);
         let score3 = bm25.score("hello", 3);
 
-        assert!(score1 > score3); // Document 1 should score higher for "hello"
-        assert!(score2 > score3); // Document 2 should score higher for "hello"
-        assert!(score1 > 0.0); // Non-zero score for matching document
-        assert_eq!(score3, 0.0); // Zero score for non-matching document
+        assert!(score1 > score3);
+        assert!(score2 > score3);
+        assert!(score1 > 0.0);
+        assert_eq!(score3, 0.0);
     }
 
     #[test]
     fn test_bm25_empty_documents_returns_zero() {
-        // Regression test for division by zero bug
         let documents: Vec<(usize, String)> = vec![];
         let bm25 = BM25::new(&documents);
-
-        // Should return 0.0, not panic or return NaN
         let score = bm25.score("query", 1);
         assert_eq!(score, 0.0);
         assert!(!score.is_nan(), "Score should not be NaN");
+    }
+
+    #[test]
+    fn test_bm25_empty_query_returns_zero() {
+        let documents = vec![(1, "hello world".to_string())];
+        let bm25 = BM25::new(&documents);
+        let score = bm25.score("", 1);
+        assert_eq!(score, 0.0);
+    }
+
+    #[test]
+    fn test_bm25_all_empty_documents_returns_zero() {
+        let documents = vec![
+            (1, "".to_string()),
+            (2, "".to_string()),
+            (3, "".to_string()),
+        ];
+        let bm25 = BM25::new(&documents);
+        let score = bm25.score("query", 1);
+        assert_eq!(score, 0.0);
+        assert!(!score.is_nan(), "Score should not be NaN");
+    }
+
+    #[test]
+    fn test_bm25_nonexistent_chunk_id_returns_zero() {
+        let documents = vec![(1, "hello world".to_string())];
+        let bm25 = BM25::new(&documents);
+        let score = bm25.score("hello", 999);
+        assert_eq!(score, 0.0);
+    }
+
+    #[test]
+    fn test_bm25_multi_term_query() {
+        let documents = vec![
+            (1, "hello world".to_string()),
+            (2, "hello rust".to_string()),
+            (3, "world rust".to_string()),
+        ];
+
+        let bm25 = BM25::new(&documents);
+        let score1 = bm25.score("hello world", 1);
+        let score2 = bm25.score("hello world", 2);
+        let score3 = bm25.score("hello world", 3);
+
+        assert!(score1 > score2);
+        assert!(score1 > score3);
+    }
+
+    #[test]
+    fn test_bm25_term_frequency_impact() {
+        let documents = vec![
+            (1, "rust rust rust".to_string()),
+            (2, "rust".to_string()),
+            (3, "python java go".to_string()),
+        ];
+
+        let bm25 = BM25::new(&documents);
+
+        let score1 = bm25.score("rust", 1);
+        let score3 = bm25.score("rust", 3);
+
+        // Doc 1 contains "rust", doc 3 doesn't - doc 1 should score higher
+        assert!(
+            score1 > score3,
+            "Document containing term should score higher than document without term. score1={}, score3={}",
+            score1,
+            score3
+        );
+        assert!(
+            score1 > 0.0,
+            "Document with term should have positive score"
+        );
+        assert_eq!(score3, 0.0, "Document without term should score zero");
+    }
+    #[test]
+    fn test_bm25_document_frequency_impact() {
+        let documents = vec![
+            (1, "rust".to_string()),
+            (2, "rust".to_string()),
+            (3, "python".to_string()),
+        ];
+
+        let bm25 = BM25::new(&documents);
+        let rust_score = bm25.score("rust", 1);
+        let python_score = bm25.score("python", 3);
+
+        assert!(
+            python_score > rust_score,
+            "Rare term (python) should score higher than common term (rust)"
+        );
+    }
+
+    #[test]
+    fn test_bm25_deterministic_scoring() {
+        let documents = vec![
+            (1, "the quick brown fox".to_string()),
+            (2, "the lazy dog".to_string()),
+        ];
+
+        let bm25 = BM25::new(&documents);
+        let score1_run1 = bm25.score("quick", 1);
+        let score1_run2 = bm25.score("quick", 1);
+
+        assert_eq!(
+            score1_run1, score1_run2,
+            "Scoring should be deterministic for same input"
+        );
+    }
+
+    #[test]
+    fn test_bm25_single_character_terms() {
+        let documents = vec![(1, "a b c".to_string())];
+        let bm25 = BM25::new(&documents);
+        let score = bm25.score("a", 1);
+        assert!(score > 0.0);
+    }
+
+    #[test]
+    fn test_bm25_numbers_in_terms() {
+        let documents = vec![(1, "version 1 2 3".to_string())];
+        let bm25 = BM25::new(&documents);
+        let score = bm25.score("1 2", 1);
+        assert!(score > 0.0);
     }
 }

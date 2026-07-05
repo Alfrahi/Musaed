@@ -222,4 +222,152 @@ mod tests {
                 .is_ok());
         }
     }
+
+    #[test]
+    fn test_rate_limiter_burst_at_window_boundary() {
+        let limiter = RateLimiter::new();
+
+        // Exhaust limit for cmd_ollama_chat (10 per second)
+        for _ in 0..10 {
+            assert!(limiter
+                .check_rate_limit("burst_window", "cmd_ollama_chat")
+                .is_ok());
+        }
+
+        // 11th request should fail
+        assert!(limiter
+            .check_rate_limit("burst_window", "cmd_ollama_chat")
+            .is_err());
+
+        // Wait for window to reset
+        std::thread::sleep(std::time::Duration::from_millis(1001));
+
+        // Should allow full burst again
+        for _ in 0..10 {
+            assert!(limiter
+                .check_rate_limit("burst_window", "cmd_ollama_chat")
+                .is_ok());
+        }
+    }
+
+    #[test]
+    fn test_rate_limiter_exact_limit_boundary() {
+        let limiter = RateLimiter::new();
+
+        // Exactly at limit (10 requests for cmd_ollama_chat)
+        for i in 0..10 {
+            let result = limiter.check_rate_limit("boundary", "cmd_ollama_chat");
+            assert!(result.is_ok(), "Request {} should succeed", i + 1);
+        }
+
+        // One over limit should fail
+        let result = limiter.check_rate_limit("boundary", "cmd_ollama_chat");
+        assert!(result.is_err(), "Request 11 should fail");
+    }
+
+    #[test]
+    fn test_rate_limiter_refill_timing_precision() {
+        let limiter = RateLimiter::new();
+
+        // Use all tokens
+        for _ in 0..10 {
+            let _ = limiter.check_rate_limit("timing", "cmd_ollama_chat");
+        }
+
+        // Verify blocked before window expires
+        assert!(limiter
+            .check_rate_limit("timing", "cmd_ollama_chat")
+            .is_err());
+
+        // Sleep slightly less than window
+        std::thread::sleep(std::time::Duration::from_millis(900));
+
+        // Should still be blocked (window hasn't fully reset)
+        assert!(limiter
+            .check_rate_limit("timing", "cmd_ollama_chat")
+            .is_err());
+
+        // Sleep remaining time
+        std::thread::sleep(std::time::Duration::from_millis(200));
+
+        // Should allow requests again
+        assert!(limiter
+            .check_rate_limit("timing", "cmd_ollama_chat")
+            .is_ok());
+    }
+
+    #[test]
+    fn test_rate_limiter_sliding_window_behavior() {
+        let limiter = RateLimiter::new();
+
+        // Make 5 requests
+        for _ in 0..5 {
+            let _ = limiter.check_rate_limit("sliding", "cmd_ollama_chat");
+        }
+
+        // Wait half a window
+        std::thread::sleep(std::time::Duration::from_millis(500));
+
+        // Make 5 more requests
+        for _ in 0..5 {
+            let _ = limiter.check_rate_limit("sliding", "cmd_ollama_chat");
+        }
+
+        // Should now be at limit (10 total in current window)
+        assert!(limiter
+            .check_rate_limit("sliding", "cmd_ollama_chat")
+            .is_err());
+
+        // Wait until first 5 requests expire from window
+        std::thread::sleep(std::time::Duration::from_millis(600));
+
+        // Should allow ~5 new requests (first 5 expired)
+        // At least 1 should work
+        assert!(limiter
+            .check_rate_limit("sliding", "cmd_ollama_chat")
+            .is_ok());
+    }
+
+    #[test]
+    fn test_rate_limiter_underflow_protection() {
+        let limiter = RateLimiter::new();
+
+        // Set an extreme config to test edge cases
+        limiter.set_command_config(
+            "test_extreme",
+            RateLimitConfig {
+                max_requests: 1,
+                window_ms: 100,
+            },
+        );
+
+        // Make 1 request
+        assert!(limiter.check_rate_limit("extreme", "test_extreme").is_ok());
+
+        // Should be blocked
+        assert!(limiter.check_rate_limit("extreme", "test_extreme").is_err());
+
+        // Wait for reset
+        std::thread::sleep(std::time::Duration::from_millis(150));
+
+        // Should allow again
+        assert!(limiter.check_rate_limit("extreme", "test_extreme").is_ok());
+    }
+
+    #[test]
+    fn test_rate_limiter_preserves_timestamp_order() {
+        let limiter = RateLimiter::new();
+
+        // Make requests in quick succession
+        for _ in 0..5 {
+            let _ = limiter.check_rate_limit("order", "cmd_ollama_chat");
+        }
+
+        // Verify timestamps are retained in order
+        let key = ("order".to_string(), "cmd_ollama_chat".to_string());
+        let timestamps = limiter.request_timestamps.get(&key);
+        assert!(timestamps.is_some());
+        let timestamps = timestamps.unwrap();
+        assert_eq!(timestamps.len(), 5);
+    }
 }

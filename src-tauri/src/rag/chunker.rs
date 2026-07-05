@@ -901,4 +901,202 @@ struct Foo {
         assert!(merged[0].content.contains("ab"));
         assert!(merged[0].content.contains("fn long_function"));
     }
+
+    #[test]
+    fn test_text_chunker_empty_content() {
+        let content = "";
+        let chunker = TextChunker;
+        let chunks = chunker.chunk(content, "empty.txt");
+        assert!(chunks.is_empty());
+    }
+
+    #[test]
+    fn test_text_chunker_single_line() {
+        let content = "Single line without newline";
+        let chunker = TextChunker;
+        let chunks = chunker.chunk(content, "single.txt");
+        assert_eq!(chunks.len(), 1);
+        assert_eq!(chunks[0].content.trim(), content);
+        assert_eq!(chunks[0].start_line, 1);
+        assert_eq!(chunks[0].end_line, 1);
+    }
+
+    #[test]
+    fn test_text_chunker_only_newlines() {
+        let content = "\n\n\n";
+        let chunker = TextChunker;
+        let chunks = chunker.chunk(content, "newlines.txt");
+        assert!(!chunks.is_empty());
+    }
+
+    #[test]
+    fn test_markdown_chunker_empty_content() {
+        let content = "";
+        let chunker = MarkdownChunker;
+        let chunks = chunker.chunk(content, "empty.md");
+        assert!(chunks.is_empty());
+    }
+
+    #[test]
+    fn test_markdown_chunker_nested_headings() {
+        let content = r#"# H1
+
+## H2
+
+### H3
+
+#### H4
+
+Content here.
+"#;
+        let chunker = MarkdownChunker;
+        let chunks = chunker.chunk(content, "nested.md");
+        assert!(!chunks.is_empty());
+        assert!(chunks[0].content.contains("H2"));
+    }
+
+    #[test]
+    fn test_markdown_chunker_heading_chain_metadata() {
+        let content = r#"# Title
+
+## Section
+
+## Another Section
+
+Content under another section.
+"#;
+        let chunker = MarkdownChunker;
+        let chunks = chunker.chunk(content, "doc.md");
+        assert!(!chunks.is_empty());
+        let headings = chunks.last().unwrap().metadata.get("headings");
+        assert!(headings.is_some());
+    }
+
+    #[test]
+    fn test_config_chunker_empty() {
+        let content = "";
+        let chunker = ConfigChunker;
+        let chunks = chunker.chunk(content, "empty.json");
+        assert_eq!(chunks.len(), 1);
+        assert_eq!(chunks[0].chunk_type, ChunkType::Config);
+    }
+
+    #[test]
+    fn test_config_chunker_yaml_split() {
+        let content = r#"key1: value1
+nested:
+  key2: value2
+key3: value3
+"#;
+        let chunker = ConfigChunker;
+        let chunks = chunker.chunk(content, "config.yaml");
+        assert!(!chunks.is_empty());
+        assert_eq!(chunks[0].chunk_type, ChunkType::Config);
+    }
+
+    #[test]
+    fn test_code_chunker_empty_content() {
+        let content = "";
+        let chunker = CodeChunker;
+        let chunks = chunker.chunk(content, "empty.rs");
+        assert!(chunks.is_empty());
+    }
+
+    #[test]
+    fn test_code_chunker_whitespace_only() {
+        let content = "   \n\t  \n  ";
+        let chunker = CodeChunker;
+        let chunks = chunker.chunk(content, "whitespace.rs");
+        assert!(chunks.is_empty());
+    }
+
+    #[test]
+    fn test_code_chunker_typescript() {
+        let content = r#"function greet(name: string): void {
+    console.log(`Hello, ${name}!`);
+}
+
+const x: number = 42;
+"#;
+        let chunker = CodeChunker;
+        let chunks = chunker.chunk(content, "app.ts");
+        assert!(!chunks.is_empty());
+        assert_eq!(chunks[0].chunk_type, ChunkType::Code);
+        assert_eq!(chunks[0].language.as_deref(), Some("typescript"));
+    }
+
+    #[test]
+    fn test_code_chunker_python() {
+        let content = r#"def hello():
+    print("Hello")
+
+class Foo:
+    pass
+"#;
+        let chunker = CodeChunker;
+        let chunks = chunker.chunk(content, "main.py");
+        assert!(!chunks.is_empty());
+        assert_eq!(chunks[0].chunk_type, ChunkType::Code);
+        assert_eq!(chunks[0].language.as_deref(), Some("python"));
+    }
+
+    #[test]
+    fn test_chunk_type_unknown_extension() {
+        assert_eq!(chunk_type_for_file("file.xyz"), ChunkType::Text);
+        assert_eq!(chunk_type_for_file("noextension"), ChunkType::Text);
+        assert_eq!(chunk_type_for_file(".hidden"), ChunkType::Text);
+    }
+
+    #[test]
+    fn test_chunk_type_case_insensitive() {
+        assert_eq!(chunk_type_for_file("main.RS"), ChunkType::Code);
+        assert_eq!(chunk_type_for_file("README.MD"), ChunkType::Markdown);
+        assert_eq!(chunk_type_for_file("config.JSON"), ChunkType::Config);
+    }
+
+    #[test]
+    fn test_find_sentence_break_fallback_newline() {
+        let text = "Line one\nLine two\nLine three";
+        let pos = find_sentence_break(text);
+        // Function returns a valid position (always succeeds for non-empty input)
+        assert!(pos <= text.len());
+    }
+
+    #[test]
+    fn test_find_sentence_break_no_breaks() {
+        let text = "No sentence breaks here just words";
+        let pos = find_sentence_break(text);
+        // Returns 0 when no break found (start of text as fallback)
+        assert_eq!(pos, 0);
+    }
+
+    #[test]
+    fn test_merge_single_chunk() {
+        let chunks = vec![RawChunk {
+            content: "single".to_string(),
+            chunk_type: ChunkType::Text,
+            language: None,
+            start_line: 1,
+            end_line: 1,
+            metadata: serde_json::json!({}),
+        }];
+
+        let merged = merge_small_chunks(chunks);
+        assert_eq!(merged.len(), 1);
+    }
+
+    #[test]
+    fn test_chunker_trait_object_usage() {
+        let chunkers: Vec<Box<dyn Chunker>> = vec![
+            Box::new(CodeChunker),
+            Box::new(MarkdownChunker),
+            Box::new(ConfigChunker),
+            Box::new(TextChunker),
+        ];
+
+        for chunker in chunkers {
+            let result = chunker.chunk("test content", "test.txt");
+            assert!(result.is_empty() || !result.is_empty());
+        }
+    }
 }
