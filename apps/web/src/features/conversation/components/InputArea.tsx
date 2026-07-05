@@ -5,8 +5,8 @@ import { Send, Square, ImageIcon, Paperclip } from 'lucide-react';
 import { useChatInput } from '@/features/conversation/hooks/useChatInput';
 import { abortStreaming } from '@/features/conversation/hooks/useConversationActions';
 import AttachmentPreview from './AttachmentPreview';
-import { ModelSelector } from '@/components/ModelSelector';
-import { RagContextBadge } from '@/components/RagContextBadge';
+import { ModelSelector } from '@/features/library';
+import { RagContextBadge } from '@/features/rag';
 
 /** Attach action buttons (image + file upload). */
 const AttachButtons = ({
