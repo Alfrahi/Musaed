@@ -65,6 +65,16 @@ pub const CONVERSATION_UPDATE_ERROR: &str = "CONVERSATION_UPDATE_ERROR";
 pub const MESSAGE_APPEND_ERROR: &str = "MESSAGE_APPEND_ERROR";
 pub const CONVERSATION_LOCK_ERROR: &str = "CONVERSATION_LOCK_ERROR";
 
+// ── Dialog ────────────────────────────────────────────
+pub const DIALOG_ERROR: &str = "DIALOG_ERROR";
+
+// ── URL Opener ────────────────────────────────────────
+pub const URL_BLOCKED: &str = "URL_BLOCKED";
+pub const OPEN_URL_ERROR: &str = "OPEN_URL_ERROR";
+
+// ── Export ────────────────────────────────────────────
+pub const EXPORT_ERROR: &str = "EXPORT_ERROR";
+
 // ── Generic ───────────────────────────────────────────
 pub const INTERNAL_ERROR: &str = "INTERNAL_ERROR";
 pub const ABORTED: &str = "ABORTED";

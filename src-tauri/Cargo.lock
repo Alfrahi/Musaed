@@ -2395,6 +2395,7 @@ dependencies = [
  "dashmap",
  "futures",
  "ignore",
+ "lazy_static",
  "log",
  "mockito",
  "rand 0.8.6",
