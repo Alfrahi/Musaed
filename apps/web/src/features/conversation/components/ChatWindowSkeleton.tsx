@@ -4,7 +4,10 @@ import { Skeleton } from '@/components/ui';
 
 const ChatWindowSkeleton = () => {
   return (
-    <div className="ms-auto me-auto w-full max-w-4xl flex-1 space-y-8 p-6">
+    <div
+      className="ms-auto me-auto w-full max-w-4xl flex-1 space-y-8 p-6"
+      data-testid="skeleton-loader"
+    >
       {[1, 2, 3].map((i) => (
         <div key={i} className={`flex gap-5 ${i % 2 === 0 ? 'flex-row-reverse' : ''}`}>
           <Skeleton className="h-10 w-10 shrink-0 rounded-2xl" />

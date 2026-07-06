@@ -6,16 +6,20 @@ import { useSettingsStore } from '@/features/settings';
 import { useTranslation } from '@/lib/i18n';
 import type { SearchResult } from '@musaed/contracts';
 
-const chunkTypeIcon = (type: string) => {
+interface ChunkIconProps {
+  type: string;
+}
+
+const chunkTypeIcon = ({ type }: ChunkIconProps) => {
   switch (type) {
     case 'code':
-      return <Code className="h-3 w-3" />;
+      return <Code className="h-3 w-3" data-testid="code-icon" />;
     case 'markdown':
-      return <FileText className="h-3 w-3" />;
+      return <FileText className="h-3 w-3" data-testid="file-text-icon" />;
     case 'config':
-      return <FileCode className="h-3 w-3" />;
+      return <FileCode className="h-3 w-3" data-testid="file-code-icon" />;
     default:
-      return <File className="h-3 w-3" />;
+      return <File className="h-3 w-3" data-testid="file-icon" />;
   }
 };
 
@@ -27,11 +31,11 @@ export const SearchResults = () => {
   if (results.length === 0) return null;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-testid="search-results-container">
       <p className="text-muted-foreground text-xs font-medium">
         {t('rag.searchResultCount', { count: results.length })}
       </p>
-      <div className="max-h-80 space-y-1.5 overflow-y-auto">
+      <div className="max-h-80 space-y-1.5 overflow-y-auto" role="list">
         {results.map((result, i) => (
           <SearchResultCard key={`${result.chunkId}-${i}`} result={result} rank={i + 1} />
         ))}
@@ -42,10 +46,10 @@ export const SearchResults = () => {
 
 const SearchResultCard = ({ result, rank }: { result: SearchResult; rank: number }) => {
   return (
-    <div className="border-border space-y-1 rounded-md border p-2">
+    <div className="border-border space-y-1 rounded-md border p-2" role="article">
       <div className="flex items-center gap-2 text-xs">
         <span className="text-muted-foreground">#{rank}</span>
-        {chunkTypeIcon(result.chunkType)}
+        {chunkTypeIcon({ type: result.chunkType })}
         <span className="truncate font-medium">{result.filePath}</span>
         <span className="text-muted-foreground">
           L{result.startLine}-{result.endLine}

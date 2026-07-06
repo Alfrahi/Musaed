@@ -2,12 +2,15 @@
 
 import { useState } from 'react';
 import { MessageSquare, Trash2, Download, Edit2 } from 'lucide-react';
-import { useCurrentConversationId, useSetCurrentConversationId } from '@/store/coordination';
+import {
+  useCurrentConversationId,
+  useSetCurrentConversationId,
+} from '@/features/conversation/store/conversation-store';
 import { useLanguage } from '@/features/settings';
 import { cn } from '@/lib/utils';
 import { useSidebarActions } from '@/features/sidebar/hooks/useSidebarActions';
 import { useTranslation } from '@/lib/i18n';
-import type { ConversationMetadata } from '@/store/coordination';
+import type { ConversationMetadata } from '@/features/conversation/store/conversation-store';
 
 interface ConversationItemProps {
   conversation: ConversationMetadata;

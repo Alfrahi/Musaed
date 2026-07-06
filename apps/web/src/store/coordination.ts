@@ -6,10 +6,7 @@ import { useRagStore } from '@/features/rag/store/rag-store';
 import { useModelStore } from '@/features/settings/store/model-store';
 import { useStreamingStore } from '@/features/conversation/store/streaming-store';
 import { useMessageStore } from '@/features/conversation/store/message-store';
-import { useConversationStore } from '@/features/conversation/store/conversation-store';
 import type { Conversation } from '@musaed/contracts';
-import type { ConversationState as ConversationStateInner } from '@/features/conversation/store/conversation-store';
-import { useConversationActions as useConversationActionsInner } from '@/features/conversation';
 
 export type ConversationMetadata = Omit<Conversation, 'messages'>;
 
@@ -56,8 +53,6 @@ export function flushAndStop(conversationId: string): void {
     // Mark as flushed to prevent duplicate flushes (race condition guard)
     streamingStore.markFlushed(conversationId);
   }
-
-  streamingStore.stopStream(conversationId);
 }
 
 /**
@@ -109,45 +104,3 @@ export function registerHydrationCoordination(): () => void {
     disposed = true;
   };
 }
-
-// =======================
-// CONVERSATION COORDINATION
-// =======================
-
-/** Hook for getting current conversation ID. */
-export const useCurrentConversationId = () =>
-  useConversationStore((state) => state.currentConversationId);
-
-/** Hook for setting current conversation ID. */
-export const useSetCurrentConversationId = () =>
-  useConversationStore((state) => state.setCurrentConversationId);
-
-/** Hook for getting search query. */
-export const useSearchQuery = () => useConversationStore((state) => state.searchQuery);
-
-/** Hook for setting search query. */
-export const useSetSearchQuery = () => useConversationStore((state) => state.setSearchQuery);
-
-/** Selector for filtered conversations based on search query. */
-export const selectFilteredConversations = (state: ConversationStateInner) => {
-  const { conversations, conversationIds, searchQuery } = state;
-  const list = conversationIds.map((id) => conversations[id]).filter(Boolean);
-  if (!searchQuery) return list;
-  return list.filter((conv) =>
-    (conv.title ?? '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
-};
-
-/** Hook for getting filtered conversations. */
-export const useFilteredConversations = () => useConversationStore(selectFilteredConversations);
-
-/** Exported actions wrapper for sidebar and other features. */
-export function useConversationActions() {
-  return useConversationActionsInner();
-}
-
-/** Export message store getter for sidebar export functionality. */
-export { useMessageStore } from '@/features/conversation/store/message-store';
-
-/** Export conversation store for advanced usage. */
-export { useConversationStore } from '@/features/conversation/store/conversation-store';

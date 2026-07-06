@@ -63,9 +63,10 @@ export const rollbackSettingsToV0 = (): Partial<ChatSettings> => {
 
 /**
  * Validation function for settings state.
+ * Uses strict validation to reject unknown keys.
  */
 export const validateSettings = (data: unknown): ChatSettings => {
-  return ChatSettingsSchema.parse(data);
+  return ChatSettingsSchema.strict().parse(data);
 };
 
 /**

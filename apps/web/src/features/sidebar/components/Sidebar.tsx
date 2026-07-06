@@ -3,16 +3,15 @@
 import { useState } from 'react';
 import { Eraser, MessageSquare, Briefcase } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
-import {
-  useSearchQuery,
-  useFilteredConversations,
-  useConversationActions,
-  type ConversationMetadata,
-} from '@/store/coordination';
 import { useIsHydrated } from '@/store/hooks';
 import { useSettingsStore } from '@/features/settings';
 import { useTranslation } from '@/lib/i18n';
 import { ProjectList, AddProjectDialog } from '@/components/Rag';
+import {
+  useSearchQuery,
+  useFilteredConversations,
+} from '@/features/conversation/store/conversation-store';
+import { useConversationActions } from '@/features/conversation/hooks/useConversationActions';
 import SearchInput from './SearchInput';
 import ConversationItem from './ConversationItem';
 import SidebarHeader from './SidebarHeader';
@@ -20,6 +19,7 @@ import SidebarSkeleton from './SidebarSkeleton';
 import SidebarInfo from './SidebarInfo';
 import { useSidebarActions } from '@/features/sidebar/hooks/useSidebarActions';
 import { useSidebarGrouping, type SidebarItem } from '@/features/sidebar/hooks/useSidebarGrouping';
+import type { ConversationMetadata } from '@/features/conversation/store/conversation-store';
 
 /** Group header (Today, Yesterday, etc.) with optional clear-all button. */
 const GroupHeader = ({
@@ -97,8 +97,11 @@ const Sidebar = () => {
   const { handleClearAll } = useSidebarActions();
 
   const [virtualItems, loadMore] = useSidebarGrouping(
-    filteredConversations.reduce((acc, conv) => ({ ...acc, [conv.id]: conv }), {}),
-    filteredConversations.map((conv) => conv.id),
+    filteredConversations.reduce(
+      (acc, conv) => ({ ...acc, [conv.id]: conv }),
+      {} as Record<string, ConversationMetadata>
+    ),
+    filteredConversations.map((conv: ConversationMetadata) => conv.id),
     searchQuery
   );
 

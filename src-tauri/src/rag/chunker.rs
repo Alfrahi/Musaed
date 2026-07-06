@@ -277,9 +277,8 @@ impl Chunker for MarkdownChunker {
         let mut _current_heading = String::new();
         let mut heading_chain: Vec<String> = Vec::new();
         let mut section_start = 1; // 1-based
-        let mut current_line = 1;
 
-        for line in &lines {
+        for (current_line, line) in (1..).zip(lines.iter()) {
             let trimmed = line.trim();
 
             // Detect h2+ headings
@@ -318,7 +317,6 @@ impl Chunker for MarkdownChunker {
 
             current_section.push_str(line);
             current_section.push('\n');
-            current_line += 1;
         }
 
         // Final section

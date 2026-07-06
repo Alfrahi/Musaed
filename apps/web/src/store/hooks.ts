@@ -1,5 +1,3 @@
-'use client';
-
 // Shared hooks layer - UI state only
 // Feature-specific hooks are exported from each feature's store
 
@@ -22,5 +20,11 @@ export {
   useSetInfoOpen,
 } from '@/store/ui-store';
 
-// Coordination hooks
-export { coordinateStartStream, coordinateStopStream, flushAndStop } from '@/store/coordination';
+// Coordination hooks - re-export from coordination module
+// These are store-agnostic streaming lifecycle functions
+export {
+  coordinateStartStream,
+  coordinateStopStream,
+  flushAndStop,
+  stopBatching,
+} from '@/store/coordination';

@@ -99,3 +99,6 @@ export const useSetCurrentConversationId = () =>
   useConversationStore((state) => state.setCurrentConversationId);
 export const useSearchQuery = () => useConversationStore((state) => state.searchQuery);
 export const useSetSearchQuery = () => useConversationStore((state) => state.setSearchQuery);
+
+/** Hook for getting filtered conversations based on search query. */
+export const useFilteredConversations = () => useConversationStore(selectFilteredConversations);

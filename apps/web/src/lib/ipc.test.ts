@@ -39,7 +39,7 @@ describe('IPC Bridge', () => {
 
     const result = await ollamaApi.getModels('http://localhost:11434');
     expect(result).toEqual(mockModels);
-    expect(invoke).toHaveBeenCalledWith('cmd_ollama_get_models', {
+    expect(invoke).toHaveBeenCalledWith('cmd_ollama_get_models@v1', {
       baseUrl: 'http://localhost:11434',
     });
   });
