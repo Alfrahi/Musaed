@@ -3,17 +3,16 @@
 import { useState } from 'react';
 import { Eraser, MessageSquare, Briefcase } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
-import { useSearchQuery } from '@/features/conversation';
+import {
+  useSearchQuery,
+  useFilteredConversations,
+  useConversationActions,
+  type ConversationMetadata,
+} from '@/store/coordination';
 import { useIsHydrated } from '@/store/hooks';
 import { useSettingsStore } from '@/features/settings';
-import {
-  useConversationStore,
-  selectFilteredConversations,
-  type ConversationMetadata,
-} from '@/features/conversation';
 import { useTranslation } from '@/lib/i18n';
 import { ProjectList, AddProjectDialog } from '@/components/Rag';
-import { useConversationActions } from '@/features/conversation';
 import SearchInput from './SearchInput';
 import ConversationItem from './ConversationItem';
 import SidebarHeader from './SidebarHeader';
@@ -90,7 +89,7 @@ const Sidebar = () => {
   const [showAddProject, setShowAddProject] = useState(false);
   const { createNewConversation } = useConversationActions();
 
-  const filteredConversations = useConversationStore(selectFilteredConversations);
+  const filteredConversations = useFilteredConversations();
   const searchQuery = useSearchQuery();
   const language = useSettingsStore((s) => s.globalSettings.language);
   const isHydrated = useIsHydrated();

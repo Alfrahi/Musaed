@@ -5,10 +5,9 @@ import { useSettingsStore } from '@/features/settings/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 import { dialog } from '@/lib/ipc';
 import { exportToMarkdown } from '@/features/sidebar/utils/export';
-import { useConversationActions } from '@/features/conversation';
+import { useConversationActions, useMessageStore } from '@/store/coordination';
 import { logger } from '@/lib/logger';
-import { useMessageStore } from '@/features/conversation/store/message-store';
-import type { ConversationMetadata } from '@/features/conversation/store/conversation-store';
+import type { ConversationMetadata } from '@/store/coordination';
 
 export function useSidebarActions() {
   const language = useSettingsStore((s) => s.globalSettings.language);

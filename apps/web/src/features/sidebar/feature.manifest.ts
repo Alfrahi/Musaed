@@ -16,7 +16,7 @@ export default {
       'ConversationItem',
     ],
     hooks: ['useSidebarActions', 'useSidebarGrouping'],
-    utils: [],
+    utils: ['exportToMarkdown'],
   },
   ipcEndpoints: ['cmd_dialog_ask', 'cmd_export_markdown'], // Both commands now implemented
   stateSchemas: {
@@ -27,5 +27,14 @@ export default {
     conversations: 'musaed-conversation-storage-v2',
     messages: 'musaed-message-storage-v1',
   },
-  dependencies: [],
+  dependencies: [], // No direct feature imports - uses coordination layer for conversation state
+  coordinationLayerUsage: [
+    'useCurrentConversationId',
+    'useSetCurrentConversationId',
+    'useSearchQuery',
+    'useFilteredConversations',
+    'useConversationActions',
+    'useMessageStore',
+    'ConversationMetadata',
+  ],
 } as const;
