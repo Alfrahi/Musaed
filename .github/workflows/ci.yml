@@ -118,7 +118,52 @@ jobs:
       - name: Cargo test
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
-  # ── Job 4: Build verification ────────────────────────────
+  # ── Job 4: Visual Regression Tests (RTL) ─────────────────
+  visual-tests:
+    name: Visual Tests · RTL (Non-blocking)
+    runs-on: ubuntu-latest
+    needs: validate
+    continue-on-error: true # Allow failure until baselines stabilize
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install Playwright browsers
+        run: |
+          pnpm install --frozen-lockfile
+          cd apps/web
+          pnpm exec playwright install chromium --with-deps
+
+      - name: Run visual regression tests
+        run: |
+          cd apps/web
+          pnpm exec playwright test --project=chromium
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+      - name: Upload visual snapshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-snapshots
+          path: apps/web/test-results/
+          retention-days: 7
+
+  # ── Job 5: Build verification ────────────────────────────
   build:
     name: Build · Static Export
     runs-on: ubuntu-latest

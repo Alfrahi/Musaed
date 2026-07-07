@@ -84,6 +84,42 @@ const SidebarItemContent = ({
   );
 };
 
+/** Tab buttons for switching between chats and projects views. */
+const TabButtons = ({
+  activeTab,
+  setActiveTab,
+  t,
+}: {
+  activeTab: 'chats' | 'projects';
+  setActiveTab: (tab: 'chats' | 'projects') => void;
+  t: (key: string) => string;
+}) => (
+  <div className="mb-4 flex gap-1 px-4">
+    <button
+      onClick={() => setActiveTab('chats')}
+      className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-[10px] font-bold tracking-wider uppercase transition-all ${
+        activeTab === 'chats'
+          ? 'bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
+          : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900'
+      }`}
+    >
+      <MessageSquare size={12} />
+      {t('sidebar.chats')}
+    </button>
+    <button
+      onClick={() => setActiveTab('projects')}
+      className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-[10px] font-bold tracking-wider uppercase transition-all ${
+        activeTab === 'projects'
+          ? 'bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
+          : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900'
+      }`}
+    >
+      <Briefcase size={12} />
+      {t('sidebar.projects')}
+    </button>
+  </div>
+);
+
 const Sidebar = () => {
   const [activeTab, setActiveTab] = useState<'chats' | 'projects'>('chats');
   const [showAddProject, setShowAddProject] = useState(false);
@@ -122,33 +158,13 @@ const Sidebar = () => {
   };
 
   return (
-    <div className="bg-sidebar border-sidebar-border flex h-full w-60 flex-col border-e select-none">
+    <div
+      data-testid="sidebar"
+      className="bg-sidebar border-sidebar-border flex h-full w-60 flex-col border-e select-none"
+    >
       <SidebarHeader activeTab={activeTab} onCreateNew={handleCreateNew} />
 
-      <div className="mb-4 flex gap-1 px-4">
-        <button
-          onClick={() => setActiveTab('chats')}
-          className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-[10px] font-bold tracking-wider uppercase transition-all ${
-            activeTab === 'chats'
-              ? 'bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
-              : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900'
-          }`}
-        >
-          <MessageSquare size={12} />
-          {t('sidebar.chats')}
-        </button>
-        <button
-          onClick={() => setActiveTab('projects')}
-          className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-[10px] font-bold tracking-wider uppercase transition-all ${
-            activeTab === 'projects'
-              ? 'bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
-              : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900'
-          }`}
-        >
-          <Briefcase size={12} />
-          {t('sidebar.projects')}
-        </button>
-      </div>
+      <TabButtons activeTab={activeTab} setActiveTab={setActiveTab} t={t} />
 
       {activeTab === 'chats' ? (
         <>

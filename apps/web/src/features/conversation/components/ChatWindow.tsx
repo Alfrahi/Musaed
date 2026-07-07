@@ -118,7 +118,7 @@ const ChatWindow = () => {
   if (!currentConversation) return <EmptyState />;
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden">
+    <div data-testid="chat-window" className="relative flex flex-1 flex-col overflow-hidden">
       <Virtuoso
         ref={virtuosoRef}
         className="h-full"

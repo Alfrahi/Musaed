@@ -235,6 +235,17 @@ export default tseslint.config(
       'no-restricted-imports': 'off',
     },
   },
+
+  // ── Playwright config exception ─────────────────────────
+  {
+    files: ['**/playwright*.config.ts'],
+    rules: {
+      'no-restricted-syntax': 'off',
+      'no-restricted-imports': 'off',
+    },
+  },
+
+  // ── Config layer exception ──────────────────────────────
   {
     files: ['apps/web/src/lib/config.ts'],
     rules: { 'no-restricted-syntax': 'off' },

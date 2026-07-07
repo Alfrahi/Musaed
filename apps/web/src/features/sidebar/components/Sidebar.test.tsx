@@ -5,6 +5,16 @@ import Sidebar from './Sidebar';
 import { useUIStore } from '@/store/ui-store';
 import { useSettingsStore } from '@/features/settings/store/settings-store';
 
+// Mutable mock actions that can be customized per test
+const mockActions = {
+  createNewConversation: vi.fn(),
+  deleteConversation: vi.fn(),
+  renameConversation: vi.fn(),
+  setCurrentConversation: vi.fn(),
+  clearConversation: vi.fn(),
+  exportConversation: vi.fn(),
+};
+
 vi.mock('@/lib/i18n', async () => {
   const actual = await vi.importActual('@/lib/i18n');
   return {
@@ -35,14 +45,48 @@ vi.mock('react-virtuoso', async () => {
       }
       return (
         <div data-testid="virtuoso-list">
-          {data.map((_: any, i: number) => (
+          {data.map((item: any, i: number) => (
             <div key={i} data-testid="virtuoso-item">
-              {itemContent(i)}
+              {itemContent(i, item)}
             </div>
           ))}
         </div>
       );
     }),
+  };
+});
+
+vi.mock('@/features/conversation/hooks/useConversationActions', async () => {
+  const actual = await vi.importActual('@/features/conversation/hooks/useConversationActions');
+  return {
+    ...(actual as object),
+    useConversationActions: () => mockActions,
+  };
+});
+
+vi.mock('@/features/conversation/store/conversation-store', async () => {
+  const actual = await vi.importActual('@/features/conversation/store/conversation-store');
+  return {
+    ...(actual as object),
+    useSearchQuery: () => '',
+    useFilteredConversations: () => [
+      { id: 'conv-1', title: 'Test Chat 1', createdAt: Date.now(), updatedAt: Date.now() },
+      { id: 'conv-2', title: 'Test Chat 2', createdAt: Date.now(), updatedAt: Date.now() },
+    ],
+  };
+});
+
+vi.mock('@/lib/ipc', async () => {
+  return {
+    checkIsTauri: vi.fn().mockReturnValue(false),
+    ollamaApi: {
+      getModels: vi.fn().mockResolvedValue([]),
+    },
+    conversationApi: {
+      createConversation: vi.fn().mockResolvedValue('conv-new'),
+      deleteConversation: vi.fn().mockResolvedValue(undefined),
+      updateConversation: vi.fn().mockResolvedValue(undefined),
+    },
   };
 });
 
@@ -135,29 +179,17 @@ vi.mock('@/features/sidebar/hooks/useSidebarActions', async () => {
   };
 });
 
-vi.mock('@/store/coordination', async () => {
-  const actual = await vi.importActual('@/store/coordination');
-  return {
-    ...(actual as object),
-    useSearchQuery: () => '',
-    useFilteredConversations: () => [
-      { id: 'conv-1', title: 'Test Chat 1', createdAt: Date.now(), updatedAt: Date.now() },
-      { id: 'conv-2', title: 'Test Chat 2', createdAt: Date.now(), updatedAt: Date.now() },
-    ],
-    useConversationActions: () => ({
-      createNewConversation: vi.fn(),
-      deleteConversation: vi.fn(),
-      renameConversation: vi.fn(),
-      setCurrentConversation: vi.fn(),
-      clearConversation: vi.fn(),
-      exportConversation: vi.fn(),
-    }),
-  };
-});
-
 describe('Sidebar', () => {
   beforeEach(() => {
     clearMocks();
+
+    // Reset mock actions between tests
+    mockActions.createNewConversation.mockClear();
+    mockActions.deleteConversation.mockClear();
+    mockActions.renameConversation.mockClear();
+    mockActions.setCurrentConversation.mockClear();
+    mockActions.clearConversation.mockClear();
+    mockActions.exportConversation.mockClear();
 
     useUIStore.setState({
       isHydrated: true,
@@ -211,7 +243,7 @@ describe('Sidebar', () => {
 
       expect(chatsButton).toBeInTheDocument();
       expect(projectsButton).toBeInTheDocument();
-      expect(chatsButton.parentElement).toHaveClass('bg-zinc-200');
+      expect(chatsButton).toHaveClass('bg-zinc-200');
     });
 
     it('switches to projects tab when clicked', async () => {
@@ -244,7 +276,7 @@ describe('Sidebar', () => {
     it('renders group headers', () => {
       render(<Sidebar />);
 
-      expect(screen.getByText(/today/i)).toBeInTheDocument();
+      expect(screen.getByText(/sidebar\.recentChats/i)).toBeInTheDocument();
     });
   });
 
@@ -271,18 +303,6 @@ describe('Sidebar', () => {
 
   describe('Create new conversation', () => {
     it('calls createNewConversation when new button is clicked', async () => {
-      const createNewConversation = vi.fn();
-      vi.mocked(await import('@/features/conversation')).useConversationActions = vi
-        .fn()
-        .mockReturnValue({
-          createNewConversation,
-          deleteConversation: vi.fn(),
-          renameConversation: vi.fn(),
-          setCurrentConversation: vi.fn(),
-          clearConversation: vi.fn(),
-          exportConversation: vi.fn(),
-        });
-
       render(<Sidebar />);
 
       const newButton = screen.getByTestId('sidebar-header').querySelector('button');
@@ -291,7 +311,7 @@ describe('Sidebar', () => {
       }
 
       await waitFor(() => {
-        expect(createNewConversation).toHaveBeenCalledTimes(1);
+        expect(mockActions.createNewConversation).toHaveBeenCalledTimes(1);
       });
     });
   });
