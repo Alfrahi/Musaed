@@ -1,3 +1,4 @@
+use crate::conversation::connection::open_connection;
 use crate::conversation::models::{Conversation, Message};
 use rusqlite::{params, Connection, Result as SqlResult};
 use std::path::Path;
@@ -8,46 +9,15 @@ pub struct ConversationStore {
 }
 
 impl ConversationStore {
-    pub fn new(db_path: &Path) -> Result<Self, rusqlite::Error> {
-        let conn = Connection::open(db_path)?;
-
-        conn.execute_batch(
-            "CREATE TABLE IF NOT EXISTS conversations (
-                id TEXT PRIMARY KEY,
-                title TEXT NOT NULL,
-                model TEXT NOT NULL,
-                settings TEXT NOT NULL,
-                created_at INTEGER NOT NULL,
-                updated_at INTEGER NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS messages (
-                id TEXT PRIMARY KEY,
-                conversation_id TEXT NOT NULL,
-                role TEXT NOT NULL,
-                content TEXT NOT NULL,
-                timestamp INTEGER NOT NULL,
-                model TEXT,
-                done INTEGER,
-                request_id TEXT,
-                images TEXT,
-                eval_count INTEGER,
-                total_duration INTEGER,
-                eval_duration INTEGER,
-                rag_sources TEXT,
-                CONSTRAINT fk_conversation FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
-            CREATE INDEX IF NOT EXISTS idx_messages_id ON messages(id);",
-        )?;
+    pub fn new(db_path: &Path) -> Result<Self, String> {
+        let conn = open_connection(db_path)?;
 
         Ok(ConversationStore {
             conn: Mutex::new(conn),
         })
     }
 
-    async fn lock_conn(&self) -> tokio::sync::MutexGuard<'_, Connection> {
+    pub async fn lock_conn(&self) -> tokio::sync::MutexGuard<'_, Connection> {
         self.conn.lock().await
     }
 

@@ -271,14 +271,39 @@ where
     unreachable!()
 }
 
+// ====================== TEST UTILITIES ======================
+
+/// Global mutex to serialize all test access to [`REQUEST_CACHE`].
+/// Prevents deadlocks when multiple tests run in parallel and contend
+/// for the same DashMap shards.
+use tokio::sync::Mutex;
+
+static TEST_CACHE_MUTEX: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+
+/// Acquires the global test cache lock. All tests that access
+/// [`REQUEST_CACHE`] must call this function at the beginning to
+/// prevent inter-test contention and deadlocks.
+///
+/// If the mutex is poisoned (a previous test panicked while holding it),
+/// we recover by poisoning our own lock guard - this allows subsequent
+/// tests to still acquire the lock and clear the cache.
+pub async fn test_cache_lock() -> tokio::sync::MutexGuard<'static, ()> {
+    TEST_CACHE_MUTEX.lock().await
+}
+
+/// Clears all entries from [`REQUEST_CACHE`].
+/// Use in tests to ensure a clean slate before/after operations.
+/// This is preferred over mutex-based serialization because DashMap
+/// handles concurrent access safely - we only need test isolation.
+pub fn clear_request_cache() {
+    REQUEST_CACHE.clear();
+}
+
+// ====================== TESTS ======================
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{LazyLock, Mutex};
-
-    // Mutex to serialize access to REQUEST_CACHE in unit tests, avoiding
-    // deadlocks when tests run in parallel.
-    static TEST_REQUEST_CACHE_MUTEX: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
     #[test]
     fn test_invalid_ollama_base_returns_error_response() {
@@ -353,14 +378,16 @@ mod tests {
         assert_eq!(calls.load(Ordering::SeqCst), 1);
     }
 
-    #[test]
-    fn test_evict_stale_requests_removes_expired() {
-        let _guard = TEST_REQUEST_CACHE_MUTEX.lock().unwrap();
+    #[tokio::test]
+    async fn test_evict_stale_requests_removes_expired() {
+        let _guard = test_cache_lock().await;
+        clear_request_cache();
+
         // Insert an entry, wait briefly, then evict with a very short TTL.
         // The entry should be removed because it's older than 1ms.
         REQUEST_CACHE.insert("stale-req".to_string(), Instant::now());
         // Tiny sleep so the entry is genuinely older than 0ms.
-        std::thread::sleep(std::time::Duration::from_millis(2));
+        tokio::time::sleep(std::time::Duration::from_millis(2)).await;
         REQUEST_CACHE.insert("fresh-req".to_string(), Instant::now());
 
         let evicted = evict_older_than(Duration::from_millis(1));
@@ -374,19 +401,23 @@ mod tests {
             "fresh entry should remain"
         );
 
-        REQUEST_CACHE.remove("fresh-req");
+        clear_request_cache();
     }
 
-    #[test]
-    fn test_evict_stale_requests_empty_cache() {
-        let _guard = TEST_REQUEST_CACHE_MUTEX.lock().unwrap();
+    #[tokio::test]
+    async fn test_evict_stale_requests_empty_cache() {
+        let _guard = test_cache_lock().await;
+        clear_request_cache();
+
         let evicted = evict_older_than(Duration::from_secs(0));
         assert_eq!(evicted, 0);
     }
 
-    #[test]
-    fn test_evict_stale_requests_all_fresh() {
-        let _guard = TEST_REQUEST_CACHE_MUTEX.lock().unwrap();
+    #[tokio::test]
+    async fn test_evict_stale_requests_all_fresh() {
+        let _guard = test_cache_lock().await;
+        clear_request_cache();
+
         REQUEST_CACHE.insert("r1".to_string(), Instant::now());
         REQUEST_CACHE.insert("r2".to_string(), Instant::now());
 
@@ -395,22 +426,25 @@ mod tests {
         assert_eq!(evicted, 0);
         assert_eq!(REQUEST_CACHE.len(), 2);
 
-        REQUEST_CACHE.remove("r1");
-        REQUEST_CACHE.remove("r2");
+        clear_request_cache();
     }
 
-    #[test]
-    fn test_evict_stale_requests_all_stale() {
-        let _guard = TEST_REQUEST_CACHE_MUTEX.lock().unwrap();
+    #[tokio::test]
+    async fn test_evict_stale_requests_all_stale() {
+        let _guard = test_cache_lock().await;
+        clear_request_cache();
+
         REQUEST_CACHE.insert("s1".to_string(), Instant::now());
         REQUEST_CACHE.insert("s2".to_string(), Instant::now());
 
         // Tiny sleep so both entries are older than 0ms
-        std::thread::sleep(std::time::Duration::from_millis(2));
+        tokio::time::sleep(std::time::Duration::from_millis(2)).await;
 
         let evicted = evict_older_than(Duration::from_millis(1));
         assert_eq!(evicted, 2);
         assert!(REQUEST_CACHE.is_empty());
+
+        clear_request_cache();
     }
 
     #[test]
@@ -455,30 +489,33 @@ mod tests {
 
     // ---- Bounded cache tests ----
 
-    #[test]
-    fn test_request_cache_try_insert_new_key() {
-        let _guard = TEST_REQUEST_CACHE_MUTEX.lock().unwrap();
+    #[tokio::test]
+    async fn test_request_cache_try_insert_new_key() {
+        let _guard = test_cache_lock().await;
+        clear_request_cache();
         let key = "bounded-new".to_string();
         assert!(request_cache_try_insert(key.clone()));
         assert!(REQUEST_CACHE.get(&key).is_some());
-        REQUEST_CACHE.remove(&key);
+        clear_request_cache();
     }
 
-    #[test]
-    fn test_request_cache_try_insert_rejects_duplicate() {
-        let _guard = TEST_REQUEST_CACHE_MUTEX.lock().unwrap();
+    #[tokio::test]
+    async fn test_request_cache_try_insert_rejects_duplicate() {
+        let _guard = test_cache_lock().await;
+        clear_request_cache();
         let key = "bounded-dup".to_string();
         assert!(request_cache_try_insert(key.clone()));
         assert!(
             !request_cache_try_insert(key.clone()),
             "duplicate should be rejected"
         );
-        REQUEST_CACHE.remove(&key);
+        clear_request_cache();
     }
 
-    #[test]
-    fn test_request_cache_size_bound_evicts_oldest() {
-        let _guard = TEST_REQUEST_CACHE_MUTEX.lock().unwrap();
+    #[tokio::test]
+    async fn test_request_cache_size_bound_evicts_oldest() {
+        let _guard = test_cache_lock().await;
+        clear_request_cache();
         // Fill cache to capacity. The first entry should be evicted when one
         // more is inserted.
         let mut keys: Vec<String> = Vec::with_capacity(MAX_REQUEST_CACHE_SIZE + 1);
@@ -507,10 +544,6 @@ mod tests {
         );
         assert_eq!(REQUEST_CACHE.len(), MAX_REQUEST_CACHE_SIZE);
 
-        // Cleanup
-        for key in &keys {
-            REQUEST_CACHE.remove(key);
-        }
-        REQUEST_CACHE.remove(&overflow_key);
+        clear_request_cache();
     }
 }

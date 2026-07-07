@@ -40,13 +40,9 @@ mod tests {
     use crate::shared::{
         ABORT_HANDLES, MAX_TOTAL_IMAGE_SIZE_BYTES, PULL_ABORT_HANDLES, REQUEST_CACHE,
     };
-    use dashmap::mapref::entry::Entry;
-    use std::sync::{Arc, LazyLock, Mutex};
+    use std::sync::Arc;
     use std::time::Instant;
     use tokio_util::sync::CancellationToken;
-
-    // Mutex to serialize access to REQUEST_CACHE in unit tests.
-    static TEST_REQUEST_CACHE_MUTEX: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
     fn make_messages_with_images(image_sizes: Vec<usize>) -> Vec<ChatMessage> {
         image_sizes
@@ -86,20 +82,22 @@ mod tests {
         assert!(total_b64_len > MAX_TOTAL_IMAGE_SIZE_BYTES * 4 / 3 + 1024);
     }
 
-    #[tokio::test]
-    async fn duplicate_request_detected() {
-        let _guard = TEST_REQUEST_CACHE_MUTEX.lock().unwrap();
+    #[test]
+    fn duplicate_request_detected() {
+        let _guard = crate::shared::test_cache_lock();
+        crate::shared::clear_request_cache();
         let req_id = "test-dup-req".to_string();
         REQUEST_CACHE.insert(req_id.clone(), Instant::now());
 
-        let entry = REQUEST_CACHE.entry(req_id.clone());
-        assert!(matches!(entry, Entry::Occupied(_)));
+        // Verify the key exists using get() instead of entry() API to avoid
+        // potential DashMap entry() API hangs in test context
+        assert!(REQUEST_CACHE.get(&req_id).is_some());
 
-        REQUEST_CACHE.remove(&req_id);
+        crate::shared::clear_request_cache();
     }
 
-    #[tokio::test]
-    async fn abort_cancels_token() {
+    #[test]
+    fn abort_cancels_token() {
         let req_id = "test-abort-req".to_string();
         let token = Arc::new(CancellationToken::new());
         ABORT_HANDLES.insert(req_id.clone(), token.clone());
@@ -129,8 +127,8 @@ mod tests {
         assert_eq!(total_b64_len, 0);
     }
 
-    #[tokio::test]
-    async fn cmd_ollama_abort_pull_cancels_token() {
+    #[test]
+    fn cmd_ollama_abort_pull_cancels_token() {
         let model_name = "test-model".to_string();
         let token = Arc::new(CancellationToken::new());
         PULL_ABORT_HANDLES.insert(model_name.clone(), token.clone());

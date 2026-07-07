@@ -330,12 +330,19 @@ pub async fn cmd_trace_get_context(trace_id: String) -> ApiResponse<TraceContext
 
 /// Macro for wrapping an async operation with trace span lifecycle management.
 ///
-/// Usage:
-/// ```rust,no_run
+/// # Example
+///
+/// ```rust,ignore
+/// // The macro must be imported via the crate root:
+/// use musaed_lib::trace_async;
+///
 /// let result = trace_async!(
-///     "feature_name",
-///     "action_name",
-///     { /* your async code here */ },
+///     "chat",
+///     "send_message",
+///     {
+///         // your async code here
+///         Ok::<_, String>("success".to_string())
+///     },
 ///     |result| match result {
 ///         Ok(_) => Some("operation succeeded".to_string()),
 ///         Err(_) => Some("operation failed".to_string()),

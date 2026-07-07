@@ -1,6 +1,7 @@
 //! Integration tests for Ollama IPC commands using mockito.
 
 use musaed_lib::payloads::{ApiResponse, ModelValidation, OllamaHealth, OllamaModel};
+use musaed_lib::shared::{clear_request_cache, test_cache_lock};
 
 /// Helper: returns the mockito server URL in a format that passes `ollama_url` validation.
 fn mock_base_url(server: &mockito::ServerGuard) -> String {
@@ -8,10 +9,20 @@ fn mock_base_url(server: &mockito::ServerGuard) -> String {
     server.url().trim_end_matches('/').to_string()
 }
 
+/// Test setup: acquire test cache lock and clear request cache.
+/// Returns the guard which must be held for the entire test duration.
+/// All Ollama integration tests must call this to prevent deadlocks.
+async fn setup() -> tokio::sync::MutexGuard<'static, ()> {
+    let guard = test_cache_lock().await;
+    clear_request_cache();
+    guard
+}
+
 // ==================== cmd_ollama_get_models ====================
 
 #[tokio::test]
 async fn get_models_success() {
+    let _guard = setup().await;
     let mut server = mockito::Server::new_async().await;
     let url = mock_base_url(&server);
 
@@ -51,6 +62,7 @@ async fn get_models_success() {
 
 #[tokio::test]
 async fn get_models_empty_list() {
+    let _guard = setup().await;
     let mut server = mockito::Server::new_async().await;
     let url = mock_base_url(&server);
 
@@ -72,6 +84,7 @@ async fn get_models_empty_list() {
 
 #[tokio::test]
 async fn get_models_invalid_url() {
+    let _guard = setup().await;
     let result: ApiResponse<Vec<OllamaModel>> =
         musaed_lib::ollama::cmd_ollama_get_models("http://8.8.8.8:11434".to_string()).await;
 
@@ -82,6 +95,7 @@ async fn get_models_invalid_url() {
 
 #[tokio::test]
 async fn get_models_server_error() {
+    let _guard = setup().await;
     let mut server = mockito::Server::new_async().await;
     let url = mock_base_url(&server);
 
@@ -104,6 +118,7 @@ async fn get_models_server_error() {
 
 #[tokio::test]
 async fn cmd_ollama_validate_model_success() {
+    let _guard = setup().await;
     let mut server = mockito::Server::new_async().await;
     let url = mock_base_url(&server);
 
@@ -137,6 +152,7 @@ async fn cmd_ollama_validate_model_success() {
 
 #[tokio::test]
 async fn cmd_ollama_validate_model_not_found() {
+    let _guard = setup().await;
     let mut server = mockito::Server::new_async().await;
     let url = mock_base_url(&server);
 
@@ -159,6 +175,7 @@ async fn cmd_ollama_validate_model_not_found() {
 
 #[tokio::test]
 async fn cmd_ollama_delete_model_success() {
+    let _guard = setup().await;
     let mut server = mockito::Server::new_async().await;
     let url = mock_base_url(&server);
 
@@ -178,6 +195,7 @@ async fn cmd_ollama_delete_model_success() {
 
 #[tokio::test]
 async fn cmd_ollama_delete_model_not_found() {
+    let _guard = setup().await;
     let mut server = mockito::Server::new_async().await;
     let url = mock_base_url(&server);
 
@@ -199,6 +217,7 @@ async fn cmd_ollama_delete_model_not_found() {
 
 #[tokio::test]
 async fn verify_service_detects_ollama() {
+    let _guard = setup().await;
     let mut server = mockito::Server::new_async().await;
     let url = mock_base_url(&server);
 
@@ -218,6 +237,7 @@ async fn verify_service_detects_ollama() {
 
 #[tokio::test]
 async fn verify_service_rejects_non_ollama() {
+    let _guard = setup().await;
     let mut server = mockito::Server::new_async().await;
     let url = mock_base_url(&server);
 
@@ -239,6 +259,7 @@ async fn verify_service_rejects_non_ollama() {
 
 #[tokio::test]
 async fn health_check_healthy() {
+    let _guard = setup().await;
     let mut server = mockito::Server::new_async().await;
     let url = mock_base_url(&server);
 
@@ -261,6 +282,7 @@ async fn health_check_healthy() {
 
 #[tokio::test]
 async fn health_check_connection_refused() {
+    let _guard = setup().await;
     // Use a port that's not listening — will fail to connect.
     // We use a public IP to bypass the URL validator, but that won't work.
     // Instead, use localhost with a high random port.
@@ -277,6 +299,7 @@ async fn health_check_connection_refused() {
 
 #[tokio::test]
 async fn cmd_ollama_abort_chat_nonexistent_returns_success() {
+    let _guard = setup().await;
     let result: ApiResponse<()> =
         musaed_lib::ollama::cmd_ollama_abort_chat("nonexistent-request".to_string()).await;
 
@@ -288,6 +311,7 @@ async fn cmd_ollama_abort_chat_nonexistent_returns_success() {
 
 #[tokio::test]
 async fn cmd_ollama_abort_pull_nonexistent_returns_success() {
+    let _guard = setup().await;
     let result: ApiResponse<()> =
         musaed_lib::ollama::cmd_ollama_abort_pull("nonexistent-model".to_string()).await;
 

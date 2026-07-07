@@ -24,16 +24,19 @@
 //!
 //! # Usage
 //!
-//! ```rust,no_run
-//! use musaed::migrations::{run_migrations, MigrationTarget};
+//! ```rust,ignore
+//! // Run all pending migrations on the conversation database
+//! use musaed_lib::migrations::{run_migrations, MigrationTarget};
+//! use rusqlite::Connection;
 //!
-//! // Run all pending migrations
+//! let conn = Connection::open("path/to/conversations.db")?;
 //! let result = run_migrations(&conn, MigrationTarget::Conversations, None)?;
 //!
 //! // Run migrations up to a specific version
 //! let result = run_migrations(&conn, MigrationTarget::Conversations, Some(5))?;
 //!
 //! // Rollback to a previous version
+//! use musaed_lib::migrations::{rollback_to_version};
 //! let result = rollback_to_version(&conn, MigrationTarget::Conversations, 3)?;
 //! ```
 

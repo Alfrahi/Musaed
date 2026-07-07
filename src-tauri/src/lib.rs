@@ -62,6 +62,9 @@ pub fn run() {
         tracing::subscriber::set_global_default(subscriber)
             .map_err(|e| format!("Failed to set tracing subscriber: {}", e))?;
 
+        // Skip cache eviction task during tests - the infinite background loop
+        // interferes with tokio test runtimes configured with worker_threads = 1
+        #[cfg(not(test))]
         shared::spawn_cache_eviction_task();
 
         // Initialize conversation store
