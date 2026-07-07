@@ -5,7 +5,7 @@
 use crate::migrations::MigrationStep;
 
 /// Latest migration version for conversations database
-pub const LATEST_VERSION: u32 = 2;
+pub const LATEST_VERSION: u32 = 3;
 
 /// Gets the migration step for a specific version
 pub fn get_migration(version: u32) -> Option<MigrationStep> {
@@ -48,6 +48,38 @@ pub fn get_migration(version: u32) -> Option<MigrationStep> {
             &[
                 "DROP INDEX IF EXISTS idx_conversations_updated_at",
                 "DROP INDEX IF EXISTS idx_messages_timestamp",
+            ],
+        )),
+        3 => Some(MigrationStep::new(
+            3,
+            "Add model, settings, and message metadata columns",
+            &[
+                // Add model column to conversations
+                "ALTER TABLE conversations ADD COLUMN model TEXT NOT NULL DEFAULT 'llama3.2'",
+                // Add settings columns to conversations (stored as JSON)
+                "ALTER TABLE conversations ADD COLUMN settings TEXT NOT NULL DEFAULT '{}'",
+                // Add message metadata columns
+                "ALTER TABLE messages ADD COLUMN images TEXT DEFAULT NULL",
+                "ALTER TABLE messages ADD COLUMN model TEXT DEFAULT NULL",
+                "ALTER TABLE messages ADD COLUMN done INTEGER DEFAULT 0",
+                "ALTER TABLE messages ADD COLUMN request_id TEXT DEFAULT NULL",
+                "ALTER TABLE messages ADD COLUMN eval_count INTEGER DEFAULT NULL",
+                "ALTER TABLE messages ADD COLUMN total_duration INTEGER DEFAULT NULL",
+                "ALTER TABLE messages ADD COLUMN eval_duration INTEGER DEFAULT NULL",
+                "ALTER TABLE messages ADD COLUMN rag_sources TEXT DEFAULT NULL",
+            ],
+            &[
+                // Rollback: drop added columns (SQLite >= 3.35 required)
+                "ALTER TABLE messages DROP COLUMN images",
+                "ALTER TABLE messages DROP COLUMN model",
+                "ALTER TABLE messages DROP COLUMN done",
+                "ALTER TABLE messages DROP COLUMN request_id",
+                "ALTER TABLE messages DROP COLUMN eval_count",
+                "ALTER TABLE messages DROP COLUMN total_duration",
+                "ALTER TABLE messages DROP COLUMN eval_duration",
+                "ALTER TABLE messages DROP COLUMN rag_sources",
+                "ALTER TABLE conversations DROP COLUMN model",
+                "ALTER TABLE conversations DROP COLUMN settings",
             ],
         )),
         _ => None,

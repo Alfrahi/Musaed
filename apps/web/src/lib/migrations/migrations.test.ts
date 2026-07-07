@@ -25,6 +25,7 @@ import {
   validateSettings,
   migrateSettingsToV2,
 } from './versions/settings';
+import { migrateRagToV2, type RagStateShape } from './versions/rag';
 import { DEFAULT_SETTINGS } from '@musaed/contracts';
 
 describe('Migration Orchestrator', () => {
@@ -331,5 +332,214 @@ describe('Settings Migrations', () => {
     const result = rollback(v2Data);
 
     expect((result as any).density).toBeUndefined();
+  });
+});
+
+/**
+ * Stress tests for migration framework with large datasets.
+ * Ensures migrations perform correctly under load.
+ */
+describe('Migration Stress Tests', () => {
+  const LARGE_DATASET_SIZE = 1000;
+  const PERFORMANCE_BUDGET_MS = 5000; // 5 seconds
+
+  /**
+   * Creates a mock RAG project with chunks for stress testing.
+   */
+  function createMockRagProject(index: number) {
+    return {
+      id: `project-${index}`,
+      name: `Project ${index}`,
+      path: `/test/path/project-${index}`,
+      embeddingModel: 'nomic-embed-text',
+      ignorePatterns: ['node_modules', '.git'],
+      createdAt: new Date(Date.now() - index * 1000 * 60).toISOString(),
+      updatedAt: new Date(Date.now() - index * 1000 * 30).toISOString(),
+      indexedAt: new Date(Date.now() - index * 1000 * 15).toISOString(),
+      fileCount: Math.floor(Math.random() * 100) + 10,
+      chunkCount: Math.floor(Math.random() * 1000) + 100,
+      totalBytes: Math.floor(Math.random() * 1000000) + 10000,
+      status: 'indexed' as const,
+    };
+  }
+
+  describe('Large dataset migrations', () => {
+    it('should migrate 1000+ settings records within performance budget', async () => {
+      const startTime = performance.now();
+
+      // Create mock large dataset
+      const mockData = Array.from({ length: LARGE_DATASET_SIZE }, (_, i) => ({
+        theme: i % 2 === 0 ? 'dark' : 'light',
+        language: i % 3 === 0 ? 'ar' : 'en',
+      }));
+
+      // Simulate migrating each record
+      const results = mockData.map((data) => settingsMigrations[2](settingsMigrations[1](data)));
+
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+
+      // Verify all migrations succeeded
+      expect(results).toHaveLength(LARGE_DATASET_SIZE);
+      expect(results.every((r) => r.density !== undefined)).toBe(true);
+      expect(results.every((r) => r.theme !== undefined)).toBe(true);
+
+      // Verify performance
+      expect(duration).toBeLessThan(PERFORMANCE_BUDGET_MS);
+      console.log(
+        `Settings migration: ${LARGE_DATASET_SIZE} records in ${duration.toFixed(2)}ms (${(duration / LARGE_DATASET_SIZE).toFixed(4)}ms/record)`
+      );
+    });
+
+    it('should migrate 1000+ RAG projects with data integrity', async () => {
+      const startTime = performance.now();
+
+      // Create mock large dataset - individual project objects
+      const mockProjects = Array.from({ length: LARGE_DATASET_SIZE }, (_, i) =>
+        createMockRagProject(i)
+      );
+
+      // Simulate migrating each project by wrapping in state shape
+      const results = mockProjects.map((project) => {
+        // Wrap single project in state shape for migration
+        const stateWrapper = {
+          projects: { [project.id]: project },
+          projectIds: [project.id],
+          activeProjectId: project.id,
+        };
+        const migrated = migrateRagToV2(stateWrapper) as RagStateShape;
+        // Extract the migrated project from the result
+        return migrated.projects[project.id];
+      });
+
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+
+      // Verify all migrations succeeded
+      expect(results).toHaveLength(LARGE_DATASET_SIZE);
+
+      // Spot-check random records for data integrity
+      const randomIndices = [0, 100, 500, 999];
+      for (const idx of randomIndices) {
+        if (idx < results.length) {
+          expect(results[idx].status).toBeDefined();
+          expect(results[idx].status).toBe('idle'); // migrateRagToV2 defaults to 'idle'
+          expect(results[idx].id).toBe(mockProjects[idx].id);
+        }
+      }
+
+      // Verify all projects have status field
+      expect(results.every((r) => r.status !== undefined)).toBe(true);
+
+      // Verify performance
+      expect(duration).toBeLessThan(PERFORMANCE_BUDGET_MS);
+      console.log(
+        `RAG migration: ${LARGE_DATASET_SIZE} projects in ${duration.toFixed(2)}ms (${(duration / LARGE_DATASET_SIZE).toFixed(4)}ms/project)`
+      );
+    });
+
+    it('should handle idempotent migrations on large dataset', async () => {
+      // Create already-migrated data
+      const alreadyMigratedData = Array.from({ length: LARGE_DATASET_SIZE }, (_, i) => ({
+        ...DEFAULT_SETTINGS,
+        density: 1.0 + i * 0.01,
+      }));
+
+      const startTime = performance.now();
+
+      // Run migration again (should be idempotent)
+      const results = alreadyMigratedData.map((data) => migrateSettingsToV2(data));
+
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+
+      // Verify idempotency - all data unchanged
+      results.forEach((result, idx) => {
+        expect(result.density).toBe(alreadyMigratedData[idx].density);
+      });
+
+      // Verify performance (idempotent should be faster)
+      expect(duration).toBeLessThan(PERFORMANCE_BUDGET_MS);
+      console.log(
+        `Idempotent migration: ${LARGE_DATASET_SIZE} records in ${duration.toFixed(2)}ms`
+      );
+    });
+
+    it('should verify rollback correctness on large dataset', async () => {
+      // Create v2 data
+      const v2Data = Array.from({ length: LARGE_DATASET_SIZE }, (_, i) => ({
+        ...DEFAULT_SETTINGS,
+        density: 1.0 + i * 0.01,
+      }));
+
+      const startTime = performance.now();
+
+      // Rollback all to v1
+      const { rollback } = settingsBidirectionalMigrations[2];
+      const rollbackResults = v2Data.map((data) => rollback(data));
+
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+
+      // Verify all rollbacks succeeded
+      expect(rollbackResults).toHaveLength(LARGE_DATASET_SIZE);
+
+      // Spot-check random records
+      const randomIndices = [0, 250, 500, 750, 999];
+      for (const idx of randomIndices) {
+        if (idx < rollbackResults.length) {
+          expect((rollbackResults[idx] as any).density).toBeUndefined();
+          expect(rollbackResults[idx].theme).toBe(v2Data[idx].theme);
+        }
+      }
+
+      // Verify all density fields removed
+      expect(rollbackResults.every((r) => (r as any).density === undefined)).toBe(true);
+
+      // Verify performance
+      expect(duration).toBeLessThan(PERFORMANCE_BUDGET_MS);
+      console.log(
+        `Rollback: ${LARGE_DATASET_SIZE} records in ${duration.toFixed(2)}ms (${(duration / LARGE_DATASET_SIZE).toFixed(4)}ms/record)`
+      );
+    });
+  });
+
+  describe('Edge cases and failure modes', () => {
+    it('should handle empty dataset gracefully', async () => {
+      const emptyConfig = {
+        currentVersion: 2,
+        migrations: settingsMigrations,
+        validate: validateSettings,
+        defaultState: DEFAULT_SETTINGS,
+        storeName: 'test-settings',
+      };
+
+      const result = await runMigrations({}, emptyConfig);
+
+      expect(result.success).toBe(true);
+      expect(result.toVersion).toBe(2);
+    });
+
+    it('should handle partial failures with proper error reporting', async () => {
+      const failingMigration = {
+        500: () => {
+          throw new Error('Simulated failure at record 500');
+        },
+      };
+
+      const config: any = {
+        currentVersion: 501,
+        migrations: failingMigration,
+        validate: (data: unknown) => data as any,
+        defaultState: {},
+        storeName: 'test-fail',
+      };
+
+      const result = await runMigrations({}, config);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+      expect(result.toVersion).toBe(500);
+    });
   });
 });

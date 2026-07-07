@@ -426,7 +426,7 @@ mod tests {
         // Set initial version to latest
         {
             let conn_guard = conn.lock().await;
-            version_tracker::set_version(&conn_guard, MigrationTarget::Conversations, 2)
+            version_tracker::set_version(&conn_guard, MigrationTarget::Conversations, 3)
                 .expect("Failed to set version");
         }
 
@@ -435,8 +435,8 @@ mod tests {
             .expect("Migration failed");
 
         assert!(result.success);
-        assert_eq!(result.from_version, 2);
-        assert_eq!(result.to_version, 2);
+        assert_eq!(result.from_version, 3);
+        assert_eq!(result.to_version, 3);
         assert!(result.applied_migrations.is_empty());
     }
 
@@ -450,40 +450,40 @@ mod tests {
 
         assert!(result.success);
         assert_eq!(result.from_version, 0);
-        assert_eq!(result.to_version, 2); // Latest version
-        assert_eq!(result.applied_migrations, vec![1, 2]);
+        assert_eq!(result.to_version, 3); // Latest version
+        assert_eq!(result.applied_migrations, vec![1, 2, 3]);
     }
 
     #[tokio::test]
     async fn test_rollback_success() {
         let conn = create_test_db(MigrationTarget::Conversations);
 
-        // Migrate to v2
-        run_migrations(conn.clone(), MigrationTarget::Conversations, Some(2))
+        // Migrate to v3
+        run_migrations(conn.clone(), MigrationTarget::Conversations, Some(3))
             .await
             .expect("Migration failed");
 
-        // Rollback to v1
-        let result = rollback_to_version(conn.clone(), MigrationTarget::Conversations, 1)
+        // Rollback to v2
+        let result = rollback_to_version(conn.clone(), MigrationTarget::Conversations, 2)
             .await
             .expect("Rollback failed");
 
         assert!(result.success);
-        assert_eq!(result.from_version, 2);
-        assert_eq!(result.to_version, 1);
+        assert_eq!(result.from_version, 3);
+        assert_eq!(result.to_version, 2);
     }
 
     #[tokio::test]
     async fn test_rollback_invalid_sequence() {
         let conn = create_test_db(MigrationTarget::Conversations);
 
-        // Migrate to v2
-        run_migrations(conn.clone(), MigrationTarget::Conversations, Some(2))
+        // Migrate to v3
+        run_migrations(conn.clone(), MigrationTarget::Conversations, Some(3))
             .await
             .expect("Migration failed");
 
-        // Try to rollback to v3 (invalid - higher than current)
-        let result = rollback_to_version(conn.clone(), MigrationTarget::Conversations, 3).await;
+        // Try to rollback to v4 (invalid - higher than current)
+        let result = rollback_to_version(conn.clone(), MigrationTarget::Conversations, 4).await;
 
         assert!(result.is_err());
     }
@@ -522,7 +522,7 @@ mod tests {
     #[tokio::test]
     async fn test_list_migrations() {
         let conversations_migrations = list_migrations(MigrationTarget::Conversations);
-        assert_eq!(conversations_migrations.len(), 2); // v1 and v2
+        assert_eq!(conversations_migrations.len(), 3); // v1, v2, and v3
 
         let rag_migrations = list_migrations(MigrationTarget::Rag);
         assert_eq!(rag_migrations.len(), 3); // v1, v2, and v3
@@ -530,7 +530,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_latest_version() {
-        assert_eq!(get_latest_version(MigrationTarget::Conversations), 2);
+        assert_eq!(get_latest_version(MigrationTarget::Conversations), 3);
         assert_eq!(get_latest_version(MigrationTarget::Rag), 3);
     }
 }
