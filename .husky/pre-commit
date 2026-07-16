@@ -17,7 +17,14 @@ if [ -n "$staged_rs" ]; then
   cargo clippy --all-targets --all-features --manifest-path src-tauri/Cargo.toml -- -D warnings
 fi
 
-# ── 2. Lint + format staged JS/TS files ────────────────────
+# ── 2. i18n validation (only if locale files changed) ──────
+staged_locales=$(git diff --cached --name-only --diff-filter=ACM -- 'apps/web/locales/*.json')
+if [ -n "$staged_locales" ]; then
+  echo "🌐 Validating i18n keys..."
+  pnpm validate:i18n
+fi
+
+# ── 3. Lint + format staged JS/TS files ────────────────────
 echo "🔧 Running lint-staged..."
 pnpm exec lint-staged
 

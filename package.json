@@ -12,6 +12,7 @@
     "validate": "pnpm lint && pnpm type-check && pnpm --filter web i18n:check",
     "i18n:sync": "pnpm --filter web i18n:sync",
     "i18n:check": "pnpm --filter web i18n:check",
+    "validate:i18n": "node scripts/validate-i18n.mjs",
     "arch-check": "pnpm -F web exec depcruise src --config ../../.dependency-cruiser.js",
     "codegen:validation": "node scripts/codegen-validation.mjs",
     "codegen:validation:check": "node scripts/codegen-validation.mjs --check",
