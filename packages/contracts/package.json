@@ -7,6 +7,8 @@
   "types": "./src/index.ts",
   "scripts": {
     "lint": "eslint --config ../../eslint.config.mjs .",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "docs": "typedoc",
+    "docs:serve": "npx serve docs"
   }
 }

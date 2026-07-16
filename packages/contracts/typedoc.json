@@ -1,0 +1,27 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts"],
+  "entryPointStrategy": "resolve",
+  "out": "docs",
+  "tsconfig": "./tsconfig.json",
+  "exclude": ["**/*.test.ts", "**/*.test.tsx"],
+  "excludeExternals": true,
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "includeVersion": true,
+  "readme": "none",
+  "name": "@musaed/contracts",
+  "categorizeByGroup": true,
+  "sort": ["source-order"],
+  "kindSortOrder": ["Function", "TypeAlias", "Interface", "Class", "Variable", "Enum", "Module"],
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true
+  },
+  "visibilityFilters": {
+    "protected": false,
+    "private": false,
+    "inherited": false,
+    "external": false
+  }
+}

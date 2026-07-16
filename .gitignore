@@ -9,6 +9,9 @@ pnpm-debug.log*
 out/
 dist/
 
+# Generated docs
+packages/contracts/docs/
+
 # Tauri / Rust
 src-tauri/target/
 src-tauri/gen/
