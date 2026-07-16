@@ -6,7 +6,8 @@ import { useChatInput } from '@/features/conversation/hooks/useChatInput';
 import { abortStreaming } from '@/features/conversation/hooks/useConversationActions';
 import AttachmentPreview from './AttachmentPreview';
 import { ModelSelector } from '@/features/library';
-import { RagContextBadge } from '@/features/rag';
+// RagContextBadge is imported from the components directory to avoid feature-to-feature imports
+import { RagContextBadge } from '@/components/ui/RagContextBadge';
 
 /** Attach action buttons (image + file upload). */
 const AttachButtons = ({

@@ -96,20 +96,22 @@ vi.mock('@/features/library', async () => {
   };
 });
 
-vi.mock('@/features/rag', async () => {
-  const actual = await vi.importActual('@/features/rag');
-  return {
-    ...(actual as object),
-    ProjectList: ({ hideHeaderAction }: any) => (
-      <div data-testid="project-list">ProjectList {hideHeaderAction ? 'hidden' : 'visible'}</div>
-    ),
-    AddProjectDialog: ({ onClose, onAdded }: any) => (
-      <div data-testid="add-project-dialog">
-        <button onClick={onClose}>Close</button>
-        <button onClick={onAdded}>Add</button>
-      </div>
-    ),
-  };
+vi.mock('@/features/rag/components/ProjectList', () => ({
+  ProjectList: ({ hideHeaderAction }: any) => (
+    <div data-testid="project-list">ProjectList {hideHeaderAction ? 'hidden' : 'visible'}</div>
+  ),
+}));
+vi.mock('@/features/rag/components/AddProjectDialog', () => ({
+  AddProjectDialog: ({ onClose, onAdded }: any) => (
+    <div data-testid="add-project-dialog">
+      <button onClick={onClose}>Close</button>
+      <button onClick={onAdded}>Add</button>
+    </div>
+  ),
+}));
+vi.mock('@/features/rag/hooks/useRagProjects', async () => {
+  const actual = await vi.importActual('@/features/rag/hooks/useRagProjects');
+  return actual;
 });
 
 vi.mock('./SearchInput', async () => {

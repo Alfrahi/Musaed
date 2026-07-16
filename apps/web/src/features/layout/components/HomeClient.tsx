@@ -36,7 +36,7 @@ const Sidebar = dynamic(() => import('@/features/sidebar').then((m) => m.Sidebar
   ),
 });
 
-const ChatWindow = dynamic(() => import('@/features/conversation').then((m) => m.ChatWindow), {
+const ChatWindowDynamic = dynamic(() => import('@/features/conversation/components/ChatWindow'), {
   ssr: false,
   loading: () => (
     <div className="flex flex-1 items-center justify-center bg-zinc-50/30 dark:bg-zinc-950">
@@ -45,7 +45,7 @@ const ChatWindow = dynamic(() => import('@/features/conversation').then((m) => m
   ),
 });
 
-const InputArea = dynamic(() => import('@/features/conversation').then((m) => m.InputArea), {
+const InputAreaDynamic = dynamic(() => import('@/features/conversation/components/InputArea'), {
   ssr: false,
   loading: () => (
     <div className="border-sidebar-border bg-background animate-pulse border-t p-4">
@@ -168,8 +168,8 @@ const HomeClient = () => {
           appName={t('common.appName')}
         />
         <div className="relative flex min-h-0 flex-1 flex-col">
-          <ChatWindow />
-          <InputArea />
+          <ChatWindowDynamic />
+          <InputAreaDynamic />
         </div>
       </div>
       <AnimatePresence>

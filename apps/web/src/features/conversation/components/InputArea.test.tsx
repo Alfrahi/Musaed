@@ -20,7 +20,7 @@ vi.mock('@/features/library', () => ({
   ModelSelector: () => <div data-testid="model-selector">ModelSelector</div>,
 }));
 
-vi.mock('@/features/rag', () => ({
+vi.mock('@/features/rag/components/RagContextBadge', () => ({
   RagContextBadge: () => <div data-testid="rag-context-badge">RagContextBadge</div>,
 }));
 
