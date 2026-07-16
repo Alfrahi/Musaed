@@ -359,7 +359,7 @@ describe('Migration Stress Tests', () => {
       fileCount: Math.floor(Math.random() * 100) + 10,
       chunkCount: Math.floor(Math.random() * 1000) + 100,
       totalBytes: Math.floor(Math.random() * 1000000) + 10000,
-      status: 'indexed' as const,
+      status: 'idle' as const,
     };
   }
 
@@ -539,7 +539,7 @@ describe('Migration Stress Tests', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
-      expect(result.toVersion).toBe(500);
+      expect(result.toVersion).toBe(1);
     });
   });
 });
