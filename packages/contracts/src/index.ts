@@ -29,6 +29,9 @@ export interface ApiResponse<T> {
 
 // IPC versioning
 export const IPC_VERSION = 1;
+
+// Generated types from Rust
+// export * from './generated/specta-types';
 export const COMMAND_VERSIONS = {
   // Ollama
   cmd_ollama_get_models: 1,

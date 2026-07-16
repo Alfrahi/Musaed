@@ -1,10 +1,11 @@
 //! RAG-specific payload types shared between Tauri commands and the frontend.
 
 use serde::{Deserialize, Serialize};
+use specta::Type;
 
 // ====================== PROJECT ======================
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct RagProject {
     pub id: String,
@@ -21,7 +22,7 @@ pub struct RagProject {
     pub status: ProjectStatus,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum ProjectStatus {
     Idle,
@@ -41,7 +42,7 @@ impl ProjectStatus {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct NewProject {
     pub name: String,
@@ -52,7 +53,7 @@ pub struct NewProject {
 
 // ====================== INDEXING ======================
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct IndexProgress {
     pub project_id: String,
@@ -62,7 +63,7 @@ pub struct IndexProgress {
     pub message: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum IndexPhase {
     DiscoveringFiles,
@@ -103,7 +104,7 @@ pub struct IndexError {
 
 // ====================== SEARCH ======================
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchResult {
     pub chunk_id: i64,
@@ -224,7 +225,8 @@ pub struct RawChunk {
     pub metadata: serde_json::Value,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Type)]
+#[serde(rename_all = "camelCase")]
 pub enum ChunkType {
     Code,
     Markdown,

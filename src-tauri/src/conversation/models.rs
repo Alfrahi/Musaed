@@ -1,47 +1,37 @@
 use serde::{Deserialize, Serialize};
+use specta::Type;
 use tauri::AppHandle;
 
 /// Conversation data structures that match the TypeScript contracts
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Type)]
+#[serde(rename_all = "camelCase")]
 pub struct Conversation {
     pub id: String,
     pub title: String,
     pub model: String,
     pub settings: ChatSettings,
-    #[serde(rename = "createdAt")]
     pub created_at: i64,
-    #[serde(rename = "updatedAt")]
     pub updated_at: i64,
     pub messages: Vec<Message>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Type)]
+#[serde(rename_all = "camelCase")]
 pub struct ChatSettings {
     pub temperature: f64,
-    #[serde(rename = "top_k")]
     pub top_k: i32,
-    #[serde(rename = "top_p")]
     pub top_p: f64,
-    #[serde(rename = "num_predict")]
     pub num_predict: i32,
-    #[serde(rename = "num_ctx")]
     pub num_ctx: i32,
     pub stop: Vec<String>,
-    #[serde(rename = "systemPrompt")]
     pub system_prompt: String,
-    #[serde(rename = "ollamaUrl")]
     pub ollama_url: String,
     pub language: String,
     pub theme: String,
-    #[serde(rename = "hasDetectedLanguage")]
     pub has_detected_language: bool,
-    #[serde(rename = "enterToSend")]
     pub enter_to_send: bool,
-    #[serde(rename = "chatRetentionDays")]
     pub chat_retention_days: i32,
-    #[serde(rename = "enableLatex")]
     pub enable_latex: bool,
-    #[serde(rename = "enableMermaid")]
     pub enable_mermaid: bool,
     pub density: f64,
 }
@@ -69,7 +59,8 @@ impl Default for ChatSettings {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Type)]
+#[serde(rename_all = "camelCase")]
 pub struct Message {
     pub id: String,
     pub role: String,
@@ -81,25 +72,23 @@ pub struct Message {
     pub model: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub done: Option<bool>,
-    #[serde(rename = "requestId", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub request_id: Option<String>,
-    #[serde(rename = "evalCount", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub eval_count: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub total_duration: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub eval_duration: Option<i64>,
-    #[serde(rename = "ragSources", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub rag_sources: Option<Vec<RagSource>>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Type)]
+#[serde(rename_all = "camelCase")]
 pub struct RagSource {
-    #[serde(rename = "filePath")]
     pub file_path: String,
-    #[serde(rename = "startLine")]
     pub start_line: u32,
-    #[serde(rename = "endLine")]
     pub end_line: u32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub language: Option<String>,
