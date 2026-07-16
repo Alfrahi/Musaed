@@ -98,6 +98,13 @@ async function persistWithRetry(
  * @param message - The message to persist
  * @returns Promise<PersistenceResult> - For testing/observability only
  */
+export async function persistUserMessage(
+  conversationId: string,
+  message: Message
+): Promise<PersistenceResult> {
+  return persistMessage(conversationId, message);
+}
+
 export async function persistMessage(
   conversationId: string,
   message: Message

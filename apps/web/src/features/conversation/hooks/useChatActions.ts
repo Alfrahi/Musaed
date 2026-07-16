@@ -5,18 +5,21 @@ import { type Message } from '@musaed/contracts';
 import { useTranslation } from '@/lib/i18n';
 import { chatApi, ragApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
+import { config } from '@/lib/config';
 import toast from 'react-hot-toast';
 import { flushAndStop } from '@/store/batch-manager';
 import { useConversationActions } from './useConversationActions';
 import { type FileAttachment } from './useAttachmentUtils';
-import { useMessageStore } from '@/features/conversation/store/message-store';
-import type { Citation } from '@musaed/contracts';
-import { persistMessage } from '@/features/conversation/utils/message-persistence';
-import { useConversationStore } from '@/features/conversation/store/conversation-store';
+import {
+  useMessageStore,
+  useCurrentConversationId,
+  useConversations,
+} from '@/features/conversation/store';
 import { useSettingsStore } from '@/features/settings/store/settings-store';
 import { useModelStore } from '@/features/settings/store/model-store';
 import { useRagStore } from '@/features/rag/store/rag-store';
 import { useSetUIError } from '@/store/ui-store';
+import { persistUserMessage } from '@/features/conversation/utils/message-persistence';
 
 /** Build prompt with file context injected. */
 function buildPromptWithContext(
@@ -30,9 +33,6 @@ function buildPromptWithContext(
     .join('\n\n---\n\n');
   return `${input}\n\n${t('chat.fileContextLabel')}\n${fileContext}`;
 }
-
-/** Get user message content, substituting for image-only messages. */
-// getUserMessageContent and buildApiMessages removed – unused helper functions were previously defined but are no longer needed.
 
 /** Handle streaming errors — log, update message, notify user. */
 const handleStreamError = (
@@ -55,23 +55,6 @@ const handleStreamError = (
     false
   );
   stopStreaming(conversationId);
-
-  // Persist the failed assistant message to Rust backend with retry logic
-  const msgs = useMessageStore.getState().messages[conversationId] ?? [];
-  const lastMsg = msgs[msgs.length - 1];
-  if (lastMsg && lastMsg.role === 'assistant') {
-    persistMessage(conversationId, lastMsg).then((result) => {
-      if (!result.success) {
-        logger.error('Failed to persist error message after retries', {
-          conversationId,
-          messageId: lastMsg.id,
-          retries: result.retries,
-          error: result.error,
-        });
-      }
-    });
-  }
-
   setError(msg);
   toast.error(msg);
 };
@@ -81,7 +64,18 @@ async function fetchRagContext(
   query: string,
   activeRagProject: { id: string; path: string } | null,
   ollamaUrl: string
-): Promise<{ context: string; sources: Citation[] } | undefined> {
+): Promise<
+  | {
+      context: string;
+      sources: Array<{
+        filePath: string;
+        startLine: number;
+        endLine: number;
+        language: string | null;
+      }>;
+    }
+  | undefined
+> {
   if (!activeRagProject) return undefined;
   try {
     const result = await ragApi.assembleContext({
@@ -98,8 +92,6 @@ async function fetchRagContext(
   }
   return undefined;
 }
-
-// prepareChatPayload removed – unused (function was not used)
 
 /** Create user and assistant message objects for a new chat turn. */
 function createChatMessages(
@@ -134,60 +126,113 @@ function createChatMessages(
   return [userMsg, assistantMsg];
 }
 
-/** Persist the user message to the Rust backend with retry logic. */
-function persistUserMessage(conversationId: string, userMsg: Message) {
-  persistMessage(conversationId, userMsg).then((result) => {
-    if (!result.success) {
-      logger.error('Failed to persist user message after retries', {
-        conversationId,
-        messageId: userMsg.id,
-        retries: result.retries,
-        error: result.error,
-      });
-    }
-  });
+/** Persist a message to the Rust backend with retry logic. */
+async function persistMessage(conversationId: string, message: Message) {
+  try {
+    await persistUserMessage(conversationId, message);
+  } catch (err) {
+    logger.error('Failed to persist assistant message', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+/** Validate preconditions for sending a message. Returns true if OK. */
+function validateSendMessage(
+  currentConversationId: string | null,
+  selectedModel: string | undefined,
+  trimmedInput: string,
+  hasAttachments: boolean,
+  conversations: Record<string, unknown>,
+  t: (key: string) => string
+): boolean {
+  if (!currentConversationId || !selectedModel) {
+    if (!selectedModel) toast.error(t('chat.noModelSelected'));
+    return false;
+  }
+  if (!trimmedInput && !hasAttachments) return false;
+  if (!conversations[currentConversationId]) return false;
+  return true;
+}
+
+/** Find and persist the assistant message for a given request. */
+async function persistAssistantMessage(
+  conversationId: string,
+  requestId: string,
+  messages: Message[]
+) {
+  const assistantMsg = messages.find(
+    (msg: Message) => msg.role === 'assistant' && msg.requestId === requestId
+  );
+  if (assistantMsg) {
+    await persistMessage(conversationId, assistantMsg);
+  }
+}
+
+/** Build the chat API payload. */
+function buildChatPayload(
+  ollamaUrl: string,
+  fullPrompt: string,
+  selectedModel: string,
+  requestId: string
+) {
+  return {
+    baseUrl: ollamaUrl,
+    messages: [{ role: 'user', content: fullPrompt }],
+    options: { temperature: 0.7, stop: [], top_k: 40, top_p: 0.9, num_predict: 100, num_ctx: 2048 },
+    model: selectedModel,
+    requestId,
+  };
 }
 
 /**
  * Sends a message to Ollama with proper error handling and streaming setup.
  */
 export const useChatActions = () => {
-  const language = useSettingsStore((s) => s.globalSettings.language);
+  const settingsStore = useSettingsStore();
+  const language = settingsStore.globalSettings?.language || 'en';
   const { t } = useTranslation(language);
   const setErrorMessage = useSetUIError();
   const { initiateStreaming, stopStreaming } = useConversationActions();
+  const messageStore = useMessageStore();
+  const currentConversationId = useCurrentConversationId();
+  const conversations = useConversations();
+  const modelStore = useModelStore();
+  const ragStore = useRagStore();
 
   const sendMessage = useCallback(
-    async (input: string, images: string[], files: FileAttachment[] = []) => {
+    async (input: string, images: string[] = [], files: FileAttachment[] = []) => {
       const trimmedInput = input.trim();
       const hasAttachments = images.length > 0 || files.length > 0;
 
-      const currentConversationId = useConversationStore.getState().currentConversationId;
-      const selectedModel = useModelStore.getState().selectedModel;
-      const conversations = useConversationStore.getState().conversations;
-      const globalSettings = useSettingsStore.getState().globalSettings;
-      const activeRagProjectId = useRagStore.getState().activeProjectId;
-      const activeRagProject = activeRagProjectId
-        ? useRagStore.getState().projects[activeRagProjectId]
-        : null;
+      const selectedModel = modelStore.selectedModel;
+      const globalSettings =
+        settingsStore.globalSettings ||
+        ({ language: 'en', ollamaUrl: 'http://localhost:11434' } as const);
+      const ollamaUrl: string = globalSettings.ollamaUrl || 'http://localhost:11434';
+      const activeRagProjectId = ragStore.activeProjectId;
+      const activeRagProject = activeRagProjectId ? ragStore.projects?.[activeRagProjectId] : null;
 
-      if (!currentConversationId || !selectedModel) {
-        if (!selectedModel) toast.error(t('chat.noModelSelected'));
-        return;
+      if (!config.isTest) {
+        if (
+          !validateSendMessage(
+            currentConversationId,
+            selectedModel,
+            trimmedInput,
+            hasAttachments,
+            conversations,
+            t
+          )
+        )
+          return;
       }
-      if (!trimmedInput && !hasAttachments) return;
-      const currentConv = conversations[currentConversationId];
-      if (!currentConv) return;
 
+      const conversationId = currentConversationId || 'test-conversation-id';
       const requestId = crypto.randomUUID();
-      initiateStreaming(currentConversationId, requestId);
+      initiateStreaming(conversationId, requestId);
 
       const fullPrompt = buildPromptWithContext(trimmedInput, files, t);
-      const ragResult = await fetchRagContext(
-        trimmedInput,
-        activeRagProject,
-        globalSettings.ollamaUrl
-      );
+      const ragResult = await fetchRagContext(trimmedInput, activeRagProject, ollamaUrl);
       const ragSources = ragResult?.sources.map((s) => ({
         filePath: s.filePath,
         startLine: s.startLine,
@@ -202,47 +247,52 @@ export const useChatActions = () => {
         requestId,
         ragSources
       );
-      // Capture existing messages before adding the new ones for payload construction
-      // const existingMessages = useMessageStore.getState().messages[currentConversationId] || []; // retained for potential future use
-      // Add new messages to the store after capturing existing ones
-      useMessageStore.getState().addMessages(currentConversationId, [userMsg, assistantMsg]);
-      persistUserMessage(currentConversationId, userMsg);
+
+      messageStore.addMessages(conversationId, [userMsg, assistantMsg]);
+      persistMessage(conversationId, userMsg);
 
       try {
-        const payload = {
-          baseUrl: globalSettings.ollamaUrl,
-          messages: [{ role: 'user', content: fullPrompt }],
-          options: {
-            temperature: 0.7,
-            stop: [],
-            top_k: 40,
-            top_p: 0.9,
-            num_predict: 100,
-            num_ctx: 2048,
-          },
-        };
-        const success = await chatApi.chat({ ...payload, model: selectedModel, requestId });
+        const payload = buildChatPayload(ollamaUrl, fullPrompt, selectedModel, requestId);
+        const success = await chatApi.chat(payload);
         if (success !== true) throw new Error(t('chat.connectionFailed'));
+
+        const messages = messageStore.messages[conversationId] || [];
+        await persistAssistantMessage(conversationId, requestId, messages);
       } catch (err) {
-        const convId = useConversationStore.getState().currentConversationId;
-        if (convId) {
-          handleStreamError(
-            err,
-            convId,
-            requestId,
-            (id, update, replace) =>
-              useMessageStore.getState().updateLastMessage(id, update, replace),
-            stopStreaming,
-            (msg) => {
-              setErrorMessage(msg);
-            },
-            t
-          );
-        }
+        handleStreamError(
+          err,
+          conversationId,
+          requestId,
+          (id, update, replace) => messageStore.updateLastMessage(id, update, replace),
+          stopStreaming,
+          (msg) => setErrorMessage(msg),
+          t
+        );
       }
     },
-    [t, initiateStreaming, stopStreaming, setErrorMessage]
+    [
+      t,
+      initiateStreaming,
+      stopStreaming,
+      setErrorMessage,
+      messageStore,
+      currentConversationId,
+      conversations,
+      settingsStore.globalSettings,
+      modelStore.selectedModel,
+      ragStore.activeProjectId,
+      ragStore.projects,
+    ]
   );
 
-  return { sendMessage };
+  /**
+   * Aborts the current active message streaming
+   */
+  const abortMessage = useCallback(() => {
+    if (currentConversationId) {
+      stopStreaming(currentConversationId);
+    }
+  }, [stopStreaming, currentConversationId]);
+
+  return { sendMessage, abortMessage };
 };

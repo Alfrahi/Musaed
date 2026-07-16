@@ -10,7 +10,7 @@ import {
   useBatchUpdate,
 } from '@/features/conversation/store';
 import { useModelStore } from '@/features/settings/store/model-store';
-import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { useSettingsStore, useLanguage } from '@/features/settings/store/settings-store';
 import { chatApi, conversationApi } from '@/lib/ipc';
 import { coordinateStartStream, coordinateStopStream, flushAndStop } from '@/store/coordination';
 import { useTranslation } from '@/lib/i18n';
@@ -73,10 +73,11 @@ const createConversation = async (
 export const useConversationActions = () => {
   const updateConversation = useUpdateConversation();
   const batchUpdate = useBatchUpdate();
-  const { t } = useTranslation(useSettingsStore.getState().globalSettings.language);
+  const language = useLanguage();
+  const { t } = useTranslation(language);
 
   const createNewConversation = useCallback(() => {
-    createConversation(batchUpdate, t);
+    return createConversation(batchUpdate, t);
   }, [batchUpdate, t]);
 
   const deleteConversation = useCallback(

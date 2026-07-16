@@ -7,6 +7,8 @@ export {
   useBatchUpdate,
   selectCurrentConversation,
   selectFilteredConversations,
+  useCurrentConversationId,
+  useConversations,
   type ConversationState,
   type ConversationMetadata,
 } from './conversation-store';
