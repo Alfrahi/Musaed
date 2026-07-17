@@ -330,15 +330,7 @@ const CommandInputSchemas: {
   cmd_conversations_list: undefined,
   cmd_conversation_get: z.object({ id: z.string().min(1) }),
   cmd_conversation_create: z.object({
-    conversation: z.object({
-      id: z.string(),
-      title: z.string(),
-      model: z.string(),
-      settings: z.any(),
-      createdAt: z.number(),
-      updatedAt: z.number(),
-      messages: z.array(MessageSchema),
-    }),
+    conversation: ConversationSchema,
   }),
   cmd_message_append: z.object({
     conversationId: z.string().min(1),

@@ -7,18 +7,6 @@ export default {
   name: 'rag',
   version: '1.0.0',
   publicApi: {
-    components: [
-      'ProjectList',
-      'ProjectCard',
-      'AddProjectDialog',
-      'IndexingProgress',
-      'RagContextBadge',
-      'SearchResults',
-      'FileBrowser',
-      'FileChunkViewer',
-      'RagExplorer',
-      'ProjectSettings',
-    ],
     hooks: [
       'useRagProjects',
       'useRagIndexing',

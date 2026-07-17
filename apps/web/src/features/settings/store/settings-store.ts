@@ -10,13 +10,46 @@ import { useUIStore } from '@/store/ui-store';
 /**
  * Migration registry for settings-store. Add handlers as schema evolves.
  * Version 1: Initial schema with all current ChatSettings fields.
+ * Version 2: Convert snake_case fields (top_k, top_p, num_predict, num_ctx)
+ *            to camelCase (topK, topP, numPredict, numCtx) to match Rust
+ *            `#[serde(rename_all = "camelCase")]` on ChatSettings.
  */
-const SETTINGS_MIGRATIONS: Record<number, (data: unknown) => unknown> = {
+const SETTINGS_MIGRATIONS: Record<number, (data: unknown) => Partial<ChatSettings>> = {
   1: (data: unknown) => {
-    // Merge persisted partial data with defaults to ensure schema integrity
     const persisted =
       typeof data === 'object' && data !== null ? (data as Partial<ChatSettings>) : {};
     return { ...DEFAULT_SETTINGS, ...persisted };
+  },
+  2: (data: unknown) => {
+    const persisted =
+      typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {};
+    const migrated: Partial<ChatSettings> = {};
+    if ('top_k' in persisted) migrated.topK = persisted['top_k'] as number;
+    if ('top_p' in persisted) migrated.topP = persisted['top_p'] as number;
+    if ('num_predict' in persisted) migrated.numPredict = persisted['num_predict'] as number;
+    if ('num_ctx' in persisted) migrated.numCtx = persisted['num_ctx'] as number;
+    // Preserve other fields if present
+    const otherKeys: (keyof ChatSettings)[] = [
+      'temperature',
+      'stop',
+      'systemPrompt',
+      'ollamaUrl',
+      'language',
+      'theme',
+      'hasDetectedLanguage',
+      'enterToSend',
+      'chatRetentionDays',
+      'enableLatex',
+      'enableMermaid',
+      'density',
+    ];
+    otherKeys.forEach((k) => {
+      if (k in persisted) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (migrated as any)[k] = persisted[k];
+      }
+    });
+    return { ...DEFAULT_SETTINGS, ...migrated };
   },
 };
 
@@ -40,19 +73,20 @@ export const useSettingsStore = createWithEqualityFn<SettingsState>()(
     {
       name: 'musaed-settings-storage',
       storage: createJSONStorage(() =>
-        createTauriStorage('settings-state.json', 1, SETTINGS_MIGRATIONS)
+        createTauriStorage('settings-state.json', 2, SETTINGS_MIGRATIONS)
       ),
-      version: 1,
-      migrate: (persistedState, _version) => {
-        // Apply migration for the current version if exists, otherwise merge with defaults
-        const migration = SETTINGS_MIGRATIONS[1];
-        if (migration && typeof persistedState === 'object' && persistedState !== null) {
-          return migration(persistedState);
+      version: 2,
+      migrate: (persistedState: unknown, version: number) => {
+        if (!persistedState || typeof persistedState !== 'object') {
+          return { globalSettings: DEFAULT_SETTINGS };
         }
-        // Fallback: merge with defaults to ensure all fields exist
-        const persisted =
-          typeof persistedState === 'object' ? (persistedState as Partial<ChatSettings>) : {};
-        return { ...DEFAULT_SETTINGS, ...persisted };
+        const persistedRoot = persistedState as { globalSettings?: Partial<ChatSettings> };
+        let settings = persistedRoot.globalSettings ?? {};
+        for (let v = (version ?? 0) + 1; v <= 2; v++) {
+          const migration = SETTINGS_MIGRATIONS[v];
+          if (migration) settings = migration(settings);
+        }
+        return { globalSettings: { ...DEFAULT_SETTINGS, ...settings } };
       },
       skipHydration: true,
       onRehydrateStorage: () => {

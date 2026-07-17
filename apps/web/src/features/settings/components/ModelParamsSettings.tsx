@@ -91,36 +91,36 @@ const ModelParamsSettings = () => {
       <div className="grid grid-cols-2 gap-4">
         <SliderControl
           label={t('settings.topP')}
-          value={globalSettings.top_p}
+          value={globalSettings.topP}
           min={0}
           max={1}
           step={0.1}
-          displayValue={formatNumber(globalSettings.top_p, { minimumFractionDigits: 1 })}
-          onChange={(v) => updateGlobalSettings({ top_p: v })}
+          displayValue={formatNumber(globalSettings.topP, { minimumFractionDigits: 1 })}
+          onChange={(v) => updateGlobalSettings({ topP: v })}
         />
         <SliderControl
           label={t('settings.topK')}
-          value={globalSettings.top_k}
+          value={globalSettings.topK}
           min={0}
           max={100}
           step={1}
-          displayValue={formatNumber(globalSettings.top_k)}
-          onChange={(v) => updateGlobalSettings({ top_k: v })}
+          displayValue={formatNumber(globalSettings.topK)}
+          onChange={(v) => updateGlobalSettings({ topK: v })}
         />
       </div>
 
       <div className="pbs-1 grid grid-cols-2 gap-4">
         <NumberInput
           label={t('settings.contextWindow')}
-          value={globalSettings.num_ctx}
+          value={globalSettings.numCtx}
           fallback={2048}
-          onChange={(v) => updateGlobalSettings({ num_ctx: v })}
+          onChange={(v) => updateGlobalSettings({ numCtx: v })}
         />
         <NumberInput
           label={t('settings.maxTokens')}
-          value={globalSettings.num_predict}
+          value={globalSettings.numPredict}
           fallback={2048}
-          onChange={(v) => updateGlobalSettings({ num_predict: v })}
+          onChange={(v) => updateGlobalSettings({ numPredict: v })}
         />
       </div>
     </div>

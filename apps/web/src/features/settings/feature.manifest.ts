@@ -7,18 +7,6 @@ export default {
   name: 'settings',
   version: '1.0.0',
   publicApi: {
-    components: [
-      'SettingsModal',
-      'LogViewer',
-      'ThemeSettings',
-      'MarkdownSettings',
-      'ModelParamsSettings',
-      'OllamaSettings',
-      'StorageSettings',
-      'DiagnosticsSettings',
-      'InputSettings',
-      'LanguageSettings',
-    ],
     hooks: ['useSettingsActions', 'useLogActions', 'useStorageActions', 'useStorageCleanup'],
     utils: [],
   },

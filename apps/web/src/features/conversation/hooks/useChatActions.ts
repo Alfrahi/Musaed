@@ -179,7 +179,7 @@ function buildChatPayload(
   return {
     baseUrl: ollamaUrl,
     messages: [{ role: 'user', content: fullPrompt }],
-    options: { temperature: 0.7, stop: [], top_k: 40, top_p: 0.9, num_predict: 100, num_ctx: 2048 },
+    options: { temperature: 0.7, stop: [], topK: 40, topP: 0.9, numPredict: 100, numCtx: 2048 },
     model: selectedModel,
     requestId,
   };

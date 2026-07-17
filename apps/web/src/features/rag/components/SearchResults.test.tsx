@@ -70,10 +70,10 @@ describe('SearchResults', () => {
     useSettingsStore.setState({
       globalSettings: {
         temperature: 0.7,
-        top_k: 40,
-        top_p: 0.9,
-        num_predict: 2048,
-        num_ctx: 4096,
+        topK: 40,
+        topP: 0.9,
+        numPredict: 2048,
+        numCtx: 4096,
         stop: [],
         systemPrompt: '',
         ollamaUrl: 'http://localhost:11434',
@@ -272,10 +272,10 @@ describe('SearchResults', () => {
       useSettingsStore.setState({
         globalSettings: {
           temperature: 0.7,
-          top_k: 40,
-          top_p: 0.9,
-          num_predict: 2048,
-          num_ctx: 4096,
+          topK: 40,
+          topP: 0.9,
+          numPredict: 2048,
+          numCtx: 4096,
           stop: [],
           systemPrompt: '',
           ollamaUrl: 'http://localhost:11434',

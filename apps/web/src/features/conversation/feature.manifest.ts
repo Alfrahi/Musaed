@@ -7,7 +7,6 @@ export default {
   name: 'conversation',
   version: '1.0.0',
   publicApi: {
-    components: ['ChatWindow', 'MessageBubble', 'InputArea'],
     hooks: [
       'useChatActions',
       'useConversationActions',

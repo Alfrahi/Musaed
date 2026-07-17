@@ -21,10 +21,10 @@ export const mockUseGlobalSettings = vi.fn(() => ({
   ollamaUrl: 'http://localhost:11434',
   systemPrompt: '',
   temperature: 0.7,
-  num_predict: 100,
-  num_ctx: 2048,
-  top_k: 40,
-  top_p: 0.9,
+  numPredict: 100,
+  numCtx: 2048,
+  topK: 40,
+  topP: 0.9,
   stop: [],
 }));
 

@@ -7,6 +7,7 @@ import { useConversationStore } from '@/features/conversation/store/conversation
 import { useMessageStore } from '@/features/conversation/store/message-store';
 import { useStreamingStore } from '@/features/conversation/store/streaming-store';
 import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { DEFAULT_SETTINGS } from '@musaed/contracts';
 
 vi.mock('@/lib/i18n', async () => {
   const actual = await vi.importActual('@/lib/i18n');
@@ -82,10 +83,10 @@ describe('ChatWindow', () => {
     useSettingsStore.setState({
       globalSettings: {
         temperature: 0.7,
-        top_k: 40,
-        top_p: 0.9,
-        num_predict: 2048,
-        num_ctx: 4096,
+        topK: 40,
+        topP: 0.9,
+        numPredict: 2048,
+        numCtx: 4096,
         stop: [],
         systemPrompt: '',
         ollamaUrl: 'http://localhost:11434',
@@ -136,7 +137,7 @@ describe('ChatWindow', () => {
             createdAt: Date.now(),
             updatedAt: Date.now(),
             model: 'llama3.2',
-            settings: {},
+            settings: DEFAULT_SETTINGS,
           },
         },
       });
@@ -177,7 +178,7 @@ describe('ChatWindow', () => {
             createdAt: Date.now(),
             updatedAt: Date.now(),
             model: 'llama3.2',
-            settings: {},
+            settings: DEFAULT_SETTINGS,
           },
         },
       });
@@ -213,7 +214,7 @@ describe('ChatWindow', () => {
             createdAt: Date.now(),
             updatedAt: Date.now(),
             model: 'llama3.2',
-            settings: {},
+            settings: DEFAULT_SETTINGS,
           },
         },
       });

@@ -8,10 +8,10 @@ export const ChatMessageSchema = z.object({
 
 export const ChatSettingsSchema = z.object({
   temperature: z.number(),
-  top_k: z.number(),
-  top_p: z.number(),
-  num_predict: z.number(),
-  num_ctx: z.number(),
+  topK: z.number(),
+  topP: z.number(),
+  numPredict: z.number(),
+  numCtx: z.number(),
   stop: z.array(z.string()),
   systemPrompt: z.string(),
   ollamaUrl: z.string(),

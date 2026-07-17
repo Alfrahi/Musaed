@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ChatSettingsSchema } from './chat';
 
 export const MessageSchema = z.object({
   id: z.string(),
@@ -29,7 +30,7 @@ export const ConversationSchema = z.object({
   title: z.string(),
   messages: z.array(MessageSchema),
   model: z.string(),
-  settings: z.object({}).passthrough(), // placeholder, actual schema defined elsewhere
+  settings: ChatSettingsSchema,
   createdAt: z.number(),
   updatedAt: z.number(),
 });
