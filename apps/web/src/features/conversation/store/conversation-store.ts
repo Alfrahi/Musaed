@@ -2,9 +2,26 @@
 
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { type Conversation } from '@musaed/contracts';
+import { createTauriStorage } from '@/lib/tauri-storage';
 
-// Persistence handled by Rust backend — no Tauri Store middleware needed
+// Default state for conversation store
+const DEFAULT_CONVERSATION_STATE = {
+  conversations: {},
+  conversationIds: [],
+  currentConversationId: null,
+  searchQuery: '',
+};
+
+// Migrations for conversation store
+const CONVERSATION_MIGRATIONS: Record<number, (data: unknown) => unknown> = {
+  1: (data: unknown) => {
+    const persisted =
+      typeof data === 'object' && data !== null ? (data as Partial<ConversationState>) : {};
+    return { ...DEFAULT_CONVERSATION_STATE, ...persisted };
+  },
+};
 
 export type ConversationMetadata = Omit<Conversation, 'messages'>;
 
@@ -38,47 +55,64 @@ export const selectFilteredConversations = (state: ConversationState) => {
 };
 
 export const useConversationStore = createWithEqualityFn<ConversationState>()(
-  (set) => ({
-    conversations: {},
-    conversationIds: [],
-    currentConversationId: null,
-    searchQuery: '',
+  persist(
+    (set) => ({
+      conversations: {},
+      conversationIds: [],
+      currentConversationId: null,
+      searchQuery: '',
 
-    setConversations: (convs) =>
-      set({
-        conversations: Object.fromEntries(convs.map((c) => [c.id, c])),
-        conversationIds: convs.map((c) => c.id),
-      }),
-    setCurrentConversationId: (id) => set({ currentConversationId: id }),
-    setSearchQuery: (query) => set({ searchQuery: query }),
-    addConversation: (conv) =>
-      set((state) => ({
-        conversations: { ...state.conversations, [conv.id]: conv },
-        conversationIds: [conv.id, ...state.conversationIds],
-      })),
-    updateConversation: (id, updates) =>
-      set((state) => {
-        const conv = state.conversations[id];
-        if (!conv) return state;
-        return {
-          conversations: {
-            ...state.conversations,
-            [id]: { ...conv, ...updates, updatedAt: Date.now() },
-          },
-        };
-      }),
-    removeConversation: (id) =>
-      set((state) => {
-        const { [id]: _, ...remaining } = state.conversations;
-        return {
-          conversations: remaining,
-          conversationIds: state.conversationIds.filter((cid) => cid !== id),
-          currentConversationId:
-            state.currentConversationId === id ? null : state.currentConversationId,
-        };
-      }),
-    batchUpdate: (updater) => set(updater),
-  }),
+      setConversations: (convs) =>
+        set({
+          conversations: Object.fromEntries(convs.map((c) => [c.id, c])),
+          conversationIds: convs.map((c) => c.id),
+        }),
+      setCurrentConversationId: (id) => set({ currentConversationId: id }),
+      setSearchQuery: (query) => set({ searchQuery: query }),
+      addConversation: (conv) =>
+        set((state) => ({
+          conversations: { ...state.conversations, [conv.id]: conv },
+          conversationIds: [conv.id, ...state.conversationIds],
+        })),
+      updateConversation: (id, updates) =>
+        set((state) => {
+          const conv = state.conversations[id];
+          if (!conv) return state;
+          return {
+            conversations: {
+              ...state.conversations,
+              [id]: { ...conv, ...updates, updatedAt: Date.now() },
+            },
+          };
+        }),
+      removeConversation: (id) =>
+        set((state) => {
+          const { [id]: _, ...remaining } = state.conversations;
+          return {
+            conversations: remaining,
+            conversationIds: state.conversationIds.filter((cid) => cid !== id),
+            currentConversationId:
+              state.currentConversationId === id ? null : state.currentConversationId,
+          };
+        }),
+      batchUpdate: (updater) => set(updater),
+    }),
+    {
+      name: 'musaed-conversation-storage',
+      storage: createJSONStorage(() =>
+        createTauriStorage('conversation-state.json', 1, CONVERSATION_MIGRATIONS)
+      ),
+      version: 1,
+      migrate: (persistedState, version) => {
+        const migration = CONVERSATION_MIGRATIONS[version];
+        if (migration && typeof persistedState === 'object' && persistedState !== null) {
+          return migration(persistedState);
+        }
+        return { ...DEFAULT_CONVERSATION_STATE, ...(persistedState as Partial<ConversationState>) };
+      },
+      skipHydration: true,
+    }
+  ),
   shallow
 );
 

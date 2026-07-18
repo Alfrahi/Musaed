@@ -232,10 +232,7 @@ describe('ChatWindow', () => {
       });
       useStreamingStore.setState({
         activeStreams: {
-          'test-id': {
-            model: 'llama3',
-            startedAt: Date.now(),
-          },
+          'test-id': 'req-123',
         },
       });
 

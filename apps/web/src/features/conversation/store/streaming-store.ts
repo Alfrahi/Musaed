@@ -2,7 +2,27 @@
 
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import type { StoreApi, UseBoundStore } from 'zustand';
 import { type Message } from '@musaed/contracts';
+import { createTauriStorage } from '@/lib/tauri-storage';
+
+// Default state for streaming store
+const DEFAULT_STREAMING_STATE = {
+  liveContent: {},
+  pendingMetrics: {},
+  activeStreams: {},
+  flushedStreams: new Set(),
+};
+
+// Migrations for streaming store
+const STREAMING_MIGRATIONS: Record<number, (data: unknown) => unknown> = {
+  1: (data: unknown) => {
+    const persisted =
+      typeof data === 'object' && data !== null ? (data as Partial<StreamingState>) : {};
+    return { ...DEFAULT_STREAMING_STATE, ...persisted };
+  },
+};
 
 /** Internal buffer for efficient stream accumulation. */
 interface StreamingBuffer {
@@ -31,129 +51,157 @@ export interface StreamingState {
   clearAll: () => void;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const useStreamingStore: any = createWithEqualityFn<StreamingState>()(
-  (set, get) => ({
-    liveContent: {},
-    pendingMetrics: {},
-    activeStreams: {},
-    flushedStreams: new Set(),
+// Store instance with a custom getState overload that accepts an optional
+// selector — used by the test suite. We preserve the full zustand store API
+// (call signature, setState, subscribe) and only widen the getState signature.
+type StreamingStoreBase = UseBoundStore<StoreApi<StreamingState>>;
+export type StreamingStore = StreamingStoreBase & {
+  getState: {
+    (): StreamingState;
+    <T>(selector: (state: StreamingState) => T): T;
+  };
+};
 
-    appendToken: (conversationId, token) => {
-      set((state) => {
-        // Only append tokens for conversations that are actively streaming
-        // This prevents zombie buffer creation after clearStream is called
-        if (!(conversationId in state.activeStreams)) {
-          return state;
+const _useStreamingStore = createWithEqualityFn<StreamingState>()(
+  persist(
+    (set, get) => ({
+      liveContent: {},
+      pendingMetrics: {},
+      activeStreams: {},
+      flushedStreams: new Set(),
+
+      appendToken: (conversationId, token) => {
+        set((state) => {
+          // Only append tokens for conversations that are actively streaming
+          // This prevents zombie buffer creation after clearStream is called
+          if (!(conversationId in state.activeStreams)) {
+            return state;
+          }
+
+          const buffer = state.liveContent[conversationId] ?? { chunks: [] };
+          return {
+            liveContent: {
+              ...state.liveContent,
+              [conversationId]: {
+                chunks: [...buffer.chunks, token],
+              },
+            },
+          };
+        });
+      },
+
+      setPendingMetrics: (conversationId, metrics) => {
+        set((state) => ({
+          pendingMetrics: {
+            ...state.pendingMetrics,
+            [conversationId]: { ...state.pendingMetrics[conversationId], ...metrics },
+          },
+        }));
+      },
+
+      flushToConversation: (conversationId) => {
+        const { liveContent, pendingMetrics, flushedStreams } = get();
+
+        // Prevent duplicate flushes (idempotency guard)
+        if (flushedStreams.has(conversationId)) {
+          return null;
         }
 
-        const buffer = state.liveContent[conversationId] ?? { chunks: [] };
-        return {
-          liveContent: {
-            ...state.liveContent,
-            [conversationId]: {
-              chunks: [...buffer.chunks, token],
-            },
-          },
-        };
-      });
-    },
-
-    setPendingMetrics: (conversationId, metrics) => {
-      set((state) => ({
-        pendingMetrics: {
-          ...state.pendingMetrics,
-          [conversationId]: { ...state.pendingMetrics[conversationId], ...metrics },
-        },
-      }));
-    },
-
-    flushToConversation: (conversationId) => {
-      const { liveContent, pendingMetrics, flushedStreams } = get();
-
-      // Prevent duplicate flushes (idempotency guard)
-      if (flushedStreams.has(conversationId)) {
-        return null;
-      }
-
-      const buffer = liveContent[conversationId];
-      // If no buffer, but may have pending metrics, return null as before
-      if (!buffer) {
-        // No content and no buffer -> return null
-        if (!pendingMetrics[conversationId]) return null;
-        // No buffer but metrics exist -> treat as empty content
+        const buffer = liveContent[conversationId];
+        // If no buffer, but may have pending metrics, return null as before
+        if (!buffer) {
+          // No content and no buffer -> return null
+          if (!pendingMetrics[conversationId]) return null;
+          // No buffer but metrics exist -> treat as empty content
+          const metrics = pendingMetrics[conversationId] ?? {};
+          // Clear metrics since flushed
+          set((state) => {
+            const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
+            return { pendingMetrics: remainingMetrics };
+          });
+          return { content: '', metrics };
+        }
+        const content = buffer.chunks.join('');
         const metrics = pendingMetrics[conversationId] ?? {};
-        // Clear metrics since flushed
+
+        // Clear flushed content and metrics
         set((state) => {
+          const { [conversationId]: _flushed, ...remaining } = state.liveContent;
           const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
-          return { pendingMetrics: remainingMetrics };
+          return { liveContent: remaining, pendingMetrics: remainingMetrics };
         });
-        return { content: '', metrics };
-      }
-      const content = buffer.chunks.join('');
-      const metrics = pendingMetrics[conversationId] ?? {};
 
-      // Clear flushed content and metrics
-      set((state) => {
-        const { [conversationId]: _flushed, ...remaining } = state.liveContent;
-        const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
-        return { liveContent: remaining, pendingMetrics: remainingMetrics };
-      });
+        return { content, metrics };
+      },
 
-      return { content, metrics };
-    },
+      markFlushed: (conversationId) => {
+        set((state) => ({
+          flushedStreams: new Set(state.flushedStreams).add(conversationId),
+        }));
+      },
 
-    markFlushed: (conversationId) => {
-      set((state) => ({
-        flushedStreams: new Set(state.flushedStreams).add(conversationId),
-      }));
-    },
+      startStream: (conversationId, requestId) => {
+        set((state) => ({
+          activeStreams: { ...state.activeStreams, [conversationId]: String(requestId) },
+        }));
+      },
 
-    startStream: (conversationId, requestId) => {
-      set((state) => ({
-        activeStreams: { ...state.activeStreams, [conversationId]: String(requestId) },
-      }));
-    },
+      stopStream: (conversationId) => {
+        set((state) => {
+          const { [conversationId]: _stream, ...remainingStreams } = state.activeStreams;
+          return { activeStreams: remainingStreams };
+        });
+      },
 
-    stopStream: (conversationId) => {
-      set((state) => {
-        const { [conversationId]: _stream, ...remainingStreams } = state.activeStreams;
-        return { activeStreams: remainingStreams };
-      });
-    },
+      clearStream: (conversationId) => {
+        set((state) => {
+          const { [conversationId]: _content, ...remainingContent } = state.liveContent;
+          const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
+          const { [conversationId]: _stream, ...remainingStreams } = state.activeStreams;
+          const remainingFlushed = new Set(state.flushedStreams);
+          remainingFlushed.delete(conversationId);
+          return {
+            liveContent: remainingContent,
+            pendingMetrics: remainingMetrics,
+            activeStreams: remainingStreams,
+            flushedStreams: remainingFlushed,
+          };
+        });
+      },
 
-    clearStream: (conversationId) => {
-      set((state) => {
-        const { [conversationId]: _content, ...remainingContent } = state.liveContent;
-        const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
-        const { [conversationId]: _stream, ...remainingStreams } = state.activeStreams;
-        const remainingFlushed = new Set(state.flushedStreams);
-        remainingFlushed.delete(conversationId);
-        return {
-          liveContent: remainingContent,
-          pendingMetrics: remainingMetrics,
-          activeStreams: remainingStreams,
-          flushedStreams: remainingFlushed,
-        };
-      });
-    },
-
-    clearAll: () =>
-      set({ liveContent: {}, pendingMetrics: {}, activeStreams: {}, flushedStreams: new Set() }),
-  }),
+      clearAll: () =>
+        set({ liveContent: {}, pendingMetrics: {}, activeStreams: {}, flushedStreams: new Set() }),
+    }),
+    {
+      name: 'musaed-streaming-storage',
+      storage: createJSONStorage(() =>
+        createTauriStorage('streaming-state.json', 1, STREAMING_MIGRATIONS)
+      ),
+      version: 1,
+      migrate: (persistedState, version) => {
+        const migration = STREAMING_MIGRATIONS[version];
+        if (migration && typeof persistedState === 'object' && persistedState !== null) {
+          return migration(persistedState);
+        }
+        return { ...DEFAULT_STREAMING_STATE, ...(persistedState as Partial<StreamingState>) };
+      },
+      skipHydration: true,
+    }
+  ),
   shallow
 );
 
 // Enhance getState to accept a selector function (as used in the test suite).
-// The default Zustand hook's getState does not support selectors, so we wrap it.
-const _rawGetState = useStreamingStore.getState;
-useStreamingStore.getState = (selector?: (state: StreamingState) => unknown) => {
+// The default Zustand getState only returns the full state; we add an optional
+// selector overload for convenient one-shot reads.
+const _rawGetState = _useStreamingStore.getState;
+const getStateWithSelector = ((selector?: (state: StreamingState) => unknown) => {
   const state = _rawGetState();
-  if (typeof selector === 'function') {
-    return selector(state);
-  }
-  return state;
-};
+  return typeof selector === 'function' ? selector(state) : state;
+}) as StreamingStore['getState'];
+
+export const useStreamingStore = _useStreamingStore as unknown as StreamingStore;
+useStreamingStore.getState = getStateWithSelector;
 
 // ---------------------------------------------------------------------------
 // Selectors
