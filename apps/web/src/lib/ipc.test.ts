@@ -56,4 +56,21 @@ describe('IPC Bridge', () => {
     const result = await ollamaApi.getModels('http://localhost:11434');
     expect(result).toBeNull();
   });
+
+  it('calls cmd_ollama_abort_pull with the model name', async () => {
+    vi.mocked(invoke).mockResolvedValue({ success: true, data: null });
+
+    await ollamaApi.abortPull('llama3:8b');
+
+    expect(invoke).toHaveBeenCalledWith('cmd_ollama_abort_pull', {
+      name: 'llama3:8b',
+    });
+  });
+
+  it('rejects invalid model names without invoking the backend', async () => {
+    const result = await ollamaApi.abortPull('bad name with spaces!');
+
+    expect(result).toBeNull();
+    expect(invoke).not.toHaveBeenCalled();
+  });
 });

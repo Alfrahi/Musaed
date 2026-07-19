@@ -61,5 +61,28 @@ export function useModelPulling() {
     }
   };
 
-  return { pullStatus, handlePull, translateOllamaStatus };
+  /**
+   * Aborts an in-progress model pull by name.
+   * Clears the local pull status so the UI no longer renders the progress bar.
+   * No-ops in the browser preview environment.
+   */
+  const handleAbortPull = async (name: string) => {
+    if (!name.trim()) return;
+
+    if (!checkIsTauri()) {
+      updatePullStatus(name, null);
+      return;
+    }
+
+    try {
+      await ollamaApi.abortPull(name);
+      updatePullStatus(name, null);
+    } catch (err) {
+      logger.error('Model pull abort failed', { error: err, name });
+      updatePullStatus(name, null);
+      toast.error(t('error.genericError'));
+    }
+  };
+
+  return { pullStatus, handlePull, handleAbortPull, translateOllamaStatus };
 }

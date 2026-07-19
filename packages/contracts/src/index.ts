@@ -39,6 +39,7 @@ export const COMMAND_VERSIONS = {
   cmd_ollama_abort_chat: 1,
   cmd_ollama_delete_model: 1,
   cmd_ollama_pull_model: 1,
+  cmd_ollama_abort_pull: 1,
   cmd_ollama_check_health: 1,
   cmd_ollama_verify_service: 1,
   cmd_ollama_generate_title: 1,

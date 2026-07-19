@@ -81,6 +81,7 @@ export interface CommandMap {
   cmd_ollama_abort_chat: { args: { requestId: string }; return: void };
   cmd_ollama_delete_model: { args: { baseUrl: string; name: string }; return: boolean };
   cmd_ollama_pull_model: { args: { baseUrl: string; name: string }; return: void };
+  cmd_ollama_abort_pull: { args: { name: string }; return: void };
   cmd_ollama_check_health: { args: { baseUrl: string }; return: OllamaHealthIpc };
   cmd_ollama_verify_service: { args: { baseUrl: string }; return: string };
   cmd_ollama_generate_title: {
@@ -200,6 +201,7 @@ const CommandInputSchemas: {
   cmd_ollama_abort_chat: z.object({ requestId: RequestIdSchema }),
   cmd_ollama_delete_model: z.object({ baseUrl: z.string(), name: ModelNameSchema }),
   cmd_ollama_pull_model: z.object({ baseUrl: z.string(), name: ModelNameSchema }),
+  cmd_ollama_abort_pull: z.object({ name: ModelNameSchema }),
   cmd_ollama_check_health: undefined,
   cmd_ollama_verify_service: undefined,
   cmd_ollama_generate_title: z.object({
@@ -362,6 +364,7 @@ const CommandReturnSchemas: {
   cmd_ollama_abort_chat: voidSchema,
   cmd_ollama_delete_model: z.boolean(),
   cmd_ollama_pull_model: voidSchema,
+  cmd_ollama_abort_pull: voidSchema,
   cmd_ollama_check_health: OllamaHealthIpcSchema,
   cmd_ollama_verify_service: z.string(),
   cmd_ollama_generate_title: z.string(),
@@ -571,6 +574,12 @@ export const ollamaApi = {
    */
   pullModel: (baseUrl: string, name: string) =>
     callInternal('cmd_ollama_pull_model', { baseUrl, name }),
+  /**
+   * Cancels an in-progress model pull. Backend short-circuits to success
+   * when no active pull exists for the given model name.
+   * @param name - Name of the model whose pull should be aborted
+   */
+  abortPull: (name: string) => callInternal('cmd_ollama_abort_pull', { name }),
   /**
    * Checks the health of the Ollama server (quiet mode, no toast on failure).
    * @param baseUrl - The Ollama server URL
