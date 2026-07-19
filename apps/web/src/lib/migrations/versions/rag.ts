@@ -5,6 +5,7 @@
  * Handles both Zustand state migrations and coordinates with backend SQLite migrations.
  */
 
+import { createIdempotentMigration } from '@/lib/migrations/orchestrator';
 import {
   RagProjectSchema,
   type RagProject,
@@ -12,6 +13,20 @@ import {
   type SearchResult,
 } from '@musaed/contracts';
 import { z } from 'zod';
+
+/**
+ * Pre-v1 legacy schema (no required fields, no status sync).
+ * Strict passthrough to tolerate any legacy persisted partial.
+ */
+const RagStateV0Schema = z
+  .object({
+    projects: z.record(z.string(), z.unknown()).optional().default({}),
+    projectIds: z.array(z.string()).optional().default([]),
+    activeProjectId: z.string().nullable().optional().default(null),
+    searchResults: z.array(z.unknown()).optional().default([]),
+    isSearching: z.boolean().optional().default(false),
+  })
+  .passthrough();
 
 /**
  * Partial schema for v3 projects (includes retry fields).
@@ -73,6 +88,45 @@ export interface RagStateShape {
   searchResults: SearchResult[];
   isSearching: boolean;
 }
+
+/**
+ * Migration v0 → v1 (initial schema)
+ *
+ * Normalises arbitrary legacy persisted state into the v1 shape:
+ *  - asserts top-level fields exist with safe defaults
+ *  - filters `projectIds` to ids that actually have a project entry
+ *  - returns a v1-shaped object so subsequent v1→v2 and v2→v3 migrations run.
+ *
+ * Wrapped in `createIdempotentMigration` so re-running on already-v1 state is a no-op.
+ */
+export const migrateRagToV1 = createIdempotentMigration<Partial<RagStateShape>>((data) => {
+  const parsed = RagStateV0Schema.parse(data);
+
+  const projectsKeys = Object.keys(parsed.projects);
+  const projectIds = (parsed.projectIds ?? []).filter((id) => id in parsed.projects);
+  for (const id of projectsKeys) {
+    if (!projectIds.includes(id)) projectIds.push(id);
+  }
+
+  const rawRecord = parsed as unknown as {
+    searchResults?: SearchResult[];
+    isSearching?: boolean;
+  };
+
+  return {
+    projects: parsed.projects as Record<string, RagProject>,
+    projectIds,
+    activeProjectId: parsed.activeProjectId,
+    searchResults: rawRecord.searchResults ?? [],
+    isSearching: rawRecord.isSearching ?? false,
+  };
+}, 1);
+
+/**
+ * Rollback v1 → v0
+ * Identity (no destructive v0→v1 changes to invert).
+ */
+export const rollbackRagToV0 = (data: RagStateShape): Partial<RagStateShape> => data;
 
 /**
  * Migration v1 → v2 (2026-06-15)
@@ -209,6 +263,7 @@ export const rollbackRagToV2 = (data: RagStateShape): Partial<RagStateShape> => 
  * RAG migration registry.
  */
 export const ragMigrations = {
+  1: migrateRagToV1,
   2: migrateRagToV2,
   3: migrateRagToV3,
 };
@@ -217,6 +272,12 @@ export const ragMigrations = {
  * Bidirectional migrations for rollback support.
  */
 export const ragBidirectionalMigrations = {
+  1: {
+    migrate: migrateRagToV1,
+    rollback: rollbackRagToV0,
+    isRollbackable: true,
+    description: 'Initial RAG schema: projects map, projectIds normalization, defaults',
+  },
   2: {
     migrate: migrateRagToV2,
     rollback: rollbackRagToV1,

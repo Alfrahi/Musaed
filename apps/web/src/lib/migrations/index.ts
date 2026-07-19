@@ -47,7 +47,9 @@ export {
   ragMigrations,
   ragBidirectionalMigrations,
   validateRag,
+  migrateRagToV1,
   migrateRagToV2,
+  rollbackRagToV0,
   rollbackRagToV1,
   RAG_STORE_VERSION,
 } from './versions/rag';

@@ -6,6 +6,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { RagProject, IndexProgress, SearchResult } from '@musaed/contracts';
 import { createTauriStorage } from '@/lib/tauri-storage';
 import { useUIStore } from '@/store/ui-store';
+import { ragMigrations, validateRag } from '@/lib/migrations';
 
 const RAG_STORE_VERSION = 3;
 
@@ -145,9 +146,36 @@ export const useRagStore = createWithEqualityFn<RagState>()(
     }),
     {
       name: 'rag-state',
-      storage: createJSONStorage(() => createTauriStorage('rag-state.json', RAG_STORE_VERSION)),
+      storage: createJSONStorage(() =>
+        createTauriStorage('rag-state.json', RAG_STORE_VERSION, ragMigrations)
+      ),
       version: RAG_STORE_VERSION,
-      migrate: (_persistedState, _version) => _persistedState,
+      migrate: (persistedState: unknown, version: number) => {
+        const fromVersion = typeof version === 'number' ? version : 0;
+        let data: unknown = persistedState;
+        const registry = ragMigrations as unknown as Record<number, (d: unknown) => unknown>;
+        for (let v = fromVersion + 1; v <= RAG_STORE_VERSION; v++) {
+          const migration = registry[v];
+          if (!migration) {
+            // No-op guard — the orchestrator already raises MISSING_MIGRATION; here we
+            // keep the legacy shape so a stale missing step does not blow up rehydration.
+            break;
+          }
+          try {
+            data = migration(data);
+          } catch (err) {
+            console.error(`RAG persist-migrate v${v} failed`, err);
+            return persistedState;
+          }
+        }
+        try {
+          const validated = validateRag(data);
+          return validated;
+        } catch (err) {
+          console.error('RAG persist-migrate validation failed', err);
+          return persistedState;
+        }
+      },
       skipHydration: true,
       // Only persist these fields — search results and indexing progress are ephemeral
       partialize: (state: RagState) => ({

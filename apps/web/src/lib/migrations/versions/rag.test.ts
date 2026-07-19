@@ -4,7 +4,9 @@ import {
   ragMigrations,
   ragBidirectionalMigrations,
   validateRag,
+  migrateRagToV1,
   migrateRagToV2,
+  rollbackRagToV0,
   rollbackRagToV1,
   RAG_STORE_VERSION,
   RagStateWrapperSchema,
@@ -64,6 +66,102 @@ describe('RAG Store Migrations', () => {
       expect(result.projects).toEqual({});
       expect(result.projectIds).toEqual([]);
       expect(result.activeProjectId).toBeNull();
+    });
+  });
+
+  describe('migrateRagToV1', () => {
+    it('should normalise legacy v0 state into v1 shape', () => {
+      const v0Data = {
+        projects: {
+          'proj-1': {
+            id: 'proj-1',
+            name: 'Test',
+            path: '/test',
+            embeddingModel: 'llama3',
+            ignorePatterns: [],
+          },
+        },
+        projectIds: ['proj-1'],
+        activeProjectId: 'proj-1',
+        searchResults: [],
+        isSearching: false,
+      };
+
+      const result = migrateRagToV1(v0Data);
+
+      expect(result.projectIds).toEqual(['proj-1']);
+      expect(result.activeProjectId).toBe('proj-1');
+      expect(result.searchResults).toEqual([]);
+      expect(result.isSearching).toBe(false);
+    });
+
+    it('should filter out projectIds that have no matching project entry', () => {
+      const v0Data = {
+        projects: {
+          'proj-1': { id: 'proj-1' },
+        },
+        projectIds: ['proj-1', 'proj-orphan'],
+        activeProjectId: null,
+      };
+
+      const result = migrateRagToV1(v0Data);
+
+      expect(result.projectIds).toEqual(['proj-1']);
+    });
+
+    it('should backfill projectIds with keys missing from the array', () => {
+      const v0Data = {
+        projects: {
+          'proj-1': { id: 'proj-1' },
+          'proj-2': { id: 'proj-2' },
+        },
+        projectIds: ['proj-1'],
+        activeProjectId: null,
+      };
+
+      const result = migrateRagToV1(v0Data);
+
+      expect(result.projectIds).toEqual(['proj-1', 'proj-2']);
+    });
+
+    it('should be idempotent when metadata already reports v1', () => {
+      const v1Wrapped = {
+        metadata: { version: 1 },
+        data: { projects: { 'proj-1': { id: 'proj-1' } }, projectIds: ['proj-1'] },
+      };
+
+      // createIdempotentMigration returns the inner data field if metadata.version >= targetVersion
+      // We can only call migrateRagToV1 directly through ragMigrations[1] which wraps it
+      const result = ragMigrations[1](v1Wrapped);
+
+      // When the wrapper unwraps metadata-aliased state at v>=1, the inner data must survive
+      expect(result).toBe(v1Wrapped.data);
+    });
+
+    it('should default missing top-level fields', () => {
+      const result = migrateRagToV1({});
+
+      expect(result.projects).toEqual({});
+      expect(result.projectIds).toEqual([]);
+      expect(result.activeProjectId).toBeNull();
+      expect(result.searchResults).toEqual([]);
+      expect(result.isSearching).toBe(false);
+    });
+  });
+
+  describe('rollbackRagToV0', () => {
+    it('should return input unchanged (identity rollback)', () => {
+      const v1Data: RagStateShape = {
+        projects: {},
+        projectIds: [],
+        activeProjectId: null,
+        searchResults: [],
+        isSearching: false,
+      };
+
+      const result = rollbackRagToV0(v1Data);
+
+      expect(result).toBe(v1Data);
     });
   });
 
@@ -359,14 +457,55 @@ describe('RAG Store Migrations', () => {
   });
 
   describe('ragMigrations registry', () => {
+    it('should have migration for version 1', () => {
+      expect(ragMigrations[1]).toBeDefined();
+      expect(typeof ragMigrations[1]).toBe('function');
+    });
+
     it('should have migration for version 2', () => {
       expect(ragMigrations[2]).toBeDefined();
       expect(typeof ragMigrations[2]).toBe('function');
     });
 
-    it('should have migrations for versions 2 and 3', () => {
-      const versions = Object.keys(ragMigrations).map(Number);
-      expect(versions).toEqual([2, 3]);
+    it('should have migrations for versions 1, 2, and 3', () => {
+      const versions = Object.keys(ragMigrations)
+        .map(Number)
+        .sort((a, b) => a - b);
+      expect(versions).toEqual([1, 2, 3]);
+    });
+
+    it('applies v1 → v2 → v3 to a stored v1 shape', () => {
+      const v1Stored = {
+        projects: {
+          'proj-1': {
+            id: 'proj-1',
+            name: 'Legacy',
+            path: '/legacy',
+            embeddingModel: 'llama3',
+            ignorePatterns: [],
+          },
+        },
+        projectIds: [],
+        activeProjectId: null,
+        searchResults: [],
+        isSearching: false,
+      };
+
+      const registry = ragMigrations as unknown as Record<number, (d: unknown) => unknown>;
+      let data: unknown = v1Stored;
+      for (let v = 2; v <= 3; v++) {
+        data = registry[v](data);
+      }
+
+      const v3 = data as RagStateShape;
+      expect(v3.projectIds).toEqual(['proj-1']);
+      expect(v3.projects['proj-1'].status).toBe('idle');
+      expect(v3.projects['proj-1'].retryAttempts).toBe(0);
+      expect(v3.projects['proj-1'].lastError).toBeNull();
+
+      const validated = validateRag(v3);
+      expect(validated.projects).toEqual(v3.projects);
+      expect(validated.activeProjectId).toBeNull();
     });
   });
 
