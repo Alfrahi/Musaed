@@ -4,6 +4,7 @@ import { useUIStore } from '@/store/ui-store';
 import { useSettingsStore } from '@/features/settings/store/settings-store';
 import { useRagStore } from '@/features/rag/store/rag-store';
 import { useModelStore } from '@/features/settings/store/model-store';
+import { useConversationStore } from '@/features/conversation/store/conversation-store';
 import { useStreamingStore } from '@/features/conversation/store/streaming-store';
 import { useMessageStore } from '@/features/conversation/store/message-store';
 import type { Conversation } from '@musaed/contracts';
@@ -80,7 +81,19 @@ export function stopBatching(conversationId: string): void {
   useStreamingStore.getState().clearStream(conversationId);
 }
 
-const STORES_TO_HYDRATE = 3;
+type PersistedStore = {
+  persist: { rehydrate: () => Promise<unknown> | unknown };
+};
+
+const PERSISTED_STORES: ReadonlyArray<PersistedStore> = [
+  useSettingsStore,
+  useRagStore,
+  useModelStore,
+  useConversationStore,
+  useStreamingStore as unknown as PersistedStore,
+];
+
+const STORES_TO_HYDRATE = PERSISTED_STORES.length;
 
 /**
  * Triggers async rehydration for all persisted stores that use skipHydration.
@@ -94,9 +107,9 @@ export function registerHydrationCoordination(): () => void {
 
   if (!isHydrated) {
     useUIStore.getState().setPendingRehydrations(STORES_TO_HYDRATE);
-    useSettingsStore.persist.rehydrate();
-    useRagStore.persist.rehydrate();
-    useModelStore.persist.rehydrate();
+    for (const store of PERSISTED_STORES) {
+      store.persist.rehydrate();
+    }
   }
 
   return () => {

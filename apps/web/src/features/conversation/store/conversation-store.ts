@@ -5,6 +5,7 @@ import { shallow } from 'zustand/shallow';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { type Conversation } from '@musaed/contracts';
 import { createTauriStorage } from '@/lib/tauri-storage';
+import { useUIStore } from '@/store/ui-store';
 
 // Default state for conversation store
 const DEFAULT_CONVERSATION_STATE = {
@@ -111,6 +112,14 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
         return { ...DEFAULT_CONVERSATION_STATE, ...(persistedState as Partial<ConversationState>) };
       },
       skipHydration: true,
+      onRehydrateStorage: () => {
+        return (_state, error) => {
+          if (error) {
+            console.error('Conversation store rehydration failed:', error);
+          }
+          useUIStore.getState().onStoreRehydrated();
+        };
+      },
     }
   ),
   shallow

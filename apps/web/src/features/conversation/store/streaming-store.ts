@@ -6,28 +6,41 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { StoreApi, UseBoundStore } from 'zustand';
 import { type Message } from '@musaed/contracts';
 import { createTauriStorage } from '@/lib/tauri-storage';
-
-// Default state for streaming store
-const DEFAULT_STREAMING_STATE = {
-  liveContent: {},
-  pendingMetrics: {},
-  activeStreams: {},
-  flushedStreams: new Set(),
-};
-
-// Migrations for streaming store
-const STREAMING_MIGRATIONS: Record<number, (data: unknown) => unknown> = {
-  1: (data: unknown) => {
-    const persisted =
-      typeof data === 'object' && data !== null ? (data as Partial<StreamingState>) : {};
-    return { ...DEFAULT_STREAMING_STATE, ...persisted };
-  },
-};
+import { useUIStore } from '@/store/ui-store';
 
 /** Internal buffer for efficient stream accumulation. */
 interface StreamingBuffer {
   chunks: string[];
 }
+
+// Default state for streaming store.
+// Note: flushedStreams is an Array<string> (not Set) so it round-trips
+// through JSON persistence cleanly — JSON has no Set representation.
+const DEFAULT_STREAMING_STATE = {
+  liveContent: {} as Record<string, StreamingBuffer>,
+  pendingMetrics: {} as Record<string, Partial<Message>>,
+  activeStreams: {} as Record<string, string>,
+  flushedStreams: [] as string[],
+};
+
+// Migrations for streaming store.
+// v1 → v2: defensive coercion of the legacy persisted `flushedStreams` Set,
+// which JSON.stringify rendered as `{}` (no Set representation). Coerced to
+// `string[]` so rehydrate never hands a non-array to downstream `.includes`.
+const migrateToFlushArray = (data: unknown): Partial<StreamingState> => {
+  const persisted =
+    typeof data === 'object' && data !== null ? (data as Partial<StreamingState>) : {};
+  return {
+    ...DEFAULT_STREAMING_STATE,
+    ...persisted,
+    flushedStreams: Array.isArray(persisted.flushedStreams) ? persisted.flushedStreams : [],
+  };
+};
+
+const STREAMING_MIGRATIONS: Record<number, (data: unknown) => unknown> = {
+  1: migrateToFlushArray,
+  2: migrateToFlushArray,
+};
 
 export interface StreamingState {
   /** Per-conversation live content buffer (only for actively streaming conversations). */
@@ -37,7 +50,7 @@ export interface StreamingState {
   /** Track which conversations are actively streaming. */
   activeStreams: Record<string, string>;
   /** Track which conversations have been flushed to prevent duplicate flushes. */
-  flushedStreams: Set<string>;
+  flushedStreams: string[];
 
   appendToken: (conversationId: string, token: string) => void;
   setPendingMetrics: (conversationId: string, metrics: Partial<Message>) => void;
@@ -68,7 +81,7 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
       liveContent: {},
       pendingMetrics: {},
       activeStreams: {},
-      flushedStreams: new Set(),
+      flushedStreams: [] as string[],
 
       appendToken: (conversationId, token) => {
         set((state) => {
@@ -103,7 +116,7 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
         const { liveContent, pendingMetrics, flushedStreams } = get();
 
         // Prevent duplicate flushes (idempotency guard)
-        if (flushedStreams.has(conversationId)) {
+        if (flushedStreams.includes(conversationId)) {
           return null;
         }
 
@@ -135,9 +148,14 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
       },
 
       markFlushed: (conversationId) => {
-        set((state) => ({
-          flushedStreams: new Set(state.flushedStreams).add(conversationId),
-        }));
+        set((state) => {
+          if (state.flushedStreams.includes(conversationId)) {
+            return state;
+          }
+          return {
+            flushedStreams: [...state.flushedStreams, conversationId],
+          };
+        });
       },
 
       startStream: (conversationId, requestId) => {
@@ -158,8 +176,7 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
           const { [conversationId]: _content, ...remainingContent } = state.liveContent;
           const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
           const { [conversationId]: _stream, ...remainingStreams } = state.activeStreams;
-          const remainingFlushed = new Set(state.flushedStreams);
-          remainingFlushed.delete(conversationId);
+          const remainingFlushed = state.flushedStreams.filter((id) => id !== conversationId);
           return {
             liveContent: remainingContent,
             pendingMetrics: remainingMetrics,
@@ -170,22 +187,43 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
       },
 
       clearAll: () =>
-        set({ liveContent: {}, pendingMetrics: {}, activeStreams: {}, flushedStreams: new Set() }),
+        set({
+          liveContent: {},
+          pendingMetrics: {},
+          activeStreams: {},
+          flushedStreams: [] as string[],
+        }),
     }),
     {
       name: 'musaed-streaming-storage',
       storage: createJSONStorage(() =>
-        createTauriStorage('streaming-state.json', 1, STREAMING_MIGRATIONS)
+        createTauriStorage('streaming-state.json', 2, STREAMING_MIGRATIONS)
       ),
-      version: 1,
+      version: 2,
       migrate: (persistedState, version) => {
         const migration = STREAMING_MIGRATIONS[version];
         if (migration && typeof persistedState === 'object' && persistedState !== null) {
           return migration(persistedState);
         }
-        return { ...DEFAULT_STREAMING_STATE, ...(persistedState as Partial<StreamingState>) };
+        const persisted =
+          typeof persistedState === 'object' && persistedState !== null
+            ? (persistedState as Partial<StreamingState>)
+            : {};
+        return {
+          ...DEFAULT_STREAMING_STATE,
+          ...persisted,
+          flushedStreams: Array.isArray(persisted.flushedStreams) ? persisted.flushedStreams : [],
+        };
       },
       skipHydration: true,
+      onRehydrateStorage: () => {
+        return (_state, error) => {
+          if (error) {
+            console.error('Streaming store rehydration failed:', error);
+          }
+          useUIStore.getState().onStoreRehydrated();
+        };
+      },
     }
   ),
   shallow
