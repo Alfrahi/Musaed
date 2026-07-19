@@ -17,6 +17,7 @@ interface ProjectCardProps {
   onSelect: () => void;
   onIndex: () => void;
   onReindex: () => void;
+  onRetry?: () => void;
   onAbort: () => void;
   onRemove: () => void;
 }
@@ -48,6 +49,7 @@ const ProjectCard = ({
   onSelect,
   onIndex,
   onReindex,
+  onRetry,
   onAbort,
   onRemove,
 }: ProjectCardProps) => {
@@ -67,7 +69,7 @@ const ProjectCard = ({
       <ProjectHeader project={project} isActive={isActive} onSelect={onSelect} />
       <ProjectStats project={project} t={t} />
       {isIndexing && indexProgress && (
-        <IndexingProgress progress={indexProgress} onAbort={onAbort} />
+        <IndexingProgress progress={indexProgress} onAbort={onAbort} onRetry={onRetry} />
       )}
       <ProjectActions
         project={project}
@@ -146,6 +148,7 @@ const ProjectActions = ({
   isIndexing,
   onIndex,
   onReindex,
+  onRetry,
   onAbort,
   onRemove,
   t,
@@ -154,6 +157,7 @@ const ProjectActions = ({
   isIndexing: boolean;
   onIndex: () => void;
   onReindex: () => void;
+  onRetry?: () => void;
   onAbort: () => void;
   onRemove: () => void;
   t: (key: string) => string;
@@ -188,6 +192,18 @@ const ProjectActions = ({
           title={t('rag.reindexProject')}
         >
           <RefreshCw className="h-3 w-3" /> {t('rag.reindexProject')}
+        </button>
+      )}
+      {!isIndexing && project.status === 'error' && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onRetry?.();
+          }}
+          className="text-muted-foreground hover:text-foreground flex items-center gap-0.5 text-xs"
+          title={t('rag.retryIndexing')}
+        >
+          <RefreshCw className="h-3 w-3" /> {t('rag.retry')}
         </button>
       )}
       {isIndexing && (

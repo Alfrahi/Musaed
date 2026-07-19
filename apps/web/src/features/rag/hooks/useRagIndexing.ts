@@ -30,6 +30,13 @@ export function useRagIndexing() {
     [ollamaUrl]
   );
 
+  const retryIndexing = useCallback(
+    async (projectId: string) => {
+      return ragApi.retryIndexProject(projectId, ollamaUrl);
+    },
+    [ollamaUrl]
+  );
+
   // Listen for indexing events
   const startIndexEventListeners = useCallback(() => {
     const unlisteners: (() => void)[] = [];
@@ -85,6 +92,7 @@ export function useRagIndexing() {
     startIndexing,
     abortIndexing,
     reindexProject,
+    retryIndexing,
     startIndexEventListeners,
   };
 }

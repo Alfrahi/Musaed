@@ -14,10 +14,18 @@ import {
 import { z } from 'zod';
 
 /**
+ * Partial schema for v3 projects (includes retry fields).
+ */
+const RagProjectV3Schema = RagProjectSchema.extend({
+  retryAttempts: z.number().optional().default(0),
+  lastError: z.string().nullable().optional(),
+});
+
+/**
  * RAG state wrapper schema with metadata.
  */
 export const RagStateWrapperSchema = z.object({
-  projects: z.record(z.string(), RagProjectSchema),
+  projects: z.record(z.string(), RagProjectV3Schema),
   projectIds: z.array(z.string()),
   activeProjectId: z.string().nullable(),
   searchResults: z.array(SearchResultSchema).optional().default([]),
@@ -57,6 +65,7 @@ const RagStateV1Schema = z
 /**
  * RAG state shape for migration purposes (avoids circular import).
  */
+
 export interface RagStateShape {
   projects: Record<string, RagProject>;
   projectIds: string[];
@@ -79,7 +88,7 @@ export const migrateRagToV2 = (data: unknown): Partial<RagStateShape> => {
   const parsed = RagStateV1Schema.parse(data);
 
   // Ensure all projects have all required fields and status
-  const migratedProjects: Record<string, RagProject> = {};
+  const migratedProjects = {} as Record<string, RagProject>;
   for (const [id, project] of Object.entries(parsed.projects)) {
     migratedProjects[id] = {
       id: project.id,
@@ -94,6 +103,8 @@ export const migrateRagToV2 = (data: unknown): Partial<RagStateShape> => {
       chunkCount: project.chunkCount ?? 0,
       totalBytes: project.totalBytes ?? 0,
       status: project.status ?? 'idle',
+      retryAttempts: project.retryAttempts ?? 0,
+      lastError: project.lastError ?? null,
     };
   }
 
@@ -139,10 +150,67 @@ export const validateRag = (data: unknown): Partial<RagStateShape> => {
 };
 
 /**
+ * Migration v2 → v3 (2026-07-19)
+ * Adds retryAttempts and lastError fields to track indexing retry state.
+ *
+ * If the input data already includes these fields (i.e., it's already at v3),
+ * the migration is a no‑op and returns the data unchanged.
+ */
+export const migrateRagToV3 = (data: unknown): Partial<RagStateShape> => {
+  // Detect if data already includes retry fields (already at v3)
+  if (typeof data === 'object' && data !== null && 'projects' in data) {
+    const projects = (data as { projects?: Record<string, unknown> }).projects;
+    if (projects) {
+      const firstKey = Object.keys(projects)[0];
+      const firstProject = firstKey ? projects[firstKey] : undefined;
+      const fp = firstProject as object | undefined;
+      if (fp && ('retryAttempts' in fp || 'lastError' in fp)) {
+        return data as Partial<RagStateShape>;
+      }
+    }
+  }
+
+  // Otherwise perform standard v2 → v3 migration.
+  const v2Data = migrateRagToV2(data);
+
+  const migratedProjects = {} as Record<string, RagProject>;
+  for (const [id, project] of Object.entries(v2Data.projects || {})) {
+    migratedProjects[id] = {
+      ...project,
+      retryAttempts: 0,
+      lastError: null,
+    };
+  }
+
+  return {
+    ...v2Data,
+    projects: migratedProjects,
+  };
+};
+
+/**
+ * Rollback v3 → v2
+ * Removes retryAttempts and lastError fields.
+ */
+export const rollbackRagToV2 = (data: RagStateShape): Partial<RagStateShape> => {
+  const migratedProjects: Record<string, Omit<RagProject, 'retryAttempts' | 'lastError'>> = {};
+  for (const [id, project] of Object.entries(data.projects)) {
+    const { retryAttempts: _, lastError: __, ...rest } = project;
+    migratedProjects[id] = rest;
+  }
+
+  return {
+    ...data,
+    projects: migratedProjects as Record<string, RagProject>,
+  };
+};
+
+/**
  * RAG migration registry.
  */
 export const ragMigrations = {
   2: migrateRagToV2,
+  3: migrateRagToV3,
 };
 
 /**
@@ -155,9 +223,15 @@ export const ragBidirectionalMigrations = {
     isRollbackable: true,
     description: 'Add status field sync and projectIds normalization',
   },
+  3: {
+    migrate: migrateRagToV3,
+    rollback: rollbackRagToV2,
+    isRollbackable: true,
+    description: 'Add retryAttempts and lastError fields for indexing retry policies',
+  },
 };
 
 /**
  * Current RAG store schema version.
  */
-export const RAG_STORE_VERSION = 2;
+export const RAG_STORE_VERSION = 3;

@@ -175,9 +175,19 @@
       "completed": "مكتمل",
       "failed": "فشل"
     },
+    "retryMessages": {
+      "retryAttempt": "محاولة إعادة المحاولة {attempt} من {max}",
+      "retryingIn": "إعادة المحاولة خلال {seconds} ثوانٍ...",
+      "lastError": "آخر خطأ: {error}",
+      "maxRetriesReached": "تم الوصول إلى الحد الأقصى لمحاولات إعادة المحاولة. آخر خطأ: {error}",
+      "retryFailed": "فشلت إعادة المحاولة",
+      "retryNow": "إعادة المحاولة الآن"
+    },
     "indexProject": "فهرسة المشروع",
     "reindexProject": "إعادة فهرسة المشروع",
+    "retryIndexing": "إعادة محاولة الفهرسة",
     "cancelIndexing": "إلغاء الفهرسة",
+    "retryingIn": "إعادة المحاولة خلال {seconds} ثانية",
     "removeProject": "إزالة المشروع",
     "projectSettings": "إعدادات المشروع",
     "projectUpdated": "تم تحديث المشروع",
@@ -192,7 +202,8 @@
     "deactivateRag": "تعطيل سياق RAG",
     "defaultEmbeddingModel": "{model} (افترضي)",
     "indexing": "فهرسة",
-    "cancel": "إلغاء"
+    "cancel": "إلغاء",
+    "retry": "إعادة المحاولة"
   },
   "library": {
     "title": "المكتبة",

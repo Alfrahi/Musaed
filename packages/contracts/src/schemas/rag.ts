@@ -26,6 +26,8 @@ export const RagProjectSchema = z.object({
   chunkCount: z.number(),
   totalBytes: z.number(),
   status: ProjectStatusSchema,
+  retryAttempts: z.number().optional().default(0),
+  lastError: z.string().nullable().optional(),
 });
 export const IndexProgressSchema = z.object({
   projectId: z.string(),

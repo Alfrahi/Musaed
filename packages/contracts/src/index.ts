@@ -64,6 +64,7 @@ export const COMMAND_VERSIONS = {
   cmd_rag_index_project: 1,
   cmd_rag_abort_index: 1,
   cmd_rag_reindex_project: 1,
+  cmd_rag_retry_index_project: 1,
   cmd_rag_get_index_status: 1,
   cmd_rag_search: 1,
   cmd_rag_get_file_chunks: 1,

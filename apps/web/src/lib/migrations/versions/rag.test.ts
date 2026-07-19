@@ -12,8 +12,8 @@ import {
 
 describe('RAG Store Migrations', () => {
   describe('RAG_STORE_VERSION', () => {
-    it('should be version 2', () => {
-      expect(RAG_STORE_VERSION).toBe(2);
+    it('should be version 3', () => {
+      expect(RAG_STORE_VERSION).toBe(3);
     });
   });
 
@@ -34,6 +34,8 @@ describe('RAG Store Migrations', () => {
             chunkCount: 0,
             totalBytes: 0,
             status: 'idle',
+            retryAttempts: 0,
+            lastError: null,
           },
         },
         projectIds: ['proj-1'],
@@ -41,9 +43,9 @@ describe('RAG Store Migrations', () => {
         searchResults: [],
         isSearching: false,
         metadata: {
-          version: 2,
+          version: 3,
           lastMigratedAt: new Date().toISOString(),
-          migrationPath: [1, 2],
+          migrationPath: [1, 2, 3],
         },
       };
 
@@ -122,6 +124,8 @@ describe('RAG Store Migrations', () => {
             chunkCount: 0,
             totalBytes: 0,
             status: 'idle',
+            retryAttempts: 0,
+            lastError: null,
           },
         },
         projectIds: ['proj-1'], // Out of sync
@@ -173,6 +177,40 @@ describe('RAG Store Migrations', () => {
     });
   });
 
+  describe('rollbackRagToV2', () => {
+    it('should remove retryAttempts and lastError fields from projects', () => {
+      const v3Data: RagStateShape = {
+        projects: {
+          'proj-1': {
+            id: 'proj-1',
+            name: 'Test',
+            path: '/test',
+            embeddingModel: 'llama3',
+            ignorePatterns: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            indexedAt: null,
+            fileCount: 0,
+            chunkCount: 0,
+            totalBytes: 0,
+            status: 'idle',
+            retryAttempts: 2,
+            lastError: 'Test error',
+          },
+        },
+        projectIds: ['proj-1'],
+        activeProjectId: 'proj-1',
+        searchResults: [],
+        isSearching: false,
+      };
+
+      const result = ragBidirectionalMigrations[3].rollback(v3Data);
+
+      expect((result.projects!['proj-1'] as any).retryAttempts).toBeUndefined();
+      expect((result.projects!['proj-1'] as any).lastError).toBeUndefined();
+    });
+  });
+
   describe('rollbackRagToV1', () => {
     it('should return data unchanged (identity rollback)', () => {
       const v2Data: RagStateShape = {
@@ -190,6 +228,8 @@ describe('RAG Store Migrations', () => {
             chunkCount: 0,
             totalBytes: 0,
             status: 'idle',
+            retryAttempts: 0,
+            lastError: null,
           },
         },
         projectIds: ['proj-1'],
@@ -201,6 +241,72 @@ describe('RAG Store Migrations', () => {
       const result = rollbackRagToV1(v2Data);
 
       expect(result).toBe(v2Data);
+    });
+  });
+
+  describe('migrateRagToV3', () => {
+    it('should add retryAttempts and lastError fields to projects', () => {
+      const v2Data = {
+        projects: {
+          'proj-1': {
+            id: 'proj-1',
+            name: 'Test',
+            path: '/test',
+            embeddingModel: 'llama3',
+            ignorePatterns: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            indexedAt: null,
+            fileCount: 0,
+            chunkCount: 0,
+            totalBytes: 0,
+            status: 'idle',
+            retryAttempts: 0,
+            lastError: null,
+          },
+        },
+        projectIds: ['proj-1'],
+        activeProjectId: 'proj-1',
+        searchResults: [],
+        isSearching: false,
+      };
+
+      const result = ragMigrations[3](v2Data);
+
+      expect(result.projects!['proj-1'].retryAttempts).toBe(0);
+      expect(result.projects!['proj-1'].lastError).toBeNull();
+    });
+
+    it('should preserve existing retryAttempts and lastError fields', () => {
+      const v3Data = {
+        projects: {
+          'proj-1': {
+            id: 'proj-1',
+            name: 'Test',
+            path: '/test',
+            embeddingModel: 'llama3',
+            ignorePatterns: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            indexedAt: null,
+            fileCount: 0,
+            chunkCount: 0,
+            totalBytes: 0,
+            status: 'error',
+            retryAttempts: 2,
+            lastError: 'Test error',
+          },
+        },
+        projectIds: ['proj-1'],
+        activeProjectId: 'proj-1',
+        searchResults: [],
+        isSearching: false,
+      };
+
+      const result = ragMigrations[3](v3Data);
+
+      expect(result.projects!['proj-1'].retryAttempts).toBe(2);
+      expect(result.projects!['proj-1'].lastError).toBe('Test error');
     });
   });
 
@@ -221,6 +327,8 @@ describe('RAG Store Migrations', () => {
             chunkCount: 0,
             totalBytes: 0,
             status: 'idle',
+            retryAttempts: 0,
+            lastError: null,
           },
         },
         projectIds: ['proj-1'],
@@ -256,9 +364,9 @@ describe('RAG Store Migrations', () => {
       expect(typeof ragMigrations[2]).toBe('function');
     });
 
-    it('should only have version 2 migration', () => {
+    it('should have migrations for versions 2 and 3', () => {
       const versions = Object.keys(ragMigrations).map(Number);
-      expect(versions).toEqual([2]);
+      expect(versions).toEqual([2, 3]);
     });
   });
 
@@ -273,6 +381,19 @@ describe('RAG Store Migrations', () => {
     it('should have description for version 2', () => {
       expect(ragBidirectionalMigrations[2].description).toBe(
         'Add status field sync and projectIds normalization'
+      );
+    });
+
+    it('should have bidirectional migration for version 3', () => {
+      expect(ragBidirectionalMigrations[3]).toBeDefined();
+      expect(ragBidirectionalMigrations[3].migrate).toBeDefined();
+      expect(ragBidirectionalMigrations[3].rollback).toBeDefined();
+      expect(ragBidirectionalMigrations[3].isRollbackable).toBe(true);
+    });
+
+    it('should have description for version 3', () => {
+      expect(ragBidirectionalMigrations[3].description).toBe(
+        'Add retryAttempts and lastError fields for indexing retry policies'
       );
     });
   });

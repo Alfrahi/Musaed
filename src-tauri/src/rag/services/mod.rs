@@ -24,6 +24,35 @@ use crate::rate_limiter::RATE_LIMITER;
 use tauri::{Emitter, Runtime};
 use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
+use tracing;
+
+/// Maximum number of retries for the indexing pipeline on transient failures.
+const INDEX_MAX_RETRIES: u32 = 3;
+
+/// Initial backoff in milliseconds for indexing retries (exponential with jitter).
+const INDEX_RETRY_BACKOFF_MS: u64 = 2000;
+
+/// Returns true if the error is transient (worth retrying) vs permanent.
+/// Cancellation, project-not-found, and validation errors are not retried.
+fn is_transient_index_error(err: &str) -> bool {
+    let lower = err.to_lowercase();
+    // Permanent failures — don't retry
+    if lower.contains("cancelled") || lower.contains("canceled") {
+        return false;
+    }
+    if lower.contains("not found") || lower.contains("does not exist") {
+        return false;
+    }
+    if lower.contains("invalid") || lower.contains("validation") {
+        return false;
+    }
+    if lower.contains("non-utf-8") || lower.contains("permission denied") {
+        return false;
+    }
+    // Transient failures — retry
+    // (timeout, connection refused, embedding failed, DB locked, etc.)
+    true
+}
 
 /// Canonicalizes a path and verifies it stays within the project root.
 pub(crate) fn canonicalize_path_within_project(
@@ -390,40 +419,115 @@ pub async fn start_indexing<'a, R: Runtime>(
     };
     let cancel_token = Arc::new(CancellationToken::new());
     crate::shared::RAG_INDEX_ABORT_HANDLES.insert(req.project_id.clone(), cancel_token.clone());
-    let opts = IndexOptions {
-        project_id: &req.project_id,
-        project_path: &project_path,
-        embedding_model: &embedding_model,
-        base_url: req.base_url.as_deref().unwrap_or("http://localhost:11434"),
-        ignore_patterns: &ignore_patterns,
-        force: req.force.unwrap_or(false),
-    };
-    let result = indexing::index_project(
-        req.state.inner().clone(),
-        opts,
-        cancel_token.clone(),
-        req.app_handle.clone(),
-    )
-    .await;
-    crate::shared::RAG_INDEX_ABORT_HANDLES.remove(&req.project_id);
-    match result {
-        Ok(_) => Ok(ApiResponse {
-            success: true,
-            data: Some(true),
-            error: None,
-        }),
-        Err(e) => {
-            let _ = req.app_handle.emit(
-                crate::shared::EVENT_RAG_INDEX_ERROR,
-                &BackendError::new("RAG_INDEX_ERROR", e.clone()),
+
+    // Retry loop for transient failures (Ollama timeout, DB lock, etc.)
+    let mut last_error = String::new();
+    let mut backoff_ms = INDEX_RETRY_BACKOFF_MS;
+
+    for attempt in 0..=INDEX_MAX_RETRIES {
+        if cancel_token.is_cancelled() {
+            last_error = "Indexing cancelled".to_string();
+            break;
+        }
+
+        if attempt > 0 {
+            tracing::warn!(
+                "Indexing retry {}/{} for project {} after: {}",
+                attempt,
+                INDEX_MAX_RETRIES,
+                req.project_id,
+                last_error
             );
-            Ok(ApiResponse {
-                success: false,
-                data: None,
-                error: Some(BackendError::new("RAG_INDEX_ERROR", e)),
-            })
+            // Emit a retry progress event so the frontend can show status
+            let _ = req.app_handle.emit(
+                crate::shared::EVENT_RAG_INDEX_PROGRESS,
+                &crate::rag::types::IndexProgress {
+                    project_id: req.project_id.clone(),
+                    phase: crate::rag::types::IndexPhase::DiscoveringFiles,
+                    current: attempt as usize,
+                    total: INDEX_MAX_RETRIES as usize,
+                    message: format!(
+                        "Retrying indexing (attempt {}/{})...",
+                        attempt, INDEX_MAX_RETRIES
+                    ),
+                },
+            );
+            // Exponential backoff with jitter
+            let jitter = (rand::random::<f64>() * 0.1 * backoff_ms as f64) as u64;
+            tokio::time::sleep(std::time::Duration::from_millis(backoff_ms + jitter)).await;
+            backoff_ms = std::cmp::min(backoff_ms * 2, 30000);
+        }
+
+        let result = indexing::index_project(
+            req.state.inner().clone(),
+            IndexOptions {
+                project_id: &req.project_id,
+                project_path: &project_path,
+                embedding_model: &embedding_model,
+                base_url: req.base_url.as_deref().unwrap_or("http://localhost:11434"),
+                ignore_patterns: &ignore_patterns,
+                force: req.force.unwrap_or(false),
+            },
+            cancel_token.clone(),
+            req.app_handle.clone(),
+        )
+        .await;
+
+        match result {
+            Ok(()) => {
+                crate::shared::RAG_INDEX_ABORT_HANDLES.remove(&req.project_id);
+                if attempt > 0 {
+                    tracing::info!(
+                        "Indexing succeeded after {} retry(ies) for project_id: {}",
+                        attempt,
+                        req.project_id
+                    );
+                }
+                return Ok(ApiResponse {
+                    success: true,
+                    data: Some(true),
+                    error: None,
+                });
+            }
+            Err(e) => {
+                last_error = e.clone();
+                if !is_transient_index_error(&e) {
+                    tracing::error!(
+                        "Indexing failed with non-retryable error for project_id {}: {}",
+                        req.project_id,
+                        e
+                    );
+                    break;
+                }
+                if attempt == INDEX_MAX_RETRIES {
+                    tracing::error!(
+                        "Indexing failed after {} retries for project_id {}: {}",
+                        INDEX_MAX_RETRIES,
+                        req.project_id,
+                        e
+                    );
+                    break;
+                }
+                tracing::warn!(
+                    "Indexing attempt {} failed for project_id {}: {}",
+                    attempt + 1,
+                    req.project_id,
+                    e
+                );
+            }
         }
     }
+
+    crate::shared::RAG_INDEX_ABORT_HANDLES.remove(&req.project_id);
+    let _ = req.app_handle.emit(
+        crate::shared::EVENT_RAG_INDEX_ERROR,
+        &BackendError::new("RAG_INDEX_ERROR", last_error.clone()),
+    );
+    Ok(ApiResponse {
+        success: false,
+        data: None,
+        error: Some(BackendError::new("RAG_INDEX_ERROR", last_error)),
+    })
 }
 
 pub async fn search<'a>(req: SearchRequest<'a>) -> Result<ApiResponse<Vec<SearchResult>>, String> {

@@ -7,7 +7,7 @@ import type { RagProject, IndexProgress, SearchResult } from '@musaed/contracts'
 import { createTauriStorage } from '@/lib/tauri-storage';
 import { useUIStore } from '@/store/ui-store';
 
-const RAG_STORE_VERSION = 1;
+const RAG_STORE_VERSION = 3;
 
 export interface RagState {
   projects: Record<string, RagProject>;
@@ -77,7 +77,13 @@ export const useRagStore = createWithEqualityFn<RagState>()(
           return {
             projects: {
               ...state.projects,
-              [projectId]: { ...existing, ...updates },
+              [projectId]: {
+                ...existing,
+                ...updates,
+                // Preserve retry state unless explicitly updated
+                retryAttempts: updates.retryAttempts ?? existing.retryAttempts,
+                lastError: updates.lastError ?? existing.lastError,
+              },
             },
           };
         }),
@@ -88,6 +94,21 @@ export const useRagStore = createWithEqualityFn<RagState>()(
         set((state: RagState) => {
           const existing = state.projects[projectId];
           if (!existing) return state;
+
+          // Reset retryAttempts when starting a new indexing operation
+          const retryAttempts =
+            progress?.phase === 'discoveringFiles' && progress.current > 0 && progress.total === 3
+              ? progress.current // This indicates a retry attempt
+              : progress?.phase === 'discoveringFiles'
+                ? 0 // New indexing operation
+                : (existing.retryAttempts ?? 0);
+
+          // Capture last error when phase is failed
+          const lastError =
+            progress?.phase === 'failed' && progress.message
+              ? progress.message
+              : (existing.lastError ?? null);
+
           return {
             projects: {
               ...state.projects,
@@ -100,6 +121,8 @@ export const useRagStore = createWithEqualityFn<RagState>()(
                       ? 'error'
                       : 'indexing'
                   : existing.status,
+                retryAttempts,
+                lastError,
               },
             },
           };

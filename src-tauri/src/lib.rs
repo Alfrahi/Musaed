@@ -135,6 +135,7 @@ pub fn run() {
             rag::commands::cmd_rag_abort_index,
             rag::commands::cmd_rag_index_project,
             rag::commands::cmd_rag_reindex_project,
+            rag::commands::cmd_rag_retry_index_project,
             rag::commands::cmd_rag_get_index_status,
             rag::commands::cmd_rag_search,
             rag::commands::cmd_rag_get_file_chunks,

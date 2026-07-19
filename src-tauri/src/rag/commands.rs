@@ -122,6 +122,25 @@ pub async fn cmd_rag_reindex_project<R: Runtime>(
 }
 
 #[tauri::command]
+pub async fn cmd_rag_retry_index_project<R: Runtime>(
+    window: tauri::Window<R>,
+    project_id: String,
+    base_url: Option<String>,
+    state: State<'_, Arc<Mutex<RagStore>>>,
+    app_handle: AppHandle,
+) -> Result<ApiResponse<bool>, String> {
+    let req = IndexRequest {
+        window,
+        project_id,
+        force: Some(false), // Don't force reindex, just retry the failed operation
+        base_url,
+        state,
+        app_handle,
+    };
+    start_indexing(req).await
+}
+
+#[tauri::command]
 pub async fn cmd_rag_get_index_status(
     project_id: String,
 ) -> Result<ApiResponse<IndexStatus>, String> {

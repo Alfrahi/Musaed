@@ -175,9 +175,19 @@
       "completed": "Complete",
       "failed": "Failed"
     },
+    "retryMessages": {
+      "retryAttempt": "Retry attempt {attempt} of {max}",
+      "retryingIn": "Retrying in {seconds} seconds...",
+      "lastError": "Last error: {error}",
+      "maxRetriesReached": "Max retries reached. Last error: {error}",
+      "retryFailed": "Retry failed",
+      "retryNow": "Retry now"
+    },
     "indexProject": "Index project",
     "reindexProject": "Re-index project",
+    "retryIndexing": "Retry indexing",
     "cancelIndexing": "Cancel indexing",
+    "retryingIn": "Retrying in {seconds}s",
     "removeProject": "Remove project",
     "projectSettings": "Project Settings",
     "projectUpdated": "Project updated",
@@ -192,7 +202,8 @@
     "deactivateRag": "Deactivate RAG context",
     "defaultEmbeddingModel": "{model} (default)",
     "indexing": "Indexing",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "retry": "Retry"
   },
   "library": {
     "title": "Library",

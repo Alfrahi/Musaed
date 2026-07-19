@@ -13,7 +13,8 @@ import { useTranslation } from '@/lib/i18n';
 
 export const ProjectList = ({ hideHeaderAction = false }: { hideHeaderAction?: boolean }) => {
   const { projects, projectIds, removeProjectById } = useRagProjectsHook();
-  const { startIndexing, abortIndexing, startIndexEventListeners } = useRagIndexing();
+  const { startIndexing, abortIndexing, retryIndexing, startIndexEventListeners } =
+    useRagIndexing();
   const activeProjectId = useActiveRagProjectId();
   const setActiveProjectId = useSetActiveRagProjectId();
   const language = useSettingsStore((s) => s.globalSettings.language);
@@ -32,6 +33,10 @@ export const ProjectList = ({ hideHeaderAction = false }: { hideHeaderAction?: b
 
   const handleReindex = (projectId: string) => {
     startIndexing(projectId, true);
+  };
+
+  const handleRetry = (projectId: string) => {
+    retryIndexing(projectId);
   };
 
   const handleRemove = async (projectId: string) => {
@@ -76,6 +81,7 @@ export const ProjectList = ({ hideHeaderAction = false }: { hideHeaderAction?: b
                   onSelect={() => setActiveProjectId(activeProjectId === id ? null : id)}
                   onIndex={() => handleIndex(id)}
                   onReindex={() => handleReindex(id)}
+                  onRetry={() => handleRetry(id)}
                   onAbort={() => abortIndexing(id)}
                   onRemove={() => handleRemove(id)}
                 />

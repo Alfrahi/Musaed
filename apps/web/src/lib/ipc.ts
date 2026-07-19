@@ -145,6 +145,7 @@ export interface CommandMap {
   };
   cmd_rag_abort_index: { args: { projectId: string }; return: boolean };
   cmd_rag_reindex_project: { args: { projectId: string; baseUrl?: string }; return: boolean };
+  cmd_rag_retry_index_project: { args: { projectId: string; baseUrl?: string }; return: boolean };
   cmd_rag_get_index_status: { args: { projectId: string }; return: IndexStatus };
   cmd_rag_search: {
     args: { projectId: string; query: string; topK?: number; threshold?: number; baseUrl?: string };
@@ -280,6 +281,10 @@ const CommandInputSchemas: {
     projectId: z.string().min(1),
     baseUrl: z.string().optional(),
   }),
+  cmd_rag_retry_index_project: z.object({
+    projectId: z.string().min(1),
+    baseUrl: z.string().optional(),
+  }),
   cmd_rag_get_index_status: z.object({ projectId: z.string().min(1) }),
   cmd_rag_search: z.object({
     projectId: z.string().min(1),
@@ -389,6 +394,7 @@ const CommandReturnSchemas: {
   cmd_rag_index_project: z.boolean(),
   cmd_rag_abort_index: z.boolean(),
   cmd_rag_reindex_project: z.boolean(),
+  cmd_rag_retry_index_project: z.boolean(),
   cmd_rag_get_index_status: IndexStatusSchema,
   cmd_rag_search: z.array(SearchResultSchema),
   cmd_rag_get_file_chunks: z.array(ChunkRecordSchema),
@@ -782,6 +788,14 @@ export const ragApi = {
    */
   reindexProject: (projectId: string, baseUrl?: string) =>
     callInternal('cmd_rag_reindex_project', { projectId, baseUrl }),
+  /**
+   * Retries a failed indexing operation for a project.
+   * @param projectId - The project identifier
+   * @param baseUrl - Optional Ollama base URL (uses default if omitted)
+   * @returns true if retry started successfully, false otherwise
+   */
+  retryIndexProject: (projectId: string, baseUrl?: string) =>
+    callInternal('cmd_rag_retry_index_project', { projectId, baseUrl }),
   /**
    * Gets the current indexing status for a project.
    * @param projectId - The project identifier
