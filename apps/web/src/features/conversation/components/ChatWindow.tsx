@@ -15,6 +15,7 @@ import {
 import { useMessageStore } from '@/features/conversation/store/message-store';
 import type { StreamingState } from '@/features/conversation/store/streaming-store';
 import { useSettingsStore } from '@/features/settings';
+import { ErrorFallback } from '@/components/ui';
 import MessageBubble from './MessageBubble';
 import ChatWindowSkeleton from './ChatWindowSkeleton';
 import EmptyState from './EmptyState';
@@ -114,6 +115,10 @@ const ChatWindow = () => {
     }
   }, [messages.length]);
 
+  // Detect if the last message contains an error
+  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+  const hasError = lastMessage?.role === 'assistant' && lastMessage.content?.includes('[Error:');
+
   if (!isHydrated) return <ChatWindowSkeleton />;
   if (!currentConversation) return <EmptyState />;
 
@@ -134,6 +139,19 @@ const ChatWindow = () => {
       />
       {showScrollButton && messages.length > 0 && (
         <ScrollButton onClick={scrollToBottom} label={t('common.done')} />
+      )}
+      {hasError && (
+        <div className="absolute inset-x-0 bottom-0 border-t border-zinc-200 bg-white/95 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-950/95">
+          <ErrorFallback
+            type="ollama"
+            compact
+            className="flex-row py-3"
+            onRetry={() => {
+              // Clear error message and let user retry - the UI store error state will be cleared
+              useUIStore.getState().setErrorMessage(null);
+            }}
+          />
+        </div>
       )}
     </div>
   );

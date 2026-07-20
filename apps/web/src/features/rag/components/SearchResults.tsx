@@ -1,8 +1,15 @@
 'use client';
 
 import { FileText, Code, FileCode, File } from 'lucide-react';
-import { useRagSearchResults } from '@/features/rag/store/rag-store';
+import {
+  useRagSearchResults,
+  useRagSearchError,
+  useIsRagSearching,
+} from '@/features/rag/store/rag-store';
 import { useSettingsStore } from '@/features/settings';
+import { useRagSearch } from '@/features/rag/hooks/useRagSearch';
+import { useActiveRagProjectId } from '@/features/rag/store/rag-store';
+import { ErrorFallback, Skeleton } from '@/components/ui';
 import { useTranslation } from '@/lib/i18n';
 import type { SearchResult } from '@musaed/contracts';
 
@@ -25,8 +32,41 @@ const chunkTypeIcon = ({ type }: ChunkIconProps) => {
 
 export const SearchResults = () => {
   const results = useRagSearchResults();
+  const searchError = useRagSearchError();
+  const isSearching = useIsRagSearching();
   const globalSettings = useSettingsStore((s) => s.globalSettings);
   const { t } = useTranslation(globalSettings.language);
+  const { search } = useRagSearch();
+  const activeProjectId = useActiveRagProjectId();
+
+  if (isSearching) {
+    return (
+      <div className="space-y-2" data-testid="search-results-loading">
+        <Skeleton className="h-4 w-32" />
+        <div className="space-y-1.5">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (searchError) {
+    return (
+      <div className="space-y-2" data-testid="search-results-error">
+        <ErrorFallback
+          type="ollama"
+          compact
+          description={searchError}
+          onRetry={() => {
+            if (activeProjectId) {
+              search({ projectId: activeProjectId, query: '' });
+            }
+          }}
+        />
+      </div>
+    );
+  }
 
   if (results.length === 0) return null;
 

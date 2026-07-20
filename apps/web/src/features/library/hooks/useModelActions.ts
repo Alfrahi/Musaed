@@ -15,6 +15,7 @@ import { useTranslation } from '@/lib/i18n';
 export function useModelActions() {
   const setModels = useModelStore((s) => s.setModels);
   const setSelectedModel = useModelStore((s) => s.setSelectedModel);
+  const setFetchError = useModelStore((s) => s.setFetchError);
   const language = useSettingsStore((s) => s.globalSettings.language);
   const setErrorMessage = useUIStore((s) => s.setErrorMessage);
   const setOllamaConnected = useUIStore((s) => s.setOllamaConnected);
@@ -34,6 +35,7 @@ export function useModelActions() {
         if (data !== null) {
           setOllamaConnected(true);
           setModels(data);
+          setFetchError(null);
 
           const { selectedModel: currentSelected } = useModelStore.getState();
           if (!currentSelected && data.length > 0) setSelectedModel(data[0].name);
@@ -42,17 +44,21 @@ export function useModelActions() {
           if (isManual) toast.success(t('library.status.success'), { id: 'fetch-models' });
         } else {
           setOllamaConnected(false);
-          setErrorMessage('error.failedToFetchModels');
-          if (isManual) toast.error(t('error.failedToFetchModels'), { id: 'fetch-models' });
+          const errorMsg = t('error.failedToFetchModels');
+          setFetchError(errorMsg);
+          setErrorMessage(errorMsg);
+          if (isManual) toast.error(errorMsg, { id: 'fetch-models' });
         }
       } catch (err) {
         setOllamaConnected(false);
-        logger.error('Exception during model fetch', { error: err });
-        setErrorMessage('error.failedToFetchModels');
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        logger.error('Exception during model fetch', { error: errorMsg });
+        setFetchError(t('error.failedToFetchModels'));
+        setErrorMessage(t('error.failedToFetchModels'));
         if (isManual) toast.error(t('error.failedToFetchModels'), { id: 'fetch-models' });
       }
     },
-    [setModels, setSelectedModel, setErrorMessage, setOllamaConnected, t]
+    [setModels, setSelectedModel, setFetchError, setErrorMessage, setOllamaConnected, t]
   );
 
   /**

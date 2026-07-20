@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
 import { useUIStore } from '@/store/ui-store';
-import { useModelStore } from '@/features/settings';
+import { useModelStore, useModelFetchError } from '@/features/settings/store/model-store';
 import { useSettingsStore } from '@/features/settings';
 import { useTranslation } from '@/lib/i18n';
 import ModelCard from './ModelCard';
@@ -12,6 +12,7 @@ import LibrarySearchHeader from './LibrarySearchHeader';
 import { useModelPulling } from '@/features/library/hooks/useModelPulling';
 import { useModelActions } from '@/features/library/hooks/useModelActions';
 import { dialog } from '@/lib/ipc';
+import { ErrorFallback } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { ModalLayout } from '@/components/ui';
 import type { Language } from '@musaed/contracts';
@@ -154,6 +155,7 @@ const LibraryFooter = ({
 const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
   const models = useModelStore((s) => s.models);
   const pullStatus = useModelStore((s) => s.pullStatus);
+  const fetchError = useModelFetchError();
   const isOllamaConnected = useUIStore((s) => s.isOllamaConnected);
   const language = useSettingsStore((s) => s.globalSettings.language);
   const { fetchModels, deleteModel } = useModelActions();
@@ -215,7 +217,15 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
       {!isOllamaConnected && <ConnectionWarning message={t('chat.connectionFailed')} />}
 
       <div className="flex-1 overflow-hidden bg-white dark:bg-zinc-950/20">
-        {activeTab === 'featured' ? (
+        {fetchError && !isOllamaConnected ? (
+          <div className="flex h-full items-center justify-center">
+            <ErrorFallback
+              type="ollama"
+              description={fetchError}
+              onRetry={() => fetchModels(true)}
+            />
+          </div>
+        ) : activeTab === 'featured' ? (
           <FeaturedGrid
             models={models}
             filteredFeatured={filteredFeatured}

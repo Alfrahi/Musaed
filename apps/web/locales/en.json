@@ -318,5 +318,36 @@
       "title": "Powered by Ollama",
       "description": "Uses Ollama as the local engine for high-speed LLM inference on your hardware."
     }
+  },
+  "fallback": {
+    "retry": "Retry",
+    "general": {
+      "title": "Something went wrong",
+      "description": "An unexpected error occurred. Please try again."
+    },
+    "network": {
+      "title": "Connection lost",
+      "description": "Unable to reach the server. Please check your connection."
+    },
+    "ollama": {
+      "title": "Ollama unavailable",
+      "description": "Could not connect to Ollama. Please ensure it is running."
+    },
+    "notFound": {
+      "title": "Not found",
+      "description": "The requested resource could not be found."
+    },
+    "forbidden": {
+      "title": "Access denied",
+      "description": "You don't have permission to access this resource."
+    },
+    "chat": {
+      "title": "Failed to send message",
+      "description": "Could not complete your request. Please try again."
+    },
+    "rag": {
+      "title": "Search failed",
+      "description": "Could not complete the search. Please try again."
+    }
   }
 }

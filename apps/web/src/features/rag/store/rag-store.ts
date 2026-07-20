@@ -16,6 +16,7 @@ export interface RagState {
   activeProjectId: string | null;
   searchResults: SearchResult[];
   isSearching: boolean;
+  searchError: string | null;
 
   // Actions
   setProjects: (projects: RagProject[]) => void;
@@ -26,6 +27,7 @@ export interface RagState {
   setIndexProgress: (projectId: string, progress: IndexProgress | null) => void;
   setSearchResults: (results: SearchResult[]) => void;
   setIsSearching: (isSearching: boolean) => void;
+  setSearchError: (error: string | null) => void;
   /** Resync projectIds from project keys — guards against partialize desync. */
   normalize: () => void;
   reset: () => void;
@@ -37,6 +39,7 @@ const initialState = {
   activeProjectId: null as string | null,
   searchResults: [] as SearchResult[],
   isSearching: false,
+  searchError: null as string | null,
 };
 
 export const useRagStore = createWithEqualityFn<RagState>()(
@@ -133,6 +136,8 @@ export const useRagStore = createWithEqualityFn<RagState>()(
 
       setIsSearching: (isSearching: boolean) => set({ isSearching }),
 
+      setSearchError: (error: string | null) => set({ searchError: error }),
+
       normalize: () =>
         set((state: RagState) => {
           const validIds = state.projectIds.filter((id) => id in state.projects);
@@ -212,5 +217,8 @@ export const useActiveRagProject = () => {
 };
 export const useRagSearchResults = () => useRagStore((state) => state.searchResults);
 export const useSetRagSearchResults = () => useRagStore((state) => state.setSearchResults);
+export const useIsRagSearching = () => useRagStore((state) => state.isSearching);
 export const useSetIsRagSearching = () => useRagStore((state) => state.setIsSearching);
+export const useRagSearchError = () => useRagStore((state) => state.searchError);
+export const useSetRagSearchError = () => useRagStore((state) => state.setSearchError);
 export const useSetRagIndexProgress = () => useRagStore((state) => state.setIndexProgress);

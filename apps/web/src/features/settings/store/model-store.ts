@@ -25,9 +25,11 @@ interface ModelState {
   models: OllamaModel[];
   selectedModel: string;
   pullStatus: Record<string, PullStatus>; // modelName -> status
+  fetchError: string | null;
   setModels: (models: OllamaModel[]) => void;
   setSelectedModel: (selectedModel: string) => void;
   updatePullStatus: (name: string, status: PullStatus | null) => void;
+  setFetchError: (error: string | null) => void;
 }
 
 // Selectors for the model store
@@ -46,6 +48,7 @@ export const useModelStore = createWithEqualityFn<ModelState>()(
       models: [],
       selectedModel: DEFAULT_MODEL_STATE.selectedModel,
       pullStatus: {},
+      fetchError: null,
       setModels: (models) => set({ models }),
       setSelectedModel: (selectedModel) => set({ selectedModel }),
       updatePullStatus: (name, status) =>
@@ -58,6 +61,7 @@ export const useModelStore = createWithEqualityFn<ModelState>()(
           }
           return { pullStatus: next };
         }),
+      setFetchError: (error) => set({ fetchError: error }),
     }),
     {
       name: 'musaed-model-storage',
@@ -103,3 +107,5 @@ export const useModelStore = createWithEqualityFn<ModelState>()(
 // Selector hooks for external access (e.g., settings feature)
 export const useModels = () => useModelStore((state) => state.models);
 export const useSelectedModel = () => useModelStore((state) => state.selectedModel);
+export const useModelFetchError = () => useModelStore((state) => state.fetchError);
+export const useSetModelFetchError = () => useModelStore((state) => state.setFetchError);
