@@ -110,6 +110,26 @@
     "maxTokens": "Max Tokens",
     "systemDiagnostics": "System Diagnostics",
     "viewLogs": "View Logs",
+    "ipcLatency": {
+      "title": "IPC Latency",
+      "description": "Per-command latency budgets enforced by the IPC bridge.",
+      "totalCalls": "Total calls: {count}",
+      "violations": "Violations: {count}",
+      "violationsBadge": "{count} violations",
+      "clear": "Clear counters",
+      "budgetMs": "Budget: {ms} ms",
+      "category": "Category: {category}",
+      "noViolations": "All IPC calls within budget.",
+      "latencyMs": "{ms} ms",
+      "overage": "+{pct}% over budget",
+      "tableHeaders": {
+        "command": "Command",
+        "category": "Category",
+        "latency": "Latency",
+        "budget": "Budget",
+        "status": "Status"
+      }
+    },
     "resetPreferences": "Reset Preferences",
     "confirmReset": "Are you sure you want to reset all settings to default? This will not delete your chat history.",
     "enterToSend": "Enter to Send",

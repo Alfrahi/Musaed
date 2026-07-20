@@ -33,6 +33,26 @@ export default {
     'cmd_rag_set_embedding_model',
     'cmd_rag_validate_embedding_model',
   ],
+  /**
+   * Performance-sensitive IPC endpoints owned by this feature. The actual
+   * thresholds (ms) live in `@musaed/contracts` (`IPC_LATENCY_BUDGETS`).
+   *
+   * @see STANDARDS.md §15 Performance Rules — IPC latency budgets per feature
+   */
+  latencyProfiles: {
+    interactive: [
+      'cmd_rag_list_projects',
+      'cmd_rag_get_project',
+      'cmd_rag_get_index_status',
+      'cmd_rag_get_project_stats',
+    ],
+    heavy: [
+      'cmd_rag_index_project',
+      'cmd_rag_reindex_project',
+      'cmd_rag_search',
+      'cmd_rag_assemble_context',
+    ],
+  },
   stateSchemas: {
     ragStore: 1,
   },

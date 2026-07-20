@@ -41,6 +41,9 @@ import {
   type TraceEntry,
   type TraceContext,
   type TraceStatus,
+  IPC_LATENCY_BUDGETS,
+  type IpcCallStat,
+  type IpcStats,
 } from '@musaed/contracts';
 import type {
   RagProject,
@@ -52,6 +55,43 @@ import type {
   AssembledContext,
 } from '@musaed/contracts';
 import toast from 'react-hot-toast';
+
+/**
+ * Re-export of the latency budgets from `@musaed/contracts`.
+ *
+ * The single source of truth lives in `packages/contracts/src/latency.ts` so
+ * that command-enum consumers (e.g., feature manifests, diagnostics UI, CI
+ * budget checks) can read the same map.
+ *
+ * @see STANDARDS.md §15 Performance Rules — IPC latency budgets per feature
+ */
+export { IPC_LATENCY_BUDGETS };
+export type { IpcCallStat, IpcStats };
+
+export type { IpcStats as LatencyStats };
+
+/**
+ * Aggregated IPC performance statistics for monitoring and CI enforcement.
+ * Exposed globally so tests and observability tooling can assert on budget compliance.
+ *
+ * @example
+ * // In a test after performing IPC calls:
+ * expect(ipcStats.violationCount).toBe(0);
+ * // Or check specific commands:
+ * const violations = ipcStats.calls.filter(c => c.status === 'violation');
+ * expect(violations).toHaveLength(0);
+ */
+export const ipcStats: IpcStats = {
+  /** Total IPC calls made */
+  callCount: 0,
+
+  /** Total IPC calls that exceeded their latency budget */
+  violationCount: 0,
+
+  /** Per-call records: command → { latencyMs, budgetMs, status }.
+   *  Useful for debugging and per-command analytics. */
+  calls: [],
+};
 
 /**
  * IPC Bridge — Strict Contract Architecture
@@ -510,25 +550,32 @@ async function callInternal<K extends keyof CommandMap>(
 
   if (!checkIsTauri()) return null;
 
+  const budgetMs = IPC_LATENCY_BUDGETS[command] ?? 0;
+  const callStart = performance.now();
+
   try {
     const { invoke: tauriInvoke } = await import('@tauri-apps/api/core');
     const response = await tauriInvoke<ApiResponse<CommandMap[K]['return']>>(command, args);
 
     const schema = CommandReturnSchemas[command];
+    const latencyMs = Math.round(performance.now() - callStart);
 
     if (response?.success) {
-      if (!schema) return response.data ?? true;
+      if (!schema) {
+        recordIpcLatency(command, latencyMs, budgetMs);
+        return response.data ?? true;
+      }
       const result = schema.safeParse(response.data);
       if (!result.success) {
-        // Prevent raw Zod errors from leaking
         console.error(`[IPC] Response validation failed for "${command}"`, result.error.issues);
         throw new Error('Invalid response from backend');
       }
+      recordIpcLatency(command, latencyMs, budgetMs);
       return result.data;
     }
 
     if (response?.error) {
-      // Sanitize the backend error before displaying to UI and return null to indicate failure
+      recordIpcLatency(command, latencyMs, budgetMs);
       const sanitized = sanitizeError(response.error);
       if (!options?.quiet) {
         toast.error(sanitized.message);
@@ -537,10 +584,65 @@ async function callInternal<K extends keyof CommandMap>(
     }
     throw new Error('Unknown error occurred during IPC call');
   } catch (err) {
-    // Ensure no raw errors escape - always sanitize
+    const latencyMs = Math.round(performance.now() - callStart);
+    recordIpcLatency(command, latencyMs, budgetMs);
     const sanitized = sanitizeError(err);
     throw new Error(sanitized.message);
   }
+}
+
+/**
+ * Records IPC call latency and checks against budget thresholds.
+ * Violations are reported as structured WARN entries via logApi.
+ * All calls are recorded in ipcStats for monitoring and CI enforcement.
+ */
+function recordIpcLatency(command: string, latencyMs: number, budgetMs: number): void {
+  ipcStats.callCount++;
+
+  const status = budgetMs > 0 && latencyMs > budgetMs ? 'violation' : 'ok';
+  ipcStats.calls.push({ command, latencyMs, budgetMs, status });
+
+  if (status === 'violation') {
+    ipcStats.violationCount++;
+    const overagePct = Math.round(((latencyMs - budgetMs) / budgetMs) * 100);
+    const violationEntry = JSON.stringify({
+      timestamp: new Date().toISOString(),
+      level: 'WARN',
+      source: 'ipc-latency',
+      message: `[IPC LATENCY VIOLATION] "${command}" exceeded budget by ${overagePct}%`,
+      detail: { command, latencyMs, budgetMs, overagePct },
+    });
+    if (typeof window !== 'undefined') {
+      logApi.append(violationEntry).catch(() => {});
+    } else {
+      console.warn(
+        `[IPC LATENCY VIOLATION] "${command}" took ${latencyMs}ms (budget: ${budgetMs}ms)`
+      );
+    }
+  }
+}
+
+/**
+ * Returns a deep copy snapshot of the current IPC stats. Useful for
+ * long-lived subscribers (e.g. Diagnostics UI) that want to re-render
+ * without mutating the live counters.
+ */
+export function snapshotIpcStats(): IpcStats {
+  return {
+    callCount: ipcStats.callCount,
+    violationCount: ipcStats.violationCount,
+    calls: [...ipcStats.calls],
+  };
+}
+
+/**
+ * Resets all IPC perf counters. Intended for tests and for the
+ * Diagnostics UI's "clear counters" affordance.
+ */
+export function resetIpcStats(): void {
+  ipcStats.callCount = 0;
+  ipcStats.violationCount = 0;
+  ipcStats.calls.length = 0;
 }
 
 /**
@@ -659,7 +761,7 @@ export const logApi = {
 
 /**
  * Structured Tracing API - propagates trace context across IPC boundaries.
- * Implements the observability model from QWEN.md §14.
+ * Implements the observability model from STANDARDS.md §14.
  */
 export const traceApi = {
   /**

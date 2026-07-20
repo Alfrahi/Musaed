@@ -110,6 +110,26 @@
     "maxTokens": "أقصى عدد للرموز",
     "systemDiagnostics": "تشخيص النظام",
     "viewLogs": "عرض السجلات",
+    "ipcLatency": {
+      "title": "زمن استجابة IPC",
+      "description": "حدود زمن الاستجابة لكل أمر تُفرض بواسطة جسر IPC.",
+      "totalCalls": "إجمالي الاستدعاءات: {count}",
+      "violations": "الانتهاكات: {count}",
+      "violationsBadge": "{count} انتهاكات",
+      "clear": "مسح العدادات",
+      "budgetMs": "الحد: {ms} مللي ثانية",
+      "category": "الفئة: {category}",
+      "noViolations": "جميع استدعاءات IPC ضمن الحد المسموح.",
+      "latencyMs": "{ms} مللي ثانية",
+      "overage": "+{pct}% فوق الحد",
+      "tableHeaders": {
+        "command": "الأمر",
+        "category": "الفئة",
+        "latency": "زمن الاستجابة",
+        "budget": "الحد",
+        "status": "الحالة"
+      }
+    },
     "resetPreferences": "إعادة تعيين التفضيلات",
     "confirmReset": "هل أنت متأكد أن تريد إعادة تعيين جميع الإعدادات إلى الافتراضي؟ لن يتم حذف سجل المحادثات.",
     "enterToSend": "إظغط Enter للإرسال",

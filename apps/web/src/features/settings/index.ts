@@ -1,5 +1,6 @@
 export { useSettingsActions } from './hooks/useSettingsActions';
 export { useLogActions } from './hooks/useLogActions';
+export { useIpcLatencyStats } from './hooks/useIpcLatency';
 export * from './store/settings-store';
 export * from './store/model-store';
 export { useStorageActions } from './hooks/useStorageActions';
