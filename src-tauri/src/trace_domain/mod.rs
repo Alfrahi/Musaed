@@ -2,7 +2,7 @@
 //!
 //! This module provides production-grade structured logging with trace context
 //! propagation across IPC boundaries. It implements the observability model
-//! defined in QWEN.md §14.
+//! defined in STANDARDS.md §14.
 //!
 //! ## Architecture
 //!

@@ -25,6 +25,17 @@ export default {
     'cmd_rag_search',
     'cmd_logs_append',
   ],
+  /**
+   * Performance-sensitive IPC endpoints owned by this feature. The actual
+   * thresholds (ms) live in `@musaed/contracts` (`IPC_LATENCY_BUDGETS`).
+   * This section only declares *which* commands this feature cares about.
+   *
+   * @see STANDARDS.md §15 Performance Rules — IPC latency budgets per feature
+   */
+  latencyProfiles: {
+    interactive: ['cmd_ollama_chat', 'cmd_ollama_abort_chat'],
+    background: ['cmd_ollama_generate_title', 'cmd_rag_search'],
+  },
   stateSchemas: {
     conversationStore: 3,
     messageStore: 1,

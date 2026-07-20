@@ -19,6 +19,21 @@ export default {
     'cmd_ollama_verify_service',
     'cmd_ollama_validate_model',
   ],
+  /**
+   * Performance-sensitive IPC endpoints owned by this feature. The actual
+   * thresholds (ms) live in `@musaed/contracts` (`IPC_LATENCY_BUDGETS`).
+   *
+   * @see STANDARDS.md §15 Performance Rules — IPC latency budgets per feature
+   */
+  latencyProfiles: {
+    interactive: [
+      'cmd_ollama_check_health',
+      'cmd_ollama_verify_service',
+      'cmd_ollama_get_models',
+      'cmd_ollama_validate_model',
+    ],
+    background: ['cmd_ollama_pull_model', 'cmd_ollama_delete_model'],
+  },
   stateSchemas: {
     modelStore: 1,
   },

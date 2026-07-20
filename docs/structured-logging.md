@@ -1,6 +1,6 @@
 # Structured Logging System
 
-Production-grade structured logging system with trace context propagation across IPC boundaries. Implements the observability model from QWEN.md §14.
+Production-grade structured logging system with trace context propagation across IPC boundaries. Implements the observability model from STANDARDS.md §14.
 
 ## Architecture
 

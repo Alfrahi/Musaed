@@ -5,6 +5,7 @@ import { Activity } from 'lucide-react';
 import { useLanguage } from '@/features/settings/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 import LogViewer from './LogViewer';
+import IpcLatencyPanel from './IpcLatencyPanel';
 
 const DiagnosticsSettings = () => {
   const [isLogViewerOpen, setIsLogViewerOpen] = useState(false);
@@ -26,6 +27,7 @@ const DiagnosticsSettings = () => {
             {t('settings.viewLogs')}
           </button>
         </div>
+        <IpcLatencyPanel />
       </div>
       <LogViewer isOpen={isLogViewerOpen} onClose={() => setIsLogViewerOpen(false)} />
     </>
