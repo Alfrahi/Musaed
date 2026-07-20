@@ -17,6 +17,7 @@
     "codegen:validation": "node scripts/codegen-validation.mjs",
     "codegen:validation:check": "node scripts/codegen-validation.mjs --check",
     "validate:contracts": "node scripts/validate-contracts.mjs",
+    "test:contracts": "node --test scripts/validate-contracts.test.mjs",
     "prepare": "husky"
   },
   "devDependencies": {
