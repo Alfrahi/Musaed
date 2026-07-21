@@ -3,7 +3,9 @@
  * Defines public API, IPC endpoints, and dependencies.
  */
 
-export default {
+import type { FeatureManifest } from '@musaed/contracts';
+
+const manifest: FeatureManifest = {
   name: 'rag',
   version: '1.0.0',
   publicApi: {
@@ -14,6 +16,7 @@ export default {
       'useRagContext',
       'useRagFileBrowser',
     ],
+    components: [],
     utils: ['fileNameFromPath', 'truncateFilePath', 'getRelativeFilePath'],
   },
   ipcEndpoints: [
@@ -61,3 +64,5 @@ export default {
   },
   dependencies: [],
 } as const;
+
+export default manifest;

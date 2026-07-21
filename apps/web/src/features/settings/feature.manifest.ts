@@ -3,11 +3,20 @@
  * Defines public API, IPC endpoints, and dependencies.
  */
 
-export default {
+import type { FeatureManifest } from '@musaed/contracts';
+
+const manifest: FeatureManifest = {
   name: 'settings',
   version: '1.0.0',
   publicApi: {
-    hooks: ['useSettingsActions', 'useLogActions', 'useStorageActions', 'useStorageCleanup'],
+    hooks: [
+      'useSettingsActions',
+      'useLogActions',
+      'useStorageActions',
+      'useStorageCleanup',
+      'useIpcLatencyStats',
+    ],
+    components: [],
     utils: [],
   },
   ipcEndpoints: [
@@ -46,3 +55,5 @@ export default {
   },
   dependencies: ['library'], // Settings accesses library functionality via lib/useModelActions abstraction
 } as const;
+
+export default manifest;

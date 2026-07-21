@@ -5,7 +5,9 @@
  * composition root that mounts all other features.
  */
 
-export default {
+import type { FeatureManifest } from '@musaed/contracts';
+
+const manifest: FeatureManifest = {
   name: 'layout',
   version: '1.0.0',
   publicApi: {
@@ -22,7 +24,9 @@ export default {
   stateSchemas: {}, // No feature-specific state (uses global stores)
   persistenceSchemas: {}, // No persistent storage
   dependencies: [
-    'chat', // Composition dependency (exempt from import rules)
+    'conversation', // Composition dependency (exempt from import rules)
     'sidebar', // Composition dependency (exempt from import rules)
   ],
 } as const;
+
+export default manifest;
