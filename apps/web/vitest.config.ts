@@ -14,10 +14,6 @@ export default defineConfig({
     setupFiles: ['./src/tests/setup.ts', './vitest.setup.ts'],
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@musaed/contracts/migrations': path.resolve(
-        __dirname,
-        '../../packages/contracts/src/migrations'
-      ),
       '@musaed/contracts': path.resolve(__dirname, '../../packages/contracts/src'),
     },
     coverage: {
