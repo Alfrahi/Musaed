@@ -81,6 +81,10 @@ export const IndexStatusSchema = z.object({
   isIndexing: z.boolean(),
   progress: IndexProgressSchema.nullable(),
 });
+/**
+ * Mirrors Rust `crate::rag::types::RagModelValidation` (src-tauri/src/rag/types.rs).
+ * Returned by `cmd_rag_validate_embedding_model`.
+ */
 export const RagModelValidationSchema = z.object({
   isValid: z.boolean(),
   modelName: z.string(),

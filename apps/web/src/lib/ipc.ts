@@ -4,17 +4,17 @@ import {
   type ApiResponse,
   type OllamaModel,
   type ChatMessage,
-  type ChatSettings,
-  type OllamaHealthIpc,
+  type ChatOptions,
+  type OllamaHealth,
   OllamaModelSchema,
-  OllamaHealthIpcSchema,
+  OllamaHealthSchema,
   type ModelValidation,
   ModelValidationSchema,
   ModelNameSchema,
   RequestIdSchema,
   LanguageSchema,
   IpcChatMessageSchema,
-  IpcChatOptionsSchema,
+  ChatOptionsSchema,
   LogEntrySchema,
   LogClearTokenSchema,
   VALIDATION_LIMITS,
@@ -36,9 +36,9 @@ import {
   type Message,
   ConversationSchema,
   // Structured logging types
-  TraceEntrySchema,
+  TraceEntryInputSchema,
   TraceContextSchema,
-  type TraceEntry,
+  type TraceEntryInput,
   type TraceContext,
   type TraceStatus,
   IPC_LATENCY_BUDGETS,
@@ -113,7 +113,7 @@ export interface CommandMap {
       baseUrl: string;
       model: string;
       messages: ChatMessage[];
-      options: Partial<ChatSettings>;
+      options: ChatOptions;
       requestId: string;
     };
     return: boolean;
@@ -122,7 +122,7 @@ export interface CommandMap {
   cmd_ollama_delete_model: { args: { baseUrl: string; name: string }; return: boolean };
   cmd_ollama_pull_model: { args: { baseUrl: string; name: string }; return: void };
   cmd_ollama_abort_pull: { args: { name: string }; return: void };
-  cmd_ollama_check_health: { args: { baseUrl: string }; return: OllamaHealthIpc };
+  cmd_ollama_check_health: { args: { baseUrl: string }; return: OllamaHealth };
   cmd_ollama_verify_service: { args: { baseUrl: string }; return: string };
   cmd_ollama_generate_title: {
     args: {
@@ -143,7 +143,7 @@ export interface CommandMap {
   cmd_logs_clear: { args: { token: string }; return: void };
 
   // Tracing commands
-  cmd_trace_append: { args: { input: TraceEntry }; return: void };
+  cmd_trace_append: { args: { input: TraceEntryInput }; return: void };
   cmd_trace_start: {
     args: { traceId: string; feature: string; action: string };
     return: TraceContext;
@@ -235,7 +235,7 @@ const CommandInputSchemas: {
     messages: z
       .array(IpcChatMessageSchema)
       .max(VALIDATION_LIMITS.MAX_MESSAGES_COUNT, 'Too many messages'),
-    options: IpcChatOptionsSchema,
+    options: ChatOptionsSchema,
     requestId: RequestIdSchema,
   }),
   cmd_ollama_abort_chat: z.object({ requestId: RequestIdSchema }),
@@ -261,7 +261,7 @@ const CommandInputSchemas: {
   cmd_logs_clear: z.object({ token: LogClearTokenSchema }),
 
   // Tracing command input schemas
-  cmd_trace_append: z.object({ input: TraceEntrySchema }),
+  cmd_trace_append: z.object({ input: TraceEntryInputSchema }),
   cmd_trace_start: z.object({
     traceId: z.string().uuid('Invalid traceId format'),
     feature: z.string().min(1).max(VALIDATION_LIMITS.MAX_FEATURE_NAME_LEN),
@@ -405,7 +405,7 @@ const CommandReturnSchemas: {
   cmd_ollama_delete_model: z.boolean(),
   cmd_ollama_pull_model: voidSchema,
   cmd_ollama_abort_pull: voidSchema,
-  cmd_ollama_check_health: OllamaHealthIpcSchema,
+  cmd_ollama_check_health: OllamaHealthSchema,
   cmd_ollama_verify_service: z.string(),
   cmd_ollama_generate_title: z.string(),
   cmd_ollama_validate_model: ModelValidationSchema,

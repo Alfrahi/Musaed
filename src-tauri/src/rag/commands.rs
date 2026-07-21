@@ -2,7 +2,7 @@ use crate::payloads::ApiResponse;
 use crate::rag::services::*;
 use crate::rag::store::RagStore;
 use crate::rag::types::{
-    AssembledContext, ChunkRecord, IndexStatus, ModelValidation, ProjectStats, RagProject,
+    AssembledContext, ChunkRecord, IndexStatus, ProjectStats, RagModelValidation, RagProject,
     SearchResult,
 };
 use std::sync::Arc;
@@ -215,7 +215,7 @@ pub async fn cmd_rag_validate_embedding_model(
     base_url: Option<String>,
     model_name: String,
     _app_handle: AppHandle,
-) -> Result<ApiResponse<ModelValidation>, String> {
+) -> Result<ApiResponse<RagModelValidation>, String> {
     let req = ValidateEmbeddingModelRequest {
         base_url,
         model_name,

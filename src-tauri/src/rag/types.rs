@@ -159,7 +159,7 @@ pub struct EmbedProgress {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct ModelValidation {
+pub struct RagModelValidation {
     pub is_valid: bool,
     pub model_name: String,
     pub embedding_dimension: Option<usize>,
