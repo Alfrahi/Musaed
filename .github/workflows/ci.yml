@@ -52,8 +52,11 @@ jobs:
       - name: Validation constants sync
         run: pnpm codegen:validation:check
 
-      - name: IPC contract validation
+      - name: IPC contract validation (baseline)
         run: pnpm validate:contracts
+
+      - name: IPC contract validation (strict)
+        run: pnpm validate:contracts --strict
 
       - name: No TODOs/FIXMEs
         run: |
