@@ -18,7 +18,7 @@ import {
   extractVersion,
   extractData,
 } from './orchestrator';
-import { MigrationErrorCode } from '@musaed/contracts/migrations';
+import { MigrationErrorCode } from '@musaed/contracts';
 import {
   settingsMigrations,
   settingsBidirectionalMigrations,
