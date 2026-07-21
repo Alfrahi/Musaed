@@ -20,6 +20,14 @@ pnpm --filter web i18n:check
 echo "🔗 Checking validation constants sync..."
 pnpm codegen:validation:check
 
+# ── 3c. IPC contract validation (baseline) ────────────────
+echo "📜 Checking IPC contract validation (baseline)..."
+pnpm validate:contracts
+
+# ── 3d. IPC contract validation (strict) ──────────────────
+echo "📜 Checking IPC contract validation (strict)..."
+pnpm validate:contracts --strict
+
 # ── 4. No TODOs/FIXMEs in source ──────────────────────────
 echo "📝 Checking for TODOs/FIXMEs..."
 if grep -rE "\bTODO\b|\bFIXME\b|\bHACK\b" apps/web/src --include="*.ts" --include="*.tsx" --exclude-dir={test,tests}; then
