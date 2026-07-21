@@ -29,7 +29,7 @@ export const IpcChatMessageSchema = z.object({
     .optional(),
 });
 
-export const IpcChatOptionsSchema = z.object({
+export const ChatOptionsSchema = z.object({
   temperature: z
     .number()
     .min(VALIDATION_LIMITS.TEMPERATURE_RANGE[0])
@@ -63,6 +63,11 @@ export const IpcChatOptionsSchema = z.object({
     .max(VALIDATION_LIMITS.MAX_STOP_SEQUENCES)
     .optional(),
 });
+export type ChatOptions = z.infer<typeof ChatOptionsSchema>;
+
+// Back-compat alias for callers that imported the historical name.
+export const IpcChatOptionsSchema = ChatOptionsSchema;
+export type IpcChatOptions = ChatOptions;
 
 export const LogEntrySchema = z
   .string()
@@ -109,3 +114,27 @@ export const TraceEntrySchema = z.object({
   context: z.record(z.string(), z.unknown()).optional(),
 });
 export type TraceEntry = z.infer<typeof TraceEntrySchema>;
+
+/**
+ * Input payload for creating a new trace entry (cmd_trace_append).
+ * Mirrors Rust `TraceEntryInput` (src-tauri/src/trace_domain/mod.rs).
+ * Unlike `TraceEntry`, this omits `timestamp`/`spanId` because the backend
+ * assigns those on receipt.
+ */
+export const TraceEntryInputSchema = z.object({
+  traceId: z.string().uuid('Invalid traceId format'),
+  spanId: z.string().uuid('Invalid spanId format').optional(),
+  parentSpanId: z.string().uuid('Invalid spanId format').optional(),
+  feature: z
+    .string()
+    .min(1)
+    .max(VALIDATION_LIMITS.MAX_FEATURE_NAME_LEN, 'Feature name exceeds limit'),
+  action: z.string().min(1).max(VALIDATION_LIMITS.MAX_ACTION_NAME_LEN, 'Action name exceeds limit'),
+  level: LogLevelSchema,
+  status: TraceStatusSchema.optional(),
+  latencyMs: z.number().int().min(0).optional(),
+  message: z.string().max(VALIDATION_LIMITS.MAX_TRACE_MESSAGE_LEN, 'Message exceeds size limit'),
+  source: z.enum(['frontend', 'backend', 'ipc']),
+  context: z.record(z.string(), z.unknown()).optional(),
+});
+export type TraceEntryInput = z.infer<typeof TraceEntryInputSchema>;

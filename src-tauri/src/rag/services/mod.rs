@@ -13,7 +13,7 @@ use crate::rag::indexing::{self, IndexOptions};
 use crate::rag::search::RagSearchEngine;
 use crate::rag::store::RagStore;
 use crate::rag::types::{
-    AssembledContext, ChunkRecord, IndexStatus, ModelValidation, ProjectStats, RagProject,
+    AssembledContext, ChunkRecord, IndexStatus, ProjectStats, RagModelValidation, RagProject,
     SearchResult,
 };
 use crate::rag::validation::{
@@ -706,7 +706,7 @@ pub async fn set_embedding_model<'a>(
 
 pub async fn validate_embedding_model(
     req: ValidateEmbeddingModelRequest,
-) -> Result<ApiResponse<ModelValidation>, String> {
+) -> Result<ApiResponse<RagModelValidation>, String> {
     if !crate::validation::is_valid_model_name(&req.model_name) {
         return Ok(rag_validation_error(format!(
             "Invalid model name: {:?}",

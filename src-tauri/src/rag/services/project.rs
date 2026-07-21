@@ -5,7 +5,7 @@
 //! request structs and forward to these functions.
 
 use crate::payloads::{ApiResponse, BackendError};
-use crate::rag::types::{RagProject, IndexStatus, ProjectStats, ModelValidation, AssembledContext};
+use crate::rag::types::{RagProject, IndexStatus, ProjectStats, AssembledContext};
 use crate::rag::validation;
 use crate::shared::RAG_INDEX_ABORT_HANDLES;
 use crate::validation::is_valid_model_name;

@@ -59,8 +59,11 @@ export const ModelValidationSchema = z.object({
   details: OllamaModelDetailsSchema.nullish(),
 });
 
-export const OllamaHealthIpcSchema = z.object({
+export const OllamaHealthSchema = z.object({
   isRunning: z.boolean(),
   version: z.string().nullish(),
   responseTimeMs: z.coerce.number(),
 });
+
+// Back-compat alias for callers that imported the historical name.
+export const OllamaHealthIpcSchema = OllamaHealthSchema;

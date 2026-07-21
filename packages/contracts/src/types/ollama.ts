@@ -7,7 +7,7 @@ import {
   type OllamaTokenSchema,
   type PullProgressSchema,
   type PullErrorSchema,
-  type OllamaHealthIpcSchema,
+  type OllamaHealthSchema,
 } from '../schemas/ollama';
 
 export type OllamaModelDetails = z.infer<typeof OllamaModelDetailsSchema>;
@@ -17,4 +17,4 @@ export type ModelValidation = z.infer<typeof ModelValidationSchema>;
 export type OllamaToken = z.infer<typeof OllamaTokenSchema>;
 export type PullProgress = z.infer<typeof PullProgressSchema>;
 export type PullError = z.infer<typeof PullErrorSchema>;
-export type OllamaHealthIpc = z.infer<typeof OllamaHealthIpcSchema>;
+export type OllamaHealth = z.infer<typeof OllamaHealthSchema>;

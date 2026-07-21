@@ -2,7 +2,7 @@
 //!
 //! Wraps the `/api/embed` endpoint for batched embedding generation.
 
-use crate::rag::types::ModelValidation;
+use crate::rag::types::RagModelValidation;
 use crate::shared::{acquire_global_permit, ollama_endpoint, retry_with_backoff, HTTP_CLIENT};
 use serde::{Deserialize, Serialize};
 use tracing;
@@ -208,15 +208,15 @@ impl OllamaEmbedder {
     }
 
     /// Validate that the model supports embeddings by trying to embed a test string.
-    pub async fn validate(&self) -> Result<ModelValidation, String> {
+    pub async fn validate(&self) -> Result<RagModelValidation, String> {
         match self.embed_query("validation test").await {
-            Ok(embedding) => Ok(ModelValidation {
+            Ok(embedding) => Ok(RagModelValidation {
                 is_valid: true,
                 model_name: self.model.clone(),
                 embedding_dimension: Some(embedding.len()),
                 error: None,
             }),
-            Err(e) => Ok(ModelValidation {
+            Err(e) => Ok(RagModelValidation {
                 is_valid: false,
                 model_name: self.model.clone(),
                 embedding_dimension: None,
@@ -240,7 +240,7 @@ mod tests {
 
     #[test]
     fn test_model_validation_serialization() {
-        let validation = ModelValidation {
+        let validation = RagModelValidation {
             is_valid: true,
             model_name: "nomic-embed-text-v2-moe".to_string(),
             embedding_dimension: Some(768),
