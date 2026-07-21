@@ -7,6 +7,7 @@ export * from './errors';
 export * from './constants';
 export * from './command-versions';
 export * from './latency';
+export * from './migrations';
 export type * from './manifest';
 export type * from './types/ollama';
 export type * from './types/chat';
