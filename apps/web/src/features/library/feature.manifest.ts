@@ -3,12 +3,14 @@
  * Defines public API, IPC endpoints, and dependencies.
  */
 
-export default {
+import type { FeatureManifest } from '@musaed/contracts';
+
+const manifest: FeatureManifest = {
   name: 'library',
   version: '1.0.0',
   publicApi: {
     components: ['ModelLibrary', 'ModelCard', 'ModelSelector'],
-    hooks: ['useModelPulling', 'useModelActions'],
+    hooks: ['useModelPulling', 'useModelActions', 'useModelCapabilities'],
     utils: [],
   },
   ipcEndpoints: [
@@ -42,3 +44,5 @@ export default {
   },
   dependencies: [],
 } as const;
+
+export default manifest;

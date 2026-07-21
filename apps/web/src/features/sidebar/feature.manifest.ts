@@ -1,9 +1,16 @@
 /**
  * Sidebar Feature Manifest
  * Defines public API, IPC endpoints, and dependencies.
+ *
+ * Coordination layer usage (documented, not part of the typed contract):
+ *   useCurrentConversationId, useSetCurrentConversationId, useSearchQuery,
+ *   useFilteredConversations, useConversationActions, useMessageStore,
+ *   ConversationMetadata
  */
 
-export default {
+import type { FeatureManifest } from '@musaed/contracts';
+
+const manifest: FeatureManifest = {
   name: 'sidebar',
   version: '1.0.0',
   publicApi: {
@@ -28,13 +35,6 @@ export default {
     messages: 'musaed-message-storage-v1',
   },
   dependencies: [], // No direct feature imports - uses coordination layer for conversation state
-  coordinationLayerUsage: [
-    'useCurrentConversationId',
-    'useSetCurrentConversationId',
-    'useSearchQuery',
-    'useFilteredConversations',
-    'useConversationActions',
-    'useMessageStore',
-    'ConversationMetadata',
-  ],
 } as const;
+
+export default manifest;

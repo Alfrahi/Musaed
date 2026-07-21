@@ -4,7 +4,9 @@
  * This is a UI-only feature with no state management or business logic.
  */
 
-export default {
+import type { FeatureManifest } from '@musaed/contracts';
+
+const manifest: FeatureManifest = {
   name: 'info',
   version: '1.0.0',
   publicApi: {
@@ -17,3 +19,5 @@ export default {
   persistenceSchemas: {}, // No persistent storage
   dependencies: [], // Standalone feature with no dependencies
 } as const;
+
+export default manifest;

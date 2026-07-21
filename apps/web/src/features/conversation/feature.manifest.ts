@@ -1,21 +1,25 @@
 /**
- * Chat Feature Manifest
+ * Conversation Feature Manifest
  * Defines public API, IPC endpoints, and dependencies.
  */
 
-export default {
+import type { FeatureManifest } from '@musaed/contracts';
+
+const manifest: FeatureManifest = {
   name: 'conversation',
   version: '1.0.0',
   publicApi: {
     hooks: [
       'useChatActions',
       'useConversationActions',
+      'useConversationMessages',
       'useAttachmentManager',
       'useTauriEvents',
       'useChatInitialization',
       'useAutoTitle',
       'triggerAutoTitle',
     ],
+    components: [],
     utils: ['isDefaultTitle', 'generateConversationTitle'],
   },
   ipcEndpoints: [
@@ -47,3 +51,5 @@ export default {
   },
   dependencies: [], // Access to library/rag/settings is via IPC/store hooks, not direct imports
 } as const;
+
+export default manifest;
