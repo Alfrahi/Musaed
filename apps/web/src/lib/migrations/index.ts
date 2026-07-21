@@ -62,20 +62,17 @@ export type {
   RollbackFn,
   BidirectionalMigration,
   BidirectionalMigrationRegistry,
-} from '@musaed/contracts/migrations';
-
-export {
-  MigrationError,
-  MigrationErrorCode,
-  createMigrationMetadata,
-  isValidVersionSequence,
-} from '@musaed/contracts/migrations';
-
-export type {
   MigrationMetadata,
   SqlMigrationStep,
   IDbMigrationResult as DbMigrationResult,
   RunMigrationsRequest,
   RunMigrationsResponse,
   MigrationStatus,
-} from '@musaed/contracts/migrations';
+} from '@musaed/contracts';
+
+export {
+  MigrationError,
+  MigrationErrorCode,
+  createMigrationMetadata,
+  isValidVersionSequence,
+} from '@musaed/contracts';

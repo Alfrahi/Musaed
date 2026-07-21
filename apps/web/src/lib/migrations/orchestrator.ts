@@ -17,7 +17,7 @@ import {
   MigrationErrorCode,
   type MigrationRegistry,
   type BidirectionalMigrationRegistry,
-} from '@musaed/contracts/migrations';
+} from '@musaed/contracts';
 
 /**
  * Orchestrates sequential migration execution for Zustand stores.
