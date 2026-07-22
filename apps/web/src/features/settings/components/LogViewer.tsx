@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
-import { X, Terminal, RefreshCw, Trash2 } from 'lucide-react';
+import { X, Terminal, RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/features/settings/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 import { useLogActions } from '@/features/settings/hooks/useLogActions';
+import { useIpcViolations } from '@/features/settings/hooks/useIpcViolations';
 import { ModalLayout } from '@/components/ui';
 
 interface ParsedLog {
@@ -188,6 +189,83 @@ const LogViewerContent = ({ logs, t, formatDate }: LogViewerContentProps) => (
   </div>
 );
 
+interface IpcViolationsListProps {
+  t: (key: string, vars?: Record<string, string | number | boolean>) => string;
+  formatDate: (date: Date, options?: Intl.DateTimeFormatOptions) => string;
+}
+
+/**
+ * Surfaces IPC latency-budget violations dispatched to the trace pipeline.
+ * Each row renders the inline budget tag `[IPC +{latency} / {budget}ms]`
+ * so the reader can correlate the entry with `IpcLatencyPanel` counters
+ * and the underlying trace record persisted via `traceApi.append`.
+ *
+ * Visibility is driven by the polling-free `useIpcViolations` subscription,
+ * so this panel only re-renders when a new violation is emitted.
+ */
+const IpcViolationsList = ({ t, formatDate }: IpcViolationsListProps) => {
+  const { violations } = useIpcViolations();
+
+  if (violations.length === 0) return null;
+
+  return (
+    <section
+      className="shrink-0 border-b border-zinc-100 dark:border-zinc-800"
+      aria-label={t('logs.ipcViolations.title')}
+    >
+      <div className="flex items-center gap-2 bg-yellow-50/60 px-6 py-2 dark:bg-yellow-400/5">
+        <AlertTriangle
+          size={14}
+          className="text-yellow-600 dark:text-yellow-400"
+          aria-hidden="true"
+        />
+        <span className="text-[10px] font-bold tracking-widest text-yellow-700 uppercase dark:text-yellow-300">
+          {t('logs.ipcViolations.title')}
+        </span>
+      </div>
+      <ul role="list" className="max-h-32 overflow-y-auto">
+        {violations.map((entry) => {
+          const budgetTag = t('logs.ipcViolations.budgetTag', {
+            latency: entry.latencyMs,
+            budget: entry.budgetMs,
+          });
+          const overageTooltip = t('logs.ipcViolations.overageTooltip', {
+            pct: entry.overagePct,
+          });
+          return (
+            <li
+              key={entry.traceId}
+              role="listitem"
+              className="flex gap-3 border-b border-zinc-50 py-2 ps-6 pe-6 font-mono text-[11px] last:border-b-0 dark:border-zinc-800/50"
+            >
+              <span className="shrink-0 text-zinc-400 dark:text-zinc-600">
+                [
+                {formatDate(new Date(entry.timestamp), {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })}
+                ]
+              </span>
+              <span className="mbs-0.5 h-fit shrink-0 rounded bg-yellow-100 px-1.5 text-[9px] font-bold text-yellow-700 uppercase dark:bg-yellow-400/10 dark:text-yellow-300">
+                {budgetTag}
+              </span>
+              <div className="min-w-0 flex-1">
+                <span
+                  className="break-words text-zinc-700 dark:text-zinc-300"
+                  title={overageTooltip}
+                >
+                  {entry.command}
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+};
+
 const LogViewer = ({ isOpen, onClose }: LogViewerProps) => {
   const language = useLanguage();
   const { t, formatDate } = useTranslation(language);
@@ -214,6 +292,7 @@ const LogViewer = ({ isOpen, onClose }: LogViewerProps) => {
         clearLogs={clearLogs}
         onClose={onClose}
       />
+      <IpcViolationsList t={t} formatDate={formatDate} />
       <LogViewerContent logs={logs} t={t} formatDate={formatDate} />
       <LogViewerFooter t={t} onClose={onClose} />
     </ModalLayout>

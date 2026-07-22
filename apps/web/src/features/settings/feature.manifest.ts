@@ -15,6 +15,7 @@ const manifest: FeatureManifest = {
       'useStorageActions',
       'useStorageCleanup',
       'useIpcLatencyStats',
+      'useIpcViolations',
     ],
     components: [],
     utils: [],
@@ -28,6 +29,7 @@ const manifest: FeatureManifest = {
     'cmd_ollama_validate_model',
     'cmd_logs_append',
     'cmd_logs_clear',
+    'cmd_trace_append',
   ],
   /**
    * Performance-sensitive IPC endpoints owned by this feature. The actual

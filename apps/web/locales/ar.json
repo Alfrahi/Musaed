@@ -264,7 +264,13 @@
     "clearLogs": "مسح السجلات",
     "confirmClear": "هل أنت متأكد أن تريد مسح جميع السجلات؟",
     "noLogs": "لم يتم تسجيل أي سجلات للنظام بعد.",
-    "logStorageInfo": "يتم تخزين السجلات محلياً في دليل بيانات التطبيق"
+    "logStorageInfo": "يتم تخزين السجلات محلياً في دليل بيانات التطبيق",
+    "ipcViolations": {
+      "title": "انتهاكات زمن IPC",
+      "empty": "لا توجد انتهاكات لميزانية IPC مسجلة.",
+      "budgetTag": "[IPC +{latency} / {budget}ms]",
+      "overageTooltip": "+{pct}% فوق الميزانية"
+    }
   },
   "models": {
     "deepseekR1_15b": "أحدث نموذج تفكير من DeepSeek (1.5B)",

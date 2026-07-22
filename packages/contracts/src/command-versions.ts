@@ -6,7 +6,7 @@
  * commands stay aligned via this map. Tests in `latency.test.ts` confirm
  * that every entry here has a matching latency budget.
  *
- * @see QWEN.md §10 IPC + Rust contract alignment
+ * @see STANDARDS.md §10 IPC + Rust contract alignment
  */
 
 export const COMMAND_VERSIONS = {

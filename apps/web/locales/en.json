@@ -264,7 +264,13 @@
     "clearLogs": "Clear logs",
     "confirmClear": "Are you sure you want to clear all logs?",
     "noLogs": "No system logs recorded yet.",
-    "logStorageInfo": "Logs are stored locally in the application data directory"
+    "logStorageInfo": "Logs are stored locally in the application data directory",
+    "ipcViolations": {
+      "title": "IPC Latency Violations",
+      "empty": "No IPC budget violations recorded.",
+      "budgetTag": "[IPC +{latency} / {budget}ms]",
+      "overageTooltip": "+{pct}% over budget"
+    }
   },
   "models": {
     "deepseekR1_15b": "DeepSeek's latest reasoning model (1.5B)",

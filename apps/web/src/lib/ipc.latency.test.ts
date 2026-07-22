@@ -16,12 +16,16 @@ import {
   IPC_LATENCY_BUDGETS,
   snapshotIpcStats,
   resetIpcStats,
+  resetIpcViolations,
+  getIpcViolations,
+  subscribeIpcViolations,
+  type IpcViolationRecord,
 } from '@/lib/ipc';
 
 describe('IPC Latency Budgets', () => {
   beforeEach(() => {
     (window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {};
-    resetIpcStats();
+    resetIpcViolations();
     (invoke as unknown as { mockReset: () => void }).mockReset();
   });
 
@@ -157,5 +161,144 @@ describe('IPC Latency Budgets', () => {
 
   it('detects tauri environment correctly (sanity)', () => {
     expect(checkIsTauri()).toBe(true);
+  });
+});
+
+describe('IPC latency violation trace pipeline', () => {
+  beforeEach(() => {
+    (window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {};
+    resetIpcViolations();
+    (invoke as unknown as { mockReset: () => void }).mockReset();
+  });
+
+  afterEach(() => {
+    delete (window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+    vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
+  it('dispatches a structured budget_violation trace entry via cmd_trace_append on violation', async () => {
+    // Force every IPC call to look like a 1500 ms call against the
+    // 1000 ms budget for cmd_ollama_abort_pull.
+    let calls = 0;
+    const spy = vi.spyOn(performance, 'now').mockImplementation(() => {
+      calls += 1;
+      return calls <= 1 ? 0 : 1500;
+    });
+
+    vi.mocked(invoke).mockResolvedValue({ success: true, data: null });
+
+    await ollamaApi.abortPull('llama3:8b');
+
+    // traceApi.append triggers an async dynamic import before invoke fires;
+    // wait for the call to land on the mock before asserting on its payload.
+    await vi.waitFor(() => {
+      expect(vi.mocked(invoke).mock.calls.some(([command]) => command === 'cmd_trace_append')).toBe(
+        true
+      );
+    });
+
+    // find the trace dispatch call
+    const traceCalls = vi
+      .mocked(invoke)
+      .mock.calls.filter(([command]) => command === 'cmd_trace_append');
+    expect(traceCalls).toHaveLength(1);
+
+    const [, payload] = traceCalls[0];
+    const input = (payload as { input: Record<string, unknown> }).input;
+    expect(input).toMatchObject({
+      feature: 'ipc',
+      action: 'budget_violation',
+      source: 'ipc',
+      level: 'WARN',
+      status: 'timeout',
+      latencyMs: 1500,
+      message: expect.stringContaining('cmd_ollama_abort_pull'),
+    });
+    expect(input.context).toMatchObject({
+      command: 'cmd_ollama_abort_pull',
+      latencyMs: 1500,
+      budgetMs: 1000,
+      overagePct: 50,
+    });
+    // traceId must be a UUID-like string
+    expect(typeof input.traceId).toBe('string');
+    expect((input.traceId as string).length).toBeGreaterThan(10);
+
+    spy.mockRestore();
+  });
+
+  it('throttles repeated violations of the same command within the throttle window', async () => {
+    vi.useFakeTimers();
+
+    // Every call appears to take 1250 ms against the 1000 ms budget.
+    let perfCalls = 0;
+    const spy = vi.spyOn(performance, 'now').mockImplementation(() => {
+      perfCalls += 1;
+      // callStart is measurement #1 (returns 0); every subsequent
+      // measurement returns a value over the 1000 ms budget.
+      return perfCalls === 1 ? 0 : 1250;
+    });
+
+    vi.mocked(invoke).mockResolvedValue({ success: true, data: null });
+
+    const subscriber = vi.fn();
+    const unsubscribe = subscribeIpcViolations(subscriber);
+
+    // 5 violations of the same command - all within 100 ms of each other.
+    for (let i = 0; i < 5; i++) {
+      await ollamaApi.abortPull('llama3:8b');
+      vi.advanceTimersByTime(20);
+      // Flush microtasks so the dynamic-import chain inside
+      // callInternal -> traceApi.append settles before the next iteration.
+      await vi.advanceTimersByTimeAsync(0);
+    }
+
+    // After all iterations, give the import promise one more flush.
+    await vi.advanceTimersByTimeAsync(0);
+
+    const traceCalls = vi
+      .mocked(invoke)
+      .mock.calls.filter(([command]) => command === 'cmd_trace_append');
+
+    // Only the first violation should have dispatched a trace entry.
+    expect(traceCalls).toHaveLength(1);
+
+    // Also only one record should have been pushed to the history.
+    const violations = getIpcViolations();
+    expect(violations).toHaveLength(1);
+    expect(violations[0].command).toBe('cmd_ollama_abort_pull');
+
+    // The subscriber should have been notified exactly once for the
+    // dispatched violation (no notification for the throttled ones).
+    expect(subscriber).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+    spy.mockRestore();
+  });
+
+  it('notifies subscribers when a violation is dispatched', async () => {
+    let perfCalls = 0;
+    const spy = vi.spyOn(performance, 'now').mockImplementation(() => {
+      perfCalls += 1;
+      return perfCalls === 1 ? 0 : 1500;
+    });
+
+    vi.mocked(invoke).mockResolvedValue({ success: true, data: null });
+
+    const received: IpcViolationRecord[] = [];
+    const unsubscribe = subscribeIpcViolations(() => {
+      received.push(...getIpcViolations());
+    });
+
+    await ollamaApi.abortPull('llama3:8b');
+
+    expect(received).toHaveLength(1);
+    expect(received[0].command).toBe('cmd_ollama_abort_pull');
+    expect(received[0].latencyMs).toBe(1500);
+    expect(received[0].budgetMs).toBe(1000);
+
+    unsubscribe();
+    spy.mockRestore();
   });
 });

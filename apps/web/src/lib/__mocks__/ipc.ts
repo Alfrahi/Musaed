@@ -85,6 +85,59 @@ export const traceApi = {
   getContext: vi.fn().mockResolvedValue(null),
 };
 
+// ── IPC latency budget mock state ────────────────────────────────────────
+// The latency layer tracks per-command call/violation counters and dispatches
+// structured trace entries when a budget is exceeded. Tests that exercise
+// `recordIpcLatency` (via `ipc.latency.test.ts`) opt out of this global mock
+// with `vi.unmock('@/lib/ipc')` and import the real implementation; the stubs
+// below exist so component tests that pull `@/lib/ipc` indirectly (through
+// settings hooks, LogViewer, etc.) do not crash on missing exports.
+export interface IpcViolationRecord {
+  traceId: string;
+  timestamp: string;
+  command: string;
+  latencyMs: number;
+  budgetMs: number;
+  overagePct: number;
+}
+
+const mockIpcStats = {
+  callCount: 0,
+  violationCount: 0,
+  calls: [] as Array<{
+    command: string;
+    latencyMs: number;
+    budgetMs: number;
+    status: 'ok' | 'violation';
+  }>,
+};
+const ipcViolationSubscribers = new Set<() => void>();
+
+export const ipcStats = mockIpcStats;
+export type IpcStats = typeof mockIpcStats;
+export type LatencyStats = typeof mockIpcStats;
+
+export const snapshotIpcStats = vi.fn(() => ({
+  callCount: mockIpcStats.callCount,
+  violationCount: mockIpcStats.violationCount,
+  calls: [...mockIpcStats.calls],
+}));
+export const resetIpcStats = vi.fn(() => {
+  mockIpcStats.callCount = 0;
+  mockIpcStats.violationCount = 0;
+  mockIpcStats.calls.length = 0;
+});
+
+export const getIpcViolations = vi.fn((): IpcViolationRecord[] => []);
+export const getIpcViolationsSince = vi.fn((_traceId: string): IpcViolationRecord[] => []);
+export const resetIpcViolations = vi.fn(() => undefined);
+export function subscribeIpcViolations(listener: () => void): () => void {
+  ipcViolationSubscribers.add(listener);
+  return () => {
+    ipcViolationSubscribers.delete(listener);
+  };
+}
+
 // Mock dialogApi
 export const dialogApi = {
   ask: vi.fn().mockResolvedValue(true),
