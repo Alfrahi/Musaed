@@ -34,7 +34,13 @@ const manifest: FeatureManifest = {
     conversations: 'musaed-conversation-storage-v2',
     messages: 'musaed-message-storage-v1',
   },
-  dependencies: [], // No direct feature imports - uses coordination layer for conversation state
+  // Sidebar is the conversation-list composition layer. It imports from
+  // conversation (display + actions), rag (project browser), and settings
+  // (i18n + theme) — declared here so dep-cruiser honors them as the
+  // manifest-driven dependency contract (see scripts/codegen-feature-deps.mjs).
+  // Store getters (useLanguage, useSettingsStore, …) live in `@/store` and
+  // cross-feature *store* access is not a feature-import for these purposes.
+  dependencies: ['conversation', 'rag'],
 } as const;
 
 export default manifest;

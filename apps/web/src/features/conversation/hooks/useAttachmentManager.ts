@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { useSettingsStore } from '@/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 import {
   type FileAttachment,

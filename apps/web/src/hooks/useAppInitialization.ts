@@ -1,22 +1,35 @@
 'use client';
 
+/**
+ * App boot orchestrator.
+ *
+ * Lives in `src/hooks/` (not `features/conversation/`) because it coordinates
+ * multiple features at startup: language detection (settings), storage cleanup
+ * (settings), model fetch + restore (library), and conversation hydration
+ * (conversation). Per STANDARDS.md §3, no feature may import a sibling
+ * feature; an orchestrator that crosses those boundaries by design belongs
+ * in the shared `src/hooks/` layer, not inside any one feature. See the
+ * architecture decision recorded in
+ * `apps/web/src/store/coordination.ts` and AUDIT.txt §3.1.
+ *
+ * `HomeClient.tsx` (the layout composition root) is the only consumer; it
+ * invokes `initializeApp()` once on mount.
+ */
 import { useCallback } from 'react';
 import { useUIStore } from '@/store/ui-store';
-import { useSettingsStore } from '@/features/settings/store/settings-store';
-import { useModelStore } from '@/features/settings/store/model-store';
-import { useConversationStore } from '@/features/conversation/store/conversation-store';
+import { useSettingsStore } from '@/store/settings-store';
+import { useModelStore } from '@/store/model-store';
+import { useConversationStore } from '@/store/conversation-store';
 import { useSetInitialized, useSetUIError } from '@/store/hooks';
 import { useModelActions } from '@/features/library';
-import { useConversationActions } from './useConversationActions';
-import { useSettingsActions } from '@/features/settings';
-import { useStorageCleanup } from '@/features/settings';
-import { initializeConversations } from '@/features/conversation/utils/conversation-backend';
-import { useMessageStore } from '@/features/conversation/store/message-store';
+import { useConversationActions, initializeConversations } from '@/features/conversation';
+import { useSettingsActions, useStorageCleanup } from '@/features/settings';
+import { useMessageStore } from '@/store/message-store';
 import { conversationApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
 import { getSystemLanguage } from '@/lib/i18n';
 
-export function useChatInitialization() {
+export function useAppInitialization() {
   const setInitialized = useSetInitialized();
   const setError = useSetUIError();
   const { updateGlobalSettings } = useSettingsActions();

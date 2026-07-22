@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Settings2, RefreshCw, ChevronDown, Check } from 'lucide-react';
 import { useUIStore } from '@/store/ui-store';
-import { useModelStore } from '@/features/settings';
-import { useSettingsStore } from '@/features/settings';
+import { useModelStore, useSettingsStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
 import { useModelActions } from '@/features/library/hooks/useModelActions';

@@ -1,14 +1,10 @@
 'use client';
 
 import { FileText, Code, FileCode, File } from 'lucide-react';
-import {
-  useRagSearchResults,
-  useRagSearchError,
-  useIsRagSearching,
-} from '@/features/rag/store/rag-store';
-import { useSettingsStore } from '@/features/settings';
+import { useRagSearchResults, useRagSearchError, useIsRagSearching } from '@/store/rag-store';
+import { useSettingsStore } from '@/store';
 import { useRagSearch } from '@/features/rag/hooks/useRagSearch';
-import { useActiveRagProjectId } from '@/features/rag/store/rag-store';
+import { useActiveRagProjectId } from '@/store/rag-store';
 import { ErrorFallback, Skeleton } from '@/components/ui';
 import { useTranslation } from '@/lib/i18n';
 import type { SearchResult } from '@musaed/contracts';

@@ -3,7 +3,7 @@
 import { stripThinkingBlocks, type Language, type Message } from '@musaed/contracts';
 import { titleApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
-import type { ConversationMetadata } from '@/features/conversation/store/conversation-store';
+import type { ConversationMetadata } from '@/store/conversation-store';
 
 /** Maximum characters to send for each message when generating a title. */
 const MAX_MESSAGE_LENGTH = 500;

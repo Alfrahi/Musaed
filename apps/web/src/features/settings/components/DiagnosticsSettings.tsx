@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Activity } from 'lucide-react';
-import { useLanguage } from '@/features/settings/store/settings-store';
+import { useLanguage } from '@/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 import LogViewer from './LogViewer';
 import IpcLatencyPanel from './IpcLatencyPanel';

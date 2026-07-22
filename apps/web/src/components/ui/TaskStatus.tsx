@@ -1,7 +1,7 @@
 'use client';
 
-import { useModelStore } from '@/features/settings/store/model-store';
-import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { useModelStore } from '@/store/model-store';
+import { useSettingsStore } from '@/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 import { Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';

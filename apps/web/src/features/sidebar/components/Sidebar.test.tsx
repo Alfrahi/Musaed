@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { clearMocks } from '@tauri-apps/api/mocks';
 import Sidebar from './Sidebar';
 import { useUIStore } from '@/store/ui-store';
-import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { useSettingsStore } from '@/store/settings-store';
 
 // Mutable mock actions that can be customized per test
 const mockActions = {
@@ -64,8 +64,8 @@ vi.mock('@/features/conversation/hooks/useConversationActions', async () => {
   };
 });
 
-vi.mock('@/features/conversation/store/conversation-store', async () => {
-  const actual = await vi.importActual('@/features/conversation/store/conversation-store');
+vi.mock('@/store/conversation-store', async () => {
+  const actual = await vi.importActual('@/store/conversation-store');
   return {
     ...(actual as object),
     useSearchQuery: () => '',

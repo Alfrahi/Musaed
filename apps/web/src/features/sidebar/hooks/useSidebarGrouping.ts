@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import type { ConversationMetadata } from '@/features/conversation/store/conversation-store';
+import type { ConversationMetadata } from '@/store/conversation-store';
 
 export type TimeGroup = 'search' | 'today' | 'yesterday' | 'lastWeek' | 'older';
 

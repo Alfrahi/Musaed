@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useModelStore } from '@/features/settings/store/model-store';
-import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { useModelStore } from '@/store/model-store';
+import { useSettingsStore } from '@/store/settings-store';
 import { useUIStore } from '@/store/ui-store';
 import { ollamaApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';

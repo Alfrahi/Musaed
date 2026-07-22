@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { ragApi } from '@/lib/ipc';
-import * as ragStoreHooks from '@/features/rag/store/rag-store';
+import * as ragStoreHooks from '@/store/rag-store';
 import { useRagProjects } from './useRagProjects';
 import type { RagProject } from '@musaed/contracts';
 
@@ -14,7 +14,7 @@ vi.mock('@/lib/ipc', () => ({
   },
 }));
 
-vi.mock('@/features/rag/store/rag-store', () => ({
+vi.mock('@/store/rag-store', () => ({
   useRagProjects: vi.fn(),
   useRagProjectIds: vi.fn(),
   useSetRagProjects: vi.fn(),

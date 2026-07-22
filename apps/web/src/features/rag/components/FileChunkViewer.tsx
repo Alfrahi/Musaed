@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRagFileBrowser } from '@/features/rag/hooks/useRagFileBrowser';
-import { useActiveRagProject } from '@/features/rag/store/rag-store';
-import { useLanguage } from '@/features/settings';
+import { useActiveRagProject } from '@/store/rag-store';
+import { useLanguage } from '@/store';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import type { ChunkRecord } from '@musaed/contracts';

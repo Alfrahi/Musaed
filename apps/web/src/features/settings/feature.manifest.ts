@@ -17,7 +17,7 @@ const manifest: FeatureManifest = {
       'useIpcLatencyStats',
       'useIpcViolations',
     ],
-    components: [],
+    components: ['SettingsModal'],
     utils: [],
   },
   ipcEndpoints: [

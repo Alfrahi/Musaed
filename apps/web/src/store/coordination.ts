@@ -1,15 +1,17 @@
 'use client';
 
 import { useUIStore } from '@/store/ui-store';
-import { useSettingsStore } from '@/features/settings/store/settings-store';
-import { useRagStore } from '@/features/rag/store/rag-store';
-import { useModelStore } from '@/features/settings/store/model-store';
-import { useConversationStore } from '@/features/conversation/store/conversation-store';
-import { useStreamingStore } from '@/features/conversation/store/streaming-store';
-import { useMessageStore } from '@/features/conversation/store/message-store';
-import type { Conversation } from '@musaed/contracts';
-
-export type ConversationMetadata = Omit<Conversation, 'messages'>;
+import { useSettingsStore } from '@/store/settings-store';
+import { useRagStore } from '@/store/rag-store';
+import { useModelStore } from '@/store/model-store';
+import { useConversationStore } from '@/store/conversation-store';
+import { useStreamingStore } from '@/store/streaming-store';
+import { useMessageStore } from '@/store/message-store';
+// `ConversationMetadata` is defined in conversation-store.ts and re-exported from
+// the store barrel; coordination.ts historically also exported it. We re-export
+// (not redefine) to keep a single canonical declaration and avoid TS2308
+// "already exported a member named 'ConversationMetadata'" collisions.
+export type { ConversationMetadata } from './conversation-store';
 
 /**
  * Coordinates streaming start/stop between the streaming store

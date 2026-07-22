@@ -1,0 +1,9 @@
+{
+  "conversation": ["library"],
+  "info": [],
+  "layout": ["conversation", "sidebar"],
+  "library": [],
+  "rag": [],
+  "settings": ["library"],
+  "sidebar": ["conversation", "rag"]
+}

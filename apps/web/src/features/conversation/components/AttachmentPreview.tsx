@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { X, FileText } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
-import { useSettingsStore } from '@/features/settings';
+import { useSettingsStore } from '@/store';
 import { type FileAttachment } from '@/features/conversation/hooks/useAttachmentUtils';
 import { attachmentImageSrc } from '../image-attachment';
 

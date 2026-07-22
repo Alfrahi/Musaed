@@ -7,7 +7,7 @@ import {
   type OllamaHealth,
   getConnectionManager,
 } from '@/lib';
-import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { useSettingsStore } from '@/store/settings-store';
 import { useSetOllamaConnected } from '@/store/ui-store';
 import { checkIsTauri, ollamaApi } from '@/lib/ipc';
 

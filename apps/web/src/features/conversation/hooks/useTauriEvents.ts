@@ -3,13 +3,13 @@
 import { useEffect } from 'react';
 import { type z } from 'zod';
 
-import { useSettingsStore } from '@/features/settings/store/settings-store';
-import { useStreamingStore } from '@/features/conversation/store/streaming-store';
-import { useModelStore } from '@/features/settings/store/model-store';
+import { useSettingsStore } from '@/store/settings-store';
+import { useStreamingStore } from '@/store/streaming-store';
+import { useModelStore } from '@/store/model-store';
 import { listen, ollamaApi } from '@/lib/ipc';
 import { flushAndStop } from '@/store/batch-manager';
 import { coordinateStopStream } from '@/store/coordination';
-import { useMessageStore } from '@/features/conversation/store/message-store';
+import { useMessageStore } from '@/store/message-store';
 import { triggerAutoTitle } from './useAutoTitle';
 import { persistMessage } from '@/features/conversation/utils/message-persistence';
 import {

@@ -10,7 +10,7 @@ import { attachmentImageSrc } from '../image-attachment';
 import { useMessageActions } from '@/features/conversation/hooks/useMessageActions';
 import { MessageAvatar } from './MessageAvatar';
 import { MessageStats } from './MessageStats';
-import { useSettingsStore } from '@/features/settings';
+import { useSettingsStore } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 
 interface MessageBubbleProps {

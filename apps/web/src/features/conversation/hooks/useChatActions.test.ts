@@ -69,7 +69,7 @@ vi.mock('./useConversationActions', () => ({
   useConversationActions: () => conversationActionsMock,
 }));
 
-vi.mock('@/features/conversation/store', () => {
+vi.mock('@/store/conversation-store', () => {
   const messageStore = {
     addMessages: vi.fn(),
     updateLastMessage: vi.fn(),
@@ -99,7 +99,7 @@ vi.mock('@/features/conversation/store', () => {
   };
 });
 
-vi.mock('@/features/settings/store/settings-store', () => ({
+vi.mock('@/store/settings-store', () => ({
   useSettingsStore: vi.fn(() => ({
     globalSettings: {
       language: 'en',
@@ -109,11 +109,11 @@ vi.mock('@/features/settings/store/settings-store', () => ({
   useLanguage: vi.fn(() => 'en'),
 }));
 
-vi.mock('@/features/settings/store/model-store', () => ({
+vi.mock('@/store/model-store', () => ({
   useModelStore: vi.fn(() => ({ selectedModel: 'llama3.2:latest' })),
 }));
 
-vi.mock('@/features/rag/store/rag-store', () => ({
+vi.mock('@/store/rag-store', () => ({
   useRagStore: vi.fn(() => ({ activeProjectId: null, projects: {} })),
 }));
 

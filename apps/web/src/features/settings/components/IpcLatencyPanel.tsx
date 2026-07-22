@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { Gauge, RefreshCw, X } from 'lucide-react';
 import { IPC_LATENCY_BUDGETS, getIpcLatencyBudgetCategory } from '@musaed/contracts';
 import { useIpcLatencyStats } from '@/features/settings/hooks/useIpcLatency';
-import { useLanguage } from '@/features/settings/store/settings-store';
+import { useLanguage } from '@/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 

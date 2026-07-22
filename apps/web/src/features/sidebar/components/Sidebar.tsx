@@ -4,14 +4,11 @@ import { useState } from 'react';
 import { Eraser, MessageSquare, Briefcase } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import { useIsHydrated } from '@/store/hooks';
-import { useSettingsStore } from '@/features/settings';
+import { useSettingsStore } from '@/store';
 import { useTranslation } from '@/lib/i18n';
-import { ProjectList, AddProjectDialog } from '@/components/Rag';
-import {
-  useSearchQuery,
-  useFilteredConversations,
-} from '@/features/conversation/store/conversation-store';
-import { useConversationActions } from '@/features/conversation/hooks/useConversationActions';
+import { ProjectList, AddProjectDialog } from '@/features/rag';
+import { useSearchQuery, useFilteredConversations } from '@/store/conversation-store';
+import { useConversationActions } from '@/features/conversation';
 import SearchInput from './SearchInput';
 import ConversationItem from './ConversationItem';
 import SidebarHeader from './SidebarHeader';
@@ -19,7 +16,7 @@ import SidebarSkeleton from './SidebarSkeleton';
 import SidebarInfo from './SidebarInfo';
 import { useSidebarActions } from '@/features/sidebar/hooks/useSidebarActions';
 import { useSidebarGrouping, type SidebarItem } from '@/features/sidebar/hooks/useSidebarGrouping';
-import type { ConversationMetadata } from '@/features/conversation/store/conversation-store';
+import type { ConversationMetadata } from '@/store/conversation-store';
 
 /** Group header (Today, Yesterday, etc.) with optional clear-all button. */
 const GroupHeader = ({
