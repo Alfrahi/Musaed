@@ -13,7 +13,7 @@ import 'katex/dist/katex.min.css';
 
 import CodeBlock from './CodeBlock';
 import { opener } from '@/lib/ipc';
-import { useSettingsStore } from '@/features/settings';
+import { useSettingsStore } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 
 const MermaidRenderer = dynamic(() => import('./MermaidRenderer'), {

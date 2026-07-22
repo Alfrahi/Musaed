@@ -5,8 +5,7 @@ import { X, FolderOpen, Loader2 } from 'lucide-react';
 import { dialog } from '@/lib/ipc';
 import { useRagProjects as useRagProjectsHook } from '@/features/rag/hooks/useRagProjects';
 import { useTranslation } from '@/lib/i18n';
-import { useSettingsStore } from '@/features/settings';
-import { useModelStore } from '@/features/settings';
+import { useSettingsStore, useModelStore } from '@/store';
 
 interface AddProjectDialogProps {
   onClose: () => void;

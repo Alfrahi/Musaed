@@ -223,24 +223,24 @@ export function mockAllDependencies() {
   }));
 
   // Mock message store
-  vi.mock('@/features/conversation/store/message-store', () => ({
+  vi.mock('@/store/message-store', () => ({
     useMessageStore: mockStoreHooks.useMessageStore,
   }));
 
   // Mock streaming store
-  vi.mock('@/features/conversation/store/streaming-store', () => ({
+  vi.mock('@/store/streaming-store', () => ({
     useStreamingStore: mockStoreHooks.useStreamingStore,
   }));
 
   // Mock model store
-  vi.mock('@/features/settings/store/model-store', () => ({
+  vi.mock('@/store/model-store', () => ({
     useModelStore: mockStoreHooks.useModelStore,
     getState: () => mockStores.modelStore,
     selectedModel: mockStores.modelStore.selectedModel,
   }));
 
   // Mock conversation store
-  vi.mock('@/features/conversation/store', () => ({
+  vi.mock('@/store/conversation-store', () => ({
     useConversationStore: mockStoreHooks.useConversationStore,
     useUpdateConversation: mockStoreHooks.useUpdateConversation,
     useBatchUpdate: mockStoreHooks.useBatchUpdate,
@@ -251,7 +251,7 @@ export function mockAllDependencies() {
   }));
 
   // Mock settings store
-  vi.mock('@/features/settings/store/settings-store', () => ({
+  vi.mock('@/store/settings-store', () => ({
     useSettingsStore: mockStoreHooks.useSettingsStore,
     useLanguage: vi.fn(() => 'en'),
     // Direct store access
@@ -259,7 +259,7 @@ export function mockAllDependencies() {
   }));
 
   // Mock RAG store
-  vi.mock('@/features/rag/store/rag-store', () => ({
+  vi.mock('@/store/rag-store', () => ({
     useRagStore: mockStoreHooks.useRagStore,
     // Direct store access
     getState: () => mockStores.ragStore,

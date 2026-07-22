@@ -15,12 +15,11 @@ const manifest: FeatureManifest = {
       'useConversationMessages',
       'useAttachmentManager',
       'useTauriEvents',
-      'useChatInitialization',
       'useAutoTitle',
       'triggerAutoTitle',
     ],
     components: [],
-    utils: ['isDefaultTitle', 'generateConversationTitle'],
+    utils: ['isDefaultTitle', 'generateConversationTitle', 'initializeConversations'],
   },
   ipcEndpoints: [
     'cmd_ollama_chat',
@@ -49,7 +48,10 @@ const manifest: FeatureManifest = {
     conversation: 'musaed-conversation-storage-v2',
     message: 'musaed-message-storage-v1',
   },
-  dependencies: [], // Access to library/rag/settings is via IPC/store hooks, not direct imports
+  // `library` is a declared dependency because InputArea.tsx composes the
+  // library feature's ModelSelector component into the chat input chrome.
+  // dep-cruiser honors this list (see scripts/codegen-feature-deps.mjs).
+  dependencies: ['library'],
 } as const;
 
 export default manifest;

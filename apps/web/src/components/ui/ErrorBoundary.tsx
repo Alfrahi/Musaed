@@ -3,7 +3,7 @@
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 import { RefreshCw, AlertTriangle, WifiOff, HelpCircle } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
-import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { useSettingsStore } from '@/store/settings-store';
 import { logger } from '@/lib/logger';
 import { opener } from '@/lib/ipc';
 import { sanitizeError } from '@musaed/contracts';

@@ -44,7 +44,10 @@ jobs:
         run: pnpm type-check
 
       - name: Architecture boundary check
-        run: pnpm arch-check
+        run: |
+          pnpm codegen:feature-deps:check
+          pnpm arch-check
+          pnpm test:arch
 
       - name: i18n compliance
         run: pnpm --filter web i18n:check

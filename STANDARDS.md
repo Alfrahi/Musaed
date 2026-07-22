@@ -89,13 +89,35 @@ Each feature owns:
 ### Allowed
 
 - feature → shared/lib
+- feature → sibling feature ONLY when that sibling is listed in the source
+  feature's `feature.manifest.ts` `dependencies: [...]` array (see §4). This
+  is a machine-validated contract — dep-cruiser reads the generated
+  `apps/web/src/generated-feature-deps.json` (see `scripts/codegen-feature-deps.mjs`)
+  and fails the build if any undeclared cross-feature import is found.
 - non-feature → feature via `index.ts` ONLY
+- `src/hooks/` may import from any feature barrel — it is the shared
+  orchestration layer (e.g. `useAppInitialization` coordinates settings +
+  library + conversation at startup). Boot-anywhere orchestrators that cross
+  feature boundaries by design belong here, NOT inside `features/{x}/`.
 
 ### Forbidden
 
-- feature → feature imports (any depth)
-- deep imports into feature internals
-- store cross-feature access
+- feature → feature imports that are not declared in the source feature's
+  manifest `dependencies:` (CI failure via `codegen:feature-deps:check` +
+  dep-cruiser).
+- deep imports into feature internals (only barrel `index.ts` is public)
+- store cross-feature access via feature barrels — use `@/store/*` instead.
+  The store layer lives in `src/store/` precisely because every feature
+  depends on it; routing store getters through a feature barrel defeats the
+  purpose of the feature boundary.
+
+### Composition root exemption
+
+`features/layout/` is the **single** feature exempt from the cross-feature
+import rule. Its `HomeClient.tsx` mounts every other feature by design. No
+`no-layout-to-other-features` dep-cruiser rule exists. Adding a new
+feature with the same exemption is a Tier 3 architectural change (see §20)
+and requires updating this section plus `.dependency-cruiser.js`.
 
 ---
 
@@ -421,7 +443,13 @@ All logs MUST be structured:
 
 CI MUST FAIL IF:
 
-- cross-feature imports exist
+- cross-feature imports exist that are NOT declared in the source feature's
+  `feature.manifest.ts` `dependencies: []` array (see §3 Feature IMPORT rules).
+  This is enforced by `pnpm codegen:feature-deps:check` followed by
+  `pnpm arch-check` — the codegen step asserts the generated
+  `apps/web/src/generated-feature-deps.json` is in sync with the manifests,
+  and dep-cruiser consumes that JSON to decide which cross-feature edges are
+  legal.
 - IPC bypass is detected
 - contract mismatch exists
 - schema version mismatch exists
@@ -432,15 +460,16 @@ CI MUST FAIL IF:
 
 ## TOOL ENFORCEMENT MAP
 
-| Rule                 | Tool               |
-| -------------------- | ------------------ |
-| Dependency rules     | dependency-cruiser |
-| Type safety          | TypeScript         |
-| Rust correctness     | cargo clippy       |
-| Lint rules           | ESLint             |
-| staged hygiene       | Husky              |
-| architecture graph   | dependency-cruiser |
-| contracts validation | custom CI script   |
+| Rule                    | Tool                                       |
+| ----------------------- | ------------------------------------------ |
+| Dependency rules        | dependency-cruiser                         |
+| Type safety             | TypeScript                                 |
+| Rust correctness        | cargo clippy                               |
+| Lint rules              | ESLint                                     |
+| staged hygiene          | Husky                                      |
+| architecture graph      | dependency-cruiser                         |
+| contracts validation    | custom CI script                           |
+| manifest `dependencies` | `codegen:feature-deps:check` + dep-cruiser |
 
 ---
 
@@ -448,10 +477,18 @@ CI MUST FAIL IF:
 
 CI MUST validate:
 
-- feature dependency graph
+- feature dependency graph — and the graph MUST match each feature's
+  `feature.manifest.ts` `dependencies:` array. The codegen script
+  `scripts/codegen-feature-deps.mjs` reads every manifest, emits
+  `apps/web/src/generated-feature-deps.json`, and dep-cruiser consumes that
+  JSON so the manifest is a real contract, not documentation.
 - IPC ↔ Rust ↔ contracts alignment
-- store isolation
-- feature manifest consistency
+- store isolation — stores live in `src/store/`; no `features/{x}/store/`
+  re-exports should reach a sibling feature.
+- feature manifest consistency — `publicApi.hooks` and `publicApi.components`
+  must mirror what `index.ts` re-exports; `stateSchemas` versions must match
+  the `version:` written by the store, and `dependencies:` must list every
+  sibling feature that this feature actually imports.
 
 ---
 

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
 // Mock useSettingsStore before importing the component
-vi.mock('@/features/settings', () => ({
+vi.mock('@/store', () => ({
   useSettingsStore: vi.fn(() => ({
     globalSettings: { language: 'en' },
   })),

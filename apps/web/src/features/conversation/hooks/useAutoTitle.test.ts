@@ -8,7 +8,7 @@ let mockMessageState: any = {};
 let mockSettingsState: any = {};
 
 // Mock stores according to feedback guidelines
-vi.mock('@/features/conversation/store/conversation-store', () => {
+vi.mock('@/store/conversation-store', () => {
   const mockUpdateConversation = vi.fn();
   const getState = vi.fn(() => ({
     conversations: mockConversationState,
@@ -19,7 +19,7 @@ vi.mock('@/features/conversation/store/conversation-store', () => {
   return { useConversationStore };
 });
 
-vi.mock('@/features/conversation/store/message-store', () => {
+vi.mock('@/store/message-store', () => {
   const getState = vi.fn(() => ({
     messages: mockMessageState,
   }));
@@ -28,7 +28,7 @@ vi.mock('@/features/conversation/store/message-store', () => {
   return { useMessageStore };
 });
 
-vi.mock('@/features/settings/store/settings-store', () => {
+vi.mock('@/store/settings-store', () => {
   const getState = vi.fn(() => ({
     globalSettings: mockSettingsState,
   }));
@@ -87,7 +87,7 @@ describe('triggerAutoTitle', () => {
   });
 
   it('generates and updates title when defaults are present', async () => {
-    const conversationStore = await import('@/features/conversation/store/conversation-store');
+    const conversationStore = await import('@/store/conversation-store');
     const getStateMock = conversationStore.useConversationStore.getState;
     const mockUpdate = (getStateMock() as any).updateConversation;
 
@@ -120,7 +120,7 @@ describe('triggerAutoTitle', () => {
   it('handles retry loop when conversation missing initially', async () => {
     const loggerModule = await import('@/lib/logger');
     const mockLogger = loggerModule.logger;
-    const conversationStore = await import('@/features/conversation/store/conversation-store');
+    const conversationStore = await import('@/store/conversation-store');
     const getStateMock = conversationStore.useConversationStore.getState as ReturnType<
       typeof vi.fn
     >;

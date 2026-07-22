@@ -1,7 +1,7 @@
 'use client';
 
 import { Keyboard } from 'lucide-react';
-import { useGlobalSettings, useLanguage } from '@/features/settings/store/settings-store';
+import { useGlobalSettings, useLanguage } from '@/store/settings-store';
 import { useSettingsActions } from '@/features/settings/hooks/useSettingsActions';
 import { useTranslation } from '@/lib/i18n';
 

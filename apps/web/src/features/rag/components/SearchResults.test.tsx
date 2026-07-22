@@ -2,8 +2,8 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { clearMocks } from '@tauri-apps/api/mocks';
 import { SearchResults } from './SearchResults';
-import { useSettingsStore } from '@/features/settings/store/settings-store';
-import { useRagStore } from '@/features/rag/store/rag-store';
+import { useSettingsStore } from '@/store/settings-store';
+import { useRagStore } from '@/store/rag-store';
 import type { SearchResult } from '@musaed/contracts';
 
 const mockResults: SearchResult[] = [

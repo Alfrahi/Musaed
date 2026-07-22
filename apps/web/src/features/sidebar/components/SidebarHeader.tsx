@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { useSettingsStore } from '@/features/settings';
+import { useSettingsStore } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 
 interface SidebarHeaderProps {

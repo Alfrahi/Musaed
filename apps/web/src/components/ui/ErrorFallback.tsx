@@ -2,7 +2,7 @@
 
 import { AlertCircle, RefreshCw, WifiOff, Server, FileX, Ban } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
-import { useSettingsStore } from '@/features/settings';
+import { useSettingsStore } from '@/store';
 import { cn } from '@/lib/utils';
 
 export type FallbackType = 'general' | 'network' | 'ollama' | 'notFound' | 'forbidden';

@@ -22,16 +22,20 @@ Manages real-time chat interactions with the local Ollama LLM, including message
 | `useConversationActions` | `hooks/useConversationActions.ts` | CRUD operations on conversations                                  |
 | `useAttachmentManager`   | `hooks/useAttachmentManager.ts`   | File attachment lifecycle (add, remove, validate)                 |
 | `useTauriEvents`         | `hooks/useTauriEvents.ts`         | Subscribes to Tauri event listeners for streaming updates         |
-| `useChatInitialization`  | `hooks/useChatInitialization.ts`  | Initializes chat state on mount                                   |
 | `useAutoTitle`           | `hooks/useAutoTitle.ts`           | Generates conversation titles from first message exchange         |
 | `triggerAutoTitle`       | `hooks/useAutoTitle.ts`           | Imperative trigger for title generation                           |
 
+> App boot orchestration (`useChatInitialization`) has moved to
+> `src/hooks/useAppInitialization.ts` — it crosses settings/library/conversation
+> boundaries and lives in the shared `src/hooks/` layer per STANDARDS.md §3.
+
 ### Utils
 
-| Export                      | Source                     | Description                                        |
-| --------------------------- | -------------------------- | -------------------------------------------------- |
-| `isDefaultTitle`            | `utils/title-generator.ts` | Checks if a title is still the default placeholder |
-| `generateConversationTitle` | `utils/title-generator.ts` | Generates a human-readable title from messages     |
+| Export                      | Source                          | Description                                                 |
+| --------------------------- | ------------------------------- | ----------------------------------------------------------- |
+| `isDefaultTitle`            | `utils/title-generator.ts`      | Checks if a title is still the default placeholder          |
+| `generateConversationTitle` | `utils/title-generator.ts`      | Generates a human-readable title from messages              |
+| `initializeConversations`   | `utils/conversation-backend.ts` | Loads persisted conversations from the Rust backend at boot |
 
 ### Feature Manifest
 

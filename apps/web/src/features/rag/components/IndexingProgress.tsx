@@ -1,9 +1,9 @@
 'use client';
 
 import type { IndexProgress } from '@musaed/contracts';
-import { useGlobalSettings } from '@/features/settings';
+import { useGlobalSettings } from '@/store';
 import { useTranslation } from '@/lib/i18n';
-import { useActiveRagProject } from '@/features/rag/store/rag-store';
+import { useActiveRagProject } from '@/store/rag-store';
 import { Button } from '@/components/ui/button';
 
 interface IndexingProgressProps {

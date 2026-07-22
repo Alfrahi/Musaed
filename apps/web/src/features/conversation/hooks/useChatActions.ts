@@ -10,14 +10,11 @@ import toast from 'react-hot-toast';
 import { flushAndStop } from '@/store/batch-manager';
 import { useConversationActions } from './useConversationActions';
 import { type FileAttachment } from './useAttachmentUtils';
-import {
-  useMessageStore,
-  useCurrentConversationId,
-  useConversations,
-} from '@/features/conversation/store';
-import { useSettingsStore } from '@/features/settings/store/settings-store';
-import { useModelStore } from '@/features/settings/store/model-store';
-import { useRagStore } from '@/features/rag/store/rag-store';
+import { useMessageStore } from '@/store/message-store';
+import { useCurrentConversationId, useConversations } from '@/store/conversation-store';
+import { useSettingsStore } from '@/store/settings-store';
+import { useModelStore } from '@/store/model-store';
+import { useRagStore } from '@/store/rag-store';
 import { useSetUIError } from '@/store/ui-store';
 import { persistUserMessage } from '@/features/conversation/utils/message-persistence';
 

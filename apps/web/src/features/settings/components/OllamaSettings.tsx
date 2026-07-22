@@ -4,7 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import { Globe, Terminal } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { DEFAULT_SETTINGS } from '@musaed/contracts';
-import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { useSettingsStore } from '@/store/settings-store';
 import { useSettingsActions } from '@/features/settings/hooks/useSettingsActions';
 import { useModelActions } from '@/features/library';
 import { useTranslation } from '@/lib/i18n';

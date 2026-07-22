@@ -16,8 +16,11 @@
     "arch-check": "pnpm -F web exec depcruise src --config ../../.dependency-cruiser.js",
     "codegen:validation": "node scripts/codegen-validation.mjs",
     "codegen:validation:check": "node scripts/codegen-validation.mjs --check",
+    "codegen:feature-deps": "node scripts/codegen-feature-deps.mjs",
+    "codegen:feature-deps:check": "node scripts/codegen-feature-deps.mjs --check",
     "validate:contracts": "node scripts/validate-contracts.mjs",
     "test:contracts": "node --test scripts/validate-contracts.test.mjs",
+    "test:arch": "node --test scripts/dep-cruiser-guard.test.mjs",
     "prepare": "husky"
   },
   "devDependencies": {

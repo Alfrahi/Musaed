@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { useSettingsStore } from '@/store/settings-store';
 import { useIsHydrated } from '@/store/hooks';
 import { useNativeUX } from '@/hooks/useNativeUX';
 

@@ -2,7 +2,7 @@
 
 import { Info } from 'lucide-react';
 import { useSetInfoOpen } from '@/store/hooks';
-import { useLanguage } from '@/features/settings';
+import { useLanguage } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 
 const SidebarInfo = () => {

@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { X, Terminal, RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import { cn } from '@/lib/utils';
-import { useLanguage } from '@/features/settings/store/settings-store';
+import { useLanguage } from '@/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 import { useLogActions } from '@/features/settings/hooks/useLogActions';
 import { useIpcViolations } from '@/features/settings/hooks/useIpcViolations';

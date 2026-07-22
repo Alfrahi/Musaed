@@ -1,7 +1,7 @@
 'use client';
 
 import { Bot, Plus, Sparkles, Shield } from 'lucide-react';
-import { useSettingsStore } from '@/features/settings';
+import { useSettingsStore } from '@/store';
 import { useConversationActions } from '@/features/conversation/hooks/useConversationActions';
 import { useTranslation } from '@/lib/i18n';
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
-import SettingsModal from '@/features/settings/components/SettingsModal';
+import { SettingsModal } from '@/features/settings';
 
 const SettingsLoading = () => {
   return (

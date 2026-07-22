@@ -3,10 +3,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { clearMocks } from '@tauri-apps/api/mocks';
 import ChatWindow from './ChatWindow';
 import { useUIStore } from '@/store/ui-store';
-import { useConversationStore } from '@/features/conversation/store/conversation-store';
-import { useMessageStore } from '@/features/conversation/store/message-store';
-import { useStreamingStore } from '@/features/conversation/store/streaming-store';
-import { useSettingsStore } from '@/features/settings/store/settings-store';
+import { useConversationStore } from '@/store/conversation-store';
+import { useMessageStore } from '@/store/message-store';
+import { useStreamingStore } from '@/store/streaming-store';
+import { useSettingsStore } from '@/store/settings-store';
 import { DEFAULT_SETTINGS } from '@musaed/contracts';
 
 vi.mock('@/lib/i18n', async () => {

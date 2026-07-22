@@ -7,8 +7,8 @@ import {
   useSetRagSearchResults,
   useSetIsRagSearching,
   useSetRagSearchError,
-} from '@/features/rag/store/rag-store';
-import { useOllamaUrl } from '@/features/settings/store/settings-store';
+} from '@/store/rag-store';
+import { useOllamaUrl } from '@/store/settings-store';
 import type { SearchResult } from '@musaed/contracts';
 
 export function useRagSearch() {

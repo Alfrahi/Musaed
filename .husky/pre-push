@@ -6,7 +6,9 @@ set -e
 
 # ── 1. Architecture boundary validation ────────────────────
 echo "🧱 Checking architecture boundaries..."
+pnpm codegen:feature-deps:check
 pnpm arch-check
+pnpm test:arch
 
 # ── 2. Type safety ────────────────────────────────────────
 echo "🔒 Running TypeScript check..."

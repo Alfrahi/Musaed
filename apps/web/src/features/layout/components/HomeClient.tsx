@@ -21,11 +21,8 @@ import { useGlobalShortcuts } from '@/hooks/useGlobalShortcuts';
 import { cn } from '@/lib/utils';
 import { checkIsTauri } from '@/lib/ipc';
 
-import {
-  useChatInitialization,
-  useTauriEvents,
-  useConversationMessages,
-} from '@/features/conversation';
+import { useTauriEvents, useConversationMessages } from '@/features/conversation';
+import { useAppInitialization } from '@/hooks';
 import TaskStatus from '@/components/ui/TaskStatus';
 import OllamaConnectionStatus from '@/components/ui/OllamaConnectionStatus';
 
@@ -129,7 +126,7 @@ const HomeClient = () => {
   const setLibraryOpen = useSetLibraryOpen();
   const setSettingsOpen = useSetSettingsOpen();
   const setInfoOpen = useSetInfoOpen();
-  const { initializeApp } = useChatInitialization();
+  const { initializeApp } = useAppInitialization();
   const [mounted, setMounted] = useState(false);
   const { t, isRtl } = useTranslation(globalSettings.language);
 

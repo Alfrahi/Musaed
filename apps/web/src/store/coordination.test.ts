@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useUIStore } from '@/store/ui-store';
-import { useSettingsStore } from '@/features/settings/store/settings-store';
-import { useRagStore } from '@/features/rag/store/rag-store';
-import { useModelStore } from '@/features/settings/store/model-store';
-import { useConversationStore } from '@/features/conversation/store/conversation-store';
-import { useStreamingStore } from '@/features/conversation/store/streaming-store';
+import { useSettingsStore } from '@/store/settings-store';
+import { useRagStore } from '@/store/rag-store';
+import { useModelStore } from '@/store/model-store';
+import { useConversationStore } from '@/store/conversation-store';
+import { useStreamingStore } from '@/store/streaming-store';
 import { registerHydrationCoordination } from './coordination';
 
 beforeEach(() => {

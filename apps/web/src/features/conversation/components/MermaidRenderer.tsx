@@ -9,7 +9,7 @@ import {
   detectUnsupportedDiagram,
   preprocessMermaidContent,
 } from '@/features/conversation/utils/mermaid-utils';
-import { useSettingsStore } from '@/features/settings';
+import { useSettingsStore } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 
 interface MermaidRendererProps {
