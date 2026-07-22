@@ -94,6 +94,156 @@ export const ipcStats: IpcStats = {
 };
 
 /**
+ * Maximum number of violation entries retained in `ipcViolationHistory`.
+ * Prevents unbounded growth in long-running sessions.
+ */
+const IPC_VIOLATION_HISTORY_MAX = 200;
+
+/**
+ * Throttle window (ms) for trace emission per over-budget command.
+ * Once a violation is dispatched, subsequent violations of the same
+ * command within this window are dropped to avoid trace-store spam.
+ */
+const IPC_VIOLATION_TRACE_THROTTLE_MS = 30_000;
+
+/**
+ * Structured record of an IPC latency violation that was dispatched
+ * to the trace pipeline. The `traceId` matches the value written to
+ * the trace store so the Diagnostics UI can correlate the entry in
+ * `LogViewer` with the in-process `ipcStats` counter.
+ */
+export interface IpcViolationRecord {
+  /** UUID identifying this violation trace (matches trace store entry). */
+  traceId: string;
+  /** ISO timestamp at moment of detection. */
+  timestamp: string;
+  /** Command name that overran its budget. */
+  command: string;
+  /** Observed latency in milliseconds. */
+  latencyMs: number;
+  /** Configured budget in milliseconds. */
+  budgetMs: number;
+  /** Percentage overage (rounded). */
+  overagePct: number;
+}
+
+/**
+ * Rolling window of structured IPC violations. Surfaced to the
+ * Diagnostics UI via `getIpcViolations()` and `getIpcViolationsSince()`
+ * so users can correlate trace entries with IPC perf counters.
+ */
+const ipcViolationHistory: IpcViolationRecord[] = [];
+
+/**
+ * Last dispatch timestamp (ms) per command, used to enforce the
+ * per-command throttle window for trace emission.
+ */
+const lastViolationTraceAt: Map<string, number> = new Map();
+
+/**
+ * Subscribers to mutation of `ipcViolationHistory`. Used by
+ * `subscribeIpcViolations()` so long-lived UI surfaces can re-render
+ * without polling. Returns an unsubscribe function.
+ */
+const ipcViolationSubscribers: Set<() => void> = new Set();
+
+function notifyIpcViolationSubscribers(): void {
+  for (const subscriber of ipcViolationSubscribers) {
+    try {
+      subscriber();
+    } catch {
+      // Subscriber errors must not break the IPC pipeline.
+    }
+  }
+}
+
+/**
+ * Generates a UUID v4 for trace IDs. Falls back to a deterministic
+ * value in environments without `crypto.randomUUID` (e.g., legacy
+ * test runners), keeping the trace pipeline non-fatal.
+ */
+function generateTraceId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `ipc-viol-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Dispatches a structured `budget_violation` trace entry through
+ * `traceApi.append` so IPC latency violations appear in the same
+ * observability pipeline used by other features (STANDARDS.md §14).
+ *
+ * Throttled per-command at `IPC_VIOLATION_TRACE_THROTTLE_MS` so a
+ * persistently over-budget command does not flood the trace store.
+ *
+ * Returns the dispatched `IpcViolationRecord` when a trace was
+ * emitted, or `null` when the violation was suppressed by the
+ * throttle window.
+ */
+function dispatchIpcViolationTrace(
+  command: string,
+  latencyMs: number,
+  budgetMs: number
+): IpcViolationRecord | null {
+  const now = Date.now();
+  const lastAt = lastViolationTraceAt.get(command);
+  if (lastAt !== undefined && now - lastAt < IPC_VIOLATION_TRACE_THROTTLE_MS) {
+    return null;
+  }
+  lastViolationTraceAt.set(command, now);
+
+  const traceId = generateTraceId();
+  const timestamp = new Date(now).toISOString();
+  const overagePct = Math.round(((latencyMs - budgetMs) / budgetMs) * 100);
+
+  const traceInput: TraceEntryInput = {
+    traceId,
+    feature: 'ipc',
+    action: 'budget_violation',
+    level: 'WARN',
+    status: 'timeout',
+    latencyMs,
+    message: `[IPC LATENCY VIOLATION] "${command}" took ${latencyMs}ms (budget: ${budgetMs}ms)`,
+    source: 'ipc',
+    context: {
+      command,
+      latencyMs,
+      budgetMs,
+      overagePct,
+    },
+  };
+
+  traceApi.append(traceInput).catch(() => {
+    // Trace emission must never break the IPC pipeline. Errors are
+    // silently swallowed in production; the in-process record below
+    // still surfaces the violation to the Diagnostics UI.
+  });
+
+  const record: IpcViolationRecord = {
+    traceId,
+    timestamp,
+    command,
+    latencyMs,
+    budgetMs,
+    overagePct,
+  };
+
+  ipcViolationHistory.push(record);
+  if (ipcViolationHistory.length > IPC_VIOLATION_HISTORY_MAX) {
+    ipcViolationHistory.shift();
+  }
+  notifyIpcViolationSubscribers();
+  return record;
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => {
+    lastViolationTraceAt.clear();
+  });
+}
+
+/**
  * IPC Bridge — Strict Contract Architecture
  *
  * All Tauri IPC must route through this file. The bridge provides:
@@ -604,17 +754,18 @@ function recordIpcLatency(command: string, latencyMs: number, budgetMs: number):
 
   if (status === 'violation') {
     ipcStats.violationCount++;
-    const overagePct = Math.round(((latencyMs - budgetMs) / budgetMs) * 100);
-    const violationEntry = JSON.stringify({
-      timestamp: new Date().toISOString(),
-      level: 'WARN',
-      source: 'ipc-latency',
-      message: `[IPC LATENCY VIOLATION] "${command}" exceeded budget by ${overagePct}%`,
-      detail: { command, latencyMs, budgetMs, overagePct },
-    });
-    if (typeof window !== 'undefined') {
-      logApi.append(violationEntry).catch(() => {});
-    } else {
+    const dispatched = dispatchIpcViolationTrace(command, latencyMs, budgetMs);
+    if (dispatched === null) {
+      // Throttled — still emit a dev-only console line so the
+      // violation is visible without spamming the trace store.
+      if (typeof window === 'undefined') {
+        console.warn(
+          `[IPC LATENCY VIOLATION] "${command}" took ${latencyMs}ms (budget: ${budgetMs}ms)`
+        );
+      }
+    } else if (typeof window === 'undefined') {
+      // In non-window runtimes (e.g., SSR, vitest jsdom without
+      // window) mirror the violation to stdout for visibility.
       console.warn(
         `[IPC LATENCY VIOLATION] "${command}" took ${latencyMs}ms (budget: ${budgetMs}ms)`
       );
@@ -643,6 +794,56 @@ export function resetIpcStats(): void {
   ipcStats.callCount = 0;
   ipcStats.violationCount = 0;
   ipcStats.calls.length = 0;
+}
+
+/**
+ * Clears all IPC latency tracking state: perf counters, violation
+ * history, and the per-command throttle window. Used by tests and
+ * the Diagnostics UI "clear counters" affordance.
+ */
+export function resetIpcViolations(): void {
+  ipcStats.callCount = 0;
+  ipcStats.violationCount = 0;
+  ipcStats.calls.length = 0;
+  ipcViolationHistory.length = 0;
+  lastViolationTraceAt.clear();
+  notifyIpcViolationSubscribers();
+}
+
+/**
+ * Returns a copy of the rolling IPC violation history (most-recent
+ * first is not guaranteed — entries are in insertion order). The
+ * list is bounded at `IPC_VIOLATION_HISTORY_MAX`.
+ */
+export function getIpcViolations(): IpcViolationRecord[] {
+  return [...ipcViolationHistory];
+}
+
+/**
+ * Returns violations whose `traceId` differs from the supplied
+ * marker — i.e., entries that arrived *after* the marker. Pass the
+ * last-seen `traceId` from a prior call to obtain an incremental
+ * update. Returns the full history when the marker is not found.
+ *
+ * The Diagnostics UI uses this to re-render only when new violations
+ * arrive, avoiding polling churn.
+ */
+export function getIpcViolationsSince(traceId: string): IpcViolationRecord[] {
+  const idx = ipcViolationHistory.findIndex((entry) => entry.traceId === traceId);
+  if (idx === -1) return [...ipcViolationHistory];
+  return ipcViolationHistory.slice(idx + 1);
+}
+
+/**
+ * Subscribes to mutation of the IPC violation history. Returns an
+ * unsubscribe function. Long-lived UI surfaces (LogViewer,
+ * DiagnosticsSettings) use this to re-render without polling.
+ */
+export function subscribeIpcViolations(listener: () => void): () => void {
+  ipcViolationSubscribers.add(listener);
+  return () => {
+    ipcViolationSubscribers.delete(listener);
+  };
 }
 
 /**

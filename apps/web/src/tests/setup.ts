@@ -14,11 +14,13 @@ afterEach(() => {
 });
 
 // ── Crypto ──────────────────────────────────────────────────────────────────
-// Deterministic UUID for snapshot stability.
+// Deterministic UUID for snapshot stability. Uses a zero-padded v4 layout so
+// any Zod `.uuid()` validator (trace entries, trace contexts, IPC payloads)
+// accepts it during test runs.
 
 Object.defineProperty(window, 'crypto', {
   value: {
-    randomUUID: () => 'test-uuid',
+    randomUUID: () => '00000000-0000-4000-8000-000000000000',
   },
 });
 
