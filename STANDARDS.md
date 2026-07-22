@@ -157,6 +157,21 @@ Must define:
 
 ---
 
+## PUBLIC RE-EXPORT RULE
+
+Any module added under `packages/contracts/src/` that is intended for
+cross-package consumption MUST be re-exported from
+`packages/contracts/src/index.ts`. A vitest alias or tsconfig path mapping is
+NOT an acceptable substitute — sub-path imports such as
+`@musaed/contracts/migrations` rely on consumer-side path-resolution and may
+silently break under any tooling change (clean `tsc`, esbuild outside
+`tsconfig`, Yarn 4, swc, etc.). When a new public module is added, add an
+`export * from './<module>';` line to `index.ts` in the same commit that
+introduces the module. CI greps for sub-path imports across `apps/` and
+`src-tauri/` and fails the build when any are found.
+
+---
+
 ## IPC VERSIONING RULE
 
 - Breaking change → MUST create new version

@@ -58,6 +58,15 @@ jobs:
       - name: IPC contract validation (strict)
         run: pnpm validate:contracts --strict
 
+      - name: No sub-path imports of @musaed/contracts
+        run: |
+          matches=$(grep -RE --include='*.ts' --include='*.tsx' --include='*.rs' --include='*.js' --include='*.mjs' "from '@musaed/contracts/[^']+'" apps/ src-tauri/ || true)
+          if [ -n "$matches" ]; then
+            echo "❌ Found sub-path import(s) of @musaed/contracts/* — re-export from packages/contracts/src/index.ts instead (STANDARDS.md §5 PUBLIC RE-EXPORT RULE)."
+            echo "$matches"
+            exit 1
+          fi
+
       - name: No TODOs/FIXMEs
         run: |
           if grep -rE "\bTODO\b|\bFIXME\b|\bHACK\b" apps/web/src --include="*.ts" --include="*.tsx" --exclude-dir={test,tests}; then

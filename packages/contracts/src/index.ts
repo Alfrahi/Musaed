@@ -1,5 +1,8 @@
 'use client';
 
+// Public re-exports — any module added under packages/contracts/src/ that
+// is consumed across packages MUST be re-exported below. Sub-path imports
+// rely on bundler/tsconfig path-mapping and are forbidden except for tests.
 import { type BackendError } from './errors';
 
 // Core re-exports for the contracts package
