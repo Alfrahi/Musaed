@@ -93,7 +93,7 @@ const useExportMarkdownBundle = (
     const convs = Object.values(conversations);
     if (convs.length === 0) return;
 
-    toast.loading('Preparing bundle...', { duration: 1000 });
+    toast.loading(t('settings.storage.preparingBundle'), { duration: 1000 });
 
     const safeTitle = `musaed_bundle_${new Date().toISOString().split('T')[0]}`;
     const fileName = `${safeTitle}.md`;

@@ -33,7 +33,13 @@ export {
 export type { CommandMap } from '@/lib/ipc';
 
 // I18n - shared internationalization
-export { useTranslation, getSystemLanguage } from '@/lib/i18n';
+export {
+  useTranslation,
+  getSystemLanguage,
+  translate,
+  setActiveLanguageResolver,
+  getActiveLanguage,
+} from '@/lib/i18n';
 export type { TranslationKey } from '@/lib/i18n';
 
 // Logging & observability - shared infrastructure

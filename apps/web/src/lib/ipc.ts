@@ -55,6 +55,7 @@ import type {
   AssembledContext,
 } from '@musaed/contracts';
 import toast from 'react-hot-toast';
+import { translate, getActiveLanguage } from '@/lib/i18n';
 
 /**
  * Re-export of the latency budgets from `@musaed/contracts`.
@@ -678,7 +679,7 @@ async function callInternal<K extends keyof CommandMap>(
     !isValidOllamaUrl(args.baseUrl)
   ) {
     if (!options?.quiet) {
-      toast.error('Security Block: Invalid or disallowed Ollama address.');
+      toast.error(translate('error.securityBlock', getActiveLanguage()));
     }
     return null;
   }
@@ -692,7 +693,9 @@ async function callInternal<K extends keyof CommandMap>(
       const safeMessage = inputResult.error.issues[0]?.message ?? 'Request validation failed';
       console.error(`[IPC] Input validation failed for "${command}"`);
       if (!options?.quiet) {
-        toast.error(`Invalid request: ${safeMessage}`);
+        toast.error(
+          translate('error.invalidRequest', getActiveLanguage(), { message: safeMessage })
+        );
       }
       return null;
     }

@@ -156,6 +156,7 @@
       "importError": "Failed to import data. Invalid format.",
       "confirmImport": "Importing data will overwrite your current chat history. Continue?",
       "calculating": "Calculating...",
+      "preparingBundle": "Preparing bundle...",
       "autoDelete": "Auto-delete Old Chats",
       "retention": {
         "30": "After 30 days",
@@ -313,7 +314,11 @@
     "unsupportedLink": "Unsupported link",
     "connectionError": "Connection Error",
     "genericError": "Something went wrong. Please try again.",
-    "imageConversionFailed": "Failed to convert image to base64"
+    "imageConversionFailed": "Failed to convert image to base64",
+    "securityBlock": "Security block: Invalid or disallowed Ollama address.",
+    "invalidRequest": "Invalid request: {message}",
+    "messageSaveFailed": "Failed to save message to history",
+    "modelPullFailed": "Model pull failed"
   },
   "a11y": {
     "closeModal": "Close modal",
