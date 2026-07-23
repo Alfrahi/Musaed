@@ -1,12 +1,27 @@
+//! Markdown export for conversations.
+//!
+//! Holds the rendering business logic that turns a stored conversation into a
+//! Markdown document. Pulled out of the legacy root-level `export.rs` to keep
+//! command handlers thin per STANDARDS.md §6 — the command adapter itself
+//! lives in `conversation::commands`.
+
+use crate::conversation::models::Conversation;
 use crate::conversation::store::ConversationStore;
 use crate::error_codes;
 use crate::payloads::{ApiResponse, BackendError};
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use tauri::AppHandle;
-use tauri::Manager;
 use tokio::sync::Mutex;
+
+/// Formats a line range for display in markdown.
+pub(crate) fn format_line_range(start: u32, end: u32) -> String {
+    if start == end {
+        format!("l{}", start)
+    } else {
+        format!("l{}-l{}", start, end)
+    }
+}
 
 /// Formats a conversation as Markdown for export.
 ///
@@ -15,9 +30,7 @@ use tokio::sync::Mutex;
 ///
 /// # Returns
 /// Formatted Markdown string
-fn format_conversation_as_markdown(
-    conversation: &crate::conversation::models::Conversation,
-) -> String {
+pub(crate) fn format_conversation_as_markdown(conversation: &Conversation) -> String {
     let mut md = String::new();
 
     // Header
@@ -71,34 +84,19 @@ fn format_conversation_as_markdown(
     md
 }
 
-/// Formats a line range for display in markdown.
-fn format_line_range(start: u32, end: u32) -> String {
-    if start == end {
-        format!("l{}", start)
-    } else {
-        format!("l{}-l{}", start, end)
-    }
-}
-
 /// Exports a conversation to Markdown format.
-/// Fetches the conversation from the store, formats it as Markdown, and writes to disk.
 ///
-/// # Arguments
-/// * `app` - Tauri app handle for accessing the conversation store
-/// * `conversation_id` - The conversation ID to export
-/// * `path` - The file path to save to
+/// Fetches the conversation from the store, formats it as Markdown, and writes
+/// the result to `path`. Re-exports `error_codes::CONVERSATION_NOT_FOUND` on
+/// store errors and `error_codes::FILE_SYSTEM_ERROR` on write failures.
 ///
-/// # Returns
-/// `ApiResponse<bool>` - true if export succeeded, false otherwise
-#[tauri::command]
-pub async fn cmd_export_markdown(
-    app: AppHandle,
+/// This is the service-level entry point used by the
+/// `cmd_export_markdown` command adapter in `conversation::commands`.
+pub(crate) async fn export_markdown(
+    store: Arc<Mutex<ConversationStore>>,
     conversation_id: String,
     path: String,
 ) -> ApiResponse<bool> {
-    // Get conversation store from app state
-    let store = app.state::<Arc<Mutex<ConversationStore>>>();
-
     // Fetch conversation with messages
     let conversation = match store
         .lock()
@@ -144,9 +142,6 @@ pub async fn cmd_export_markdown(
 mod tests {
     use super::*;
     use crate::conversation::models::{ChatSettings, Conversation, Message, RagSource};
-    use crate::error_codes;
-    use std::io::Read;
-    use tempfile::NamedTempFile;
 
     fn create_test_conversation() -> Conversation {
         Conversation {
@@ -333,59 +328,5 @@ mod tests {
         assert!(md.contains("# Test With Newlines"));
         // Title newlines should be replaced with spaces
         assert!(!md.contains("# Test\n"));
-    }
-
-    #[test]
-    fn test_error_response_file_write_failure() {
-        // Test error response structure for file write failures
-        let error_response: ApiResponse<bool> = ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new(
-                error_codes::FILE_SYSTEM_ERROR,
-                "Failed to write export file: Permission denied".to_string(),
-            )),
-        };
-
-        assert!(!error_response.success);
-        assert!(error_response.data.is_none());
-        assert!(error_response.error.is_some());
-        assert_eq!(
-            error_response.error.unwrap().code,
-            error_codes::FILE_SYSTEM_ERROR
-        );
-    }
-
-    #[test]
-    fn test_success_response_structure() {
-        let success_response: ApiResponse<bool> = ApiResponse {
-            success: true,
-            data: Some(true),
-            error: None,
-        };
-
-        assert!(success_response.success);
-        assert_eq!(success_response.data, Some(true));
-        assert!(success_response.error.is_none());
-    }
-
-    #[test]
-    fn test_markdown_file_write_integration() {
-        // Create a temporary file for testing
-        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
-        let temp_path = temp_file.path().to_str().unwrap().to_string();
-
-        // Simulate file write
-        let result = fs::write(Path::new(&temp_path), "# Test\n\nContent");
-
-        assert!(result.is_ok());
-
-        // Verify content
-        let mut file = std::fs::File::open(&temp_path).unwrap();
-        let mut content = String::new();
-        file.read_to_string(&mut content).unwrap();
-
-        assert!(content.contains("# Test"));
-        assert!(content.contains("Content"));
     }
 }

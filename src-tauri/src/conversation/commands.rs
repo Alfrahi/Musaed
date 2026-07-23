@@ -63,3 +63,14 @@ pub async fn cmd_conversation_update(
 ) -> Result<ApiResponse<()>, tauri::Error> {
     Ok(service::update_conversation(state.inner().clone(), id, title, updated_at).await)
 }
+
+#[tauri::command]
+pub async fn cmd_export_markdown(
+    app: tauri::AppHandle,
+    conversation_id: String,
+    path: String,
+) -> ApiResponse<bool> {
+    use tauri::Manager;
+    let store = app.state::<Arc<Mutex<ConversationStore>>>();
+    crate::conversation::export::export_markdown(store.inner().clone(), conversation_id, path).await
+}

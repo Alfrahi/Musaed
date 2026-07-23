@@ -6,7 +6,6 @@ use tracing_subscriber::layer::SubscriberExt;
 pub mod conversation;
 pub mod dialog;
 pub mod error_codes;
-pub mod export;
 pub mod generated_validation;
 pub mod migrations;
 pub mod ollama;
@@ -151,9 +150,9 @@ pub fn run() {
             conversation::commands::cmd_conversation_delete,
             conversation::commands::cmd_conversations_clear,
             conversation::commands::cmd_conversation_update,
+            conversation::commands::cmd_export_markdown,
             // Other commands
             dialog::cmd_dialog_ask,
-            export::cmd_export_markdown,
             opener::cmd_opener_open_url,
         ])
         .run(tauri::generate_context!())
