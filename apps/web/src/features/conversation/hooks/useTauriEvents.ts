@@ -7,6 +7,7 @@ import { useSettingsStore } from '@/store/settings-store';
 import { useStreamingStore } from '@/store/streaming-store';
 import { useModelStore } from '@/store/model-store';
 import { listen, ollamaApi } from '@/lib/ipc';
+import { translate } from '@/lib/i18n';
 import { flushAndStop } from '@/store/batch-manager';
 import { coordinateStopStream } from '@/store/coordination';
 import { useMessageStore } from '@/store/message-store';
@@ -64,7 +65,8 @@ const handleToken = (payload: OllamaToken) => {
     if (lastMsg && lastMsg.role === 'assistant') {
       persistMessage(convId, lastMsg).then((result) => {
         if (!result.success) {
-          toast.error('Failed to save message to history');
+          const lang = useSettingsStore.getState().globalSettings.language;
+          toast.error(translate('error.messageSaveFailed', lang));
           logger.error('Message persistence failed after retries', {
             conversationId: convId,
             messageId: lastMsg.id,
@@ -131,7 +133,8 @@ const createPullProgressHandler =
 const createPullErrorHandler = (isMountedRef: () => boolean) => (payload: PullError) => {
   const modelKey = payload.name || 'current';
   useModelStore.getState().updatePullStatus(modelKey, { status: 'error' });
-  toast.error(payload.error || 'Model pull failed');
+  const lang = useSettingsStore.getState().globalSettings.language;
+  toast.error(payload.error || translate('error.modelPullFailed', lang));
   setTimeout(
     () => isMountedRef() && useModelStore.getState().updatePullStatus(modelKey, null),
     8000

@@ -156,6 +156,7 @@
       "importError": "فشل استيراد البيانات. تنسيق غير صالح.",
       "confirmImport": "سيؤدي استيراد البيانات إلى الكتابة فوق سجل المحادثات الحالي. هل تريد الاستمرار؟",
       "calculating": "جاري الحساب...",
+      "preparingBundle": "جاري تجهيز الحزمة...",
       "autoDelete": "حذف المحادثات القديمة تلقائياً",
       "retention": {
         "30": "بعد 30 يوماً",
@@ -313,7 +314,11 @@
     "unsupportedLink": "رابط غير مدعوم",
     "connectionError": "خطأ في الاتصال",
     "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
-    "imageConversionFailed": "فشل في تحويل الصورة إلى base64"
+    "imageConversionFailed": "فشل في تحويل الصورة إلى base64",
+    "securityBlock": "حظر أمني: عنوان Ollama غير صالح أو غير مسموح به.",
+    "invalidRequest": "طلب غير صالح: {message}",
+    "messageSaveFailed": "فشل في حفظ الرسالة في السجل",
+    "modelPullFailed": "فشل سحب النموذج"
   },
   "a11y": {
     "closeModal": "إغلاق النافذة",

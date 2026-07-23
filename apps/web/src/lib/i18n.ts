@@ -14,6 +14,78 @@ type NestedKeyOf<T> = T extends object
 
 export type TranslationKey = NestedKeyOf<typeof en>;
 
+/**
+ * Resolver for the active UI language, used by module-scoped code that cannot
+ * call the {@link useTranslation} hook (notably `lib/ipc.ts` and other lib-layer
+ * error paths). Defaults to `'en'` until the app boot orchestrator wires it to
+ * the settings store via {@link setActiveLanguageResolver}. Keeping this indirection
+ * in `lib/i18n.ts` (rather than having `lib/ipc.ts` reach into the settings store
+ * directly) avoids a static import cycle: `lib/tauri-storage.ts` already imports
+ * from `lib/ipc.ts`, so a top-level `ipc → store` edge would close a cycle banned
+ * by dep-cruiser.
+ */
+let activeLanguageResolver: () => Language = () => 'en';
+
+/**
+ * Register a resolver returning the active UI language. Called once during app
+ * boot (see `useAppInitialization`) and kept live via a Zustand `subscribe(...)`
+ * so the resolver tracks settings changes for the lifetime of the session.
+ */
+export const setActiveLanguageResolver = (resolver: () => Language): void => {
+  activeLanguageResolver = resolver;
+};
+
+/**
+ * Returns the active UI language via the registered resolver (defaults to `'en'`
+ * before the resolver is wired). Safe to call from anywhere, including
+ * module-scoped code outside React render.
+ */
+export const getActiveLanguage = (): Language => activeLanguageResolver();
+
+/**
+ * Resolve a translation key for the given language.
+ *
+ * Pure-function form of {@link useTranslation}, for module-scoped code that
+ * cannot call a hook (e.g. `lib/ipc.ts`, event handlers in `useTauriEvents.ts`
+ * that are declared at module scope). Resolves keys through the same dictionary
+ * lookup + `IntlMessageFormat` interpolation as the hook's `t`.
+ *
+ * @param key - Dot-separated translation key (e.g. `error.securityBlock`).
+ * @param lang - Active language used for dictionary lookup and locale formatting.
+ * @param values - Optional interpolation values passed to `IntlMessageFormat`.
+ * @returns The resolved localized string, or the key itself as a fallback.
+ */
+export const translate = (
+  key: TranslationKey | string,
+  lang: Language,
+  values?: Record<string, string | number | boolean>
+): string => {
+  const keys = key.split('.');
+  const dict = (translations[lang] || translations.en) as Record<string, unknown>;
+  const defaultDict = translations.en as Record<string, unknown>;
+
+  const resolve = (obj: Record<string, unknown>, k: string[]): string | undefined => {
+    const val = k.reduce(
+      (acc: unknown, part: string) =>
+        acc && typeof acc === 'object' ? (acc as Record<string, unknown>)[part] : undefined,
+      obj
+    );
+    return typeof val === 'string' ? val : undefined;
+  };
+
+  const value = resolve(dict, keys) || resolve(defaultDict, keys);
+  if (!value) return key;
+
+  if (!values) return value;
+
+  const activeLocale = lang === 'ar' ? 'ar-YE' : 'en-US';
+  try {
+    return new IntlMessageFormat(value, activeLocale).format(values) as string;
+  } catch {
+    return value;
+  }
+};
+
 const dateTimeFormatters = new Map<string, Intl.DateTimeFormat>();
 const numberFormatters = new Map<string, Intl.NumberFormat>();
 const messageFormatters = new Map<string, IntlMessageFormat>();

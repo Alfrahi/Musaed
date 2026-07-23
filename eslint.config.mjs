@@ -152,6 +152,32 @@ export default tseslint.config(
           selector: "MemberExpression[object.name='process'][property.name='env']",
           message: 'Use typed configuration layer instead of process.env directly.',
         },
+
+        // MUSAED i18n HARD RULE — no hardcoded toast messages (STANDARDS.md §11/§13).
+        // Toast calls must resolve message strings via `t()` (from useTranslation in
+        // components/hooks) or `translate()` (from lib/i18n, for module-scoped code
+        // like lib/ipc.ts and event handler modules). String literals, template
+        // literals, and `x || 'literal'`-style fallbacks as the first argument are
+        // forbidden — Arabic users would otherwise see raw English on the most
+        // visible error paths. See audit item M4.
+        {
+          selector:
+            "CallExpression[callee.object.name='toast'][arguments.0.type='Literal']",
+          message:
+            'Toast messages must be localized via t()/translate() — hardcoded string literals are forbidden (STANDARDS.md §11/§13).',
+        },
+        {
+          selector:
+            "CallExpression[callee.object.name='toast'][arguments.0.type='TemplateLiteral']",
+          message:
+            'Toast messages must be localized via t()/translate() — hardcoded template literals are forbidden (STANDARDS.md §11/§13).',
+        },
+        {
+          selector:
+            "CallExpression[callee.object.name='toast'][arguments.0.type='LogicalExpression'][arguments.0.right.type='Literal']",
+          message:
+            'Toast fallback strings must be localized via t()/translate() — `x || \'literal\'` is forbidden (STANDARDS.md §11/§13).',
+        },
       ],
 
       // ================================================
@@ -181,13 +207,39 @@ export default tseslint.config(
   },
 
   // ── IPC layer exceptions ─────────────────────────────────
+  // lib/ipc.ts and lib/tauri-storage.ts are the only files allowed to use the raw
+  // @tauri-apps/* APIs and process.env — so `no-restricted-syntax` is narrowed here
+  // to JUST the i18n toast-literal guard, rather than disabled entirely. This closes
+  // a trap (audit item M4): an unconstrained blanket `'off'` would let raw English
+  // toast strings drift back into the IPC bridge — exactly the area being targeted —
+  // and the rule would never fire on the file it's most needed for.
   {
     files: [
       'apps/web/src/lib/ipc.ts',
       'apps/web/src/lib/tauri-storage.ts',
     ],
     rules: {
-      'no-restricted-syntax': 'off',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "CallExpression[callee.object.name='toast'][arguments.0.type='Literal']",
+          message:
+            'Toast messages must be localized via t()/translate() — hardcoded string literals are forbidden (STANDARDS.md §11/§13).',
+        },
+        {
+          selector:
+            "CallExpression[callee.object.name='toast'][arguments.0.type='TemplateLiteral']",
+          message:
+            'Toast messages must be localized via t()/translate() — hardcoded template literals are forbidden (STANDARDS.md §11/§13).',
+        },
+        {
+          selector:
+            "CallExpression[callee.object.name='toast'][arguments.0.type='LogicalExpression'][arguments.0.right.type='Literal']",
+          message:
+            'Toast fallback strings must be localized via t()/translate() — `x || \'literal\'` is forbidden (STANDARDS.md §11/§13).',
+        },
+      ],
       'no-restricted-imports': 'off',
     },
   },

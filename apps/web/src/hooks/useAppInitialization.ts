@@ -27,7 +27,7 @@ import { useSettingsActions, useStorageCleanup } from '@/features/settings';
 import { useMessageStore } from '@/store/message-store';
 import { conversationApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
-import { getSystemLanguage } from '@/lib/i18n';
+import { getSystemLanguage, setActiveLanguageResolver } from '@/lib/i18n';
 
 export function useAppInitialization() {
   const setInitialized = useSetInitialized();
@@ -39,6 +39,13 @@ export function useAppInitialization() {
 
   const initializeApp = useCallback(async () => {
     if (useUIStore.getState().isInitialized) return;
+
+    // Wire the i18n language resolver for module-scoped code (lib/ipc.ts toast
+    // error paths, etc.). The resolver reads live settings state on each call so
+    // it tracks language changes without needing re-registration. Done here,
+    // rather than via a top-level `lib/ipc → store` import, to avoid a static
+    // import cycle banned by dep-cruiser (see `setActiveLanguageResolver` docs).
+    setActiveLanguageResolver(() => useSettingsStore.getState().globalSettings.language);
 
     try {
       const currentSettings = useSettingsStore.getState().globalSettings;

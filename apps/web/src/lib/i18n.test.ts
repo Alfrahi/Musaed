@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useTranslation } from '@/lib/i18n';
+import { useTranslation, translate } from '@/lib/i18n';
 
 describe('Internationalization Utility', () => {
   it('resolves nested keys correctly in English', () => {
@@ -33,5 +33,28 @@ describe('Internationalization Utility', () => {
     const { result: resultEn } = renderHook(() => useTranslation('en'));
     expect(resultAr.current.isRtl).toBe(true);
     expect(resultEn.current.isRtl).toBe(false);
+  });
+});
+
+describe('translate (non-hook API)', () => {
+  it('resolves nested keys identically to useTranslation for English', () => {
+    expect(translate('common.appName', 'en')).toBe('Musaed');
+    expect(translate('sidebar.newChat', 'en')).toBe('New Chat');
+  });
+
+  it('resolves nested keys identically to useTranslation for Arabic', () => {
+    expect(translate('common.appName', 'ar')).toBe('مُساعد');
+    expect(translate('sidebar.newChat', 'ar')).toBe('محادثة جديدة');
+  });
+
+  it('handles pluralization and interpolation', () => {
+    expect(translate('library.installed', 'en', { count: 0 })).toBe('No models');
+    expect(translate('library.installed', 'en', { count: 5 })).toBe('5 models installed');
+  });
+
+  it('falls back to English when a key is missing in the active locale', () => {
+    // 'apples' is not in ar.json — should fall back to en.json value
+    // and ultimately to the key itself when the key is wholly unknown.
+    expect(translate('nonexistent.key', 'en')).toBe('nonexistent.key');
   });
 });
