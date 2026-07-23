@@ -57,10 +57,10 @@ const manifest: FeatureManifest = {
     ],
   },
   stateSchemas: {
-    ragStore: 1,
+    ragStore: 3,
   },
   persistenceSchemas: {
-    rag: 'musaed-rag-storage-v1',
+    rag: 'rag-state',
   },
   dependencies: [],
 } as const;

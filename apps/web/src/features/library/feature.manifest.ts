@@ -40,7 +40,7 @@ const manifest: FeatureManifest = {
     modelStore: 1,
   },
   persistenceSchemas: {
-    models: 'musaed-model-storage-v1',
+    models: 'musaed-model-storage',
   },
   dependencies: [],
 } as const;

@@ -48,12 +48,12 @@ const manifest: FeatureManifest = {
     background: ['cmd_ollama_pull_model', 'cmd_ollama_delete_model'],
   },
   stateSchemas: {
-    settingsStore: 1,
-    conversationStore: 3,
+    settingsStore: 2,
+    conversationStore: 1,
   },
   persistenceSchemas: {
     settings: 'musaed-settings-storage',
-    logs: 'logs.json',
+    // logs are handled by Rust backend
   },
   dependencies: ['library'], // Settings accesses library functionality via lib/useModelActions abstraction
 } as const;

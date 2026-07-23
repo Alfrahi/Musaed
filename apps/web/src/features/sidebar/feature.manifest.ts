@@ -27,12 +27,12 @@ const manifest: FeatureManifest = {
   },
   ipcEndpoints: ['cmd_dialog_ask', 'cmd_export_markdown'], // Both commands now implemented
   stateSchemas: {
-    conversationStore: 3,
+    conversationStore: 1,
     messageStore: 1,
   },
   persistenceSchemas: {
-    conversations: 'musaed-conversation-storage-v2',
-    messages: 'musaed-message-storage-v1',
+    conversations: 'musaed-conversation-storage',
+    // messages store is handled by Rust backend - in-memory cache only
   },
   // Sidebar is the conversation-list composition layer. It imports from
   // conversation (display + actions), rag (project browser), and settings
