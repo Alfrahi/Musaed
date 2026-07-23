@@ -40,13 +40,13 @@ const manifest: FeatureManifest = {
     background: ['cmd_ollama_generate_title', 'cmd_rag_search'],
   },
   stateSchemas: {
-    conversationStore: 3,
+    conversationStore: 1,
     messageStore: 1,
-    streamingStore: 1,
+    streamingStore: 2,
   },
   persistenceSchemas: {
-    conversation: 'musaed-conversation-storage-v2',
-    message: 'musaed-message-storage-v1',
+    conversation: 'musaed-conversation-storage',
+    // message store is handled by Rust backend - in-memory cache only
   },
   // `library` is a declared dependency because InputArea.tsx composes the
   // library feature's ModelSelector component into the chat input chrome.

@@ -9,7 +9,7 @@
     "test": "pnpm --filter web test",
     "lint": "pnpm -F web exec eslint src",
     "type-check": "pnpm --filter \"*\" type-check",
-    "validate": "pnpm lint && pnpm type-check && pnpm --filter web i18n:check",
+    "validate": "pnpm lint && pnpm type-check && pnpm --filter web i18n:check && pnpm validate:manifests",
     "i18n:sync": "pnpm --filter web i18n:sync",
     "i18n:check": "pnpm --filter web i18n:check",
     "validate:i18n": "node scripts/validate-i18n.mjs",
@@ -19,6 +19,8 @@
     "codegen:feature-deps": "node scripts/codegen-feature-deps.mjs",
     "codegen:feature-deps:check": "node scripts/codegen-feature-deps.mjs --check",
     "validate:contracts": "node scripts/validate-contracts.mjs",
+    "validate:manifests": "node scripts/validate-manifests.mjs",
+    "validate:manifests:check": "node scripts/validate-manifests.mjs",
     "test:contracts": "node --test scripts/validate-contracts.test.mjs",
     "test:arch": "node --test scripts/dep-cruiser-guard.test.mjs",
     "prepare": "husky"

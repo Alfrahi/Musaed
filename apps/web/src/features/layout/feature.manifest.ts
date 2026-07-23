@@ -20,6 +20,7 @@ const manifest: FeatureManifest = {
     'cmd_ollama_chat',
     'cmd_ollama_abort_chat',
     'cmd_message_append',
+    'cmd_conversation_create',
   ],
   stateSchemas: {}, // No feature-specific state (uses global stores)
   persistenceSchemas: {}, // No persistent storage
