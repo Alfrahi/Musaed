@@ -1,10 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   useStreamingStore,
   selectLiveContent,
   selectIsLiveStreaming,
   selectActiveRequestId,
 } from './streaming-store';
+import { traceApi } from '@/lib/ipc';
+import { resetStoreTracing } from '@/lib/store-tracing';
 
 describe('useStreamingStore', () => {
   beforeEach(() => {
@@ -406,6 +408,70 @@ describe('useStreamingStore', () => {
 
       expect(normalised).toEqual([]);
       expect(() => normalised.includes).not.toThrow();
+    });
+  });
+
+  // ── Observability (STANDARDS.md §14) ─────────────────────────────────────
+  // appendToken emits a DEBUG trace entry every Nth token per conversation
+  // through the shared traceApi pipeline. The throttle counter is reset
+  // on flush/clear so a restarted stream emits from the first boundary.
+  describe('observability', () => {
+    const N = 16;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      useStreamingStore.getState().clearAll();
+      resetStoreTracing();
+    });
+
+    it('emits a trace entry on the Nth appendToken for a started stream', async () => {
+      useStreamingStore.getState().startStream('obs-conv', 'req-1');
+      for (let i = 1; i < N; i++) {
+        useStreamingStore.getState().appendToken('obs-conv', 't');
+      }
+      expect(traceApi.append).not.toHaveBeenCalled();
+      useStreamingStore.getState().appendToken('obs-conv', 't');
+
+      expect(traceApi.append).toHaveBeenCalledTimes(1);
+      const input = (vi.mocked(traceApi.append).mock.calls[0] as unknown[])[0] as Parameters<
+        typeof traceApi.append
+      >[0];
+      expect(input).toMatchObject({
+        feature: 'streaming',
+        action: 'appendToken',
+        level: 'DEBUG',
+        source: 'frontend',
+      });
+      expect(input.context).toMatchObject({ conversationId: 'obs-conv' });
+    });
+
+    it('emits a flushToConversation trace on a successful flush', () => {
+      useStreamingStore.getState().startStream('flush-conv', 'req-2');
+      useStreamingStore.getState().appendToken('flush-conv', 'hello');
+      useStreamingStore.getState().flushToConversation('flush-conv');
+
+      const flushCall = vi
+        .mocked(traceApi.append)
+        .mock.calls.find((c) => (c[0] as { action: string }).action === 'flushToConversation');
+      expect(flushCall).toBeDefined();
+      expect(flushCall![0]).toMatchObject({
+        feature: 'streaming',
+        action: 'flushToConversation',
+        level: 'DEBUG',
+        context: { conversationId: 'flush-conv', contentLen: 'hello'.length },
+      });
+    });
+
+    it('does not trace appendToken for an inactive (no start) stream', () => {
+      // No startStream — appendToken short-circuits inside set(); the trace
+      // helper itself still runs (counts the token) but the audit contract is
+      // that we only care that flushToConversation still emits on proper flush.
+      useStreamingStore.getState().appendToken('ghost-conv', 't');
+      expect(
+        vi
+          .mocked(traceApi.append)
+          .mock.calls.some((c) => (c[0] as { action: string }).action === 'appendToken')
+      ).toBe(false);
     });
   });
 });

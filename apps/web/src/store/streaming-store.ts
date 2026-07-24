@@ -7,6 +7,7 @@ import type { StoreApi, UseBoundStore } from 'zustand';
 import { type Message } from '@musaed/contracts';
 import { createTauriStorage } from '@/lib/tauri-storage';
 import { useUIStore } from '@/store/ui-store';
+import { traceStoreMutation, traceAppendToken, resetTokenCounter } from '@/lib/store-tracing';
 
 /** Internal buffer for efficient stream accumulation. */
 interface StreamingBuffer {
@@ -41,6 +42,66 @@ const STREAMING_MIGRATIONS: Record<number, (data: unknown) => unknown> = {
   1: migrateToFlushArray,
   2: migrateToFlushArray,
 };
+
+/**
+ * Body of `flushToConversation`, lifted out of the store-creator arrow so
+ * the creator stays under the project's per-function line limit. Reads the
+ * buffer, clears the flushed entries, and emits a §14 store-mutation trace.
+ */
+function runFlushToConversation(
+  conversationId: string,
+  get: () => StreamingState,
+  set: (
+    partial: Partial<StreamingState> | ((state: StreamingState) => Partial<StreamingState>)
+  ) => void
+): { content: string; metrics: Partial<Message> } | null {
+  const { liveContent, pendingMetrics, flushedStreams } = get();
+
+  // Prevent duplicate flushes (idempotency guard)
+  if (flushedStreams.includes(conversationId)) {
+    return null;
+  }
+
+  const buffer = liveContent[conversationId];
+  // If no buffer, but may have pending metrics, return null as before
+  if (!buffer) {
+    // No content and no buffer -> return null
+    if (!pendingMetrics[conversationId]) return null;
+    // No buffer but metrics exist -> treat as empty content
+    const metrics = pendingMetrics[conversationId] ?? {};
+    // Clear metrics since flushed
+    set((state) => {
+      const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
+      return { pendingMetrics: remainingMetrics };
+    });
+    return { content: '', metrics };
+  }
+  const content = buffer.chunks.join('');
+  const metrics = pendingMetrics[conversationId] ?? {};
+
+  // Clear flushed content and metrics
+  set((state) => {
+    const { [conversationId]: _flushed, ...remaining } = state.liveContent;
+    const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
+    return { liveContent: remaining, pendingMetrics: remainingMetrics };
+  });
+
+  resetTokenCounter(conversationId);
+  traceStoreMutation({
+    feature: 'streaming',
+    action: 'flushToConversation',
+    level: 'DEBUG',
+    message: `flushToConversation for ${conversationId}`,
+    context: {
+      conversationId,
+      contentLen: content.length,
+      metricKeys: Object.keys(metrics),
+    },
+    throttleMs: 0,
+  });
+
+  return { content, metrics };
+}
 
 export interface StreamingState {
   /** Per-conversation live content buffer (only for actively streaming conversations). */
@@ -84,6 +145,12 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
       flushedStreams: [] as string[],
 
       appendToken: (conversationId, token) => {
+        // Hot path — observe 1-in-N via the specialized counter helper
+        // so trace volume stays bounded regardless of stream rate.
+        // Read the pre-mutation chunk count for context; the helper
+        // maintains its own per-conversation counter for the 1/N gate.
+        const currentChunks = get().liveContent[conversationId]?.chunks.length ?? 0;
+        traceAppendToken(conversationId, currentChunks);
         set((state) => {
           // Only append tokens for conversations that are actively streaming
           // This prevents zombie buffer creation after clearStream is called
@@ -112,40 +179,7 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
         }));
       },
 
-      flushToConversation: (conversationId) => {
-        const { liveContent, pendingMetrics, flushedStreams } = get();
-
-        // Prevent duplicate flushes (idempotency guard)
-        if (flushedStreams.includes(conversationId)) {
-          return null;
-        }
-
-        const buffer = liveContent[conversationId];
-        // If no buffer, but may have pending metrics, return null as before
-        if (!buffer) {
-          // No content and no buffer -> return null
-          if (!pendingMetrics[conversationId]) return null;
-          // No buffer but metrics exist -> treat as empty content
-          const metrics = pendingMetrics[conversationId] ?? {};
-          // Clear metrics since flushed
-          set((state) => {
-            const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
-            return { pendingMetrics: remainingMetrics };
-          });
-          return { content: '', metrics };
-        }
-        const content = buffer.chunks.join('');
-        const metrics = pendingMetrics[conversationId] ?? {};
-
-        // Clear flushed content and metrics
-        set((state) => {
-          const { [conversationId]: _flushed, ...remaining } = state.liveContent;
-          const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
-          return { liveContent: remaining, pendingMetrics: remainingMetrics };
-        });
-
-        return { content, metrics };
-      },
+      flushToConversation: (conversationId) => runFlushToConversation(conversationId, get, set),
 
       markFlushed: (conversationId) => {
         set((state) => {
@@ -172,6 +206,7 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
       },
 
       clearStream: (conversationId) => {
+        resetTokenCounter(conversationId);
         set((state) => {
           const { [conversationId]: _content, ...remainingContent } = state.liveContent;
           const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
@@ -186,13 +221,19 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
         });
       },
 
-      clearAll: () =>
+      clearAll: () => {
+        // Reset every known per-stream counter so a fresh stream after
+        // a global clear emits its first trace at the 1/N boundary.
+        for (const id of Object.keys(get().liveContent)) {
+          resetTokenCounter(id);
+        }
         set({
           liveContent: {},
           pendingMetrics: {},
           activeStreams: {},
           flushedStreams: [] as string[],
-        }),
+        });
+      },
     }),
     {
       name: 'musaed-streaming-storage',

@@ -7,6 +7,7 @@ import { useModelStore } from '@/store/model-store';
 import { useConversationStore } from '@/store/conversation-store';
 import { useStreamingStore } from '@/store/streaming-store';
 import { useMessageStore } from '@/store/message-store';
+import { traceStoreMutation } from '@/lib/store-tracing';
 // `ConversationMetadata` is defined in conversation-store.ts and re-exported from
 // the store barrel; coordination.ts historically also exported it. We re-export
 // (not redefine) to keep a single canonical declaration and avoid TS2308
@@ -55,6 +56,19 @@ export function flushAndStop(conversationId: string): void {
 
     // Mark as flushed to prevent duplicate flushes (race condition guard)
     streamingStore.markFlushed(conversationId);
+
+    traceStoreMutation({
+      feature: 'streaming',
+      action: 'flushAndStop',
+      level: 'INFO',
+      message: `flushAndStop for ${conversationId}`,
+      context: {
+        conversationId,
+        contentLen: result.content.length,
+        metricKeys: Object.keys(result.metrics),
+      },
+      throttleMs: 0,
+    });
   }
 }
 
@@ -71,6 +85,18 @@ export function coordinateStopStream(conversationId: string): void {
   if (Object.keys(activeStreams).length === 0) {
     useUIStore.getState().setStreaming(false);
   }
+
+  traceStoreMutation({
+    feature: 'streaming',
+    action: 'coordinateStopStream',
+    level: 'INFO',
+    message: `coordinateStopStream for ${conversationId}`,
+    context: {
+      conversationId,
+      streamsRemaining: Object.keys(activeStreams).length,
+    },
+    throttleMs: 0,
+  });
 }
 
 /**

@@ -6,6 +6,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { type Conversation } from '@musaed/contracts';
 import { createTauriStorage } from '@/lib/tauri-storage';
 import { useUIStore } from '@/store/ui-store';
+import { traceStoreMutation } from '@/lib/store-tracing';
 
 // Default state for conversation store
 const DEFAULT_CONVERSATION_STATE = {
@@ -71,10 +72,20 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
       setCurrentConversationId: (id) => set({ currentConversationId: id }),
       setSearchQuery: (query) => set({ searchQuery: query }),
       addConversation: (conv) =>
-        set((state) => ({
-          conversations: { ...state.conversations, [conv.id]: conv },
-          conversationIds: [conv.id, ...state.conversationIds],
-        })),
+        set((state) => {
+          traceStoreMutation({
+            feature: 'conversation',
+            action: 'addConversation',
+            level: 'INFO',
+            message: `addConversation ${conv.id}`,
+            context: { conversationId: conv.id, title: conv.title ?? null },
+            throttleMs: 0,
+          });
+          return {
+            conversations: { ...state.conversations, [conv.id]: conv },
+            conversationIds: [conv.id, ...state.conversationIds],
+          };
+        }),
       updateConversation: (id, updates) =>
         set((state) => {
           const conv = state.conversations[id];
@@ -89,6 +100,17 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
       removeConversation: (id) =>
         set((state) => {
           const { [id]: _, ...remaining } = state.conversations;
+          traceStoreMutation({
+            feature: 'conversation',
+            action: 'removeConversation',
+            level: 'INFO',
+            message: `removeConversation ${id}`,
+            context: {
+              conversationId: id,
+              wasCurrent: state.currentConversationId === id,
+            },
+            throttleMs: 0,
+          });
           return {
             conversations: remaining,
             conversationIds: state.conversationIds.filter((cid) => cid !== id),
