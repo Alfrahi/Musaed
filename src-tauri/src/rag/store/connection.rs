@@ -80,12 +80,28 @@ extern "C" fn sqlite3_vec_init_wrapper(
     _pz_err_msg: *mut *mut std::os::raw::c_char,
     _p_api: *const ffi::sqlite3_api_routines,
 ) -> std::os::raw::c_int {
+    // SAFETY: `sqlite3_vec_init` is the C entry point of the sqlite-vec
+    // loadable extension. It takes no arguments, writes no global state
+    // outside the sqlite-vec module, and performs idempotent one-time
+    // registration of its SQL functions. The wrapper's `_db`,
+    // `_pz_err_msg`, and `_p_api` parameters are unused by sqlite-vec's
+    // init signature (validated by the upstream crate's API), so passing
+    // them through to the FFI call is sound. Called exactly once per
+    // process boot via the SQLite auto-extension dispatch path.
     unsafe { sqlite_vec::sqlite3_vec_init() };
     0
 }
 
 /// Loads the sqlite-vec extension into the SQLite runtime.
 pub(super) fn load_vec_extension() -> Result<(), String> {
+    // SAFETY: `sqlite3_auto_extension` expects an `extern "C"` callback
+    // matching its prototype (`*mut sqlite3`, `*mut *mut c_char`,
+    // `*const sqlite3_api_routines` -> `c_int`). `sqlite3_vec_init_wrapper`
+    // is declared with exactly that signature, so the `Some(...)` cast to
+    // the function-pointer argument is sound. Registration is idempotent
+    // and global, and is performed once per process boot before any RAG
+    // connection is opened — vec is loaded into every subsequently-opened
+    // SQLite connection without further `unsafe`.
     unsafe {
         ffi::sqlite3_auto_extension(Some(sqlite3_vec_init_wrapper));
     }

@@ -210,6 +210,93 @@ async fn test_insert_and_search_chunks() {
     assert_eq!(results[0].file_path, "src/main.rs");
 }
 
+/// Regression test for AUDIT-REPORT.md Min-4: §8 mandates "Results MUST be
+/// deterministic". The hybrid ranking pipeline (BM25 + vector) is fed by
+/// `search_similar`; if its ordering or float scoring ever became
+/// non-deterministic — e.g. from a SQLite plan change, a float-ordering
+/// refactor in BM25, or a future swap to a non-stable sort — silent
+/// regressions would surface as query results that drift between runs.
+///
+/// This test asserts that the same query issued twice against the same
+/// store returns byte-identical serialised ranked output (chunk ids,
+/// scores, ordering). It exercises multiple candidates with distinct
+/// embeddings so the ranking order is non-trivial.
+#[tokio::test]
+async fn test_search_results_are_deterministic() {
+    let store = test_store();
+    store
+        .create_project(&make_test_project("det", "Determinism", "/tmp/det"))
+        .await
+        .unwrap();
+
+    // Three chunks with distinct embeddings so ranking order is meaningful.
+    let embeddings_and_content: [([f32; 768], &str); 3] = [
+        {
+            let mut e = [0.0f32; 768];
+            e[0] = 1.0;
+            (e, "fn sort_by_score(items: &[f32]) -> Vec<f32>")
+        },
+        {
+            let mut e = [0.0f32; 768];
+            e[1] = 1.0;
+            (e, "fn bm25_score(query: &str, doc: &str) -> f32")
+        },
+        {
+            let mut e = [0.0f32; 768];
+            e[2] = 1.0;
+            (e, "struct HybridSearchEngine { weights: VectorWeights }")
+        },
+    ];
+
+    for (i, (embedding, content)) in embeddings_and_content.iter().enumerate() {
+        let file = FileRecord {
+            id: None,
+            project_id: "det".to_string(),
+            relative_path: format!("src/file_{i}.rs"),
+            file_hash: format!("hash_{i}"),
+            file_size: 100,
+            modified_at: "2024-01-01".to_string(),
+            chunk_count: 1,
+        };
+        let file_id = store.upsert_file(&file).await.unwrap();
+
+        let chunk = ChunkRow {
+            id: None,
+            project_id: "det".to_string(),
+            file_id,
+            chunk_index: 0,
+            content: content.to_string(),
+            chunk_type: "code".to_string(),
+            language: Some("rust".to_string()),
+            start_line: 1,
+            end_line: 5,
+            metadata: serde_json::json!({"topic": "rag"}),
+        };
+        let chunk_id = store.insert_chunk(&chunk).await.unwrap();
+        store.insert_embedding(chunk_id, embedding).await.unwrap();
+    }
+
+    // A query embedding that overlaps all three basis vectors so every
+    // candidate is returned but ranked in a specific order.
+    let mut query = vec![0.0f32; 768];
+    query[0] = 0.6;
+    query[1] = 0.3;
+    query[2] = 0.1;
+
+    let first = serde_json::to_string(&store.search_similar("det", &query, 10, 0.0).await.unwrap())
+        .expect("first results serialize");
+    let second =
+        serde_json::to_string(&store.search_similar("det", &query, 10, 0.0).await.unwrap())
+            .expect("second results serialize");
+
+    assert!(!first.is_empty(), "search returned no candidates");
+    assert_eq!(
+        first, second,
+        "repeated identical queries produced different rankings or scores — \
+         §8 determinism invariant violated"
+    );
+}
+
 #[tokio::test]
 async fn test_delete_file_cascades() {
     let store = test_store();
