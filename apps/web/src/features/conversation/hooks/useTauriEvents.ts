@@ -88,6 +88,7 @@ const handleError = (payload: BackendError) => {
   const sanitized = sanitizeError(payload);
   const streamingStore = useStreamingStore.getState();
   logger.error('Backend error event', { error: sanitized });
+  const lang = useSettingsStore.getState().globalSettings.language;
 
   if (sanitized.requestId) {
     const convId = Object.entries(streamingStore.activeStreams).find(
@@ -96,12 +97,12 @@ const handleError = (payload: BackendError) => {
     if (convId) {
       flushAndStop(convId);
       coordinateStopStream(convId);
-      toast.error(sanitized.message);
+      toast.error(translate('error.backendError', lang, { message: sanitized.message }));
       return;
     }
   }
 
-  toast.error(sanitized.message);
+  toast.error(translate('error.backendError', lang, { message: sanitized.message }));
 
   // Flush all active streams on unattributed errors
   Object.keys(streamingStore.activeStreams).forEach((id) => {

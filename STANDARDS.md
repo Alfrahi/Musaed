@@ -218,10 +218,18 @@ src-tauri/src/{domain}/
 
 Domains:
 
-- `ollama/`
-- `rag/`
-- `logging/`
-- `validation/`
+- `ollama/` — Ollama engine: chat, streaming, model management, health
+- `rag/` — retrieval-augmented generation: indexing, search, embeddings, context
+- `trace_domain/` — structured logging & trace lifecycle (semantic match for the
+  logging concern referenced elsewhere in this document as `logging/`)
+- `conversation/` — conversation state, message persistence, export (markdown)
+- `migrations/` — SQLite schema migrations and rollback
+
+### Flat modules (not directories)
+
+- `validation.rs` — stateless input-validation helpers. Kept as a flat root
+  file rather than a domain directory because it carries no service/state;
+  it is imported by other domains as a shared utility.
 
 ---
 
