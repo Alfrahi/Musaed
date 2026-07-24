@@ -192,85 +192,89 @@ export const mockUtils = {
   },
 };
 
-// Mock all dependencies
+// Mock all dependencies.
+//
+// `vi.mock` calls MUST live at the top level of the module so they are hoisted
+// by Vitest before any test runs (calling them from inside a function would
+// still hoist, but Vitest warns and a future version will error). The mock
+// value consts above are module-level, so the deferred factory closures below
+// see them initialized by the time the mocked modules are first imported.
+//
+// `mockAllDependencies()` is preserved as a no-op for backwards-compatibility
+// with test files that call it from `beforeEach`. The mocks are installed at
+// module load, so the call has no runtime effect — but the call sites should
+// be left alone to minimize churn across the test suite.
+
+vi.mock('@/lib/i18n', () => ({
+  useTranslation: vi.fn((_lang: string) => mockTranslation),
+}));
+
+vi.mock('@/lib/ipc', () => ({
+  __esModule: true,
+  chatApi: mockIpc.chatApi,
+  conversationApi: mockIpc.conversationApi,
+  ragApi: mockIpc.ragApi,
+  store: mockIpc.store,
+  logApi: mockIpc.logApi,
+  checkIsTauri: mockIpc.checkIsTauri,
+}));
+
+vi.mock('@/store/batch-manager', () => ({ flushAndStop: mockUtils.batchManager.flushAndStop }));
+
+vi.mock('@/store/coordination', () => ({ ...mockUtils.coordination }));
+
+vi.mock('@/store/ui-store', () => ({
+  useUIStore: () => mockStores.uiStore,
+  useSetUIError: () => mockStores.uiStore.setErrorMessage,
+}));
+
+vi.mock('@/store/message-store', () => ({
+  useMessageStore: mockStoreHooks.useMessageStore,
+}));
+
+vi.mock('@/store/streaming-store', () => ({
+  useStreamingStore: mockStoreHooks.useStreamingStore,
+}));
+
+vi.mock('@/store/model-store', () => ({
+  useModelStore: mockStoreHooks.useModelStore,
+  getState: () => mockStores.modelStore,
+  selectedModel: mockStores.modelStore.selectedModel,
+}));
+
+vi.mock('@/store/conversation-store', () => ({
+  useConversationStore: mockStoreHooks.useConversationStore,
+  useUpdateConversation: mockStoreHooks.useUpdateConversation,
+  useBatchUpdate: mockStoreHooks.useBatchUpdate,
+  useCurrentConversationId: mockStoreHooks.useCurrentConversationId,
+  useConversations: mockStoreHooks.useConversations,
+  useMessageStore: mockStoreHooks.useMessageStore,
+  ...mockStores.conversationStore,
+}));
+
+vi.mock('@/store/settings-store', () => ({
+  useSettingsStore: mockStoreHooks.useSettingsStore,
+  useLanguage: vi.fn(() => 'en'),
+  // Direct store access
+  globalSettings: mockStores.settingsStore.globalSettings,
+}));
+
+vi.mock('@/store/rag-store', () => ({
+  useRagStore: mockStoreHooks.useRagStore,
+  // Direct store access
+  getState: () => mockStores.ragStore,
+  activeProjectId: mockStores.ragStore.activeProjectId,
+}));
+
+vi.mock('@/features/conversation/utils/message-persistence', () => ({
+  persistUserMessage: mockUtils.persistUserMessage,
+}));
+
+vi.mock('@/lib/logger', () => ({ logger: mockUtils.logger }));
+
+// No-op kept for backwards compatibility with test files that call
+// `mockAllDependencies()` from `beforeEach`. The mocks above are installed at
+// module load; this function is preserved only to avoid churning call sites.
 export function mockAllDependencies() {
-  // Mock i18n
-  vi.mock('@/lib/i18n', () => ({
-    useTranslation: vi.fn((_lang: string) => mockTranslation),
-  }));
-
-  // Mock IPC
-  vi.mock('@/lib/ipc', () => ({
-    __esModule: true,
-    chatApi: mockIpc.chatApi,
-    conversationApi: mockIpc.conversationApi,
-    ragApi: mockIpc.ragApi,
-    store: mockIpc.store,
-    logApi: mockIpc.logApi,
-    checkIsTauri: mockIpc.checkIsTauri,
-  }));
-
-  // Mock batch-manager
-  vi.mock('@/store/batch-manager', () => ({ flushAndStop: mockUtils.batchManager.flushAndStop }));
-
-  // Mock coordination
-  vi.mock('@/store/coordination', () => ({ ...mockUtils.coordination }));
-
-  // Mock UI store
-  vi.mock('@/store/ui-store', () => ({
-    useUIStore: () => mockStores.uiStore,
-    useSetUIError: () => mockStores.uiStore.setErrorMessage,
-  }));
-
-  // Mock message store
-  vi.mock('@/store/message-store', () => ({
-    useMessageStore: mockStoreHooks.useMessageStore,
-  }));
-
-  // Mock streaming store
-  vi.mock('@/store/streaming-store', () => ({
-    useStreamingStore: mockStoreHooks.useStreamingStore,
-  }));
-
-  // Mock model store
-  vi.mock('@/store/model-store', () => ({
-    useModelStore: mockStoreHooks.useModelStore,
-    getState: () => mockStores.modelStore,
-    selectedModel: mockStores.modelStore.selectedModel,
-  }));
-
-  // Mock conversation store
-  vi.mock('@/store/conversation-store', () => ({
-    useConversationStore: mockStoreHooks.useConversationStore,
-    useUpdateConversation: mockStoreHooks.useUpdateConversation,
-    useBatchUpdate: mockStoreHooks.useBatchUpdate,
-    useCurrentConversationId: mockStoreHooks.useCurrentConversationId,
-    useConversations: mockStoreHooks.useConversations,
-    useMessageStore: mockStoreHooks.useMessageStore,
-    ...mockStores.conversationStore,
-  }));
-
-  // Mock settings store
-  vi.mock('@/store/settings-store', () => ({
-    useSettingsStore: mockStoreHooks.useSettingsStore,
-    useLanguage: vi.fn(() => 'en'),
-    // Direct store access
-    globalSettings: mockStores.settingsStore.globalSettings,
-  }));
-
-  // Mock RAG store
-  vi.mock('@/store/rag-store', () => ({
-    useRagStore: mockStoreHooks.useRagStore,
-    // Direct store access
-    getState: () => mockStores.ragStore,
-    activeProjectId: mockStores.ragStore.activeProjectId,
-  }));
-
-  // Mock message persistence
-  vi.mock('@/features/conversation/utils/message-persistence', () => ({
-    persistUserMessage: mockUtils.persistUserMessage,
-  }));
-
-  // Mock logger
-  vi.mock('@/lib/logger', () => ({ logger: mockUtils.logger }));
+  // intentionally empty — mocks are hoisted to top level above
 }
