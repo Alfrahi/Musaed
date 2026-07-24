@@ -175,7 +175,7 @@ Must define:
 
 - request/response types
 - enums
-- IPC version contracts
+- IPC command registry
 
 ---
 
@@ -194,17 +194,19 @@ introduces the module. CI greps for sub-path imports across `apps/` and
 
 ---
 
-## IPC VERSIONING RULE
+## IPC DRIFT DETECTION
 
-- Breaking change → MUST create new version
-- Example:
+Breaking-change detection between the Rust `#[tauri::command]` signatures and
+the TypeScript `CommandMap` is enforced at CI time by
+`pnpm validate:contracts --strict` (`scripts/validate-contracts.mjs`), which
+cross-checks argument count, names, types, and return types. There is no
+runtime `_v1`/`_v2` command-name versioning scheme; any contract drift
+between the Rust and TypeScript surfaces fails the build.
 
-```txt id="ipcver"
-chat.sendMessage_v1
-chat.sendMessage_v2
-```
-
-- Old versions MUST remain until migration is complete
+The `COMMAND_VERSIONS` map in `packages/contracts/src/command-versions.ts` is
+a command registry (not a version map) — the frontend IPC bridge consults it
+in development to warn about unregistered commands, and `latency.test.ts`
+enumerates its keys to confirm every command has a latency budget.
 
 ---
 
@@ -516,7 +518,7 @@ CI MUST validate:
 
 - feature boundary changes
 - domain restructuring
-- IPC version changes
+- IPC command signature changes
 
 ---
 
