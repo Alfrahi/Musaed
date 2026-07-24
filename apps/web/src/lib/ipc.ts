@@ -43,6 +43,15 @@ import {
   IPC_LATENCY_BUDGETS,
   type IpcCallStat,
   type IpcStats,
+  // Migration contracts
+  RunMigrationsRequestSchema,
+  RunMigrationsResponseSchema,
+  MigrationStatusSchema,
+  MigrationInfoSchema,
+  type RunMigrationsRequest,
+  type RunMigrationsResponse,
+  type MigrationStatus,
+  type MigrationInfo,
 } from '@musaed/contracts';
 import type {
   RagProject,
@@ -368,6 +377,19 @@ export interface CommandMap {
   cmd_conversation_delete: { args: { id: string }; return: void };
   cmd_conversations_clear: { args: Record<string, never>; return: void };
   cmd_conversation_update: { args: { id: string; title: string; updatedAt: number }; return: void };
+
+  // Migration commands — backend SQLite schema migrations. Exposed so the
+  // Settings/Diagnostics UI can run, roll back, and report on migrations.
+  cmd_run_migrations: {
+    args: { target: string; targetVersion?: number; allowRollback: boolean };
+    return: RunMigrationsResponse;
+  };
+  cmd_rollback_migrations: {
+    args: { target: string; toVersion: number };
+    return: RunMigrationsResponse;
+  };
+  cmd_get_migration_status: { args: { target: string }; return: MigrationStatus };
+  cmd_list_migrations: { args: { target: string }; return: MigrationInfo[] };
 }
 
 const voidSchema = z.preprocess((val) => (val === null ? undefined : val), z.void());
@@ -541,6 +563,19 @@ const CommandInputSchemas: {
     title: z.string().min(1),
     updatedAt: z.number(),
   }),
+
+  // Migration input schemas
+  cmd_run_migrations: RunMigrationsRequestSchema,
+  cmd_rollback_migrations: z.object({
+    target: z.enum(['conversations', 'rag']),
+    toVersion: z.number().int().min(0),
+  }),
+  cmd_get_migration_status: z.object({
+    target: z.enum(['conversations', 'rag']),
+  }),
+  cmd_list_migrations: z.object({
+    target: z.enum(['conversations', 'rag']),
+  }),
 };
 
 /**
@@ -603,6 +638,12 @@ const CommandReturnSchemas: {
   cmd_conversation_delete: voidSchema,
   cmd_conversations_clear: voidSchema,
   cmd_conversation_update: voidSchema,
+
+  // Migration return schemas
+  cmd_run_migrations: RunMigrationsResponseSchema,
+  cmd_rollback_migrations: RunMigrationsResponseSchema,
+  cmd_get_migration_status: MigrationStatusSchema,
+  cmd_list_migrations: z.array(MigrationInfoSchema),
 };
 
 /**
@@ -1314,4 +1355,40 @@ export const conversationApi = {
   clearAllConversations: () => callInternal('cmd_conversations_clear', {}),
   updateConversation: (id: string, title: string, updatedAt: number) =>
     callInternal('cmd_conversation_update', { id, title, updatedAt }),
+};
+
+/**
+ * Migration API — drives backend SQLite schema migrations (conversations/rag).
+ *
+ * Used by the Settings/Diagnostics surface to run pending migrations, roll
+ * back to a previous version, and report current state. These are the typed
+ * equivalents of the four `cmd_*_migrations` Rust commands.
+ */
+export const migrationApi = {
+  /**
+   * Runs pending migrations for a target database.
+   * @param args - { target, targetVersion?, allowRollback? }
+   * @returns Migration result with from/to version and applied steps
+   */
+  run: (args: CommandMap['cmd_run_migrations']['args']) => callInternal('cmd_run_migrations', args),
+  /**
+   * Rolls back a target database to a previous version.
+   * @param target - 'conversations' | 'rag'
+   * @param toVersion - Target version to roll back to
+   * @returns Migration result with from/to version and applied steps
+   */
+  rollback: (target: 'conversations' | 'rag', toVersion: number) =>
+    callInternal('cmd_rollback_migrations', { target, toVersion }),
+  /**
+   * Reports current vs latest version for a target database.
+   * @param target - 'conversations' | 'rag'
+   * @returns Migration status including `needsMigration` flag
+   */
+  status: (target: 'conversations' | 'rag') => callInternal('cmd_get_migration_status', { target }),
+  /**
+   * Lists the available migration steps for a target database.
+   * @param target - 'conversations' | 'rag'
+   * @returns Array of migration info (version, description, isRollbackable)
+   */
+  list: (target: 'conversations' | 'rag') => callInternal('cmd_list_migrations', { target }),
 };

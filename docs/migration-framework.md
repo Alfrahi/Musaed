@@ -207,24 +207,31 @@ CREATE TABLE IF NOT EXISTS _conversations_migrations (
 
 ### Frontend → Backend
 
+All four migration commands are wired into the typed IPC bridge
+(`apps/web/src/lib/ipc.ts`) as `migrationApi`. Direct `invoke()` calls
+bypass the typed bridge and are blocked by ESLint — always go through
+`migrationApi`:
+
 ```typescript
-// Run migrations
-const result = await ipc.invoke('run_migrations', {
+import { migrationApi } from '@/lib/ipc';
+
+// Run pending migrations on the conversations database
+const result = await migrationApi.run({
   target: 'conversations',
-  targetVersion: null, // or specific version
+  targetVersion: undefined, // omit to apply all pending up to latest
   allowRollback: true,
 });
 
-// Get rollback plan (dry-run)
-const plan = await ipc.invoke('get_rollback_plan', {
-  target: 'rag',
-  toVersion: 2,
-});
+// Roll back to a specific version
+const rollbackResult = await migrationApi.rollback('rag', 2);
 
-// Check migration status
-const status = await ipc.invoke('get_migration_status', {
-  target: 'conversations',
-});
+// Check migration status (used by the Settings/Diagnostics panel)
+const status = await migrationApi.status('conversations');
+// → { target, currentVersion, latestVersion, needsMigration, lastMigratedAt? }
+
+// List the available migration steps for a target
+const steps = await migrationApi.list('rag');
+// → Array<{ version, description, isRollbackable }>
 ```
 
 ### Command Responses
@@ -238,21 +245,27 @@ interface RunMigrationsResponse {
   error?: { code: string; message: string };
 }
 
-interface RollbackPlanResponse {
-  target: string;
-  fromVersion: number;
-  toVersion: number;
-  migrationsToRollback: Array<{
-    version: number;
-    description: string;
-    isRollbackable: boolean;
-    hasDataLoss: boolean;
-  }>;
-  isSafe: boolean;
-  warnings: string[];
-  estimatedDataLoss?: string;
+interface MigrationStatus {
+  target: 'conversations' | 'rag';
+  currentVersion: number;
+  latestVersion: number;
+  needsMigration: boolean;
+  lastMigratedAt?: string;
+}
+
+interface MigrationInfo {
+  version: number;
+  description: string;
+  isRollbackable: boolean;
 }
 ```
+
+The contract types and Zod schemas live in
+`packages/contracts/src/migrations.ts` (`RunMigrationsRequestSchema`,
+`RunMigrationsResponseSchema`, `MigrationStatusSchema`,
+`MigrationInfoSchema`) and are the single source of truth. Rust
+serde structs mirror these names (via `#[serde(rename_all = "camelCase")]`)
+so the wire format matches the contracts byte-for-byte.
 
 ---
 

@@ -142,7 +142,7 @@ fn check_migration_has_data_loss(target: MigrationTarget, version: u32) -> bool 
 }
 
 /// Gets migration info for planning
-fn get_migration_info(target: MigrationTarget, version: u32) -> Option<MigrationInfo> {
+fn get_migration_info(target: MigrationTarget, version: u32) -> Option<MigrationStepInfo> {
     match target {
         MigrationTarget::Conversations => conversations::get_migration_info(version),
         MigrationTarget::Rag => rag::get_migration_info(version),
@@ -150,7 +150,7 @@ fn get_migration_info(target: MigrationTarget, version: u32) -> Option<Migration
 }
 
 #[derive(Debug, Clone)]
-pub struct MigrationInfo {
+pub struct MigrationStepInfo {
     pub description: String,
     pub is_rollbackable: bool,
 }
@@ -195,7 +195,7 @@ pub fn create_rollback_snapshot(
 
 // Sub-modules for target-specific rollback logic
 mod conversations {
-    use super::MigrationInfo;
+    use super::MigrationStepInfo;
 
     pub fn has_data_loss_on_rollback(_version: u32) -> bool {
         // Check specific migrations for data loss
@@ -203,14 +203,14 @@ mod conversations {
         false
     }
 
-    pub fn get_migration_info(_version: u32) -> Option<MigrationInfo> {
+    pub fn get_migration_info(_version: u32) -> Option<MigrationStepInfo> {
         // Would return info about specific conversation migrations
         None
     }
 }
 
 mod rag {
-    use super::MigrationInfo;
+    use super::MigrationStepInfo;
 
     pub fn has_data_loss_on_rollback(version: u32) -> bool {
         // RAG migrations that drop embedding tables cause data loss
@@ -221,7 +221,7 @@ mod rag {
         }
     }
 
-    pub fn get_migration_info(_version: u32) -> Option<MigrationInfo> {
+    pub fn get_migration_info(_version: u32) -> Option<MigrationStepInfo> {
         None
     }
 }

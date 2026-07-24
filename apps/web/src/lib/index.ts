@@ -29,6 +29,7 @@ export {
   traceApi,
   titleApi,
   conversationApi,
+  migrationApi,
 } from '@/lib/ipc';
 export type { CommandMap } from '@/lib/ipc';
 

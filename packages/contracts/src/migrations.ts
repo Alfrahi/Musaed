@@ -234,6 +234,17 @@ export const MigrationStatusSchema = z.object({
 export type MigrationStatus = z.infer<typeof MigrationStatusSchema>;
 
 /**
+ * Metadata for a single available migration step, returned by `cmd_list_migrations`.
+ */
+export const MigrationInfoSchema = z.object({
+  version: z.number().int(),
+  description: z.string(),
+  isRollbackable: z.boolean(),
+});
+
+export type MigrationInfo = z.infer<typeof MigrationInfoSchema>;
+
+/**
  * Helper to create a migration with optional rollback.
  */
 export function createMigration<T>(params: {

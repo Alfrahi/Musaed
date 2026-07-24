@@ -50,7 +50,7 @@ pub struct MigrationErrorDetail {
 /// Migration status information
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MigrationStatusResponse {
+pub struct MigrationStatus {
     pub target: String,
     pub current_version: u32,
     pub latest_version: u32,
@@ -60,7 +60,7 @@ pub struct MigrationStatusResponse {
 /// List available migrations for a target
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MigrationInfoResponse {
+pub struct MigrationInfo {
     pub version: u32,
     pub description: String,
     pub is_rollbackable: bool,
@@ -71,8 +71,15 @@ pub struct MigrationInfoResponse {
 pub async fn cmd_run_migrations(
     conversation_store: State<'_, Arc<Mutex<Connection>>>,
     rag_store: State<'_, Arc<Mutex<Connection>>>,
-    request: RunMigrationsRequest,
+    target: String,
+    target_version: Option<u32>,
+    allow_rollback: bool,
 ) -> Result<RunMigrationsResponse, String> {
+    let request = RunMigrationsRequest {
+        target,
+        target_version,
+        allow_rollback,
+    };
     crate::migrations::service::run(
         conversation_store.inner().clone(),
         rag_store.inner().clone(),
@@ -104,7 +111,7 @@ pub async fn cmd_get_migration_status(
     conversation_store: State<'_, Arc<Mutex<Connection>>>,
     rag_store: State<'_, Arc<Mutex<Connection>>>,
     target: String,
-) -> Result<MigrationStatusResponse, String> {
+) -> Result<MigrationStatus, String> {
     crate::migrations::service::status(
         conversation_store.inner().clone(),
         rag_store.inner().clone(),
@@ -115,6 +122,6 @@ pub async fn cmd_get_migration_status(
 
 /// List available migrations for a target
 #[tauri::command]
-pub fn cmd_list_migrations(target: String) -> Result<Vec<MigrationInfoResponse>, String> {
+pub fn cmd_list_migrations(target: String) -> Result<Vec<MigrationInfo>, String> {
     crate::migrations::service::list(target)
 }

@@ -63,6 +63,12 @@ const TAURI_INJECTED_PARAMS = new Set([
 /**
  * Parameter name patterns that indicate Tauri-managed or internal state
  * that is not part of the IPC contract exposed to the frontend.
+ *
+ * Note: also see `isInjectedType` — the type-based check covers
+ * `param: State<…>` parameters like `conversation_store: State<…>`,
+ * which is the canonical Tauri pattern for injected managed-state handles.
+ * Relying only on the param *name* would miss any command whose author
+ * named the binding something other than the literal `state`.
  */
 function isInjectedParam(paramName) {
   if (TAURI_INJECTED_PARAMS.has(paramName)) return true;
@@ -70,6 +76,31 @@ function isInjectedParam(paramName) {
   if (paramName.startsWith('Arc<Mutex<') || paramName.startsWith('Arc<')) return true;
   // serde_json — internal serialization
   if (paramName === 'serde_json') return true;
+  return false;
+}
+
+/**
+ * Type-based injected-param detector. Catches Tauri's runtime-injected
+ * `State<'_, T>` / `State<'r, T>` handles regardless of the binding name
+ * (e.g. `conversation_store: State<...>)`). This is the principled
+ * counterpart to `isInjectedParam` so commands aren't forced to name the
+ * binding literally `state`.
+ */
+function isInjectedType(paramType) {
+  // State<'_, Arc<Mutex<Connection>>> etc. — Tauri-managed state handle.
+  if (paramType.startsWith('State<')) return true;
+  // AppHandle / Window / WebviewWindow — Tauri runtime handles (rarely
+  // spelled in user-facing param types, but cover them for completeness).
+  if (
+    paramType.startsWith('AppHandle<') ||
+    paramType === 'AppHandle' ||
+    paramType.startsWith('Window<') ||
+    paramType === 'Window' ||
+    paramType.startsWith('WebviewWindow<') ||
+    paramType === 'WebviewWindow'
+  ) {
+    return true;
+  }
   return false;
 }
 
@@ -192,7 +223,7 @@ function parseRustCommands() {
           }
           const paramName = arg.substring(0, colonIdx).trim();
           const paramType = arg.substring(colonIdx + 1).trim();
-          if (!isInjectedParam(paramName)) {
+          if (!isInjectedParam(paramName) && !isInjectedType(paramType)) {
             userArgs.push(paramName);
             userArgTypes.push(paramType);
           }
@@ -712,13 +743,14 @@ function compareCommandStrict(rustName, rust, ts) {
  * Commands that are intentionally internal-only (called by the Rust backend,
  * not by the frontend). These are exempt from requiring a TypeScript
  * CommandMap entry.
+ *
+ * Note: the four SQLite migration commands (`cmd_run_migrations`,
+ * `cmd_rollback_migrations`, `cmd_get_migration_status`, `cmd_list_migrations`)
+ * were previously listed here. They have since been wired into the typed
+ * `CommandMap` + `migrationApi` surface so the Settings/Diagnostics UI can
+ * drive them, and are now contract-checked like every other command.
  */
-const INTERNAL_ONLY_COMMANDS = new Set([
-  'cmd_run_migrations',
-  'cmd_rollback_migrations',
-  'cmd_get_migration_status',
-  'cmd_list_migrations',
-]);
+const INTERNAL_ONLY_COMMANDS = new Set([]);
 
 function validate(rustCommands, tsCommands, { strict = false } = {}) {
   const issues = [];

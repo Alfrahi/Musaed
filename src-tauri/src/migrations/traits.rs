@@ -106,10 +106,10 @@ impl MigrationMetadata {
 
 /// Migration registry for lookups
 pub struct MigrationRegistry {
-    pub migrations: Vec<Box<dyn Fn() -> Box<dyn MigrationInfo> + Send + Sync>>,
+    pub migrations: Vec<Box<dyn Fn() -> Box<dyn MigrationInfoTrait> + Send + Sync>>,
 }
 
-pub trait MigrationInfo {
+pub trait MigrationInfoTrait {
     fn target(&self) -> &'static str;
     fn version(&self) -> u32;
     fn description(&self) -> &'static str;

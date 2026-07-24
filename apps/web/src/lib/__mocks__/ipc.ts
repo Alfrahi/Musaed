@@ -164,6 +164,29 @@ export const conversationApi = {
   updateConversation: vi.fn().mockResolvedValue(undefined),
 };
 
+// Mock migrationApi
+export const migrationApi = {
+  run: vi.fn().mockResolvedValue({
+    success: true,
+    fromVersion: 1,
+    toVersion: 1,
+    appliedMigrations: [],
+  }),
+  rollback: vi.fn().mockResolvedValue({
+    success: true,
+    fromVersion: 1,
+    toVersion: 1,
+    appliedMigrations: [],
+  }),
+  status: vi.fn().mockResolvedValue({
+    target: 'conversations',
+    currentVersion: 1,
+    latestVersion: 1,
+    needsMigration: false,
+  }),
+  list: vi.fn().mockResolvedValue([]),
+};
+
 // Mock dialog
 export const dialog = {
   ask: vi.fn().mockResolvedValue(true),

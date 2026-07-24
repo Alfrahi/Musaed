@@ -90,6 +90,11 @@ export const IPC_LATENCY_BUDGETS: Readonly<Record<string, LatencyBudgetMs>> = {
   cmd_conversations_clear: 2000,
   cmd_conversation_update: 2000,
   cmd_message_append: 1000,
+  /** Backend SQLite migrations — heavyweight, run on user request */
+  cmd_run_migrations: 10000,
+  cmd_rollback_migrations: 10000,
+  cmd_get_migration_status: 2000,
+  cmd_list_migrations: 1000,
 } as const;
 
 /**
@@ -119,7 +124,8 @@ export type LatencyBudgetCategory =
   | 'rag-light'
   | 'rag-mutation'
   | 'rag-heavy'
-  | 'conversation';
+  | 'conversation'
+  | 'migration';
 
 export function getIpcLatencyBudgetCategory(command: string): LatencyBudgetCategory | undefined {
   if (command.startsWith('cmd_ollama_check_') || command === 'cmd_ollama_verify_service') {
@@ -147,6 +153,14 @@ export function getIpcLatencyBudgetCategory(command: string): LatencyBudgetCateg
     return 'rag-mutation';
   }
   if (command.startsWith('cmd_rag_')) return 'rag-heavy';
+  if (
+    command === 'cmd_run_migrations' ||
+    command === 'cmd_rollback_migrations' ||
+    command === 'cmd_get_migration_status' ||
+    command === 'cmd_list_migrations'
+  ) {
+    return 'migration';
+  }
   if (command.startsWith('cmd_conversation') || command.startsWith('cmd_message_')) {
     return 'conversation';
   }
