@@ -6,6 +6,7 @@ import { shallow } from 'zustand/shallow';
 // Persistence handled by Rust backend — in-memory cache only
 
 import { type Message } from '@musaed/contracts';
+import { traceStoreMutation } from '@/lib/store-tracing';
 
 interface MessageState {
   /** conversationId -> messages */
@@ -51,6 +52,7 @@ export const useMessageStore = createWithEqualityFn<MessageState>()(
         if (!msgs || msgs.length === 0) return state;
         const newMsgs = [...msgs];
         const lastIdx = newMsgs.length - 1;
+        const isDone = update.done === true;
         newMsgs[lastIdx] = {
           ...newMsgs[lastIdx],
           ...update,
@@ -58,6 +60,22 @@ export const useMessageStore = createWithEqualityFn<MessageState>()(
             ? (update.content ?? newMsgs[lastIdx].content)
             : newMsgs[lastIdx].content + (update.content ?? ''),
         };
+        // Throttle streaming flush increments per-conversation so multi-stream
+        // tracing stays independent. Final (done:true) flush always emits.
+        traceStoreMutation({
+          feature: 'message',
+          action: 'updateLastMessage',
+          level: 'DEBUG',
+          message: `updateLastMessage for ${conversationId}`,
+          context: {
+            conversationId,
+            replace,
+            isDone,
+            contentLen: newMsgs[lastIdx].content.length,
+          },
+          throttleMs: isDone ? 0 : undefined,
+          throttleKeySuffix: conversationId,
+        });
         return {
           messages: { ...state.messages, [conversationId]: newMsgs },
         };
