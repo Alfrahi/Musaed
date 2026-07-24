@@ -35,7 +35,9 @@ export interface ApiResponse<T> {
 }
 
 // IPC versioning
-export const IPC_VERSION = 1;
+// Breaking-change detection is delegated to `pnpm validate:contracts --strict`,
+// which cross-checks Rust #[tauri::command] signatures against the TypeScript
+// CommandMap at CI time. See STANDARDS.md §5 and scripts/validate-contracts.mjs.
 
 // Generated types from Rust
 // export * from './generated/specta-types';

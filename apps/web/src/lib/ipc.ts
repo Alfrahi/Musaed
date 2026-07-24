@@ -28,7 +28,6 @@ import {
   MAX_FILE_PATH_LEN,
   sanitizeError,
   COMMAND_VERSIONS,
-  IPC_VERSION as _IPC_VERSION,
   MessageSchema,
   type CommandName,
   AssembledContextSchema,
@@ -253,10 +252,10 @@ if (typeof window !== 'undefined') {
  * - Input/output validation using Zod schemas
  * - URL security validation for Ollama endpoints
  * - Error sanitization to prevent data leakage
- * - Contract version tracking (COMMAND_VERSIONS)
- *
- * Versioning: Each command in COMMAND_VERSIONS maps to its contract version.
- * Breaking changes require a new command (e.g., cmd_foo@v2) and an entry here.
+ * - Contract registry guard (COMMAND_VERSIONS) — development-mode check that
+ *   every invoked command is registered. Breaking-change detection itself is
+ *   delegated to `pnpm validate:contracts --strict`, which cross-checks Rust
+ *   #[tauri::command] signatures against this CommandMap at CI time.
  */
 export interface CommandMap {
   cmd_ollama_get_models: { args: { baseUrl: string }; return: OllamaModel[] };
