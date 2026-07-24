@@ -11,7 +11,7 @@ pub(super) async fn search_similar(
     top_k: usize,
     threshold: f32,
 ) -> Result<Vec<SearchResult>, String> {
-    let conn = store.lock_conn().await;
+    let conn = store.read_conn().await;
 
     // Zero-pad query embedding
     let mut padded = vec![0.0f32; MAX_EMBEDDING_DIMENSION];

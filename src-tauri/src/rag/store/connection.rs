@@ -115,6 +115,21 @@ pub(super) fn open_connection(db_path: &Path) -> Result<Connection, String> {
     Ok(conn)
 }
 
+/// Open an additional read-side `Connection` against the same WAL-mode
+/// database file. The schema, vec extension (loaded globally by
+/// [`open_connection`]'s `sqlite3_auto_extension` call), and migrations are
+/// already applied; this connection only needs the same pragmas.
+///
+/// Used to populate the read pool in [`super::RagStore::open`] so concurrent
+/// readers can run in parallel (Maj-3, AUDIT-REPORT.md).
+pub(super) fn open_read_connection(db_path: &Path) -> Result<Connection, String> {
+    let conn =
+        Connection::open(db_path).map_err(|e| format!("Failed to open RAG database: {}", e))?;
+    conn.execute_batch(PRAGMAS_SQL)
+        .map_err(|e| format!("Failed to set pragmas for read pool: {}", e))?;
+    Ok(conn)
+}
+
 /// Run database migrations for schema changes across versions.
 pub(super) fn run_migrations(conn: &Connection) -> Result<(), String> {
     // Migration 1: Add `status` column to projects table.

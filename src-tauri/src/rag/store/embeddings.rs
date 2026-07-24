@@ -8,7 +8,7 @@ pub(super) async fn insert_embedding(
     chunk_id: i64,
     embedding: &[f32],
 ) -> Result<(), String> {
-    let conn = store.lock_conn().await;
+    let conn = store.write_conn().await;
 
     // Zero-pad embedding to MAX_EMBEDDING_DIMENSION
     let mut padded = vec![0.0f32; MAX_EMBEDDING_DIMENSION];
@@ -33,7 +33,7 @@ pub(super) async fn insert_embeddings_batch(
     chunk_ids: &[i64],
     embeddings: &[Vec<f32>],
 ) -> Result<(), String> {
-    let conn = store.lock_conn().await;
+    let conn = store.write_conn().await;
     let tx = conn
         .unchecked_transaction()
         .map_err(|e| format!("Failed to begin transaction: {}", e))?;

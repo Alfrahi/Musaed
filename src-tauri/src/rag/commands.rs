@@ -8,7 +8,7 @@ use crate::rag::types::{
 use std::sync::Arc;
 use tauri::State;
 use tauri::{AppHandle, Runtime};
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 
 // ====================== PROJECT MANAGEMENT COMMANDS ======================
 
@@ -18,7 +18,7 @@ pub async fn cmd_rag_add_project(
     path: String,
     embedding_model: String,
     ignore_patterns: Vec<String>,
-    state: State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<RwLock<RagStore>>>,
     _app_handle: AppHandle,
 ) -> Result<ApiResponse<RagProject>, String> {
     let req = AddProjectRequest {
@@ -35,7 +35,7 @@ pub async fn cmd_rag_add_project(
 #[tauri::command]
 pub async fn cmd_rag_remove_project(
     project_id: String,
-    state: State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<bool>, String> {
     let req = RemoveProjectRequest { project_id, state };
     remove_project(req).await
@@ -46,7 +46,7 @@ pub async fn cmd_rag_update_project(
     project_id: String,
     name: Option<String>,
     ignore_patterns: Option<Vec<String>>,
-    state: State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<RagProject>, String> {
     let req = UpdateProjectRequest {
         project_id,
@@ -59,7 +59,7 @@ pub async fn cmd_rag_update_project(
 
 #[tauri::command]
 pub async fn cmd_rag_list_projects(
-    state: State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<Vec<RagProject>>, String> {
     let req = ListProjectsRequest { state };
     list_projects(req).await
@@ -68,7 +68,7 @@ pub async fn cmd_rag_list_projects(
 #[tauri::command]
 pub async fn cmd_rag_get_project(
     project_id: String,
-    state: State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<RagProject>, String> {
     let req = GetProjectRequest { project_id, state };
     get_project(req).await
@@ -82,7 +82,7 @@ pub async fn cmd_rag_index_project<R: Runtime>(
     project_id: String,
     force: Option<bool>,
     base_url: Option<String>,
-    state: State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<RwLock<RagStore>>>,
     app_handle: AppHandle,
 ) -> Result<ApiResponse<bool>, String> {
     let req = IndexRequest {
@@ -107,7 +107,7 @@ pub async fn cmd_rag_reindex_project<R: Runtime>(
     window: tauri::Window<R>,
     project_id: String,
     base_url: Option<String>,
-    state: State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<RwLock<RagStore>>>,
     app_handle: AppHandle,
 ) -> Result<ApiResponse<bool>, String> {
     let req = IndexRequest {
@@ -126,7 +126,7 @@ pub async fn cmd_rag_retry_index_project<R: Runtime>(
     window: tauri::Window<R>,
     project_id: String,
     base_url: Option<String>,
-    state: State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<RwLock<RagStore>>>,
     app_handle: AppHandle,
 ) -> Result<ApiResponse<bool>, String> {
     let req = IndexRequest {
@@ -157,7 +157,7 @@ pub async fn cmd_rag_search(
     top_k: Option<usize>,
     threshold: Option<f32>,
     base_url: Option<String>,
-    state: State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<RwLock<RagStore>>>,
     _app_handle: AppHandle,
 ) -> Result<ApiResponse<Vec<SearchResult>>, String> {
     let req = SearchRequest {
@@ -175,7 +175,7 @@ pub async fn cmd_rag_search(
 pub async fn cmd_rag_get_file_chunks(
     project_id: String,
     file_path: String,
-    state: State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<Vec<ChunkRecord>>, String> {
     let req = GetFileChunksRequest {
         project_id,
@@ -188,7 +188,7 @@ pub async fn cmd_rag_get_file_chunks(
 #[tauri::command]
 pub async fn cmd_rag_get_project_stats(
     project_id: String,
-    state: State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<ProjectStats>, String> {
     let req = GetProjectStatsRequest { project_id, state };
     get_project_stats(req).await
@@ -200,7 +200,7 @@ pub async fn cmd_rag_get_project_stats(
 pub async fn cmd_rag_set_embedding_model(
     project_id: String,
     model_name: String,
-    state: State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<bool>, String> {
     let req = SetEmbeddingModelRequest {
         project_id,
@@ -233,7 +233,7 @@ pub async fn cmd_rag_assemble_context(
     threshold: Option<f32>,
     max_chars: Option<usize>,
     base_url: Option<String>,
-    state: State<'_, Arc<Mutex<RagStore>>>,
+    state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<AssembledContext>, String> {
     let req = AssembleContextRequest {
         project_id,

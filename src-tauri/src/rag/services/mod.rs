@@ -22,7 +22,7 @@ use crate::rag::validation::{
 };
 use crate::rate_limiter::RATE_LIMITER;
 use tauri::{Emitter, Runtime};
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 use tracing;
 
@@ -98,7 +98,7 @@ pub struct IndexRequest<'a, R: Runtime> {
     pub project_id: String,
     pub force: Option<bool>,
     pub base_url: Option<String>,
-    pub state: tauri::State<'a, Arc<Mutex<RagStore>>>,
+    pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
     pub app_handle: tauri::AppHandle,
 }
 
@@ -107,29 +107,29 @@ pub struct AddProjectRequest<'a> {
     pub path: String,
     pub embedding_model: String,
     pub ignore_patterns: Vec<String>,
-    pub state: tauri::State<'a, Arc<Mutex<RagStore>>>,
+    pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
     pub app_handle: tauri::AppHandle,
 }
 
 pub struct RemoveProjectRequest<'a> {
     pub project_id: String,
-    pub state: tauri::State<'a, Arc<Mutex<RagStore>>>,
+    pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
 }
 
 pub struct UpdateProjectRequest<'a> {
     pub project_id: String,
     pub name: Option<String>,
     pub ignore_patterns: Option<Vec<String>>,
-    pub state: tauri::State<'a, Arc<Mutex<RagStore>>>,
+    pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
 }
 
 pub struct ListProjectsRequest<'a> {
-    pub state: tauri::State<'a, Arc<Mutex<RagStore>>>,
+    pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
 }
 
 pub struct GetProjectRequest<'a> {
     pub project_id: String,
-    pub state: tauri::State<'a, Arc<Mutex<RagStore>>>,
+    pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
 }
 
 pub struct GetIndexStatusRequest {
@@ -146,24 +146,24 @@ pub struct SearchRequest<'a> {
     pub top_k: Option<usize>,
     pub threshold: Option<f32>,
     pub base_url: Option<String>,
-    pub state: tauri::State<'a, Arc<Mutex<RagStore>>>,
+    pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
 }
 
 pub struct GetFileChunksRequest<'a> {
     pub project_id: String,
     pub file_path: String,
-    pub state: tauri::State<'a, Arc<Mutex<RagStore>>>,
+    pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
 }
 
 pub struct GetProjectStatsRequest<'a> {
     pub project_id: String,
-    pub state: tauri::State<'a, Arc<Mutex<RagStore>>>,
+    pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
 }
 
 pub struct SetEmbeddingModelRequest<'a> {
     pub project_id: String,
     pub model_name: String,
-    pub state: tauri::State<'a, Arc<Mutex<RagStore>>>,
+    pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
 }
 
 pub struct ValidateEmbeddingModelRequest {
@@ -178,7 +178,7 @@ pub struct AssembleContextRequest<'a> {
     pub threshold: Option<f32>,
     pub max_chars: Option<usize>,
     pub base_url: Option<String>,
-    pub state: tauri::State<'a, Arc<Mutex<RagStore>>>,
+    pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
 }
 
 // ---------- Implementations (same as original file) ----------
@@ -203,7 +203,7 @@ pub async fn add_project<'a>(
         ));
     }
     let store = req.state.inner();
-    let s = store.lock().await;
+    let s = store.write().await;
     match s
         .create_project_with_params(
             &req.name,
@@ -233,7 +233,7 @@ pub async fn remove_project<'a>(
         return Ok(rag_validation_error(e));
     }
     let store = req.state.inner();
-    let s = store.lock().await;
+    let s = store.write().await;
     Ok(match s.delete_project(&req.project_id).await {
         Ok(()) => ApiResponse {
             success: true,
@@ -255,7 +255,7 @@ pub async fn update_project<'a>(
         return Ok(rag_validation_error(e));
     }
     let store = req.state.inner();
-    let s = store.lock().await;
+    let s = store.write().await;
     if let Err(e) = s
         .update_project_metadata(
             &req.project_id,
@@ -293,7 +293,7 @@ pub async fn list_projects<'a>(
     req: ListProjectsRequest<'a>,
 ) -> Result<ApiResponse<Vec<RagProject>>, String> {
     let store = req.state.inner();
-    let s = store.lock().await;
+    let s = store.read().await;
     Ok(match s.list_projects().await {
         Ok(projects) => ApiResponse {
             success: true,
@@ -315,7 +315,7 @@ pub async fn get_project<'a>(
         return Ok(rag_validation_error(e));
     }
     let store = req.state.inner();
-    let s = store.lock().await;
+    let s = store.read().await;
     Ok(match s.get_project(&req.project_id).await {
         Ok(Some(project)) => ApiResponse {
             success: true,
@@ -394,7 +394,7 @@ pub async fn start_indexing<'a, R: Runtime>(
     }
     let (project_path, embedding_model, ignore_patterns) = {
         let store = req.state.inner();
-        let s = store.lock().await;
+        let s = store.read().await;
         match s.get_project(&req.project_id).await {
             Ok(Some(p)) => (
                 p.path.clone(),
@@ -536,7 +536,7 @@ pub async fn search<'a>(req: SearchRequest<'a>) -> Result<ApiResponse<Vec<Search
     }
     let store = req.state.inner();
     let project = {
-        let s = store.lock().await;
+        let s = store.read().await;
         match s.get_project(&req.project_id).await {
             Ok(Some(p)) => p,
             Ok(None) => {
@@ -592,7 +592,7 @@ pub async fn get_file_chunks<'a>(
         return Ok(rag_validation_error(e));
     }
     let store = req.state.inner();
-    let s = store.lock().await;
+    let s = store.read().await;
     let project = s
         .get_project(&req.project_id)
         .await
@@ -658,7 +658,7 @@ pub async fn get_project_stats<'a>(
         return Ok(rag_validation_error(e));
     }
     let store = req.state.inner();
-    let s = store.lock().await;
+    let s = store.read().await;
     Ok(match s.get_project_stats(&req.project_id).await {
         Ok(stats) => ApiResponse {
             success: true,
@@ -686,7 +686,7 @@ pub async fn set_embedding_model<'a>(
         )));
     }
     let store = req.state.inner();
-    let s = store.lock().await;
+    let s = store.write().await;
     if let Err(e) = s
         .update_embedding_model(&req.project_id, &req.model_name)
         .await
@@ -746,7 +746,7 @@ pub async fn assemble_context<'a>(
     }
     let store = req.state.inner();
     let project = {
-        let s = store.lock().await;
+        let s = store.read().await;
         match s.get_project(&req.project_id).await {
             Ok(Some(p)) => p,
             Ok(None) => {

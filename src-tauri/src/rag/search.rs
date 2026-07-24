@@ -8,7 +8,7 @@ use crate::rag::embedder::OllamaEmbedder;
 use crate::rag::store::RagStore;
 use crate::rag::types::SearchResult;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 use tracing;
 
 /// Default number of results to return.
@@ -30,7 +30,7 @@ pub struct RagSearchEngine;
 impl RagSearchEngine {
     /// Search for relevant chunks given a natural language query.
     pub async fn search(
-        store: Arc<Mutex<RagStore>>,
+        store: Arc<RwLock<RagStore>>,
         project_id: &str,
         query: &str,
         base_url: &str,
@@ -49,15 +49,19 @@ impl RagSearchEngine {
             threshold
         );
 
-        // Embed the query
+        // Embed the query via Ollama (no store lock held across this network
+        // call — see Maj-3, AUDIT-REPORT.md).
         let embedder = OllamaEmbedder::new(base_url, embedding_model);
         let query_embedding = embedder.embed_query(query).await?;
 
-        // Vector search in SQLite
-        let s = store.lock().await;
-        let candidates = s
-            .search_similar(project_id, &query_embedding, top_k * 2, threshold)
-            .await?;
+        // Vector search in SQLite — brief read guard only for the vector
+        // lookup; the BM25 rerank below runs on the owned candidate list
+        // without holding the lock so the pool slot is released.
+        let candidates = {
+            let s = store.read().await;
+            s.search_similar(project_id, &query_embedding, top_k * 2, threshold)
+                .await?
+        };
 
         tracing::debug!("RAG Search: found {} vector candidates", candidates.len());
 
@@ -73,7 +77,7 @@ impl RagSearchEngine {
             query
         );
 
-        // Prepare documents for BM25
+        // BM25 rerank — no store lock held.
         let documents: Vec<(usize, String)> = candidates
             .iter()
             .map(|c| (c.chunk_id as usize, c.content.clone()))

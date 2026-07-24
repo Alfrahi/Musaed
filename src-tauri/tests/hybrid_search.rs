@@ -382,3 +382,120 @@ async fn test_delete_file_chunks_no_deadlock() {
 
     assert!(store.get_file_chunks(file_id).await.unwrap().is_empty());
 }
+
+// ---------------------------------------------------------------------------
+// Maj-3 regression tests (AUDIT-REPORT.md): RAG store read parallelism.
+//
+// The store used to be a global `tokio::sync::Mutex<RagStore>` serializing
+// every RAG op against every other op. The fix wraps it in a read/write lock
+// at the services layer and adds a connection pool inside `RagStore` so
+// distinct concurrent readers draw distinct slots and run in parallel.
+//
+// These tests prove (1) concurrent readers do not deadlock when mixed with a
+// writer, and (2) concurrent reads complete materially faster than the
+// serial equivalent — the empirical evidence that the pool is in use.
+// ---------------------------------------------------------------------------
+
+/// Regression test for Maj-3: many concurrent readers + a writer must not
+/// deadlock. With a single-mutex store this WOULD have deadlocked when the
+/// writer's guard held the only slot while readers were already queued.
+#[tokio::test]
+async fn test_maj3_concurrent_reads_and_writer_no_deadlock() {
+    let store = std::sync::Arc::new(test_store());
+    store
+        .create_project(&make_test_project("maj3-dl", "P", "/tmp/maj3-dl"))
+        .await
+        .unwrap();
+
+    // Spawn 12 readers that each list projects a handful of times.
+    let mut reader_handles = Vec::new();
+    for _ in 0..12 {
+        let s = store.clone();
+        reader_handles.push(tokio::spawn(async move {
+            for _ in 0..20 {
+                let _ = s.list_projects().await.unwrap();
+            }
+        }));
+    }
+
+    // Concurrently run a few writers through the outer write guard
+    // (simulating indexing status transitions).
+    let mut writer_handles = Vec::new();
+    for i in 0..4 {
+        let s = store.clone();
+        writer_handles.push(tokio::spawn(async move {
+            for _ in 0..10 {
+                let status = if i % 2 == 0 {
+                    ProjectStatus::Indexing
+                } else {
+                    ProjectStatus::Ready
+                };
+                // Use the internal store setter (a write path) to mimic
+                // how the indexing pipeline marks status transitions.
+                let conn = s.write_conn().await;
+                let now = chrono::Utc::now().to_rfc3339();
+                let _ = conn.execute(
+                    "UPDATE projects SET status = ?1, updated_at = ?2 WHERE id = ?3",
+                    rusqlite::params![status.as_str(), now, "maj3-dl"],
+                );
+                drop(conn);
+            }
+        }));
+    }
+
+    for h in reader_handles {
+        h.await.expect("reader task panicked");
+    }
+    for h in writer_handles {
+        h.await.expect("writer task panicked");
+    }
+
+    // Sanity: the project still exists after the storm.
+    assert!(store.get_project("maj3-dl").await.unwrap().is_some());
+}
+
+/// Regression test for Maj-3: reads actually run in parallel. Acquire the
+/// read guard in 8 concurrent tasks and hold each for a fixed sleep; with a
+/// 4-slot pool the total wall time is roughly 2 rounds (~2× the sleep), vs 8
+/// rounds for a single-mutex store. The bound is generous to avoid flakes on
+/// CI but tight enough to detect a regression to a single slot.
+///
+/// Requires the multi-threaded tokio runtime — the default current-thread
+/// runtime serializes tasks regardless of the pool size and would mask a
+/// regression to a single slot.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_maj3_concurrent_reads_run_in_parallel() {
+    let store = std::sync::Arc::new(test_store());
+
+    const READERS: usize = 8;
+    const HOLD: std::time::Duration = std::time::Duration::from_millis(40);
+
+    let start = tokio::time::Instant::now();
+    let mut handles = Vec::new();
+    for _ in 0..READERS {
+        let s = store.clone();
+        handles.push(tokio::spawn(async move {
+            let _guard = s.read_conn().await;
+            tokio::time::sleep(HOLD).await;
+        }));
+    }
+    for h in handles {
+        h.await.unwrap();
+    }
+    let elapsed = start.elapsed();
+
+    // Lower bound is ~READERS * HOLD (8 * 40 = 320ms) for a single-slot store.
+    // With a 4-slot pool on a 4-thread runtime it should be ~2 rounds = ~80ms
+    // + scheduling overhead. Bound at half the single-slot time to detect a
+    // regression to a single shared connection while staying above scheduling
+    // noise on a slow CI host.
+    let single_slot_baseline = HOLD * READERS as u32;
+    let parallel_cap = single_slot_baseline / 2;
+    assert!(
+        elapsed < parallel_cap,
+        "concurrent reads took {:?}, expected parallel completion well under {:?} — \
+         read pool may have regressed to a single slot",
+        elapsed,
+        parallel_cap,
+    );
+}
