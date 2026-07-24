@@ -13,7 +13,7 @@ pub(super) async fn create_project(
     store: &super::RagStore,
     project: &RagProject,
 ) -> Result<(), String> {
-    let conn = store.lock_conn().await;
+    let conn = store.write_conn().await;
     conn.execute(
         "INSERT INTO projects (id, name, path, embedding_model, ignore_patterns, created_at, updated_at, indexed_at, file_count, chunk_count, total_bytes, status, embedding_dimension)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
@@ -87,7 +87,7 @@ pub(super) async fn get_project(
     store: &super::RagStore,
     id: &str,
 ) -> Result<Option<RagProject>, String> {
-    let conn = store.lock_conn().await;
+    let conn = store.read_conn().await;
     let mut stmt = conn
         .prepare("SELECT * FROM projects WHERE id = ?1")
         .map_err(|e| format!("Failed to prepare query: {}", e))?;
@@ -102,7 +102,7 @@ pub(super) async fn get_project(
 
 /// List all projects, ordered by most recently updated.
 pub(super) async fn list_projects(store: &super::RagStore) -> Result<Vec<RagProject>, String> {
-    let conn = store.lock_conn().await;
+    let conn = store.read_conn().await;
     let mut stmt = conn
         .prepare("SELECT * FROM projects ORDER BY updated_at DESC")
         .map_err(|e| format!("Failed to prepare query: {}", e))?;
@@ -118,7 +118,7 @@ pub(super) async fn list_projects(store: &super::RagStore) -> Result<Vec<RagProj
 
 /// Delete a project and all its associated data.
 pub(super) async fn delete_project(store: &super::RagStore, id: &str) -> Result<(), String> {
-    let conn = store.lock_conn().await;
+    let conn = store.write_conn().await;
 
     // Delete embeddings using subquery
     conn.execute(
@@ -141,7 +141,7 @@ pub(super) async fn update_project_metadata(
     name: Option<&str>,
     ignore_patterns: Option<&[String]>,
 ) -> Result<(), String> {
-    let conn = store.lock_conn().await;
+    let conn = store.write_conn().await;
     let now = Utc::now().to_rfc3339();
 
     if let Some(n) = name {
@@ -173,7 +173,7 @@ pub(super) async fn update_project_stats(
     total_bytes: u64,
     indexed_at: Option<&str>,
 ) -> Result<(), String> {
-    let conn = store.lock_conn().await;
+    let conn = store.write_conn().await;
     let now = Utc::now().to_rfc3339();
 
     conn.execute(
@@ -190,7 +190,7 @@ pub(super) async fn get_embedding_dimension(
     store: &super::RagStore,
     id: &str,
 ) -> Result<usize, String> {
-    let conn = store.lock_conn().await;
+    let conn = store.read_conn().await;
     let dimension: i64 = conn
         .query_row(
             "SELECT embedding_dimension FROM projects WHERE id = ?1",
@@ -207,7 +207,7 @@ pub(super) async fn set_embedding_dimension(
     id: &str,
     dimension: usize,
 ) -> Result<(), String> {
-    let conn = store.lock_conn().await;
+    let conn = store.write_conn().await;
     conn.execute(
         "UPDATE projects SET embedding_dimension = ?1 WHERE id = ?2",
         rusqlite::params![dimension as i64, id],
@@ -222,7 +222,7 @@ pub(super) async fn set_status(
     id: &str,
     status: &ProjectStatus,
 ) -> Result<(), String> {
-    let conn = store.lock_conn().await;
+    let conn = store.write_conn().await;
     let now = Utc::now().to_rfc3339();
     conn.execute(
         "UPDATE projects SET status = ?1, updated_at = ?2 WHERE id = ?3",
@@ -238,7 +238,7 @@ pub(super) async fn update_embedding_model(
     id: &str,
     model: &str,
 ) -> Result<(), String> {
-    let conn = store.lock_conn().await;
+    let conn = store.write_conn().await;
     let now = Utc::now().to_rfc3339();
     conn.execute(
         "UPDATE projects SET embedding_model = ?1, updated_at = ?2 WHERE id = ?3",

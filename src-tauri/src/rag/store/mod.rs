@@ -3,6 +3,12 @@
 //! Manages the database schema, CRUD operations for projects, files, chunks,
 //! and vector similarity search. This module is split into sub-modules for
 //! maintainability and testability.
+//!
+//! Concurrency model (Maj-3, AUDIT-REPORT.md): a small pool of SQLite
+//! `Connection`s is opened against the same WAL-mode database file. Distinct
+//! readers draw distinct slots from the pool and run in parallel; the single
+//! writer is serialized by the outer `RwLock<RagStore>` write guard held in
+//! the services layer.
 
 mod chunks;
 pub mod connection;
@@ -24,9 +30,22 @@ use stats::*;
 use std::path::Path;
 use tokio::sync::Mutex;
 
-/// The RAG store. Provides async-safe access via `tokio::sync::Mutex`.
+/// Number of read connections in the pool. Each reader takes one slot;
+/// concurrent readers take distinct slots and run in parallel. The single
+/// writer (always under an outer `RwLock` write guard in the services layer)
+/// takes the first slot.
+const READ_POOL_SIZE: usize = 4;
+
+/// The RAG store. Provides async-safe access via a small connection pool —
+/// each reader takes a distinct `Mutex<Connection>` slot so reads run in
+/// parallel, while writers go through the outer `RwLock<RagStore>` write
+/// guard in the services layer.
 pub struct RagStore {
-    conn: Mutex<rusqlite::Connection>,
+    /// Pool of read connections. Readers try-lock slots round-robin; the single
+    /// writer (always under an outer write guard) takes slot 0.
+    conns: Vec<Mutex<rusqlite::Connection>>,
+    /// Round-robin counter for read slot selection.
+    next_slot: std::sync::atomic::AtomicUsize,
     /// Whether the sqlite-vec extension loaded successfully.
     /// If false, vector operations (embeddings, search) will return an error.
     rag_enabled: bool,
@@ -36,15 +55,42 @@ impl RagStore {
     /// Opens (or creates) the RAG SQLite database at the given path.
     /// The parent directory must already exist.
     ///
+    /// Opens `READ_POOL_SIZE` connections against the same WAL-mode database
+    /// file so multiple readers can run concurrently (the single writer is
+    /// enforced by the outer `RwLock` in the services layer).
+    ///
     /// If the sqlite-vec extension fails to load, RAG features (vector
     /// embeddings and similarity search) are disabled and a warning is logged.
     /// The store still opens successfully for basic metadata operations.
     pub fn open(db_path: &Path) -> Result<Self, String> {
         match open_connection(db_path) {
-            Ok(conn) => Ok(Self {
-                conn: Mutex::new(conn),
-                rag_enabled: true,
-            }),
+            Ok(conn) => {
+                let mut conns = Vec::with_capacity(READ_POOL_SIZE);
+                conns.push(Mutex::new(conn));
+                // Open the remaining pool slots against the same file (WAL
+                // mode allows concurrent readers). Each slot reuses the
+                // already-applied schema + vec extension; pragmas are set
+                // per connection inside `open_read_connection`.
+                for _ in 1..READ_POOL_SIZE {
+                    match connection::open_read_connection(db_path) {
+                        Ok(c) => conns.push(Mutex::new(c)),
+                        Err(e) => {
+                            tracing::warn!(
+                                "Failed to open RAG read-pool slot: {}. \
+                                 Falling back to {} connection(s).",
+                                e,
+                                conns.len()
+                            );
+                            break;
+                        }
+                    }
+                }
+                Ok(Self {
+                    conns,
+                    next_slot: std::sync::atomic::AtomicUsize::new(0),
+                    rag_enabled: true,
+                })
+            }
             Err(e) => {
                 tracing::warn!(
                     "Failed to load sqlite-vec extension: {}. \
@@ -56,7 +102,8 @@ impl RagStore {
                 let conn = rusqlite::Connection::open(db_path)
                     .map_err(|e| format!("Failed to open RAG database: {}", e))?;
                 Ok(Self {
-                    conn: Mutex::new(conn),
+                    conns: vec![Mutex::new(conn)],
+                    next_slot: std::sync::atomic::AtomicUsize::new(0),
                     rag_enabled: false,
                 })
             }
@@ -68,10 +115,34 @@ impl RagStore {
         self.rag_enabled
     }
 
-    /// Acquires a lock on the database connection.
-    /// Use this for operations that need direct connection access.
-    pub async fn lock_conn(&self) -> tokio::sync::MutexGuard<'_, rusqlite::Connection> {
-        self.conn.lock().await
+    /// Acquires a connection for a **read** operation. Tries each pool slot
+    /// round-robin with `try_lock`; if all slots are busy, awaits the slot the
+    /// round-robin started at. Distinct concurrent readers take distinct slots
+    /// and run in parallel.
+    pub async fn read_conn(&self) -> tokio::sync::MutexGuard<'_, rusqlite::Connection> {
+        if self.conns.len() == 1 {
+            return self.conns[0].lock().await;
+        }
+        let start = self
+            .next_slot
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+            % self.conns.len();
+        // Try to find a free slot without waiting.
+        for i in 0..self.conns.len() {
+            let idx = (start + i) % self.conns.len();
+            if let Ok(g) = self.conns[idx].try_lock() {
+                return g;
+            }
+        }
+        // All slots busy — await the slot we started at.
+        self.conns[start].lock().await
+    }
+
+    /// Acquires a connection for a **write** operation. Writers are already
+    /// serialized by the outer `RwLock<RagStore>` write guard held by the
+    /// services layer, so the first slot is sufficient.
+    pub async fn write_conn(&self) -> tokio::sync::MutexGuard<'_, rusqlite::Connection> {
+        self.conns[0].lock().await
     }
 
     // ====================== PROJECT OPERATIONS ======================

@@ -9,7 +9,7 @@ pub(super) async fn get_project_stats(
     store: &super::RagStore,
     project_id: &str,
 ) -> Result<ProjectStats, String> {
-    let conn = store.lock_conn().await;
+    let conn = store.read_conn().await;
 
     let file_count: i64 = conn
         .query_row(

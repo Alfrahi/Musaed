@@ -7,7 +7,7 @@ pub(super) async fn upsert_file(
     store: &super::RagStore,
     file: &crate::rag::types::FileRecord,
 ) -> Result<i64, String> {
-    let conn = store.lock_conn().await;
+    let conn = store.write_conn().await;
 
     // Check if file already exists for this project
     let existing_id: Option<i64> = conn
@@ -43,7 +43,7 @@ pub(super) async fn upsert_file(
 /// All three deletions (embeddings, chunks, file) must happen under a **single**
 /// lock acquisition to prevent race conditions.
 pub(super) async fn delete_file(store: &super::RagStore, file_id: i64) -> Result<(), String> {
-    let conn = store.lock_conn().await;
+    let conn = store.write_conn().await;
 
     // Delete embeddings first (via subquery)
     conn.execute(
@@ -75,7 +75,7 @@ pub(super) async fn get_file_by_path(
     project_id: &str,
     relative_path: &str,
 ) -> Result<Option<crate::rag::types::FileRecord>, String> {
-    let conn = store.lock_conn().await;
+    let conn = store.read_conn().await;
 
     let mut stmt = conn
         .prepare("SELECT id, project_id, relative_path, file_hash, file_size, modified_at, chunk_count FROM files WHERE project_id = ?1 AND relative_path = ?2")
@@ -104,7 +104,7 @@ pub(super) async fn get_project_files(
     store: &super::RagStore,
     project_id: &str,
 ) -> Result<Vec<crate::rag::types::FileRecord>, String> {
-    let conn = store.lock_conn().await;
+    let conn = store.read_conn().await;
 
     let mut stmt = conn
         .prepare("SELECT id, project_id, relative_path, file_hash, file_size, modified_at, chunk_count FROM files WHERE project_id = ?1 ORDER BY relative_path")

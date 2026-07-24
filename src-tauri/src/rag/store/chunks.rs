@@ -5,7 +5,7 @@ use rusqlite::params;
 
 /// Insert a single chunk and return its ID.
 pub(super) async fn insert_chunk(store: &super::RagStore, chunk: &ChunkRow) -> Result<i64, String> {
-    let conn = store.lock_conn().await;
+    let conn = store.write_conn().await;
     conn.execute(
         "INSERT INTO chunks (project_id, file_id, chunk_index, content, chunk_type, language, start_line, end_line, metadata) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         params![
@@ -29,7 +29,7 @@ pub(super) async fn insert_chunks_batch(
     store: &super::RagStore,
     chunks: &[ChunkRow],
 ) -> Result<(), String> {
-    let conn = store.lock_conn().await;
+    let conn = store.write_conn().await;
     let tx = conn
         .unchecked_transaction()
         .map_err(|e| format!("Failed to begin transaction: {}", e))?;
@@ -63,7 +63,7 @@ pub(super) async fn get_file_chunks(
     store: &super::RagStore,
     file_id: i64,
 ) -> Result<Vec<crate::rag::types::ChunkRecord>, String> {
-    let conn = store.lock_conn().await;
+    let conn = store.read_conn().await;
     let mut stmt = conn
         .prepare("SELECT id, chunk_index, content, chunk_type, language, start_line, end_line, metadata FROM chunks WHERE file_id = ?1 ORDER BY chunk_index")
         .map_err(|e| format!("Failed to prepare query: {}", e))?;
@@ -95,7 +95,7 @@ pub(super) async fn delete_file_chunks(
     store: &super::RagStore,
     file_id: i64,
 ) -> Result<(), String> {
-    let conn = store.lock_conn().await;
+    let conn = store.write_conn().await;
 
     // Delete embeddings first (via subquery)
     conn.execute(

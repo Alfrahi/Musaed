@@ -11,7 +11,7 @@ use crate::rag::types::{ChunkRow, FileRecord, IndexPhase, IndexProgress, Project
 use std::path::Path;
 use std::sync::Arc;
 use tauri::Emitter;
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 use tracing;
 use xxhash_rust::xxh3::xxh3_64;
@@ -34,7 +34,7 @@ pub struct IndexOptions<'a> {
 /// It walks the project directory, diffs against tracked files, chunks new/modified
 /// files, generates embeddings via Ollama, and stores everything in SQLite.
 pub async fn index_project(
-    store: Arc<Mutex<RagStore>>,
+    store: Arc<RwLock<RagStore>>,
     opts: IndexOptions<'_>,
     cancel_token: Arc<CancellationToken>,
     app_handle: tauri::AppHandle,
@@ -48,7 +48,7 @@ pub async fn index_project(
 
     // Mark project as indexing
     {
-        let s = store.lock().await;
+        let s = store.write().await;
         s.set_status(project_id, &ProjectStatus::Indexing).await?;
     }
 
@@ -89,7 +89,7 @@ pub async fn index_project(
     );
 
     let tracked_files = {
-        let s = store.lock().await;
+        let s = store.read().await;
         s.get_project_files(project_id).await?
     };
 
@@ -172,7 +172,7 @@ pub async fn index_project(
     );
 
     {
-        let s = store.lock().await;
+        let s = store.write().await;
         for (i, file_id) in files_to_delete.iter().enumerate() {
             if cancel_token.is_cancelled() {
                 return Err("Indexing cancelled".to_string());
@@ -277,7 +277,7 @@ pub async fn index_project(
 
     // Store detected dimension
     {
-        let s = store.lock().await;
+        let s = store.write().await;
         s.set_embedding_dimension(project_id, dimension).await?;
     }
 
@@ -324,7 +324,7 @@ pub async fn index_project(
     );
 
     {
-        let s = store.lock().await;
+        let s = store.write().await;
         let mut embedding_idx = 0;
         let mut total_stored = 0usize;
         let mut total_bytes: u64 = 0;
@@ -428,7 +428,7 @@ pub async fn index_project(
 
     // Mark project as ready
     {
-        let s = store.lock().await;
+        let s = store.write().await;
         s.set_status(project_id, &ProjectStatus::Ready).await?;
     }
 

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use tauri::Manager;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 use tracing_subscriber::layer::SubscriberExt;
 
 pub mod conversation;
@@ -87,7 +87,7 @@ pub fn run() {
 
         let rag_store = rag::store::RagStore::open(&db_path)
             .map_err(|e| format!("Failed to initialize RAG store: {}", e))?;
-        app.manage(Arc::new(Mutex::new(rag_store)));
+        app.manage(Arc::new(RwLock::new(rag_store)));
 
         log::info!("RAG store initialized at {:?}", db_path);
 
