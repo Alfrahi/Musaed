@@ -317,6 +317,7 @@
     "imageConversionFailed": "Failed to convert image to base64",
     "securityBlock": "Security block: Invalid or disallowed Ollama address.",
     "invalidRequest": "Invalid request: {message}",
+    "backendError": "Error: {message}",
     "messageSaveFailed": "Failed to save message to history",
     "modelPullFailed": "Model pull failed"
   },

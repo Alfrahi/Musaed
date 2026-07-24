@@ -56,6 +56,7 @@ import type {
 } from '@musaed/contracts';
 import toast from 'react-hot-toast';
 import { translate, getActiveLanguage } from '@/lib/i18n';
+import { config } from '@/lib/config';
 
 /**
  * Re-export of the latency budgets from `@musaed/contracts`.
@@ -664,7 +665,7 @@ async function callInternal<K extends keyof CommandMap>(
   options?: { quiet?: boolean }
 ): Promise<CommandMap[K]['return'] | null> {
   // Dev-only contract registry check (ensures command is registered)
-  if (process.env.NODE_ENV !== 'production') {
+  if (!config.isProd) {
     const _guard: CommandName = command; // type check only; will throw if not assignable
     if (!(command in COMMAND_VERSIONS)) {
       // In development, warn about unregistered commands to prevent contract drift
@@ -731,7 +732,9 @@ async function callInternal<K extends keyof CommandMap>(
       recordIpcLatency(command, latencyMs, budgetMs);
       const sanitized = sanitizeError(response.error);
       if (!options?.quiet) {
-        toast.error(sanitized.message);
+        toast.error(
+          translate('error.backendError', getActiveLanguage(), { message: sanitized.message })
+        );
       }
       return null;
     }

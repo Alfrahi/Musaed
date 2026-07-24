@@ -317,6 +317,7 @@
     "imageConversionFailed": "فشل في تحويل الصورة إلى base64",
     "securityBlock": "حظر أمني: عنوان Ollama غير صالح أو غير مسموح به.",
     "invalidRequest": "طلب غير صالح: {message}",
+    "backendError": "خطأ: {message}",
     "messageSaveFailed": "فشل في حفظ الرسالة في السجل",
     "modelPullFailed": "فشل سحب النموذج"
   },

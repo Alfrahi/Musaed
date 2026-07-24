@@ -10,14 +10,6 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
-    "./migrations": {
-      "types": "./src/migrations.ts",
-      "default": "./src/migrations.ts"
-    },
-    "./*": {
-      "types": "./src/*",
-      "default": "./src/*"
-    },
     "./package.json": "./package.json"
   },
   "scripts": {
