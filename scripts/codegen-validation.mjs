@@ -303,8 +303,14 @@ function main() {
       );
       process.exit(1);
     }
-    const current = readFileSync(RUST_DST, 'utf-8');
-    if (current !== rustCode) {
+    const stripDateHeader = (code) =>
+      code
+        .split('\n')
+        .filter((l) => !l.startsWith('//! Generated:'))
+        .join('\n');
+    const current = stripDateHeader(readFileSync(RUST_DST, 'utf-8'));
+    const regenerate = stripDateHeader(rustCode);
+    if (current !== regenerate) {
       console.error(
         '❌ generated_validation.rs is out of date. Run `pnpm codegen:validation` to regenerate.'
       );
