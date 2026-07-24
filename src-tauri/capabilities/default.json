@@ -56,7 +56,6 @@
     "store:allow-get",
     "store:allow-save",
 
-    "updater:default",
     "allow-ollama-commands",
     "allow-logging-commands",
     "allow-rag-commands",

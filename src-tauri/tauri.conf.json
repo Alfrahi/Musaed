@@ -26,16 +26,6 @@
       "csp": "default-src 'none'; img-src 'self' data: https:; script-src 'self'; style-src 'self'; connect-src 'self'; font-src 'self' data:;"
       }
   },
-  "plugins": {
-    "updater": {
-      "active": true,
-      "endpoints": ["https://github.com/alfrahi/musaed/releases/latest/download/latest.json"],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ0RTQxMTVBRDFGREVCMzEKUldReDYvM1JXaEhrUk91WHZBeDZCc01NT1NDV0lKM3c4UDErR3hjTFFtOHVFNXRhQkdRakdnc1cK",
-      "windows": {
-        "installMode": "passive"
-      }
-    }
-  },
   "bundle": {
     "active": true,
     "targets": "all",

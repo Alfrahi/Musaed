@@ -45,11 +45,6 @@ pub fn run() {
             }
         }));
 
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    {
-        builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
-    }
-
     builder = builder.setup(|app| -> Result<(), Box<dyn std::error::Error>> {
         // Initialize file logger and get the channel sender for tracing
         let log_tx = trace_domain::init_file_logger(app.handle())
