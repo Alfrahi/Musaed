@@ -1,7 +1,6 @@
 use crate::migrations::{
     get_latest_version, list_migrations, rollback_to_version, run_migrations, version_tracker,
-    MigrationInfoResponse, MigrationStatusResponse, MigrationTarget, RunMigrationsRequest,
-    RunMigrationsResponse,
+    MigrationInfo, MigrationStatus, MigrationTarget, RunMigrationsRequest, RunMigrationsResponse,
 };
 use rusqlite::Connection;
 use std::sync::Arc;
@@ -81,7 +80,7 @@ pub async fn status(
     conversation_store: Arc<Mutex<Connection>>,
     rag_store: Arc<Mutex<Connection>>,
     target_str: String,
-) -> Result<MigrationStatusResponse, String> {
+) -> Result<MigrationStatus, String> {
     let target = parse_target(&target_str)?;
     let store = match target {
         MigrationTarget::Conversations => conversation_store,
@@ -91,7 +90,7 @@ pub async fn status(
     let current_version =
         version_tracker::get_current_version(&conn_guard, target).map_err(|e| e.to_string())?;
     let latest_version = get_latest_version(target);
-    Ok(MigrationStatusResponse {
+    Ok(MigrationStatus {
         target: target.as_str().to_string(),
         current_version,
         latest_version,
@@ -100,12 +99,12 @@ pub async fn status(
 }
 
 /// List available migrations for a target.
-pub fn list(target_str: String) -> Result<Vec<MigrationInfoResponse>, String> {
+pub fn list(target_str: String) -> Result<Vec<MigrationInfo>, String> {
     let target = parse_target(&target_str)?;
     let migrations = list_migrations(target);
     Ok(migrations
         .into_iter()
-        .map(|m| MigrationInfoResponse {
+        .map(|m| MigrationInfo {
             version: m.version,
             description: m.description.to_string(),
             is_rollbackable: m.is_rollbackable,

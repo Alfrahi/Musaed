@@ -50,7 +50,7 @@ pub mod version_tracker;
 pub use crate::define_migration;
 pub use commands::*;
 pub use rollback::create_rollback_plan;
-pub use traits::{DatabaseMigration, MigrationInfo, MigrationMetadata, RollbackMigration};
+pub use traits::{DatabaseMigration, MigrationInfoTrait, MigrationMetadata, RollbackMigration};
 pub use version_tracker::{
     get_current_version, get_migration_history, is_migration_applied, record_migration, set_version,
 };
