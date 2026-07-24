@@ -9,9 +9,9 @@ use super::client::{
     acquire_global_permit, ollama_endpoint, request_cache_try_insert, retry_with_backoff,
     ABORT_HANDLES, CONCURRENT_SEMAPHORE, EVENT_OLLAMA_ERROR, FAST_HTTP_CLIENT, HTTP_CLIENT,
     INITIAL_REQUEST_TIMEOUT_SECS, MAX_TOTAL_IMAGE_SIZE_BYTES, REQUEST_CACHE,
-    STREAM_ABSOLUTE_TIMEOUT_SECS,
+    STREAM_ABSOLUTE_TIMEOUT_SECS, STREAM_IDLE_TIMEOUT_SECS,
 };
-use super::streaming::process_chat_stream;
+use super::streaming::{process_chat_stream, TauriEmitter};
 use crate::error_codes;
 use crate::payloads::{BackendError, ChatMessage, ChatOptions, OllamaHealth};
 use crate::rate_limiter::RATE_LIMITER;
@@ -225,10 +225,11 @@ impl OllamaChatService {
             let stream_result = time::timeout(
                 Duration::from_secs(STREAM_ABSOLUTE_TIMEOUT_SECS),
                 process_chat_stream(
-                    &app_clone,
+                    &TauriEmitter::new(&app_clone),
                     &request_id_clone,
                     response,
                     &cancel_token,
+                    Duration::from_secs(STREAM_IDLE_TIMEOUT_SECS),
                     &mut token_count,
                 ),
             )
