@@ -177,7 +177,7 @@ export const InputArea = () => {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={t('chat.askAnything')}
-              className="max-h-48 min-h-[60px] w-full resize-none border-none bg-transparent p-3 font-sans text-[14px] shadow-none outline-none placeholder:text-zinc-400 focus:ring-0 focus:outline-none"
+              className="max-h-48 min-h-[60px] w-full resize-none border-none bg-transparent p-3 font-sans text-[14px] shadow-none outline-none placeholder:text-zinc-400 focus-visible:ring-0 focus-visible:outline-none"
               rows={1}
             />
             <div className="pbe-2 flex items-center justify-between ps-2 pe-2">

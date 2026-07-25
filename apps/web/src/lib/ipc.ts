@@ -48,7 +48,6 @@ import {
   RunMigrationsResponseSchema,
   MigrationStatusSchema,
   MigrationInfoSchema,
-  type RunMigrationsRequest,
   type RunMigrationsResponse,
   type MigrationStatus,
   type MigrationInfo,

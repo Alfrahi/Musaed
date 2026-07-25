@@ -10,6 +10,62 @@ import nextPlugin from '@next/eslint-plugin-next';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import reactPlugin from 'eslint-plugin-react';
 
+// ── Local plugin: a11y focus affordance rules (STANDARDS.md §13) ──────────
+const a11yFocusPlugin = {
+  rules: {
+    // reason: banning `focus:outline-none` without an adjacent `focus-visible:ring-*` keeps the global `:focus-visible` outline (globals.css) from being silently stripped
+    'no-focus-outline-none-without-ring': {
+      meta: {
+        type: 'problem',
+        docs: {
+          description:
+            'Disallow `focus:outline-none` on focusable elements without an adjacent `focus-visible:ring-*` (STANDARDS.md §13).',
+        },
+        schema: [],
+        messages: {
+          missingRing:
+            '`focus:outline-none` strips the keyboard focus affordance. Pair it with `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background` (or an equivalent `focus-visible:ring-*`), per STANDARDS.md §13.',
+        },
+      },
+      create(context) {
+        const FOCUS_OUTLINE_NONE_RE = /(^|\s)focus:outline-none(\s|$)/;
+        const FOCUS_VISIBLE_RING_RE = /(^|\s)focus-visible:ring-[^\s]+(\s|$)/;
+        const checkClassString = (node, raw) => {
+          if (typeof raw !== 'string') return;
+          if (!FOCUS_OUTLINE_NONE_RE.test(raw)) return;
+          if (FOCUS_VISIBLE_RING_RE.test(raw)) return;
+          context.report({ node, messageId: 'missingRing' });
+        };
+
+        return {
+          JSXAttribute(node) {
+            if (node.name?.name !== 'className') return;
+            const value = node.value;
+            if (!value) return;
+
+            // Form: className="..."
+            if (value.type === 'Literal' && typeof value.value === 'string') {
+              checkClassString(value, value.value);
+              return;
+            }
+
+            // Form: className={`...`} (template literal with quasis)
+            if (
+              value.type === 'JSXExpressionContainer' &&
+              value.expression?.type === 'TemplateLiteral'
+            ) {
+              for (const quasi of value.expression.quasis) {
+                checkClassString(quasi, quasi.value?.raw);
+              }
+              return;
+            }
+          },
+        };
+      },
+    },
+  },
+};
+
 export default tseslint.config(
   // ── Global ignores ──────────────────────────────────────
   {
@@ -33,6 +89,7 @@ export default tseslint.config(
       '@next/next': nextPlugin,
       'react-hooks': reactHooksPlugin,
       react: reactPlugin,
+      'musaed-a11y-focus': a11yFocusPlugin,
     },
 
     languageOptions: {
@@ -203,6 +260,9 @@ export default tseslint.config(
           message: 'Use structured logger (src/lib/logger.ts).',
         },
       ],
+
+      // reason: flags `focus:outline-none` without adjacent `focus-visible:ring-*` (globals.css `:focus-visible` requires component suppression not to strip keyboard affordance)
+      'musaed-a11y-focus/no-focus-outline-none-without-ring': 'error',
     },
   },
 
