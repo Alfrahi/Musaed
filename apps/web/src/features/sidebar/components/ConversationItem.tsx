@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MessageSquare, Trash2, Download, Edit2 } from 'lucide-react';
 import { useCurrentConversationId, useSetCurrentConversationId } from '@/store/conversation-store';
 import { useLanguage } from '@/store';
@@ -58,31 +58,41 @@ const ItemActions = ({
   editTitle: string;
   exportTitle: string;
   deleteTitle: string;
-}) => (
-  <div className="absolute end-2 flex items-center gap-1 bg-inherit ps-2 opacity-0 transition-opacity group-hover:opacity-100">
-    <button
-      onClick={onEdit}
-      className="hover:text-foreground p-1 transition-colors hover:bg-zinc-300 dark:hover:bg-zinc-700"
-      title={editTitle}
+}) => {
+  // reason: action buttons live *inside* the row, which has its own onClick
+  // activating the conversation. Without stopPropagation, clicking Edit /
+  // Export / Delete would also bubble to the row and activate it — the
+  // nested-interactive pitfall called out in audit F7.
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
+  return (
+    <div
+      className="absolute end-2 flex items-center gap-1 bg-inherit ps-2 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+      onClick={stop}
     >
-      <Edit2 size={12} />
-    </button>
-    <button
-      onClick={onExport}
-      className="p-1 transition-colors hover:bg-blue-50 hover:text-blue-500 dark:hover:bg-blue-900/20"
-      title={exportTitle}
-    >
-      <Download size={12} className="mirror-rtl" />
-    </button>
-    <button
-      onClick={onDelete}
-      className="p-1 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
-      title={deleteTitle}
-    >
-      <Trash2 size={12} />
-    </button>
-  </div>
-);
+      <button
+        onClick={onEdit}
+        className="hover:text-foreground p-1 transition-colors hover:bg-zinc-300 dark:hover:bg-zinc-700"
+        title={editTitle}
+      >
+        <Edit2 size={12} />
+      </button>
+      <button
+        onClick={onExport}
+        className="p-1 transition-colors hover:bg-blue-50 hover:text-blue-500 dark:hover:bg-blue-900/20"
+        title={exportTitle}
+      >
+        <Download size={12} className="mirror-rtl" />
+      </button>
+      <button
+        onClick={onDelete}
+        className="p-1 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+        title={deleteTitle}
+      >
+        <Trash2 size={12} />
+      </button>
+    </div>
+  );
+};
 
 const ConversationItem = ({ conversation }: ConversationItemProps) => {
   const currentConversationId = useCurrentConversationId();
@@ -92,8 +102,21 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
   const [editTitle, setEditTitle] = useState('');
   const { handleDeleteConversation, handleRenameConversation, handleExport } = useSidebarActions();
   const { t } = useTranslation(language);
+  const rowRef = useRef<HTMLDivElement>(null);
 
   const isActive = currentConversationId === conversation.id;
+
+  // Roving tabindex + programmatic focus: when this row becomes the active
+  // conversation it receives `tabIndex=0` and is programmatically focused, so
+  // keyboard users land on the active conversation directly when Tabbing into
+  // the listbox. Manual focus management, not `aria-activedescendant`, because
+  // the parent listbox is `react-virtuoso` virtualized (out-of-viewport options
+  // are unmounted and their DOM ids disappear, violating `aria-activedescendant`).
+  useEffect(() => {
+    if (isActive && rowRef.current && editingId !== conversation.id) {
+      rowRef.current.focus();
+    }
+  }, [isActive, editingId, conversation.id]);
 
   const handleSubmitRename = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,11 +124,32 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
     setEditingId(null);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // The listbox owns arrow-key navigation, but Enter and Space activate the
+    // row under it (inline rename input handles its own Enter via the form
+    // `onSubmit` handler — we skip Enter while editing to avoid a double-fire).
+    if (editingId === conversation.id) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setCurrentConversationId(conversation.id);
+    }
+  };
+
   return (
     <div
+      ref={rowRef}
+      role="option"
+      aria-current={isActive ? 'page' : undefined}
+      aria-selected={isActive || undefined}
+      tabIndex={isActive ? 0 : -1}
+      id={`conversation-option-${conversation.id}`}
       onClick={() => setCurrentConversationId(conversation.id)}
+      onKeyDown={handleKeyDown}
       className={cn(
         'group relative flex cursor-pointer items-center gap-2.5 border-s-2 px-3 py-2 text-[13px] transition-all',
+        // focus-visible ring pairs the global :focus-visible outline from globals.css
+        // with this virtualized row so keyboard focus is visible (audit F3).
+        'focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none',
         isActive
           ? 'border-primary text-foreground bg-zinc-200/50 font-semibold dark:bg-zinc-800/50'
           : 'border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800/30'

@@ -15,6 +15,13 @@ const mockActions = {
   exportConversation: vi.fn(),
 };
 
+// reason: the conversation-store mock reads these via closure. They must be
+// declared before the `vi.mock` calls below (hoisting inlines module bodies at
+// import time, but the closure references the live bindings, so resetting these
+// in `beforeEach` resets what the mock selectors return to the Sidebar).
+const currentConversationIdRef: { value: string | null } = { value: null };
+const lastSetCurrentId: { value: string | null } = { value: null };
+
 vi.mock('@/lib/i18n', async () => {
   const actual = await vi.importActual('@/lib/i18n');
   return {
@@ -73,6 +80,13 @@ vi.mock('@/store/conversation-store', async () => {
       { id: 'conv-1', title: 'Test Chat 1', createdAt: Date.now(), updatedAt: Date.now() },
       { id: 'conv-2', title: 'Test Chat 2', createdAt: Date.now(), updatedAt: Date.now() },
     ],
+    // reason: Sidebar uses these for the listbox arrow-key navigation; we expose
+    // writable refs so tests can read what id the keyboard handler set.
+    useCurrentConversationId: () => currentConversationIdRef.value,
+    useSetCurrentConversationId: () => (id: string) => {
+      lastSetCurrentId.value = id;
+      currentConversationIdRef.value = id;
+    },
   };
 });
 
@@ -192,6 +206,10 @@ describe('Sidebar', () => {
     mockActions.setCurrentConversation.mockClear();
     mockActions.clearConversation.mockClear();
     mockActions.exportConversation.mockClear();
+
+    // Reset keyboard-nav tracking state between tests.
+    currentConversationIdRef.value = null;
+    lastSetCurrentId.value = null;
 
     useUIStore.setState({
       isHydrated: true,
@@ -377,6 +395,80 @@ describe('Sidebar', () => {
       const { container } = render(<Sidebar />);
 
       expect(container).toBeInTheDocument();
+    });
+  });
+
+  // ── ARIA listbox semantics (audit F7) ────────────────────────────────
+  describe('Conversation listbox (audit F7)', () => {
+    it('wraps the virtualized conversation list in a nav with aria-label', () => {
+      render(<Sidebar />);
+      const nav = document.querySelector('nav[aria-label="a11y.conversationList"]');
+      expect(nav).not.toBeNull();
+    });
+
+    it('renders a listbox element with aria-label and tabIndex=-1', () => {
+      render(<Sidebar />);
+      const listbox = screen.getByRole('listbox');
+      expect(listbox).toHaveAttribute('aria-label', 'a11y.conversationList');
+      expect(listbox).toHaveAttribute('tabindex', '-1');
+    });
+
+    it('ArrowDown moves active conversation down through filtered list', () => {
+      // Seed the active id to the first conversation so ArrowDown is well-defined.
+      currentConversationIdRef.value = 'conv-1';
+      render(<Sidebar />);
+      const listbox = screen.getByRole('listbox');
+      fireEvent.keyDown(listbox, { key: 'ArrowDown' });
+      expect(lastSetCurrentId.value).toBe('conv-2');
+    });
+
+    it('ArrowUp moves active conversation up through filtered list', () => {
+      currentConversationIdRef.value = 'conv-2';
+      render(<Sidebar />);
+      const listbox = screen.getByRole('listbox');
+      fireEvent.keyDown(listbox, { key: 'ArrowUp' });
+      expect(lastSetCurrentId.value).toBe('conv-1');
+    });
+
+    it('ArrowUp at top is a no-op (stays on first item)', () => {
+      currentConversationIdRef.value = 'conv-1';
+      render(<Sidebar />);
+      const listbox = screen.getByRole('listbox');
+      fireEvent.keyDown(listbox, { key: 'ArrowUp' });
+      expect(lastSetCurrentId.value).toBeNull();
+    });
+
+    it('Home jumps to first conversation', () => {
+      currentConversationIdRef.value = 'conv-2';
+      render(<Sidebar />);
+      const listbox = screen.getByRole('listbox');
+      fireEvent.keyDown(listbox, { key: 'Home' });
+      expect(lastSetCurrentId.value).toBe('conv-1');
+    });
+
+    it('End jumps to last conversation', () => {
+      currentConversationIdRef.value = 'conv-1';
+      render(<Sidebar />);
+      const listbox = screen.getByRole('listbox');
+      fireEvent.keyDown(listbox, { key: 'End' });
+      expect(lastSetCurrentId.value).toBe('conv-2');
+    });
+
+    it('ArrowDown when nothing is active selects the first conversation', () => {
+      // currentConversationIdRef.value defaults to null via beforeEach
+      render(<Sidebar />);
+      const listbox = screen.getByRole('listbox');
+      fireEvent.keyDown(listbox, { key: 'ArrowDown' });
+      expect(lastSetCurrentId.value).toBe('conv-1');
+    });
+
+    it('does not capture unrelated keys (typing in search input is unaffected)', () => {
+      currentConversationIdRef.value = 'conv-1';
+      render(<Sidebar />);
+      const listbox = screen.getByRole('listbox');
+      // A non-arrow/non-Home-End key should leave lastSetCurrentId untouched.
+      fireEvent.keyDown(listbox, { key: 'a' });
+      expect(lastSetCurrentId.value).toBeNull();
     });
   });
 });

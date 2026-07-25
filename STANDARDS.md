@@ -16,9 +16,7 @@
 - Domain-Driven Design (DDD)
 - Fully offline execution (no external APIs or network calls)
 
----
-
-# **1. HARD SYSTEM CONSTRAINTS (NON-NEGOTIABLE)**
+---# **1. HARD SYSTEM CONSTRAINTS (NON-NEGOTIABLE)**
 
 The system MUST NEVER:
 
