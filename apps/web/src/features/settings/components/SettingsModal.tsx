@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useId } from 'react';
 import { X, Settings2, RotateCcw, Cpu, HardDrive, Terminal, Layout } from 'lucide-react';
 import { useGlobalSettings } from '@/store/settings-store';
 import { useSettingsActions } from '@/features/settings/hooks/useSettingsActions';
@@ -96,13 +96,14 @@ const RenderContent = ({ activeTab, t, handleReset }: RenderContentProps) => {
 interface RenderModalHeaderProps {
   t: (key: string) => string;
   onClose: () => void;
+  titleId: string;
 }
 
-const RenderModalHeader = ({ t, onClose }: RenderModalHeaderProps) => (
+const RenderModalHeader = ({ t, onClose, titleId }: RenderModalHeaderProps) => (
   <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 p-4 dark:border-zinc-800">
     <div className="flex items-center gap-2 font-semibold">
       <Settings2 size={18} className="text-blue-500" aria-hidden="true" />
-      <span>{t('settings.title')}</span>
+      <span id={titleId}>{t('settings.title')}</span>
     </div>
     <button
       onClick={onClose}
@@ -164,6 +165,7 @@ const RenderModalFooter = ({ t, onClose }: RenderModalFooterProps) => (
 
 const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+  const titleId = useId();
   const globalSettings = useGlobalSettings();
   const { resetGlobalSettings } = useSettingsActions();
   const { t } = useTranslation(globalSettings.language);
@@ -205,8 +207,14 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
   );
 
   return (
-    <ModalLayout isOpen={isOpen} onClose={onClose} maxWidth="max-w-3xl" className="h-[600px]">
-      <RenderModalHeader t={t} onClose={onClose} />
+    <ModalLayout
+      isOpen={isOpen}
+      onClose={onClose}
+      titleId={titleId}
+      maxWidth="max-w-3xl"
+      className="h-[600px]"
+    >
+      <RenderModalHeader t={t} onClose={onClose} titleId={titleId} />
 
       <div className="flex flex-1 overflow-hidden">
         <RenderTabNavigation tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />

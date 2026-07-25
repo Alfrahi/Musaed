@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useId } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
 import { useUIStore } from '@/store/ui-store';
@@ -164,6 +164,7 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
   const [activeTab, setActiveTab] = useState<'featured' | 'installed'>('featured');
   const { t } = useTranslation(language);
   const { handlePull, translateOllamaStatus } = useModelPulling();
+  const titleId = useId();
 
   const featuredModels = useMemo(
     () => FEATURED_MODELS_LIST.map((m) => ({ ...m, description: t(m.descriptionKey) })),
@@ -200,7 +201,13 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
   );
 
   return (
-    <ModalLayout isOpen={isOpen} onClose={onClose} maxWidth="max-w-4xl" className="h-[85vh]">
+    <ModalLayout
+      isOpen={isOpen}
+      onClose={onClose}
+      titleId={titleId}
+      maxWidth="max-w-4xl"
+      className="h-[85vh]"
+    >
       <LibrarySearchHeader
         language={language}
         activeTab={activeTab}
@@ -212,6 +219,7 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
         onClose={onClose}
         installedCount={models.length}
         onPullAny={handlePull}
+        titleId={titleId}
       />
 
       {!isOllamaConnected && <ConnectionWarning message={t('chat.connectionFailed')} />}

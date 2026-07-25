@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useId } from 'react';
 import { X, Terminal, RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import { cn } from '@/lib/utils';
@@ -94,20 +94,28 @@ const renderLogRow = (
 
 interface LogViewerHeaderProps {
   t: (key: string) => string;
+  titleId: string;
   isLoading: boolean;
   fetchLogs: () => void;
   clearLogs: () => void;
   onClose: () => void;
 }
 
-const LogViewerHeader = ({ t, isLoading, fetchLogs, clearLogs, onClose }: LogViewerHeaderProps) => (
+const LogViewerHeader = ({
+  t,
+  titleId,
+  isLoading,
+  fetchLogs,
+  clearLogs,
+  onClose,
+}: LogViewerHeaderProps) => (
   <div className="pbs-6 pbe-6 flex shrink-0 items-center justify-between border-b border-zinc-100 ps-6 pe-6 dark:border-zinc-800">
     <div className="flex items-center gap-4">
       <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
         <Terminal size={20} aria-hidden="true" />
       </div>
       <div>
-        <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">
+        <h2 id={titleId} className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">
           {t('logs.title')}
         </h2>
         <p className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
@@ -269,6 +277,7 @@ const IpcViolationsList = ({ t, formatDate }: IpcViolationsListProps) => {
 const LogViewer = ({ isOpen, onClose }: LogViewerProps) => {
   const language = useLanguage();
   const { t, formatDate } = useTranslation(language);
+  const titleId = useId();
   const { logs, isLoading, fetchLogs, clearLogs } = useLogActions();
 
   useEffect(() => {
@@ -281,12 +290,14 @@ const LogViewer = ({ isOpen, onClose }: LogViewerProps) => {
     <ModalLayout
       isOpen={isOpen}
       onClose={onClose}
+      titleId={titleId}
       maxWidth="max-w-4xl"
       className="h-[80vh]"
       zIndex="z-[70]"
     >
       <LogViewerHeader
         t={t}
+        titleId={titleId}
         isLoading={isLoading}
         fetchLogs={fetchLogs}
         clearLogs={clearLogs}

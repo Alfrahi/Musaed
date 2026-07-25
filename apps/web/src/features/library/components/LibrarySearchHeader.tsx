@@ -18,11 +18,13 @@ interface LibrarySearchHeaderProps {
   onClose: () => void;
   installedCount: number;
   onPullAny: (name: string) => void;
+  titleId: string;
 }
 
 /** Top bar with brand title and control buttons. */
 const HeaderBar = ({
   title,
+  titleId,
   subtitle,
   onRefresh,
   isRefreshing,
@@ -30,6 +32,7 @@ const HeaderBar = ({
   refreshTitle,
 }: {
   title: string;
+  titleId: string;
   subtitle: string;
   onRefresh: () => void;
   isRefreshing: boolean;
@@ -42,7 +45,9 @@ const HeaderBar = ({
         <HardDrive size={20} />
       </div>
       <div>
-        <h2 className="text-xl font-bold tracking-tight">{title}</h2>
+        <h2 id={titleId} className="text-xl font-bold tracking-tight">
+          {title}
+        </h2>
         <p className="text-xs font-medium tracking-widest text-zinc-500 uppercase">{subtitle}</p>
       </div>
     </div>
@@ -174,6 +179,7 @@ const LibrarySearchHeader = ({
   onClose,
   installedCount,
   onPullAny,
+  titleId,
 }: LibrarySearchHeaderProps) => {
   const { t } = useTranslation(language);
 
@@ -181,6 +187,7 @@ const LibrarySearchHeader = ({
     <>
       <HeaderBar
         title={t('library.modelManager')}
+        titleId={titleId}
         subtitle={t('library.localIntelligence')}
         onRefresh={onRefresh}
         isRefreshing={isRefreshing}

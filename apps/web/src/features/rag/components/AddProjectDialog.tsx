@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { X, FolderOpen, Loader2 } from 'lucide-react';
 import { dialog } from '@/lib/ipc';
 import { useRagProjects as useRagProjectsHook } from '@/features/rag/hooks/useRagProjects';
 import { useTranslation } from '@/lib/i18n';
 import { useSettingsStore, useModelStore } from '@/store';
+import { ModalLayout } from '@/components/ui';
 
 interface AddProjectDialogProps {
   onClose: () => void;
@@ -107,19 +108,20 @@ export const AddProjectDialog = ({ onClose, onAdded }: AddProjectDialogProps) =>
   const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
   const handleAdd = useHandleAdd(form, addNewProject, onAdded, t);
+  const titleId = useId();
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-    >
-      <div
-        className="bg-background border-border w-full max-w-md space-y-4 rounded-lg border p-6 shadow-lg"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <ModalLayout isOpen onClose={onClose} titleId={titleId} maxWidth="max-w-md">
+      <div className="bg-background border-border space-y-4 border-b p-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{t('rag.addProject')}</h2>
-          <button onClick={onClose} className="hover:bg-accent rounded p-1">
+          <h2 id={titleId} className="text-lg font-semibold">
+            {t('rag.addProject')}
+          </h2>
+          <button
+            onClick={onClose}
+            className="hover:bg-accent rounded p-1"
+            aria-label={t('a11y.closeModal')}
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -195,7 +197,7 @@ export const AddProjectDialog = ({ onClose, onAdded }: AddProjectDialogProps) =>
           </button>
         </div>
       </div>
-    </div>
+    </ModalLayout>
   );
 };
 
