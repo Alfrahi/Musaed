@@ -81,6 +81,8 @@
     "shortcutSend": "Enter to Send",
     "shortcutMultiLine": "Cmd/Ctrl + Enter to Send",
     "shortcutStop": "ESC to Stop",
+    "stop": "Stop",
+    "stopStreaming": "Stop streaming",
     "errorPrefix": "Error"
   },
   "settings": {

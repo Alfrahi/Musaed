@@ -42,6 +42,10 @@ export const useChatInput = () => {
     textareaRef.current?.focus();
   }, [input, images, files, sendMessage, clearAttachments]);
 
+  // Escape is intentionally NOT handled here. The Escape-to-stop contract is
+  // owned exclusively by useGlobalShortcuts (audit F6) so the global handler
+  // and a textarea-local handler never both fire abortStreaming. Enter/Cmd-Enter
+  // remain the only keys this handler owns.
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       const isModEnter = (e.metaKey || e.ctrlKey) && e.key === 'Enter';

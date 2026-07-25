@@ -81,6 +81,8 @@
     "shortcutSend": "إظغط Enter للإرسال",
     "shortcutMultiLine": "Ctrl + Enter للإرسال",
     "shortcutStop": "ESC للإيقاف",
+    "stop": "إيقاف",
+    "stopStreaming": "إيقاف البث",
     "errorPrefix": "خطأ"
   },
   "settings": {

@@ -59,7 +59,7 @@ describe('InputArea', () => {
   describe('Send button', () => {
     it('renders send button disabled when input is empty', () => {
       render(<InputArea />);
-      const sendButton = screen.getByRole('button', { name: 'chat.send' });
+      const sendButton = screen.getByRole('button', { name: 'a11y.sendMessage' });
       expect(sendButton).toBeDisabled();
     });
 
@@ -70,7 +70,7 @@ describe('InputArea', () => {
       });
 
       render(<InputArea />);
-      const sendButton = screen.getByRole('button', { name: 'chat.send' });
+      const sendButton = screen.getByRole('button', { name: 'a11y.sendMessage' });
       expect(sendButton).not.toBeDisabled();
     });
   });
@@ -88,7 +88,7 @@ describe('InputArea', () => {
       }));
 
       render(<InputArea />);
-      const icon = screen.getByRole('button', { name: 'chat.send' });
+      const icon = screen.getByRole('button', { name: 'a11y.sendMessage' });
       const svg = icon.querySelector('svg');
       expect(svg?.classList.contains('mirror-rtl')).toBe(true);
     });
@@ -117,7 +117,7 @@ describe('InputArea', () => {
       });
 
       render(<InputArea />);
-      const stopButton = screen.getByRole('button', { name: /common.done/i });
+      const stopButton = screen.getByRole('button', { name: /chat.stop/i });
       expect(stopButton).toBeInTheDocument();
     });
   });
@@ -132,7 +132,7 @@ describe('InputArea', () => {
       });
 
       render(<InputArea />);
-      const sendButton = screen.getByRole('button', { name: 'chat.send' });
+      const sendButton = screen.getByRole('button', { name: 'a11y.sendMessage' });
       fireEvent.click(sendButton);
       expect(onSend).toHaveBeenCalledTimes(1);
     });
@@ -148,7 +148,7 @@ describe('InputArea', () => {
       render(<InputArea />);
       // The form should not call onSend when input is empty
       // This is already tested by the disabled state of the send button
-      const sendButton = screen.getByRole('button', { name: 'chat.send' });
+      const sendButton = screen.getByRole('button', { name: 'a11y.sendMessage' });
       expect(sendButton).toBeDisabled();
     });
   });
