@@ -66,6 +66,68 @@ const a11yFocusPlugin = {
   },
 };
 
+// ── Local plugin: Button primitive adoption rule (STANDARDS.md §13/§17) ───
+// `Button` from `@/components/ui/button` carries the focus-visible ring, default
+// `type="button"`, ref-forwarding, and the CVA variant contract. Allowing raw
+// `<button>` lets these affordances silently drift back out of the chat/compose
+// surface and modal footers (audit F4 — ~86 raw `<button>` elements at audit time).
+// This rule warns (not errors) so the remaining sweep doesn't gate Phase 1; the
+// standard expects the lint warning to be live, not the migration to be complete.
+const buttonAdoptionPlugin = {
+  rules: {
+    // reason: warns on raw `<button>` JSX in `.tsx` files that don't `import { Button } from '@/components/ui/button'`. Warning-level (not error) so the Phase 1 sweep is not blocked — see ImplementationPromptSequence Prompt 4.
+    'prefer-button-primitive': {
+      meta: {
+        type: 'suggestion',
+        docs: {
+          description:
+            'Prefer importing `Button` from `@/components/ui/button` over using a raw `<button>` JSX element (audit F4 / STANDARDS.md §13/§17).',
+        },
+        schema: [],
+        messages: {
+          preferPrimitive:
+            'Raw `<button>` detected. Import `Button` from `@/components/ui/button` and use the appropriate `variant` / `size` to inherit the focus-visible ring, default `type="button"`, and CVA variant contract (audit F4).',
+        },
+      },
+      create(context) {
+        const filename = context.filename ?? '';
+        // Only enforce inside the web app's TSX sources. Test files, config,
+        // and the Button primitive itself are exempt — a Button test that
+        // renders raw `<button>` for comparison is legitimate, and `button.tsx`
+        // is the one file that must use a raw `<button>`.
+        if (
+          !filename.includes('/apps/web/src/') ||
+          !filename.endsWith('.tsx') ||
+          filename.endsWith('.test.tsx') ||
+          filename.endsWith('/components/ui/button.tsx')
+        ) {
+          // Returning an empty visitor is the documented way for `create` to
+          // opt out of a file without tripping ESLint's "did not return an
+          // object" guard.
+          return {};
+        }
+
+        let importsButton = false;
+        return {
+          ImportDeclaration(node) {
+            const src = node.source?.value ?? '';
+            if (src === '@/components/ui/button' || src.endsWith('/components/ui/button')) {
+              importsButton = true;
+            }
+          },
+          JSXOpeningElement(node) {
+            if (importsButton) return;
+            const name = node.name;
+            if (name?.type === 'JSXIdentifier' && name.name === 'button') {
+              context.report({ node, messageId: 'preferPrimitive' });
+            }
+          },
+        };
+      },
+    },
+  },
+};
+
 export default tseslint.config(
   // ── Global ignores ──────────────────────────────────────
   {
@@ -90,6 +152,7 @@ export default tseslint.config(
       'react-hooks': reactHooksPlugin,
       react: reactPlugin,
       'musaed-a11y-focus': a11yFocusPlugin,
+      'musaed-buttons': buttonAdoptionPlugin,
     },
 
     languageOptions: {
@@ -263,6 +326,9 @@ export default tseslint.config(
 
       // reason: flags `focus:outline-none` without adjacent `focus-visible:ring-*` (globals.css `:focus-visible` requires component suppression not to strip keyboard affordance)
       'musaed-a11y-focus/no-focus-outline-none-without-ring': 'error',
+
+      // reason: warns on raw `<button>` in `.tsx` files that don't import `Button` from `@/components/ui/button`. Warning-level so the Phase 1 sweep doesn't block; the contract is enforced as new code opts in. See ImplementationPromptSequence Prompt 4.
+      'musaed-buttons/prefer-button-primitive': 'warn',
     },
   },
 

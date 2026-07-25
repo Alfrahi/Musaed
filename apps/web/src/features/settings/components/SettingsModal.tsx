@@ -16,6 +16,7 @@ import { useTranslation } from '@/lib/i18n';
 import { dialog } from '@/lib/ipc';
 import { ModalLayout } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -154,12 +155,9 @@ interface RenderModalFooterProps {
 
 const RenderModalFooter = ({ t, onClose }: RenderModalFooterProps) => (
   <div className="flex shrink-0 justify-end border-t border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
-    <button
-      onClick={onClose}
-      className="h-10 rounded-lg bg-zinc-900 px-6 text-xs font-bold tracking-widest text-white uppercase shadow-sm transition-all hover:opacity-90 active:scale-95 dark:bg-zinc-100 dark:text-zinc-900"
-    >
+    <Button variant="secondary" size="md" onClick={onClose}>
       {t('common.done')}
-    </button>
+    </Button>
   </div>
 );
 

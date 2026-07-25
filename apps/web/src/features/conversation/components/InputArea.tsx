@@ -8,6 +8,7 @@ import AttachmentPreview from './AttachmentPreview';
 import { ModelSelector } from '@/features/library';
 // RagContextBadge is imported from the components directory to avoid feature-to-feature imports
 import { RagContextBadge } from '@/components/ui/RagContextBadge';
+import { Button } from '@/components/ui/button';
 
 /** Attach action buttons (image + file upload). */
 const AttachButtons = ({
@@ -22,47 +23,42 @@ const AttachButtons = ({
   fileLabel: string;
 }) => (
   <>
-    <button
-      type="button"
+    <Button
+      variant="ghost"
+      size="icon"
       onClick={onImage}
-      className="hover:text-foreground rounded-lg p-2 text-zinc-400 transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800"
+      className="p-2 text-zinc-400"
       title={imageLabel}
+      aria-label={imageLabel}
     >
       <ImageIcon size={14} />
-    </button>
-    <button
-      type="button"
+    </Button>
+    <Button
+      variant="ghost"
+      size="icon"
       onClick={onFile}
-      className="hover:text-foreground rounded-lg p-2 text-zinc-400 transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800"
+      className="p-2 text-zinc-400"
       title={fileLabel}
+      aria-label={fileLabel}
     >
       <Paperclip size={14} />
-    </button>
+    </Button>
   </>
 );
 
 /** Stop streaming button. */
 const AbortButton = ({ onClick, label }: { onClick: () => void; label: string }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="flex h-8 items-center gap-2 rounded-lg bg-zinc-900 ps-4 pe-4 text-[10px] font-bold tracking-widest text-white uppercase transition-all active:scale-95 dark:bg-zinc-100 dark:text-zinc-900"
-  >
+  <Button variant="secondary" size="sm" onClick={onClick}>
     <Square size={10} fill="currentColor" />
     {label}
-  </button>
+  </Button>
 );
 
 /** Send message button. */
 const SendButton = ({ disabled, ariaLabel }: { disabled: boolean; ariaLabel: string }) => (
-  <button
-    type="submit"
-    disabled={disabled}
-    aria-label={ariaLabel}
-    className="flex h-8 items-center gap-2 rounded-lg bg-blue-600 ps-4 pe-4 text-[10px] font-bold tracking-widest text-white uppercase shadow-sm transition-all active:scale-95 disabled:opacity-20"
-  >
+  <Button type="submit" size="sm" variant="primary" disabled={disabled} aria-label={ariaLabel}>
     <Send size={10} className="mirror-rtl" />
-  </button>
+  </Button>
 );
 
 /** Left side of toolbar: model selector + attach buttons. */

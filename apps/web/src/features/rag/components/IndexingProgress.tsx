@@ -5,6 +5,7 @@ import { useGlobalSettings } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 import { useActiveRagProject } from '@/store/rag-store';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface IndexingProgressProps {
   progress: IndexProgress;
@@ -97,7 +98,3 @@ export const IndexingProgress = ({ progress, onAbort, onRetry }: IndexingProgres
     </div>
   );
 };
-
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(' ');
-}
