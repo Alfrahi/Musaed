@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useId } from 'react';
 import { Info, Github, Shield, Cpu, X, type LucideIcon } from 'lucide-react';
 import { ModalLayout } from '@/components/ui';
 import { useTranslation } from '@/lib/i18n';
@@ -36,10 +36,12 @@ const InfoSection = ({
 /** Modal header with app icon, name, and version. */
 const InfoHeader = ({
   title,
+  titleId,
   version,
   onClose,
 }: {
   title: string;
+  titleId: string;
   version: string;
   onClose: () => void;
 }) => (
@@ -49,7 +51,9 @@ const InfoHeader = ({
         <Info size={20} />
       </div>
       <div>
-        <h2 className="text-xl font-bold tracking-tight">{title}</h2>
+        <h2 id={titleId} className="text-xl font-bold tracking-tight">
+          {title}
+        </h2>
         <p className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">v{version}</p>
       </div>
     </div>
@@ -65,6 +69,7 @@ const InfoHeader = ({
 const InfoModal = ({ isOpen, onClose }: InfoModalProps) => {
   const language = useLanguage();
   const { t } = useTranslation(language);
+  const titleId = useId();
 
   const appVersion = '0.1.0';
   const sections = [
@@ -73,8 +78,13 @@ const InfoModal = ({ isOpen, onClose }: InfoModalProps) => {
   ];
 
   return (
-    <ModalLayout isOpen={isOpen} onClose={onClose} maxWidth="max-w-md">
-      <InfoHeader title={t('common.appName')} version={appVersion} onClose={onClose} />
+    <ModalLayout isOpen={isOpen} onClose={onClose} titleId={titleId} maxWidth="max-w-md">
+      <InfoHeader
+        title={t('common.appName')}
+        titleId={titleId}
+        version={appVersion}
+        onClose={onClose}
+      />
 
       <div className="space-y-6 overflow-y-auto p-6">
         <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
