@@ -54,11 +54,11 @@ const AbortButton = ({ onClick, label }: { onClick: () => void; label: string })
 );
 
 /** Send message button. */
-const SendButton = ({ disabled }: { disabled: boolean }) => (
+const SendButton = ({ disabled, ariaLabel }: { disabled: boolean; ariaLabel: string }) => (
   <button
     type="submit"
     disabled={disabled}
-    aria-label="chat.send"
+    aria-label={ariaLabel}
     className="flex h-8 items-center gap-2 rounded-lg bg-blue-600 ps-4 pe-4 text-[10px] font-bold tracking-widest text-white uppercase shadow-sm transition-all active:scale-95 disabled:opacity-20"
   >
     <Send size={10} className="mirror-rtl" />
@@ -96,12 +96,14 @@ const ToolbarRight = ({
   onAbort,
   shortcutLabel,
   abortLabel,
+  sendAriaLabel,
 }: {
   isStreaming: boolean;
   disabled: boolean;
   onAbort: () => void;
   shortcutLabel: string;
   abortLabel: string;
+  sendAriaLabel: string;
 }) => (
   <div className="flex items-center gap-3">
     <span className="hidden font-mono text-[9px] font-bold tracking-widest text-zinc-400 uppercase sm:block">
@@ -110,7 +112,7 @@ const ToolbarRight = ({
     {isStreaming ? (
       <AbortButton onClick={onAbort} label={abortLabel} />
     ) : (
-      <SendButton disabled={disabled} />
+      <SendButton disabled={disabled} ariaLabel={sendAriaLabel} />
     )}
   </div>
 );
@@ -192,7 +194,8 @@ export const InputArea = () => {
                 disabled={!canSend}
                 onAbort={handleAbort}
                 shortcutLabel={shortcutLabel}
-                abortLabel={t('common.done')}
+                abortLabel={t('chat.stop')}
+                sendAriaLabel={t('a11y.sendMessage')}
               />
             </div>
           </form>

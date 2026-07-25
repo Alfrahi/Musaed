@@ -1,8 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useConversationActions } from '@/features/conversation';
-import { useSetSettingsOpen, useSetLibraryOpen } from '@/store/hooks';
+import { useConversationActions, abortStreaming } from '@/features/conversation';
+import { useSetSettingsOpen, useSetLibraryOpen, useSetInfoOpen } from '@/store/hooks';
+import { selectIsAnyModalOpen, useUIStore } from '@/store/ui-store';
+import { useConversationStore } from '@/store/conversation-store';
+import { useStreamingStore } from '@/store/streaming-store';
 
 /**
  * Hook to register global keyboard shortcuts for primary application actions.
@@ -11,12 +14,15 @@ import { useSetSettingsOpen, useSetLibraryOpen } from '@/store/hooks';
  * - Cmd/Ctrl + N: New Chat
  * - Cmd/Ctrl + ,: Settings
  * - Cmd/Ctrl + L: Model Library
- * - Escape: Close Modals
+ * - Escape: if any modal is open, close modals; otherwise, if the active
+ *   conversation is streaming, stop the stream. The two branches are mutually
+ *   exclusive so Escape never double-fires (audit F6 — Escape-to-stop contract).
  */
 export function useGlobalShortcuts() {
   const { createNewConversation } = useConversationActions();
   const setSettingsOpen = useSetSettingsOpen();
   const setLibraryOpen = useSetLibraryOpen();
+  const setInfoOpen = useSetInfoOpen();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -36,12 +42,28 @@ export function useGlobalShortcuts() {
       }
 
       if (e.key === 'Escape') {
-        setSettingsOpen(false);
-        setLibraryOpen(false);
+        // Modal-first routing: read state straight from the store so Escape
+        // routing stays current without re-running this effect on every toggle.
+        const anyModalOpen = selectIsAnyModalOpen(useUIStore.getState());
+        if (anyModalOpen) {
+          setSettingsOpen(false);
+          setLibraryOpen(false);
+          setInfoOpen(false);
+          return;
+        }
+
+        // No modal is intercepting Escape — route to the streaming stop
+        // contract. Read the active conversation + streaming state directly
+        // from the stores to avoid stale closure captures.
+        const conversationId = useConversationStore.getState().currentConversationId;
+        if (!conversationId) return;
+        if (conversationId in useStreamingStore.getState().activeStreams) {
+          abortStreaming(conversationId);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [createNewConversation, setSettingsOpen, setLibraryOpen]);
+  }, [createNewConversation, setSettingsOpen, setLibraryOpen, setInfoOpen]);
 }

@@ -10,6 +10,10 @@ export * from '@/store/message-store';
 export * from '@/store/streaming-store';
 export { useChatActions } from './hooks/useChatActions';
 export { useConversationActions } from './hooks/useConversationActions';
+// Public stop primitive consumed by the global Escape-to-stop shortcut
+// (useGlobalShortcuts) and InputArea. Barrel-exported so non-feature
+// callers don't deep-import into feature internals (STANDARDS §3).
+export { abortStreaming } from './hooks/useConversationActions';
 export { useAttachmentManager } from './hooks/useAttachmentManager';
 export { useTauriEvents } from './hooks/useTauriEvents';
 export { useAutoTitle, triggerAutoTitle } from './hooks/useAutoTitle';
