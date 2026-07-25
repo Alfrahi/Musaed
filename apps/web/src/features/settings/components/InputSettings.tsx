@@ -27,7 +27,7 @@ const InputSettings = () => {
 
         <button
           onClick={() => updateGlobalSettings({ enterToSend: !globalSettings.enterToSend })}
-          className={`ltr h-6 w-10 shrink-0 rounded-full p-1 transition-colors duration-200 ease-in-out focus:ring-2 focus:ring-blue-500/20 focus:outline-none ${
+          className={`ltr focus-visible:ring-offset-background h-6 w-10 shrink-0 rounded-full p-1 transition-colors duration-200 ease-in-out focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none ${
             globalSettings.enterToSend ? 'bg-blue-600' : 'bg-zinc-300 dark:bg-zinc-600'
           }`}
           role="switch"
