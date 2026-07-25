@@ -1,13 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Eraser, MessageSquare, Briefcase } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import { useIsHydrated } from '@/store/hooks';
 import { useSettingsStore } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 import { ProjectList, AddProjectDialog } from '@/features/rag';
-import { useSearchQuery, useFilteredConversations } from '@/store/conversation-store';
+import {
+  useCurrentConversationId,
+  useSetCurrentConversationId,
+  useSearchQuery,
+  useFilteredConversations,
+} from '@/store/conversation-store';
 import { useConversationActions } from '@/features/conversation';
 import SearchInput from './SearchInput';
 import ConversationItem from './ConversationItem';
@@ -81,6 +86,56 @@ const SidebarItemContent = ({
   );
 };
 
+/**
+ * Pure arrow-key navigation helper for the conversation listbox (WAI-ARIA
+ * listbox pattern). Extracted at module scope so the Sidebar component body
+ * stays under the project's `max-lines-per-function` lint gate (STANDARDS §11).
+ *
+ * Uses manual focus management, not `aria-activedescendant`: `ConversationItem`
+ * self-focuses via a `useEffect` when it becomes active. The parent listbox is
+ * `react-virtuoso` virtualized, so out-of-viewport option ids are unmounted and
+ * would violate the `aria-activedescendant` contract. We operate on
+ * `filteredConversations` (the canonical full list), not `virtualItems` (which
+ * is paginated). Home/End included; PageUp/PageDown left to Virtuoso's scroll.
+ */
+const moveActiveConversation = (
+  e: React.KeyboardEvent<HTMLDivElement>,
+  filteredConversations: ConversationMetadata[],
+  currentConversationId: string | null,
+  setCurrentConversationId: (id: string) => void
+): void => {
+  const ids = filteredConversations.map((c) => c.id);
+  if (ids.length === 0) return;
+
+  const currentIndex = currentConversationId ? ids.indexOf(currentConversationId) : -1;
+  let nextIndex = currentIndex;
+
+  switch (e.key) {
+    case 'ArrowDown':
+      e.preventDefault();
+      nextIndex = currentIndex < 0 ? 0 : Math.min(currentIndex + 1, ids.length - 1);
+      break;
+    case 'ArrowUp':
+      e.preventDefault();
+      nextIndex = currentIndex <= 0 ? 0 : currentIndex - 1;
+      break;
+    case 'Home':
+      e.preventDefault();
+      nextIndex = 0;
+      break;
+    case 'End':
+      e.preventDefault();
+      nextIndex = ids.length - 1;
+      break;
+    default:
+      return;
+  }
+
+  if (nextIndex !== currentIndex && nextIndex >= 0 && nextIndex < ids.length) {
+    setCurrentConversationId(ids[nextIndex]);
+  }
+};
+
 /** Tab buttons for switching between chats and projects views. */
 const TabButtons = ({
   activeTab,
@@ -124,6 +179,8 @@ const Sidebar = () => {
 
   const filteredConversations = useFilteredConversations();
   const searchQuery = useSearchQuery();
+  const currentConversationId = useCurrentConversationId();
+  const setCurrentConversationId = useSetCurrentConversationId();
   const language = useSettingsStore((s) => s.globalSettings.language);
   const isHydrated = useIsHydrated();
   const { t } = useTranslation(language);
@@ -136,6 +193,21 @@ const Sidebar = () => {
     ),
     filteredConversations.map((conv: ConversationMetadata) => conv.id),
     searchQuery
+  );
+
+  // Arrow-key navigation across the listbox (WAI-ARIA listbox pattern).
+  // See `moveActiveConversation` above for the pure helper and rationale
+  // (manual focus management, not `aria-activedescendant`).
+  const handleListboxKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      moveActiveConversation(
+        e,
+        filteredConversations,
+        currentConversationId,
+        setCurrentConversationId
+      );
+    },
+    [filteredConversations, currentConversationId, setCurrentConversationId]
   );
 
   if (!isHydrated) {
@@ -166,26 +238,34 @@ const Sidebar = () => {
       {activeTab === 'chats' ? (
         <>
           <SearchInput />
-          <div className="flex-1 overflow-hidden">
-            <Virtuoso
-              style={{ height: '100%' }}
-              data={virtualItems}
-              itemContent={(_index, item) => (
-                <SidebarItemContent
-                  item={item}
-                  searchQuery={searchQuery}
-                  filteredConversations={filteredConversations}
-                  handleClearAll={handleClearAll}
-                  t={t}
-                />
-              )}
-              endReached={() => {
-                if (virtualItems.length < filteredConversations.length) loadMore();
-              }}
-              overscan={200}
-              increaseViewportBy={200}
-            />
-          </div>
+          <nav aria-label={t('a11y.conversationList')} className="flex-1 overflow-hidden">
+            <div
+              role="listbox"
+              aria-label={t('a11y.conversationList')}
+              tabIndex={-1}
+              onKeyDown={handleListboxKeyDown}
+              className="h-full"
+            >
+              <Virtuoso
+                style={{ height: '100%' }}
+                data={virtualItems}
+                itemContent={(_index, item) => (
+                  <SidebarItemContent
+                    item={item}
+                    searchQuery={searchQuery}
+                    filteredConversations={filteredConversations}
+                    handleClearAll={handleClearAll}
+                    t={t}
+                  />
+                )}
+                endReached={() => {
+                  if (virtualItems.length < filteredConversations.length) loadMore();
+                }}
+                overscan={200}
+                increaseViewportBy={200}
+              />
+            </div>
+          </nav>
         </>
       ) : (
         <div className="flex-1 px-2">
