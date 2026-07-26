@@ -7,5 +7,8 @@ export { useRagContext } from './hooks/useRagContext';
 export { useRagFileBrowser } from './hooks/useRagFileBrowser';
 export { ProjectList } from './components/ProjectList';
 export { AddProjectDialog } from './components/AddProjectDialog';
+export { RagExplorer } from './components/RagExplorer';
+export { ProjectSettings } from './components/ProjectSettings';
+export { FileChunkViewer } from './components/FileChunkViewer';
 export { fileNameFromPath, truncateFilePath, getRelativeFilePath } from './utils/project-helpers';
 export { default as RagFeature } from './feature.manifest';

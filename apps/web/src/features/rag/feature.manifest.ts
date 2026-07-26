@@ -16,7 +16,13 @@ const manifest: FeatureManifest = {
       'useRagContext',
       'useRagFileBrowser',
     ],
-    components: ['ProjectList', 'AddProjectDialog'],
+    components: [
+      'ProjectList',
+      'AddProjectDialog',
+      'RagExplorer',
+      'ProjectSettings',
+      'FileChunkViewer',
+    ],
     utils: ['fileNameFromPath', 'truncateFilePath', 'getRelativeFilePath'],
   },
   ipcEndpoints: [

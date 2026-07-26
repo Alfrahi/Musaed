@@ -41,13 +41,15 @@ vi.mock('@/lib/i18n', () => ({
 // accessible name is empty and ` getByRole('switch', { name }) ` cannot
 // locate it. Instead, we find the row by its visible label text and scope
 // the switch query to that row.
-const getRowByLabel = (labelKey: string) => {
+const getRowByLabel = (labelKey: string): HTMLElement => {
   const labelEl = screen.getByText(labelKey);
   // The label <p> sits in the flex row whose direct ancestor is the row
-  // div that also holds the switch <button>. Walk up to that row.
+  // div that also holds the switch <button>. Walk up to that row. A `<div>`
+  // is always an HTMLElement, but `Element.closest` is typed to the broader
+  // `Element | null`, so we narrow to `HTMLElement` here.
   const row = labelEl.closest('div.flex');
   if (!row) throw new Error(`toggle row not found for label ${labelKey}`);
-  return row;
+  return row as HTMLElement;
 };
 
 const getSwitchButton = (labelKey: string) => {

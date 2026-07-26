@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRagFileBrowser } from '@/features/rag/hooks/useRagFileBrowser';
 import { useActiveRagProject } from '@/store/rag-store';
 import { useLanguage } from '@/store';
@@ -10,6 +10,11 @@ import type { ChunkRecord } from '@musaed/contracts';
 
 interface FileChunkViewerProps {
   filePath: string;
+  /** When provided, the viewer scrolls the chunk overlapping this 1-based
+   *  line into view on mount. Used by `MessageBubble` citation buttons which
+   *  arrive here via a `ModalLayout` and want the cited passage visible
+   *  immediately rather than pinned to the top of the file. */
+  targetStartLine?: number;
 }
 
 const ChunkMetadata = ({ metadata }: { metadata: Record<string, unknown> }) => {
@@ -39,8 +44,14 @@ const ChunkMetadata = ({ metadata }: { metadata: Record<string, unknown> }) => {
   );
 };
 
-const ChunkCard = ({ chunk }: { chunk: ChunkRecord }) => (
-  <div className="rounded-md border p-3">
+const ChunkCard = ({
+  chunk,
+  chunkRef,
+}: {
+  chunk: ChunkRecord;
+  chunkRef?: (el: HTMLDivElement | null) => void;
+}) => (
+  <div ref={chunkRef} className="rounded-md border p-3">
     <div className="mb-2 flex items-center justify-between">
       <span className="text-muted-foreground font-mono text-xs">
         Lines {chunk.startLine}–{chunk.endLine}
@@ -55,7 +66,7 @@ const ChunkCard = ({ chunk }: { chunk: ChunkRecord }) => (
   </div>
 );
 
-const FileChunkViewer = ({ filePath }: FileChunkViewerProps) => {
+const FileChunkViewer = ({ filePath, targetStartLine }: FileChunkViewerProps) => {
   const activeProject = useActiveRagProject();
   const { fetchFileChunks } = useRagFileBrowser();
   const { t } = useTranslation(useLanguage());
@@ -81,6 +92,20 @@ const FileChunkViewer = ({ filePath }: FileChunkViewerProps) => {
         setIsLoading(false);
       });
   }, [activeProject?.id, filePath, fetchFileChunks]);
+
+  // Ref callback fired by the ChunkCard that overlaps `targetStartLine`.
+  // Stable across renders — recreated only when the target line changes —
+  // so React's ref-callback contract (null then el on swap) fires once per
+  // target, not on every render. Noop when no target was supplied.
+  const targetChunkRef = useRef<(el: HTMLDivElement | null) => void | null>(null);
+  if (targetStartLine != null && targetChunkRef.current == null) {
+    targetChunkRef.current = (el) => {
+      if (el) el.scrollIntoView({ block: 'start' });
+    };
+  }
+  if (targetStartLine == null && targetChunkRef.current != null) {
+    targetChunkRef.current = null;
+  }
 
   if (isLoading) {
     return (
@@ -109,9 +134,24 @@ const FileChunkViewer = ({ filePath }: FileChunkViewerProps) => {
       <div className="flex-1 overflow-auto p-2">
         {chunks.length > 0 ? (
           <div className="space-y-4">
-            {chunks.map((chunk) => (
-              <ChunkCard key={chunk.id} chunk={chunk} />
-            ))}
+            {chunks.map((chunk) => {
+              // First chunk overlapping the cited line range gets the
+              // scroll-into-view ref callback; every other chunk renders
+              // without a ref. We compare against `targetStartLine` so the
+              // viewer lands on the chunk that *contains* the cited start,
+              // not on the first chunk in the file.
+              const isTarget =
+                targetStartLine != null &&
+                chunk.startLine <= targetStartLine &&
+                chunk.endLine >= targetStartLine;
+              return (
+                <ChunkCard
+                  key={chunk.id}
+                  chunk={chunk}
+                  chunkRef={isTarget ? (targetChunkRef.current ?? undefined) : undefined}
+                />
+              );
+            })}
           </div>
         ) : (
           <p className="text-muted-foreground p-2 text-sm">{t('rag.noChunksForFile')}</p>

@@ -3,6 +3,13 @@
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 
+/** Sidebar tab kinds. Lifted out of `Sidebar.tsx`'s local `useState` so
+ *  non-sidebar surfaces (notably `RagContextBadge` in `components/ui`) can
+ *  programmatically route the user to the Projects tab without crossing the
+ *  feature boundary into `features/sidebar`. STANDARDS §3 — feature import
+ *  rules forbid `components/ui` from reaching into the sidebar barrel. */
+export type SidebarTab = 'chats' | 'projects';
+
 interface UIState {
   isStreaming: boolean;
   isInitialized: boolean;
@@ -12,6 +19,7 @@ interface UIState {
   isSettingsOpen: boolean;
   isLibraryOpen: boolean;
   isInfoOpen: boolean;
+  sidebarTab: SidebarTab;
   /** Counter for pending store rehydrations. Decremented by each store's onRehydrateStorage callback. */
   _pendingRehydrations: number;
   setStreaming: (isStreaming: boolean) => void;
@@ -22,6 +30,7 @@ interface UIState {
   setSettingsOpen: (isSettingsOpen: boolean) => void;
   setLibraryOpen: (isLibraryOpen: boolean) => void;
   setInfoOpen: (isInfoOpen: boolean) => void;
+  setSidebarTab: (tab: SidebarTab) => void;
   /** Called before rehydration starts. Increments the pending counter by `count`. */
   setPendingRehydrations: (count: number) => void;
   /** Called by store's onRehydrateStorage when rehydration completes. */
@@ -44,6 +53,7 @@ export const useUIStore = createWithEqualityFn<UIState>()(
     isSettingsOpen: false,
     isLibraryOpen: false,
     isInfoOpen: false,
+    sidebarTab: 'chats',
     _pendingRehydrations: 0,
     setStreaming: (isStreaming) => set({ isStreaming }),
     setInitialized: (isInitialized) => set({ isInitialized }),
@@ -53,6 +63,7 @@ export const useUIStore = createWithEqualityFn<UIState>()(
     setSettingsOpen: (isSettingsOpen) => set({ isSettingsOpen }),
     setLibraryOpen: (isLibraryOpen) => set({ isLibraryOpen }),
     setInfoOpen: (isInfoOpen) => set({ isInfoOpen }),
+    setSidebarTab: (sidebarTab) => set({ sidebarTab }),
     setPendingRehydrations: (count) => set({ _pendingRehydrations: count }),
     onStoreRehydrated: () =>
       set((state) => {
@@ -84,3 +95,5 @@ export const useSetUIError = () => useUIStore((s) => s.setErrorMessage);
 export const useSetSettingsOpen = () => useUIStore((s) => s.setSettingsOpen);
 export const useSetLibraryOpen = () => useUIStore((s) => s.setLibraryOpen);
 export const useSetInfoOpen = () => useUIStore((s) => s.setInfoOpen);
+export const useSidebarTab = () => useUIStore((s) => s.sidebarTab);
+export const useSetSidebarTab = () => useUIStore((s) => s.setSidebarTab);

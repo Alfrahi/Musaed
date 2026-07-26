@@ -338,7 +338,12 @@
     "searchLibrary": "Search model library",
     "codeBlock": "{language} code block",
     "mermaidDiagram": "Rendered Mermaid diagram",
-    "retry": "Retry sending last message"
+    "retry": "Retry sending last message",
+    "openSource": "Open {file} (lines {startLine}–{endLine}) in the file browser",
+    "browseFiles": "Browse indexed files in {name}",
+    "projectSettings": "Open settings for {name}",
+    "showNMoreSources": "Show {count} more…",
+    "showFewerSources": "Show fewer"
   },
   "info": {
     "openInfo": "Open application information",
