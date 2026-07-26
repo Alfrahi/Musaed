@@ -43,6 +43,46 @@ describe('Contracts: Zod Schemas', () => {
     expect(MessageSchema.safeParse(validMessage).success).toBe(true);
   });
 
+  it('validates a message with an `error` field', () => {
+    const messageWithError = {
+      id: 'm1',
+      role: 'assistant',
+      content: 'partial response',
+      timestamp: Date.now(),
+      error: { code: 'STREAM_FAILED', message: 'Ollama went away' },
+    };
+    expect(MessageSchema.safeParse(messageWithError).success).toBe(true);
+    const parsed = MessageSchema.safeParse(messageWithError);
+    if (parsed.success) {
+      expect(parsed.data.error).toEqual({ code: 'STREAM_FAILED', message: 'Ollama went away' });
+    }
+  });
+
+  it('treats `error` as optional on the Message schema', () => {
+    const messageWithoutError = {
+      id: 'm2',
+      role: 'user',
+      content: 'hi',
+      timestamp: Date.now(),
+    };
+    const parsed = MessageSchema.safeParse(messageWithoutError);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.error).toBeUndefined();
+    }
+  });
+
+  it('rejects a malformed `error` value on the Message schema', () => {
+    const malformed = {
+      id: 'm3',
+      role: 'assistant',
+      content: 'x',
+      timestamp: Date.now(),
+      error: { code: 123, message: 'oops' },
+    };
+    expect(MessageSchema.safeParse(malformed).success).toBe(false);
+  });
+
   it('validates default chat settings', () => {
     expect(ChatSettingsSchema.safeParse(DEFAULT_SETTINGS).success).toBe(true);
   });

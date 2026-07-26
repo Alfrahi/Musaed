@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS messages (
     total_duration INTEGER,
     eval_duration INTEGER,
     rag_sources TEXT,
+    error TEXT,
     CONSTRAINT fk_conversation FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 );
 
@@ -102,6 +103,32 @@ pub(super) fn run_migrations(conn: &Connection) -> Result<(), String> {
         .map_err(|e| format!("Migration v2: failed to record: {}", e))?;
 
         tracing::info!("Migration v2: added performance indexes");
+    }
+
+    // Migration 3: Add structured `error` column for assistant-message failure
+    // payloads (v3 — UX-UI-AUDIT Prompt 8). Existing rows store NULL, which
+    // round-trips into the TypeScript `Message.error === undefined` shape.
+    // Idempotent: checks column existence before ALTER to survive partial runs.
+    if current_version < 3 {
+        let has_error_col: bool = conn
+            .prepare("SELECT COUNT(*) FROM pragma_table_info('messages') WHERE name = 'error'")
+            .and_then(|mut stmt| stmt.query_row([], |row| row.get::<_, i64>(0)))
+            .map(|count| count > 0)
+            .unwrap_or(false);
+
+        if !has_error_col {
+            conn.execute_batch("ALTER TABLE messages ADD COLUMN error TEXT;")
+                .map_err(|e| format!("Migration v3: failed to add error column: {}", e))?;
+        }
+
+        conn.execute(
+            "INSERT OR REPLACE INTO _conversations_migrations (version, description, applied_at)
+             VALUES (3, 'Add messages.error column', datetime('now'))",
+            [],
+        )
+        .map_err(|e| format!("Migration v3: failed to record: {}", e))?;
+
+        tracing::info!("Migration v3: added messages.error column");
     }
 
     Ok(())

@@ -337,7 +337,8 @@
     "copyCode": "Copy code to clipboard",
     "searchLibrary": "Search model library",
     "codeBlock": "{language} code block",
-    "mermaidDiagram": "Rendered Mermaid diagram"
+    "mermaidDiagram": "Rendered Mermaid diagram",
+    "retry": "Retry sending last message"
   },
   "info": {
     "openInfo": "Open application information",

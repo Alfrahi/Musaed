@@ -48,7 +48,11 @@ const handleStreamError = (
   flushAndStop(conversationId);
   updateLastMessage(
     conversationId,
-    { content: `\n\n[${t('chat.errorPrefix')}: ${msg}]`, done: true },
+    {
+      content: `\n\n[${t('chat.errorPrefix')}: ${msg}]`,
+      done: true,
+      error: { code: 'STREAM_FAILED', message: msg },
+    },
     false
   );
   stopStreaming(conversationId);

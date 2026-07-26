@@ -41,6 +41,14 @@ vi.mock('./MarkdownRenderer', () => ({
   default: ({ content }: { content: string }) => <div>{content}</div>,
 }));
 
+// Shared mock for sendMessage to allow assertion
+const mockSendMessage = vi.fn();
+vi.mock('../hooks/useChatActions', () => ({
+  useChatActions: () => ({
+    sendMessage: mockSendMessage,
+  }),
+}));
+
 vi.mock('react-virtuoso', async () => {
   const { forwardRef, useImperativeHandle } = await import('react');
   return {
@@ -199,6 +207,55 @@ describe('ChatWindow', () => {
 
       // Check for role label (may be nested with other classes/text)
       expect(screen.getByText((content) => content.includes('user'))).toBeInTheDocument();
+    });
+  });
+
+  describe('Error handling', () => {
+    it('renders error fallback when a message has an error and retries on button click', async () => {
+      useUIStore.setState({ isHydrated: true });
+      useConversationStore.setState({
+        currentConversationId: 'test-id',
+        conversations: {
+          'test-id': {
+            id: 'test-id',
+            title: 'Error Test',
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            model: 'llama3.2',
+            settings: DEFAULT_SETTINGS,
+          },
+        },
+      });
+      useMessageStore.setState({
+        messages: {
+          'test-id': [
+            {
+              id: 'msg-1',
+              role: 'user',
+              content: 'User query',
+              timestamp: Date.now(),
+            },
+            {
+              id: 'msg-2',
+              role: 'assistant',
+              content: 'Failed response',
+              timestamp: Date.now(),
+              error: { code: 'STREAM_ERR', message: 'Stream failed' },
+            },
+          ],
+        },
+      });
+
+      const { sendMessage } = (await import('../hooks/useChatActions')).useChatActions();
+      render(<ChatWindow />);
+
+      // Error description should be displayed
+      expect(screen.getByText('Stream failed')).toBeInTheDocument();
+      // Retry button should be present and trigger sendMessage with last user content
+      const retryBtn = screen.getByText('fallback.retry');
+      expect(retryBtn).toBeInTheDocument();
+      retryBtn.click();
+      expect(sendMessage).toHaveBeenCalledWith('User query', []);
     });
   });
 
