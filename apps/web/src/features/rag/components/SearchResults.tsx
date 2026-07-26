@@ -91,7 +91,7 @@ const SearchResultCard = ({ result, rank }: { result: SearchResult; rank: number
           L{result.startLine}-{result.endLine}
         </span>
         {result.language && (
-          <span className="text-muted-foreground bg-accent/50 rounded px-1 text-[10px]">
+          <span className="text-muted-foreground bg-accent/50 caption-xs rounded px-1">
             {result.language}
           </span>
         )}

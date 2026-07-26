@@ -14,7 +14,7 @@ export const MessageStats = React.memo(
     if (message.role === 'user' || message.evalCount == null) return null;
 
     return (
-      <div className="pbs-4 border-bs border-sidebar-border/50 flex items-center gap-4 text-[9px] font-bold text-zinc-400">
+      <div className="pbs-4 border-bs border-sidebar-border/50 caption-xs flex items-center gap-4 font-bold text-zinc-400">
         <span className="flex items-center gap-1.5">
           <Cpu size={12} />
           {formatNumber(message.evalCount)}

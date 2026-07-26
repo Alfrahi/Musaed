@@ -102,7 +102,7 @@ const MessageBubble = ({ message, labels, formatNumber }: MessageBubbleProps) =>
 
         <div className="min-w-0 flex-1 space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase">
+            <span className="caption-md font-bold text-zinc-400 uppercase">
               {isUser ? labels.user : labels.assistant}
               {!isUser && message.model && (
                 <span className="ms-3 text-zinc-500">{message.model}</span>

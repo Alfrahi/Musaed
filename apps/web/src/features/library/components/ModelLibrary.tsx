@@ -140,7 +140,7 @@ const LibraryFooter = ({
   onClose: () => void;
 }) => (
   <div className="border-bs flex items-center justify-between border-zinc-100 bg-zinc-50 py-4 ps-6 pe-6 dark:border-zinc-800 dark:bg-zinc-900/80">
-    <span className="text-[10px] font-bold tracking-widest text-zinc-400 uppercase">
+    <span className="caption-md font-bold tracking-widest text-zinc-400 uppercase">
       {storageLabel}
     </span>
     <button

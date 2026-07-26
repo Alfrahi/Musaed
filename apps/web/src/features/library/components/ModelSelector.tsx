@@ -163,7 +163,7 @@ const ModelDropdown = ({
     aria-labelledby={triggerId}
   >
     <div className="border-be border-sidebar-border mbe-1 py-2.5 ps-4 pe-4">
-      <span className="text-[11px] font-black text-zinc-400 uppercase">{headerLabel}</span>
+      <span className="caption-md font-black text-zinc-400 uppercase">{headerLabel}</span>
     </div>
     <div className="max-h-[300px] overflow-y-auto">
       {models.length > 0 ? (

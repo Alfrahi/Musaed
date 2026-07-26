@@ -25,10 +25,10 @@ const LatencyRow = ({
 }) => {
   const isViolation = row.status === 'violation';
   return (
-    <li className="flex items-center justify-between gap-2 py-2 text-[11px]" role="listitem">
+    <li className="caption-xs flex items-center justify-between gap-2 py-2" role="listitem">
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="truncate font-mono text-zinc-700 dark:text-zinc-200">{row.command}</span>
-        <span className="text-[9px] tracking-widest text-zinc-400 uppercase">
+        <span className="caption-xs tracking-widest text-zinc-400 uppercase">
           {t('settings.ipcLatency.category', { category: row.category })}
         </span>
       </div>
@@ -101,7 +101,7 @@ const IpcLatencyPanel = () => {
           <label>{t('settings.ipcLatency.title')}</label>
           {stats.violationCount > 0 && (
             <span
-              className="rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-bold tracking-widest text-red-600 uppercase dark:bg-red-500/10 dark:text-red-400"
+              className="caption-xs rounded-full bg-red-50 px-2 py-0.5 font-bold tracking-widest text-red-600 uppercase dark:bg-red-500/10 dark:text-red-400"
               role="status"
               aria-label={t('settings.ipcLatency.violationsBadge', {
                 count: stats.violationCount,
@@ -114,7 +114,7 @@ const IpcLatencyPanel = () => {
         <button
           type="button"
           onClick={reset}
-          className="flex items-center gap-1 text-[10px] font-bold tracking-widest text-blue-600 uppercase transition-colors hover:text-blue-700"
+          className="caption-xs flex items-center gap-1 font-bold tracking-widest text-blue-600 uppercase transition-colors hover:text-blue-700"
           title={t('settings.ipcLatency.clear')}
         >
           <RefreshCw size={12} aria-hidden="true" />
@@ -122,11 +122,11 @@ const IpcLatencyPanel = () => {
         </button>
       </div>
 
-      <p className="text-[10px] font-bold tracking-widest text-zinc-400 uppercase">
+      <p className="caption-md font-bold tracking-widest text-zinc-400 uppercase">
         {t('settings.ipcLatency.description')}
       </p>
 
-      <div className="flex items-center justify-between text-[10px] tracking-widest text-zinc-500 uppercase">
+      <div className="caption-md flex items-center justify-between font-bold tracking-widest text-zinc-500 uppercase">
         <span data-testid="ipc-latency-total">
           {t('settings.ipcLatency.totalCalls', { count: stats.callCount })}
         </span>
@@ -139,7 +139,7 @@ const IpcLatencyPanel = () => {
       </div>
 
       {rowsByCommand.length === 0 ? (
-        <p className="py-4 text-center text-[11px] font-medium text-zinc-400 italic">
+        <p className="caption-xs py-4 text-center font-medium text-zinc-400 italic">
           {t('settings.ipcLatency.noViolations')}
         </p>
       ) : (

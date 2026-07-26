@@ -102,7 +102,7 @@ const ToolbarRight = ({
   sendAriaLabel: string;
 }) => (
   <div className="flex items-center gap-3">
-    <span className="hidden font-mono text-[9px] font-bold tracking-widest text-zinc-400 uppercase sm:block">
+    <span className="caption-xs hidden font-mono font-bold tracking-widest text-zinc-400 uppercase sm:block">
       {shortcutLabel}
     </span>
     {isStreaming ? (

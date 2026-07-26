@@ -41,16 +41,16 @@ const TaskStatus = () => {
 
         <div className="flex min-w-0 flex-col">
           <div className="flex items-center gap-2">
-            <span className="max-w-[100px] truncate text-[10px] font-bold tracking-widest text-zinc-900 uppercase dark:text-zinc-100">
+            <span className="caption-md max-w-[100px] truncate font-bold tracking-widest text-zinc-900 uppercase dark:text-zinc-100">
               {name === 'current' ? t('library.pulling') : name}
             </span>
             {status?.progress !== undefined && (
-              <span className="font-mono text-[10px] font-black text-blue-600 dark:text-blue-400">
+              <span className="caption-xs font-mono font-black text-blue-600 dark:text-blue-400">
                 {status.progress}%
               </span>
             )}
           </div>
-          <span className="text-[8px] leading-none font-bold tracking-[0.1em] text-zinc-500 uppercase">
+          <span className="caption-xs leading-none font-bold tracking-[0.1em] uppercase">
             {t('library.pulling')}
           </span>
         </div>

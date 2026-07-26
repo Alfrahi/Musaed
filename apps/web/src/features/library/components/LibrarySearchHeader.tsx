@@ -207,7 +207,7 @@ const LibrarySearchHeader = ({
             placeholder={t('library.pullFromOllama', { name: 'llama3:8b' })}
             buttonTitle={t('library.pullModel')}
           />
-          <div className="hidden items-center gap-4 text-[10px] font-bold tracking-widest text-zinc-500 uppercase lg:flex">
+          <div className="caption-xs hidden items-center gap-4 font-bold tracking-widest text-zinc-500 uppercase lg:flex">
             <button
               onClick={() => opener.openUrl('https://ollama.com/library')}
               className="flex items-center gap-1 transition-colors hover:text-blue-500"

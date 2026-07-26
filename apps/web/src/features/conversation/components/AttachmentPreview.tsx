@@ -58,8 +58,8 @@ const AttachmentPreview = ({
             <FileText size={16} />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-[10px] font-bold dark:text-zinc-200">{file.name}</p>
-            <p className="text-[9px] tracking-widest text-zinc-500 uppercase">
+            <p className="caption-xs truncate font-bold dark:text-zinc-200">{file.name}</p>
+            <p className="caption-xs tracking-widest text-zinc-500 uppercase">
               {formatFileSize(file.size)}
             </p>
           </div>

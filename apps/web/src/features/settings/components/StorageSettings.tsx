@@ -9,7 +9,7 @@ import { useSettingsActions } from '@/features/settings/hooks/useSettingsActions
 /** Storage size display card. */
 const SizeCard = ({ label, value }: { label: string; value: string }) => (
   <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3 dark:border-zinc-700/50 dark:bg-zinc-800/50">
-    <p className="mbe-1 text-[10px] font-bold tracking-widest text-zinc-400 uppercase">{label}</p>
+    <p className="caption-md mbe-1 font-bold tracking-widest text-zinc-400 uppercase">{label}</p>
     <p className="font-mono text-sm font-black">{value}</p>
   </div>
 );
@@ -100,7 +100,7 @@ const StorageSettings = () => {
       </div>
 
       <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-2 text-[11px] font-bold tracking-wider text-zinc-500 uppercase">
+        <div className="caption-md flex items-center gap-2 font-bold tracking-wider text-zinc-500 uppercase">
           <Trash2 size={12} />
           <label>{t('settings.storage.autoDelete')}</label>
         </div>

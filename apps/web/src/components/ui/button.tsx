@@ -15,6 +15,18 @@ import { cn } from '@/lib/utils';
  *
  * `size: 'icon'` is reserved for square icon-only buttons (e.g. modal close,
  * refresh) — it collapses the padding and centres an icon.
+ *
+ * Font sizes lean on Tailwind's stock `text-xs` (12px) / `text-sm` (14px)
+ * utilities rather than the `caption-xs` / `caption-md` utilities from
+ * `globals.css`, because the caption utilities are opinionated about `color`
+ * (zinc-600 / 700 + dark-mode overrides) — they would clobber the variant's
+ * own `text-*` color (`text-white` on `primary`, `text-zinc-900` on the dark
+ * `secondary` override, …) under CSS source-order precedence. The variant's
+ * `variant` slot owns color; the `size` slot owns only height / padding /
+ * font-size. This keeps size→font-size a self-contained contract while still
+ * honoring the STANDARDS.md §13 / WCAG 1.4.3 minimum-typesize floor (12px)
+ * that `musaed-typography/no-sub-12px-typography` enforces unconditionally —
+ * including on this file.
  */
 export const buttonVariants = cva(
   // base — applies to every variant
@@ -47,9 +59,9 @@ export const buttonVariants = cva(
           'bg-red-500 text-white shadow-sm hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500',
       },
       size: {
-        sm: 'h-8 px-3 text-[10px]',
-        md: 'h-10 px-4 text-[10px]',
-        lg: 'h-12 px-6 text-xs',
+        sm: 'h-8 px-3 text-xs',
+        md: 'h-10 px-4 text-xs',
+        lg: 'h-12 px-6 text-sm',
         icon: 'h-8 w-8 p-0',
       },
     },

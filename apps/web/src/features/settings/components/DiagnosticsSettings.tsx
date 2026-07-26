@@ -22,7 +22,7 @@ const DiagnosticsSettings = () => {
           </div>
           <button
             onClick={() => setIsLogViewerOpen(true)}
-            className="text-[10px] font-bold tracking-widest text-blue-600 uppercase transition-colors hover:text-blue-700"
+            className="caption-xs font-bold tracking-widest text-blue-600 uppercase transition-colors hover:text-blue-700"
           >
             {t('settings.viewLogs')}
           </button>

@@ -26,7 +26,7 @@ const SidebarInfo = () => {
             <span className="mbe-1 truncate text-xs leading-none font-bold dark:text-zinc-200">
               {t('common.appName')}
             </span>
-            <span className="text-[9px] font-bold tracking-widest text-zinc-500 uppercase">
+            <span className="caption-md font-bold tracking-widest text-zinc-500 uppercase">
               v{version}
             </span>
           </div>

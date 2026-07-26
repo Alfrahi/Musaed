@@ -17,7 +17,7 @@ const OllamaConnectionStatus = () => {
       <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400">
         <CheckCircle2 size={14} />
         <span className="hidden sm:inline">{t('chat.localNode')}</span>
-        {health && <span className="text-[10px] text-zinc-500">({health.responseTimeMs}ms)</span>}
+        {health && <span className="caption-xs">({health.responseTimeMs}ms)</span>}
       </div>
     );
   }
@@ -46,7 +46,7 @@ const OllamaConnectionStatus = () => {
             </div>
             <button
               onClick={reconnect}
-              className="text-[10px] font-bold text-blue-600 transition-colors hover:text-blue-700"
+              className="caption-xs font-bold text-blue-600 transition-colors hover:text-blue-700"
             >
               {t('common.retry')}
             </button>
@@ -61,7 +61,7 @@ const OllamaConnectionStatus = () => {
             </div>
             <button
               onClick={reconnect}
-              className="text-[10px] font-bold text-blue-600 transition-colors hover:text-blue-700"
+              className="caption-xs font-bold text-blue-600 transition-colors hover:text-blue-700"
             >
               {t('common.retry')}
             </button>
