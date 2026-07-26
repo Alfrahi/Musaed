@@ -49,7 +49,7 @@ const manifest: FeatureManifest = {
   },
   stateSchemas: {
     settingsStore: 2,
-    conversationStore: 1,
+    conversationStore: 2,
   },
   persistenceSchemas: {
     settings: 'musaed-settings-storage',

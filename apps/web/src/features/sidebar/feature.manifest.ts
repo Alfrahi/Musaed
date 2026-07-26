@@ -27,7 +27,7 @@ const manifest: FeatureManifest = {
   },
   ipcEndpoints: ['cmd_dialog_ask', 'cmd_export_markdown'], // Both commands now implemented
   stateSchemas: {
-    conversationStore: 1,
+    conversationStore: 2,
     messageStore: 1,
   },
   persistenceSchemas: {

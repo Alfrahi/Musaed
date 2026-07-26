@@ -1,5 +1,5 @@
 {
-  "conversation": ["library"],
+  "conversation": ["library", "rag"],
   "info": [],
   "layout": ["conversation", "sidebar"],
   "library": [],

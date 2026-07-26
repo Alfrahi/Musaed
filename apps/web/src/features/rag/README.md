@@ -45,7 +45,15 @@ Components live in `components/` and are **not** re-exported from `index.ts` (pe
 | `SearchResults`    | Ranked search results display                         |
 | `FileBrowser`      | Browse files within an indexed project                |
 | `FileChunkViewer`  | Inspect individual chunks of a file                   |
-| `RagContextBadge`  | Shows RAG context status in the chat input            |
+
+## Components Mounted Outside This Feature
+
+The chat-input badge is rendered by `RagContextBadge` in `src/components/ui/`, not by a
+component in this feature. It lives outside `features/rag` so that the conversation
+feature's `InputArea` can mount it without crossing the feature boundary (STANDARDS §3).
+The badge owns the inactive-state CTA ("Add RAG Project") that routes the user to the
+sidebar Projects tab via the shared `useSidebarTab` action in `ui-store`, and the
+active-state explorer button that opens `RagExplorer` in a `ModalLayout`.
 
 ## IPC Endpoints
 

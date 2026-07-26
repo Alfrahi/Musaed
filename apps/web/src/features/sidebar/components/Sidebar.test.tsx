@@ -220,6 +220,7 @@ describe('Sidebar', () => {
       isSettingsOpen: false,
       isLibraryOpen: false,
       isInfoOpen: false,
+      sidebarTab: 'chats',
       _pendingRehydrations: 0,
     });
     useSettingsStore.setState({

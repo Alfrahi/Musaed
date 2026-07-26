@@ -5,6 +5,7 @@ import { Eraser, MessageSquare, Briefcase } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import { useIsHydrated } from '@/store/hooks';
 import { useSettingsStore } from '@/store';
+import { useSidebarTab, useSetSidebarTab } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 import { ProjectList, AddProjectDialog } from '@/features/rag';
 import {
@@ -173,7 +174,8 @@ const TabButtons = ({
 );
 
 const Sidebar = () => {
-  const [activeTab, setActiveTab] = useState<'chats' | 'projects'>('chats');
+  const activeTab = useSidebarTab();
+  const setActiveTab = useSetSidebarTab();
   const [showAddProject, setShowAddProject] = useState(false);
   const { createNewConversation } = useConversationActions();
 

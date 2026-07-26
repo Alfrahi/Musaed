@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useRagProjects } from '@/features/rag/hooks/useRagProjects';
 import { Loader2, Save, X } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -11,6 +11,10 @@ import { useTranslation } from '@/lib/i18n';
 
 interface ProjectSettingsProps {
   onClose: () => void;
+  /** id to apply to the visible heading so a wrapping ModalLayout's
+   *  `aria-labelledby` resolves to this element. If omitted, an internal
+   *  id is generated so the dialog still has a stable labelled relationship. */
+  titleId?: string;
 }
 
 interface EmbeddingModelSelectProps {
@@ -193,10 +197,12 @@ const ProjectSettingsForm = ({ onClose }: { onClose: () => void }) => {
   );
 };
 
-const ProjectSettings = ({ onClose }: ProjectSettingsProps) => {
+const ProjectSettings = ({ onClose, titleId: titleIdProp }: ProjectSettingsProps) => {
   const activeProject = useActiveRagProject();
   const language = useLanguage();
   const { t } = useTranslation(language);
+  const generatedTitleId = useId();
+  const titleId = titleIdProp ?? generatedTitleId;
 
   if (!activeProject) {
     return <div className="text-muted-foreground p-4 text-sm">{t('rag.noActiveProject')}</div>;
@@ -205,7 +211,9 @@ const ProjectSettings = ({ onClose }: ProjectSettingsProps) => {
   return (
     <div className="flex h-full flex-col p-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium">{t('rag.projectSettings')}</h2>
+        <h2 id={titleId} className="text-lg font-medium">
+          {t('rag.projectSettings')}
+        </h2>
         <button type="button" className="hover:bg-accent rounded-md p-1" onClick={onClose}>
           <X className="h-4 w-4" />
         </button>

@@ -338,7 +338,12 @@
     "searchLibrary": "البحث في مكتبة النماذج",
     "codeBlock": "كتلة برمجية بلغة {language}",
     "mermaidDiagram": "رسم Mermaid البياني المعروض",
-    "retry": "إعادة إرسال آخر رسالة"
+    "retry": "إعادة إرسال آخر رسالة",
+    "openSource": "افتح {file} (الأسطر {startLine}–{endLine}) في متصفح الملفات",
+    "browseFiles": "تصفح ملفات المفهرسة في {name}",
+    "projectSettings": "افتح إعدادات {name}",
+    "showNMoreSources": "اعرض {count} أخرى…",
+    "showFewerSources": "اعرض أقل"
   },
   "info": {
     "openInfo": "فتح معلومات التطبيق",

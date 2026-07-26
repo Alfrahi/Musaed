@@ -1,15 +1,19 @@
 'use client';
 
 import { memo, useState, useEffect } from 'react';
-import { FolderOpen, Trash2, RefreshCw, Database, X } from 'lucide-react';
+import { FolderOpen, Trash2, RefreshCw, Database, X, FolderTree, Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { IndexingProgress } from './IndexingProgress';
+import { RagExplorer } from './RagExplorer';
+import { ProjectSettings } from './ProjectSettings';
 import type { RagProject, IndexProgress as IndexProgressType } from '@musaed/contracts';
 import { listen } from '@/lib/ipc';
 import { IndexProgressSchema } from '@musaed/contracts';
-import { truncateFilePath } from '@/features/rag/utils/project-helpers';
+import { truncateFilePath } from '../utils/project-helpers';
 import { useSettingsStore } from '@/store';
 import { useTranslation } from '@/lib/i18n';
+import { Button } from '@/components/ui/button';
+import ModalLayout from '@/components/ui/ModalLayout';
 
 interface ProjectCardProps {
   project: RagProject;
@@ -57,6 +61,8 @@ const ProjectCard = ({
   const indexProgress = useProjectIndexProgress(project.id);
   const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
+  const [isExplorerOpen, setIsExplorerOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
     <div
@@ -78,8 +84,28 @@ const ProjectCard = ({
         onReindex={onReindex}
         onAbort={onAbort}
         onRemove={onRemove}
+        onBrowseFiles={() => setIsExplorerOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
         t={t}
       />
+
+      {isExplorerOpen && (
+        <ExplorerModal
+          project={project}
+          onClose={() => setIsExplorerOpen(false)}
+          titleId="rag-explorer-title"
+          t={t}
+        />
+      )}
+
+      {isSettingsOpen && (
+        <SettingsModal
+          project={project}
+          onClose={() => setIsSettingsOpen(false)}
+          titleId="rag-settings-title"
+          t={t}
+        />
+      )}
     </div>
   );
 };
@@ -143,6 +169,81 @@ const ProjectStats = ({
   );
 };
 
+type ReadyActionsProps = {
+  project: RagProject;
+  onReindex: () => void;
+  onBrowseFiles: () => void;
+  onOpenSettings: () => void;
+  t: (key: string, values?: Record<string, string | number | boolean>) => string;
+};
+
+/** Action buttons shown only for `status === 'ready'` projects. Extracted
+ *  out of `ProjectActions` so that component stays under the project's
+ *  `max-lines-per-function` lint gate (STANDARDS §11). Audit F10 — the
+ *  Browse Files + Settings buttons open `RagExplorer` / `ProjectSettings`
+ *  in a `ModalLayout` mounted by the parent `ProjectCard`. The unconditional
+ *  Remove button is rendered separately by `ProjectActions` (it applies to
+ *  every status, not just `ready`). */
+const ReadyActions = ({
+  project,
+  onReindex,
+  onBrowseFiles,
+  onOpenSettings,
+  t,
+}: ReadyActionsProps) => (
+  <>
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onReindex();
+      }}
+      className="text-muted-foreground hover:text-foreground flex items-center gap-0.5 text-xs"
+      title={t('rag.reindexProject')}
+    >
+      <RefreshCw className="h-3 w-3" /> {t('rag.reindexProject')}
+    </button>
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={(e) => {
+        e.stopPropagation();
+        onBrowseFiles();
+      }}
+      aria-label={t('a11y.browseFiles', { name: project.name })}
+      title={t('a11y.browseFiles', { name: project.name })}
+      className="text-muted-foreground hover:text-foreground px-1.5 py-0.5 text-xs"
+    >
+      <FolderTree className="h-3 w-3" />
+    </Button>
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpenSettings();
+      }}
+      aria-label={t('a11y.projectSettings', { name: project.name })}
+      title={t('a11y.projectSettings', { name: project.name })}
+      className="text-muted-foreground hover:text-foreground px-1.5 py-0.5 text-xs"
+    >
+      <Settings2 className="h-3 w-3" />
+    </Button>
+  </>
+);
+
+type ProjectActionsProps = {
+  project: RagProject;
+  isIndexing: boolean;
+  onIndex: () => void;
+  onReindex: () => void;
+  onRetry?: () => void;
+  onAbort: () => void;
+  onRemove: () => void;
+  onBrowseFiles: () => void;
+  onOpenSettings: () => void;
+  t: (key: string, values?: Record<string, string | number | boolean>) => string;
+};
+
 const ProjectActions = ({
   project,
   isIndexing,
@@ -151,17 +252,10 @@ const ProjectActions = ({
   onRetry,
   onAbort,
   onRemove,
+  onBrowseFiles,
+  onOpenSettings,
   t,
-}: {
-  project: RagProject;
-  isIndexing: boolean;
-  onIndex: () => void;
-  onReindex: () => void;
-  onRetry?: () => void;
-  onAbort: () => void;
-  onRemove: () => void;
-  t: (key: string) => string;
-}) => {
+}: ProjectActionsProps) => {
   return (
     <div
       className={cn(
@@ -183,16 +277,13 @@ const ProjectActions = ({
         </button>
       )}
       {!isIndexing && project.status === 'ready' && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onReindex();
-          }}
-          className="text-muted-foreground hover:text-foreground flex items-center gap-0.5 text-xs"
-          title={t('rag.reindexProject')}
-        >
-          <RefreshCw className="h-3 w-3" /> {t('rag.reindexProject')}
-        </button>
+        <ReadyActions
+          project={project}
+          onReindex={onReindex}
+          onBrowseFiles={onBrowseFiles}
+          onOpenSettings={onOpenSettings}
+          t={t}
+        />
       )}
       {!isIndexing && project.status === 'error' && (
         <button
@@ -231,3 +322,41 @@ const ProjectActions = ({
     </div>
   );
 };
+
+type ExplorerModalProps = {
+  project: RagProject;
+  onClose: () => void;
+  titleId: string;
+  t: (key: string) => string;
+};
+
+const ExplorerModal = ({ project, onClose, titleId, t }: ExplorerModalProps) => (
+  <ModalLayout isOpen onClose={onClose} titleId={titleId} maxWidth="max-w-4xl" className="h-[80vh]">
+    <div className="flex h-full flex-col">
+      <div className="border-sidebar-border flex items-center justify-between border-b px-4 py-3">
+        <h2 id={titleId} className="text-base font-medium">
+          {project.name}
+        </h2>
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label={t('a11y.closeModal')}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      <div className="flex-1 overflow-hidden">
+        <RagExplorer />
+      </div>
+    </div>
+  </ModalLayout>
+);
+
+type SettingsModalProps = {
+  project: RagProject;
+  onClose: () => void;
+  titleId: string;
+  t: (key: string) => string;
+};
+
+const SettingsModal = ({ project, onClose, titleId, t }: SettingsModalProps) => (
+  <ModalLayout isOpen onClose={onClose} titleId={titleId} maxWidth="max-w-2xl" className="h-[70vh]">
+    <ProjectSettings onClose={onClose} titleId={titleId} />
+  </ModalLayout>
+);
