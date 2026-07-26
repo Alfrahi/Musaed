@@ -27,16 +27,15 @@ const InputSettings = () => {
 
         <button
           onClick={() => updateGlobalSettings({ enterToSend: !globalSettings.enterToSend })}
-          className={`ltr focus-visible:ring-offset-background h-6 w-10 shrink-0 rounded-full p-1 transition-colors duration-200 ease-in-out focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none ${
+          className={`focus-visible:ring-offset-background h-6 w-10 shrink-0 rounded-full p-1 transition-colors duration-200 ease-in-out focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none ${
             globalSettings.enterToSend ? 'bg-blue-600' : 'bg-zinc-300 dark:bg-zinc-600'
           }`}
           role="switch"
           aria-checked={globalSettings.enterToSend}
-          dir="ltr"
         >
           <div
             className={`h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${
-              globalSettings.enterToSend ? 'translate-x-4' : 'translate-x-0'
+              globalSettings.enterToSend ? 'ltr:translate-x-4 rtl:-translate-x-4' : 'translate-x-0'
             }`}
           />
         </button>
