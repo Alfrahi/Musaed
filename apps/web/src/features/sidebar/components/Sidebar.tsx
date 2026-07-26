@@ -36,7 +36,7 @@ const GroupHeader = ({
   label: string;
 }) => (
   <div className="pbs-6 pbe-2 inset-bs-0 bg-sidebar mbe-1 sticky z-10 flex items-center justify-between border-b border-zinc-100 ps-3 pe-3 dark:border-zinc-800">
-    <span className="text-[9px] font-black text-zinc-400 uppercase">{label}</span>
+    <span className="caption-md font-black text-zinc-400 uppercase">{label}</span>
     {showClear && (
       <button
         onClick={onClear}
@@ -149,7 +149,7 @@ const TabButtons = ({
   <div className="mb-4 flex gap-1 px-4">
     <button
       onClick={() => setActiveTab('chats')}
-      className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-[10px] font-bold tracking-wider uppercase transition-all ${
+      className={`caption-xs flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 font-bold tracking-wider uppercase transition-all ${
         activeTab === 'chats'
           ? 'bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
           : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900'
@@ -160,7 +160,7 @@ const TabButtons = ({
     </button>
     <button
       onClick={() => setActiveTab('projects')}
-      className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-[10px] font-bold tracking-wider uppercase transition-all ${
+      className={`caption-xs flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 font-bold tracking-wider uppercase transition-all ${
         activeTab === 'projects'
           ? 'bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
           : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900'

@@ -25,7 +25,7 @@ const SliderControl = ({
   <div className="flex flex-col gap-2">
     <div className="flex items-center justify-between">
       <label className="text-xs font-medium text-zinc-500">{label}</label>
-      <span className="font-mono text-[10px] text-zinc-400">{displayValue}</span>
+      <span className="caption-xs font-mono text-zinc-400">{displayValue}</span>
     </div>
     <input
       type="range"
@@ -57,7 +57,7 @@ const NumberInput = ({
       type="number"
       value={value}
       onChange={(e) => onChange(parseInt(e.target.value) || fallback)}
-      className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 font-mono text-[11px] transition-colors outline-none focus:border-blue-500 dark:border-zinc-700 dark:bg-zinc-800"
+      className="caption-xs w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 font-mono transition-colors outline-none focus:border-blue-500 dark:border-zinc-700 dark:bg-zinc-800"
     />
   </div>
 );

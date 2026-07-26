@@ -127,11 +127,11 @@ class ErrorBoundary extends Component<Props, State> {
 
             {this.state.errorType === 'general' && this.state.error && config.isDev && (
               <details className="text-start">
-                <summary className="cursor-pointer text-[10px] font-bold tracking-widest text-gray-500 uppercase hover:text-gray-700">
+                <summary className="caption-md cursor-pointer font-bold tracking-widest text-gray-500 uppercase hover:text-gray-700">
                   <HelpCircle size={12} className="me-1 inline" />
                   {t('error.details')}
                 </summary>
-                <pre className="mbs-2 max-h-24 overflow-auto rounded bg-gray-100 p-2 text-[9px] text-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                <pre className="caption-xs mbs-2 max-h-24 overflow-auto rounded bg-gray-100 p-2 text-gray-700 dark:bg-gray-900 dark:text-gray-300">
                   {sanitizeError(this.state.error).message}
                 </pre>
               </details>

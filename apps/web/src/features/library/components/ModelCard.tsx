@@ -84,7 +84,7 @@ const InstalledModelCard = ({
             {details?.parameterSize && (
               <span
                 className={cn(
-                  'rounded-sm px-1.5 py-0.5 text-[9px] font-black tracking-tighter uppercase',
+                  'caption-xs rounded-sm px-1.5 py-0.5 font-black tracking-tighter uppercase',
                   isHeavy
                     ? 'bg-red-100 text-red-600 dark:bg-red-900/30'
                     : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800'
@@ -98,7 +98,7 @@ const InstalledModelCard = ({
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 text-[10px] font-bold tracking-widest text-green-600 uppercase dark:bg-green-900/20 dark:text-green-400">
+        <div className="caption-xs flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 font-bold tracking-widest text-green-600 uppercase dark:bg-green-900/20 dark:text-green-400">
           <ShieldCheck size={12} />
           {t('common.ready')}
         </div>
@@ -125,13 +125,13 @@ const InstalledModelMeta = ({
 }) => (
   <div className="mbs-1 flex items-center gap-3">
     {displaySize && (
-      <span className="flex items-center gap-1 text-[10px] font-bold tracking-widest text-zinc-400 uppercase">
+      <span className="caption-xs flex items-center gap-1 font-bold tracking-widest text-zinc-400 uppercase">
         <HardDrive size={10} />
         {displaySize}
       </span>
     )}
     {details?.quantizationLevel && (
-      <span className="font-mono text-[10px] text-zinc-400">{details.quantizationLevel}</span>
+      <span className="caption-xs font-mono text-zinc-400">{details.quantizationLevel}</span>
     )}
   </div>
 );
@@ -170,14 +170,14 @@ const HardwareBadge = ({
 }: ReturnType<typeof getHardwareFit> & { t: (k: string) => string }) => {
   if (isLight) {
     return (
-      <span className="rounded-sm bg-green-100 px-1.5 py-0.5 text-[9px] font-black tracking-tighter text-green-600 uppercase dark:bg-green-900/20">
+      <span className="caption-xs rounded-sm bg-green-100 px-1.5 py-0.5 font-black tracking-tighter text-green-600 uppercase dark:bg-green-900/20">
         {t('library.fastLowVram')}
       </span>
     );
   }
   if (isHeavy) {
     return (
-      <span className="rounded-sm bg-orange-100 px-1.5 py-0.5 text-[9px] font-black tracking-tighter text-orange-600 uppercase dark:bg-orange-900/20">
+      <span className="caption-xs rounded-sm bg-orange-100 px-1.5 py-0.5 font-black tracking-tighter text-orange-600 uppercase dark:bg-orange-900/20">
         {t('library.highResource')}
       </span>
     );
@@ -210,7 +210,7 @@ const PullControl = ({
       onClick={() => onPull?.(name)}
       disabled={isDownloaded}
       className={cn(
-        'flex h-10 w-full items-center justify-center gap-2 rounded-lg text-[10px] font-bold tracking-widest uppercase shadow-sm transition-all',
+        'caption-xs flex h-10 w-full items-center justify-center gap-2 rounded-lg font-bold tracking-widest uppercase shadow-sm transition-all',
         isDownloaded
           ? 'cursor-default bg-zinc-100 text-zinc-400 dark:bg-zinc-800'
           : 'bg-zinc-900 text-white hover:opacity-90 active:scale-95 dark:bg-zinc-100 dark:text-zinc-900'
@@ -237,7 +237,7 @@ const PullProgressBar = ({
   formatNumber: (n: number) => string;
 }) => (
   <div className="space-y-2">
-    <div className="flex items-center justify-between text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+    <div className="caption-xs flex items-center justify-between font-bold tracking-widest text-zinc-500 uppercase">
       <span className="flex items-center gap-2">
         {pullStatus.status.toLowerCase().includes('success') ? (
           <CheckCircle2 size={12} className="text-green-500" />

@@ -128,6 +128,75 @@ const buttonAdoptionPlugin = {
   },
 };
 
+// ── Local plugin: caption typography rule (STANDARDS.md §13 — WCAG 1.4.3) ──
+// Banning raw `text-[Npx]` numeric font-sizes for N ≤ 11 keeps micro-labels on
+// the shared `caption-xs` (12px) / `caption-md` (13px) utilities defined in
+// globals.css. Those utilities carry the zinc-600/700 · dark zinc-300/200 pair
+// that meets WCAG 1.4.3, so ad-hoc sub-12px sizes that would silently regress
+// the contrast at small typesizes are caught by CI (audit F9 / §D7).
+//
+// No file is exempted. The rule fires unconditionally across `apps/web/src`,
+// including `components/ui/button.tsx` (which now uses Tailwind's stock
+// `text-xs` / `text-sm` utilities — color-neutral sizes — rather than the
+// color-opinionated `caption-*` utilities that would clobber its variant color)
+// and test files (which must not regress to sub-12px fixtures either).
+const captionTypographyPlugin = {
+  rules: {
+    // reason: bans `text-[<int>px]` / `text-[<int>.<int>px]` with size ≤ 11px in JSX className strings. Forces sub-12px micro-labels onto `caption-xs` (12px) / `caption-md` (13px) which carry WCAG-1.4.3-safe colors. The rule fires on every `.ts`/`.tsx` parsed by ESLint under `apps/web/src` — no carve-outs.
+    'no-sub-12px-typography': {
+      meta: {
+        type: 'problem',
+        docs: {
+          description:
+            'Disallow `text-[<N>px]` Tailwind arbitrary font-size utilities with N ≤ 11 in JSX className strings — use `caption-xs` (12px) or `caption-md` (13px) instead (audit F9 / STANDARDS.md §13 — WCAG 1.4.3).',
+        },
+        schema: [],
+        messages: {
+          tooSmall:
+            '`text-[{{value}}]` is below the 12px minimum body-readable typesize. Use the `caption-xs` (12px) or `caption-md` (13px) utility from `apps/web/src/app/globals.css` instead so the label inherits the WCAG-1.4.3-safe zinc shade (audit F9 / STANDARDS.md §13).',
+        },
+      },
+      create(context) {
+        const SMALL_FONT_RE = /(^|\s)text-\[(\d+(?:\.\d+)?)px\](\s|$)/g;
+        const checkClassString = (node, raw) => {
+          if (typeof raw !== 'string') return;
+          // Reset lastIndex because `g` flag is stateful across calls.
+          SMALL_FONT_RE.lastIndex = 0;
+          let m;
+          while ((m = SMALL_FONT_RE.exec(raw)) !== null) {
+            const value = parseFloat(m[2]);
+            if (Number.isFinite(value) && value <= 11) {
+              context.report({ node, messageId: 'tooSmall', data: { value: `${m[2]}px` } });
+            }
+          }
+        };
+
+        return {
+          JSXAttribute(node) {
+            if (node.name?.name !== 'className') return;
+            const value = node.value;
+            if (!value) return;
+
+            if (value.type === 'Literal' && typeof value.value === 'string') {
+              checkClassString(value, value.value);
+              return;
+            }
+            if (
+              value.type === 'JSXExpressionContainer' &&
+              value.expression?.type === 'TemplateLiteral'
+            ) {
+              for (const quasi of value.expression.quasis) {
+                checkClassString(quasi, quasi.value?.raw);
+              }
+              return;
+            }
+          },
+        };
+      },
+    },
+  },
+};
+
 export default tseslint.config(
   // ── Global ignores ──────────────────────────────────────
   {
@@ -153,6 +222,7 @@ export default tseslint.config(
       react: reactPlugin,
       'musaed-a11y-focus': a11yFocusPlugin,
       'musaed-buttons': buttonAdoptionPlugin,
+      'musaed-typography': captionTypographyPlugin,
     },
 
     languageOptions: {
@@ -329,6 +399,9 @@ export default tseslint.config(
 
       // reason: warns on raw `<button>` in `.tsx` files that don't import `Button` from `@/components/ui/button`. Warning-level so the Phase 1 sweep doesn't block; the contract is enforced as new code opts in. See ImplementationPromptSequence Prompt 4.
       'musaed-buttons/prefer-button-primitive': 'warn',
+
+      // reason: errors on `text-[Npx]` Tailwind arbitrary font-sizes with N ≤ 11px in JSX className strings. Forces micro-labels onto the shared `caption-xs` (12px) / `caption-md` (13px) utilities from globals.css that carry WCAG-1.4.3-safe zinc shades. See ImplementationPromptSequence Prompt 7 (audit F9 / §D7). The rule fires unconditionally on every file ESLint parses under `apps/web/src` — including `button.tsx` (now migrated off `text-[10px]`) and tests — with no carve-outs at the rule level.
+      'musaed-typography/no-sub-12px-typography': 'error',
     },
   },
 

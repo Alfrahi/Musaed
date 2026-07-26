@@ -54,7 +54,7 @@ const InfoHeader = ({
         <h2 id={titleId} className="text-xl font-bold tracking-tight">
           {title}
         </h2>
-        <p className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">v{version}</p>
+        <p className="caption-md font-bold tracking-widest text-zinc-500 uppercase">v{version}</p>
       </div>
     </div>
     <button
@@ -107,7 +107,7 @@ const InfoModal = ({ isOpen, onClose }: InfoModalProps) => {
       </div>
 
       <div className="flex shrink-0 justify-center border-t border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
-        <span className="text-[10px] font-bold tracking-widest text-zinc-400 uppercase">
+        <span className="caption-md font-bold tracking-widest text-zinc-400 uppercase">
           © {new Date().getFullYear()} Musaed
         </span>
       </div>

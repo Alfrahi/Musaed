@@ -33,7 +33,7 @@ const ToggleRow = ({
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-xs font-bold dark:text-zinc-200">{t(toggle.label)}</p>
-        <p className="text-[10px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+        <p className="caption-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
           {t(toggle.description)}
         </p>
       </div>

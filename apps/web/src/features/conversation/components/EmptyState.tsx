@@ -39,7 +39,7 @@ const EmptyState = () => {
           </div>
           <div>
             <p className="text-sm font-bold">{t('sidebar.newChat')}</p>
-            <p className="mbs-0.5 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+            <p className="mbs-0.5 caption-md font-bold tracking-widest text-zinc-500 uppercase">
               {t('chat.startFresh')}
             </p>
           </div>
@@ -50,7 +50,7 @@ const EmptyState = () => {
           </div>
           <div>
             <p className="text-sm font-bold">{t('chat.privateNote')}</p>
-            <p className="mbs-0.5 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+            <p className="mbs-0.5 caption-md font-bold tracking-widest text-zinc-500 uppercase">
               {t('chat.runningLocally')}
             </p>
           </div>

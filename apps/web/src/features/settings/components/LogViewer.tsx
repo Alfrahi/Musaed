@@ -36,7 +36,7 @@ const renderParsedLog = (
 
   return (
     <div
-      className="flex gap-3 border-b border-zinc-100 py-3 ps-6 pe-6 font-mono text-[11px] dark:border-zinc-800/50"
+      className="caption-xs flex gap-3 border-b border-zinc-100 py-3 ps-6 pe-6 font-mono dark:border-zinc-800/50"
       role="listitem"
     >
       <span className="shrink-0 text-zinc-400 dark:text-zinc-600">
@@ -50,7 +50,7 @@ const renderParsedLog = (
       </span>
       <span
         className={cn(
-          'mbs-0.5 h-fit shrink-0 rounded px-1.5 text-[9px] font-bold uppercase',
+          'caption-xs mbs-0.5 h-fit shrink-0 rounded px-1.5 font-bold uppercase',
           levelClasses
         )}
       >
@@ -60,7 +60,7 @@ const renderParsedLog = (
         <span className="break-words text-zinc-700 dark:text-zinc-300">{parsed.message}</span>
         {parsed.context !== undefined && parsed.context !== null && (
           <pre
-            className="mbs-1.5 overflow-x-auto rounded-lg border border-zinc-100 bg-zinc-50 p-2 text-[9px] text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/50 dark:text-zinc-400"
+            className="caption-xs mbs-1.5 overflow-x-auto rounded-lg border border-zinc-100 bg-zinc-50 p-2 text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/50 dark:text-zinc-400"
             tabIndex={0}
           >
             {JSON.stringify(parsed.context, null, 2)}
@@ -73,7 +73,7 @@ const renderParsedLog = (
 
 const renderRawLog = (log: string) => (
   <div
-    className="border-b border-zinc-100 py-3 ps-6 pe-6 font-mono text-[11px] text-zinc-500 dark:border-zinc-800/50"
+    className="caption-xs border-b border-zinc-100 py-3 ps-6 pe-6 font-mono text-zinc-500 dark:border-zinc-800/50"
     role="listitem"
   >
     {log}
@@ -118,7 +118,7 @@ const LogViewerHeader = ({
         <h2 id={titleId} className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">
           {t('logs.title')}
         </h2>
-        <p className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+        <p className="caption-md font-bold tracking-widest text-zinc-500 uppercase">
           {t('logs.debuggingHub')}
         </p>
       </div>
@@ -160,7 +160,7 @@ interface LogViewerFooterProps {
 
 const LogViewerFooter = ({ t, onClose }: LogViewerFooterProps) => (
   <div className="flex shrink-0 items-center justify-between border-t border-zinc-100 bg-zinc-50/50 py-4 ps-6 pe-6 dark:border-zinc-800 dark:bg-zinc-900/80">
-    <span className="text-[10px] font-bold tracking-widest text-zinc-400 uppercase">
+    <span className="caption-md font-bold tracking-widest text-zinc-400 uppercase">
       {t('logs.logStorageInfo')}
     </span>
     <button
@@ -227,7 +227,7 @@ const IpcViolationsList = ({ t, formatDate }: IpcViolationsListProps) => {
           className="text-yellow-600 dark:text-yellow-400"
           aria-hidden="true"
         />
-        <span className="text-[10px] font-bold tracking-widest text-yellow-700 uppercase dark:text-yellow-300">
+        <span className="caption-md font-bold tracking-widest text-yellow-700 uppercase dark:text-yellow-300">
           {t('logs.ipcViolations.title')}
         </span>
       </div>
@@ -244,7 +244,7 @@ const IpcViolationsList = ({ t, formatDate }: IpcViolationsListProps) => {
             <li
               key={entry.traceId}
               role="listitem"
-              className="flex gap-3 border-b border-zinc-50 py-2 ps-6 pe-6 font-mono text-[11px] last:border-b-0 dark:border-zinc-800/50"
+              className="caption-xs flex gap-3 border-b border-zinc-50 py-2 ps-6 pe-6 font-mono last:border-b-0 dark:border-zinc-800/50"
             >
               <span className="shrink-0 text-zinc-400 dark:text-zinc-600">
                 [
@@ -255,7 +255,7 @@ const IpcViolationsList = ({ t, formatDate }: IpcViolationsListProps) => {
                 })}
                 ]
               </span>
-              <span className="mbs-0.5 h-fit shrink-0 rounded bg-yellow-100 px-1.5 text-[9px] font-bold text-yellow-700 uppercase dark:bg-yellow-400/10 dark:text-yellow-300">
+              <span className="caption-xs mbs-0.5 h-fit shrink-0 rounded bg-yellow-100 px-1.5 font-bold text-yellow-700 uppercase dark:bg-yellow-400/10 dark:text-yellow-300">
                 {budgetTag}
               </span>
               <div className="min-w-0 flex-1">

@@ -63,7 +63,7 @@ const RenderAdvancedTab = ({ t, handleReset }: RenderAdvancedTabProps) => (
     <div className="pb-4">
       <button
         onClick={handleReset}
-        className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 py-3 text-[10px] font-bold tracking-widest text-red-500 uppercase transition-all outline-none hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-blue-500 active:scale-95 dark:border-zinc-800 dark:hover:bg-red-900/10"
+        className="caption-xs flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 py-3 font-bold tracking-widest text-red-500 uppercase transition-all outline-none hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-blue-500 active:scale-95 dark:border-zinc-800 dark:hover:bg-red-900/10"
       >
         <RotateCcw size={14} aria-hidden="true" /> {t('settings.resetPreferences')}
       </button>
@@ -133,7 +133,7 @@ const RenderTabNavigation = ({ tabs, activeTab, setActiveTab }: RenderTabNavigat
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              'flex w-full items-center gap-3 rounded-lg border-s-2 px-3 py-2.5 text-[11px] font-bold tracking-widest uppercase transition-all',
+              'caption-md flex w-full items-center gap-3 rounded-lg border-s-2 px-3 py-2.5 font-bold tracking-widest uppercase transition-all',
               isActive
                 ? 'border-blue-500 bg-white text-blue-600 shadow-sm dark:bg-zinc-800 dark:text-blue-400'
                 : 'border-transparent text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100'

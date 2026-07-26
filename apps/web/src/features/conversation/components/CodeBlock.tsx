@@ -54,13 +54,13 @@ const CodeBlock = ({ language, value }: CodeBlockProps) => {
     >
       <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900 px-4 py-2">
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+          <span className="caption-md font-bold tracking-widest text-zinc-500 uppercase">
             {displayLanguage}
           </span>
         </div>
         <button
           onClick={onCopy}
-          className="flex items-center gap-1.5 rounded px-2 py-1 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors outline-none hover:text-white focus-visible:ring-1 focus-visible:ring-blue-500"
+          className="caption-xs flex items-center gap-1.5 rounded px-2 py-1 font-bold tracking-widest text-zinc-400 uppercase transition-colors outline-none hover:text-white focus-visible:ring-1 focus-visible:ring-blue-500"
           aria-label={t('a11y.copyCode')}
         >
           {copied ? (
