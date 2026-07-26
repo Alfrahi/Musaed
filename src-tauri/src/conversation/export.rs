@@ -165,6 +165,7 @@ mod tests {
                     total_duration: None,
                     eval_duration: None,
                     rag_sources: None,
+                    error: None,
                 },
                 Message {
                     id: "msg-2".to_string(),
@@ -184,6 +185,7 @@ mod tests {
                         end_line: 25,
                         language: Some("rust".to_string()),
                     }]),
+                    error: None,
                 },
             ],
         }
@@ -262,6 +264,7 @@ mod tests {
             total_duration: None,
             eval_duration: None,
             rag_sources: None,
+            error: None,
         });
 
         let md = format_conversation_as_markdown(&conv);

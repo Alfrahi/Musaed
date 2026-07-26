@@ -40,8 +40,8 @@ const manifest: FeatureManifest = {
     background: ['cmd_ollama_generate_title', 'cmd_rag_search'],
   },
   stateSchemas: {
-    conversationStore: 1,
-    messageStore: 1,
+    conversationStore: 2,
+    messageStore: 2,
     streamingStore: 2,
   },
   persistenceSchemas: {

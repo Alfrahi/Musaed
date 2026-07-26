@@ -23,6 +23,12 @@ export const MessageSchema = z.object({
       })
     )
     .nullish(),
+  error: z
+    .object({
+      code: z.string(),
+      message: z.string(),
+    })
+    .nullish(),
 });
 
 export const ConversationSchema = z.object({

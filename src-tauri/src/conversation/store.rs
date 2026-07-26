@@ -1,5 +1,5 @@
 use crate::conversation::connection::open_connection;
-use crate::conversation::models::{Conversation, Message};
+use crate::conversation::models::{Conversation, Message, MessageError};
 use rusqlite::{params, Connection, Result as SqlResult};
 use std::path::Path;
 use tokio::sync::Mutex;
@@ -97,7 +97,7 @@ impl ConversationStore {
 
         let mut stmt_msg = conn.prepare(
             "SELECT id, role, content, timestamp, model, done, request_id, images,
-                    eval_count, total_duration, eval_duration, rag_sources
+                    eval_count, total_duration, eval_duration, rag_sources, error
              FROM messages WHERE conversation_id = ?1 ORDER BY timestamp ASC",
         )?;
         let msgs = stmt_msg
@@ -119,6 +119,9 @@ impl ConversationStore {
                     rag_sources: row
                         .get::<_, Option<String>>(11)?
                         .map(|s| serde_json::from_str(&s).unwrap_or_default()),
+                    error: row
+                        .get::<_, Option<String>>(12)?
+                        .and_then(|s| serde_json::from_str::<MessageError>(&s).ok()),
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -162,8 +165,8 @@ impl ConversationStore {
         let conn = self.lock_conn().await;
         conn.execute(
             "INSERT INTO messages (id, conversation_id, role, content, timestamp, model, done,
-                                  request_id, images, eval_count, total_duration, eval_duration, rag_sources)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+                                  request_id, images, eval_count, total_duration, eval_duration, rag_sources, error)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
             params![
                 &msg.id,
                 conversation_id,
@@ -178,6 +181,7 @@ impl ConversationStore {
                 &msg.total_duration,
                 &msg.eval_duration,
                 &msg.rag_sources.as_ref().map(|v| serde_json::to_string(v).unwrap_or_default()),
+                &msg.error.as_ref().map(|e| serde_json::to_string(e).unwrap_or_default()),
             ],
         )?;
         Ok(())

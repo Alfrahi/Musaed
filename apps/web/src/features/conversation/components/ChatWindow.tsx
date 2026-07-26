@@ -13,6 +13,7 @@ import { ErrorFallback } from '@/components/ui';
 import MessageBubble from './MessageBubble';
 import ChatWindowSkeleton from './ChatWindowSkeleton';
 import EmptyState from './EmptyState';
+import { useChatActions } from '../hooks/useChatActions';
 import { useTranslation, type TranslationKey } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Message } from '@musaed/contracts';
@@ -63,6 +64,7 @@ const ChatWindow = () => {
   const activeStreams = useStreamingStore((s: StreamingState) => s.activeStreams);
   const isHydrated = useUIStore((s) => s.isHydrated);
   const language = useSettingsStore((s) => s.globalSettings.language);
+  const { sendMessage } = useChatActions();
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const { t, formatNumber } = useTranslation(language);
   const messageLabels = useMessageLabels(t);
@@ -109,9 +111,23 @@ const ChatWindow = () => {
     }
   }, [messages.length]);
 
-  // Detect if the last message contains an error
-  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
-  const hasError = lastMessage?.role === 'assistant' && lastMessage.content?.includes('[Error:');
+  // Detect a structured `error` on the last assistant message — replaces the
+  // legacy `content.includes('[Error:')` substring heuristic (Prompt 8).
+  const lastError = messages.length > 0 ? messages.findLast((m) => m.error)?.error : undefined;
+  const hasError = Boolean(lastError);
+
+  // Retry wiring: re-invoke `sendMessage` with the content + images of the last
+  // user message in the conversation. `sendMessage` appends a fresh user msg +
+  // a new assistant placeholder, leaving the failed assistant message in
+  // history as a record of the failed attempt (non-destructive retry).
+  const handleRetry = useCallback(() => {
+    if (!currentConversationId) return;
+    const lastUser = messages.findLast((m) => m.role === 'user');
+    if (!lastUser) return;
+    // Clear the global error toast state so the next failure can resurface.
+    useUIStore.getState().setErrorMessage(null);
+    void sendMessage(lastUser.content, lastUser.images ?? []);
+  }, [currentConversationId, messages, sendMessage]);
 
   if (!isHydrated) return <ChatWindowSkeleton />;
   if (!currentConversation) return <EmptyState />;
@@ -140,10 +156,8 @@ const ChatWindow = () => {
             type="ollama"
             compact
             className="flex-row py-3"
-            onRetry={() => {
-              // Clear error message and let user retry - the UI store error state will be cleared
-              useUIStore.getState().setErrorMessage(null);
-            }}
+            description={lastError?.message}
+            onRetry={handleRetry}
           />
         </div>
       )}

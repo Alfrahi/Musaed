@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
 
 // Mock Tauri environment
 beforeEach(() => {
@@ -30,5 +30,58 @@ describe('Conversation Store Exports', () => {
     expect(store.selectLiveContent).toBeDefined();
     expect(store.selectIsLiveStreaming).toBeDefined();
     expect(store.selectActiveRequestId).toBeDefined();
+  });
+});
+
+// Round-trip legacy persisted shapes through the v2 migration introduced for
+// the structured `Message.error` field (UX-UI-AUDIT Prompt 8, STANDARDS §9).
+// The conversation store persists `ConversationMetadata` only — messages live
+// in Rust SQLite — so the migration is a defensive identity pass-through that
+// must not invent or drop fields.
+describe('Conversation Store migrations (Prompt 8)', () => {
+  let MIGRATIONS: any;
+  let VERSION: number;
+  beforeAll(async () => {
+    const mod = await import('./conversation-store');
+    MIGRATIONS = mod.__test_CONVERSATION_MIGRATIONS;
+    VERSION = mod.__test_CONVERSATION_STORE_VERSION;
+  });
+
+  it('exposes the current store schema version', () => {
+    expect(VERSION).toBe(2);
+    expect(typeof MIGRATIONS[VERSION]).toBe('function');
+  });
+
+  it('round-trips a v1 persisted shape through the v2 migration unchanged', () => {
+    const legacy = {
+      conversations: { c1: { id: 'c1', title: 'Old', model: 'llama2' } },
+      conversationIds: ['c1'],
+      currentConversationId: 'c1',
+      searchQuery: '',
+    };
+
+    // v1 → v2: messages were never persisted here, so the migration must not
+    // invent or drop fields. Old-shape `ConversationMetadata` round-trips
+    // with `error` left undefined (handled on the Rust side per STANDARDS §10).
+    const fromV1 = MIGRATIONS[1](legacy) as typeof legacy;
+    const fromV2 = MIGRATIONS[2](legacy) as typeof legacy;
+
+    expect(fromV1).toEqual(legacy);
+    expect(fromV2).toEqual(legacy);
+    expect('error' in fromV2.conversations.c1).toBe(false);
+  });
+
+  it('coerces a malformed persisted value back to the default state shape', () => {
+    const migrated = MIGRATIONS[2](null) as {
+      conversations: unknown;
+      conversationIds: unknown;
+      currentConversationId: unknown;
+      searchQuery: unknown;
+    };
+
+    expect(migrated.conversations).toEqual({});
+    expect(migrated.conversationIds).toEqual([]);
+    expect(migrated.currentConversationId).toBeNull();
+    expect(migrated.searchQuery).toBe('');
   });
 });

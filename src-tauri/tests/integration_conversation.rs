@@ -64,6 +64,7 @@ async fn test_append_message() {
         total_duration: None,
         eval_duration: None,
         rag_sources: None,
+        error: None,
     };
     store
         .add_message(&conv.id, &msg)
@@ -185,6 +186,7 @@ async fn test_clear_all_conversations() {
             total_duration: None,
             eval_duration: None,
             rag_sources: None,
+            error: None,
         };
         store.add_message(&conv.id, &msg).await.unwrap();
     }
@@ -229,6 +231,7 @@ async fn test_message_with_rag_sources() {
         total_duration: Some(500),
         eval_duration: Some(50),
         rag_sources,
+        error: None,
     };
 
     store.add_message(&conv.id, &msg).await.unwrap();
@@ -327,6 +330,7 @@ async fn test_service_layer_append_message() {
         total_duration: None,
         eval_duration: None,
         rag_sources: None,
+        error: None,
     };
 
     let response = service::append_message(store.clone(), "svc-msg".into(), msg).await;

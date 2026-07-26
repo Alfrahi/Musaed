@@ -2,6 +2,17 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri::AppHandle;
 
+/// Structured error payload attached to a `Message` when streaming or
+/// persistence fails. Mirrors `packages/contracts/src/schemas/conversation.ts`
+/// (`message.error`) so the frontend can render the banner without falling
+/// back to the legacy `[Error:` substring heuristic (UX-UI-AUDIT Prompt 8).
+#[derive(Debug, Serialize, Deserialize, Clone, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct MessageError {
+    pub code: String,
+    pub message: String,
+}
+
 /// Conversation data structures that match the TypeScript contracts
 #[derive(Debug, Serialize, Deserialize, Clone, Type)]
 #[serde(rename_all = "camelCase")]
@@ -82,6 +93,11 @@ pub struct Message {
     pub eval_duration: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rag_sources: Option<Vec<RagSource>>,
+    /// Optional structured error attached when the assistant turn failed.
+    /// Round-trips with the TypeScript `Message.error` field so the frontend
+    /// can render a stable banner (UX-UI-AUDIT Prompt 8).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<MessageError>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Type)]

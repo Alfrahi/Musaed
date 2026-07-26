@@ -23,7 +23,22 @@ const CONVERSATION_MIGRATIONS: Record<number, (data: unknown) => unknown> = {
       typeof data === 'object' && data !== null ? (data as Partial<ConversationState>) : {};
     return { ...DEFAULT_CONVERSATION_STATE, ...persisted };
   },
+  2: (data: unknown) => {
+    const persisted =
+      typeof data === 'object' && data !== null ? (data as Partial<ConversationState>) : {};
+    // Schema change: `Message.error` is now optional in the contract (TS
+    // `Message.error?: { code; message }`). This store never persists messages
+    // directly — it persists `ConversationMetadata` only — so the migration
+    // is intentionally a pass-through. Messages round-trip through Rust, where
+    // the matching SQLite migration adds the `messages.error` column.
+    return { ...DEFAULT_CONVERSATION_STATE, ...persisted };
+  },
 };
+
+// Exported so unit tests can round-trip legacy shapes without spinning up the
+// whole Zustand store. Internal — not part of the public store API surface.
+export const __test_CONVERSATION_MIGRATIONS = CONVERSATION_MIGRATIONS;
+export const __test_CONVERSATION_STORE_VERSION = 2;
 
 export type ConversationMetadata = Omit<Conversation, 'messages'>;
 
@@ -123,9 +138,9 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
     {
       name: 'musaed-conversation-storage',
       storage: createJSONStorage(() =>
-        createTauriStorage('conversation-state.json', 1, CONVERSATION_MIGRATIONS)
+        createTauriStorage('conversation-state.json', 2, CONVERSATION_MIGRATIONS)
       ),
-      version: 1,
+      version: 2,
       migrate: (persistedState, version) => {
         const migration = CONVERSATION_MIGRATIONS[version];
         if (migration && typeof persistedState === 'object' && persistedState !== null) {

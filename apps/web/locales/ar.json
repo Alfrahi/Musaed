@@ -337,7 +337,8 @@
     "copyCode": "نسخ الكود للحافظة",
     "searchLibrary": "البحث في مكتبة النماذج",
     "codeBlock": "كتلة برمجية بلغة {language}",
-    "mermaidDiagram": "رسم Mermaid البياني المعروض"
+    "mermaidDiagram": "رسم Mermaid البياني المعروض",
+    "retry": "إعادة إرسال آخر رسالة"
   },
   "info": {
     "openInfo": "فتح معلومات التطبيق",
