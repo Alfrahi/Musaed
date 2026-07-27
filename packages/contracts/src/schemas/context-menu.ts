@@ -51,6 +51,19 @@ export const ContextMenuRequestSchema = z.object({
 });
 
 /**
+ * Translated labels for context menu items. Sent from the frontend so the
+ * Rust backend stays locale-agnostic (STANDARDS §11). Symmetric with the
+ * Rust `ContextMenuLabels` struct in `src-tauri/src/context_menu.rs`.
+ */
+export const ContextMenuLabelsSchema = z.object({
+  rename: z.string(),
+  export: z.string(),
+  delete: z.string(),
+  copy: z.string(),
+  regenerate: z.string(),
+});
+
+/**
  * Response payload from backend to frontend.
  *
  * `selectedItem` is one of the menu-action ids agreed for the `kind`
@@ -65,3 +78,4 @@ export const ContextMenuKind = ContextMenuKindSchema.enum;
 export type ContextMenuKind = z.infer<typeof ContextMenuKindSchema>;
 export type ContextMenuRequest = z.infer<typeof ContextMenuRequestSchema>;
 export type ContextMenuResponse = z.infer<typeof ContextMenuResponseSchema>;
+export type ContextMenuLabels = z.infer<typeof ContextMenuLabelsSchema>;

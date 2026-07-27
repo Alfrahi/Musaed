@@ -147,13 +147,13 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
   const handleContextMenu = useCallback(
     async (e: React.MouseEvent<HTMLDivElement>) => {
       e.preventDefault();
-      showContextMenu('conversation', conversation.id, e.clientX, e.clientY, {
+      showContextMenu('conversation', e.clientX, e.clientY, {
         rename: t('contextMenu.conversation.rename'),
         export: t('contextMenu.conversation.export'),
         delete: t('contextMenu.conversation.delete'),
       });
     },
-    [conversation.id, showContextMenu, t]
+    [showContextMenu, t]
   );
 
   return (

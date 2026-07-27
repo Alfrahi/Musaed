@@ -309,7 +309,6 @@ const StoppedStatusLine = ({ isStopped, onContinue, t }: StoppedStatusLineProps)
  * under the max-lines-per-function lint gate (Prompt 14).
  */
 function useMessageContextMenu(
-  messageId: string,
   handleCopy: () => void,
   onRegenerate: (() => void) | undefined,
   t: (key: string) => string
@@ -318,12 +317,12 @@ function useMessageContextMenu(
   return useCallback(
     async (e: React.MouseEvent<HTMLDivElement>) => {
       e.preventDefault();
-      showContextMenu('message', messageId, e.clientX, e.clientY, {
+      showContextMenu('message', e.clientX, e.clientY, {
         copy: t('contextMenu.message.copy'),
         regenerate: t('contextMenu.message.regenerate'),
       });
     },
-    [messageId, showContextMenu, t]
+    [showContextMenu, t]
   );
 }
 
@@ -347,7 +346,7 @@ const MessageBubble = ({
   const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
   const titleId = 'rag-source-title';
-  const handleContextMenu = useMessageContextMenu(message.id, handleCopy, onRegenerate, t);
+  const handleContextMenu = useMessageContextMenu(handleCopy, onRegenerate, t);
   const isStopped = message.stopped === true && message.role === 'assistant';
 
   return (
@@ -409,7 +408,6 @@ const MessageBubble = ({
             <MessageContent message={message} isUser={isUser} />
           </div>
 
-          {/* RAG Source References */}
           {sourceReferences.length > 0 && (
             <RagSourceReferences
               sources={sourceReferences}
