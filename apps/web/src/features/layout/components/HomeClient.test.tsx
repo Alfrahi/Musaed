@@ -1,6 +1,82 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { AppHeader } from './HomeClient';
+import { AppHeader, default as HomeClient } from './HomeClient';
+
+vi.mock('@/store/settings-store', () => ({
+  useSettingsStore: vi.fn((selector) =>
+    selector({ globalSettings: { language: 'en', theme: 'light' as const } })
+  ),
+}));
+
+vi.mock('@/store/hooks', () => ({
+  useIsHydrated: () => true,
+  useIsLibraryOpen: () => false,
+  useIsSettingsOpen: () => false,
+  useIsInfoOpen: () => false,
+  useSetLibraryOpen: () => vi.fn(),
+  useSetSettingsOpen: () => vi.fn(),
+  useSetInfoOpen: () => vi.fn(),
+}));
+
+vi.mock('@/store/coordination', () => ({
+  registerHydrationCoordination: vi.fn(() => vi.fn()),
+}));
+
+vi.mock('@/features/settings', () => ({
+  useGlobalSettings: () => ({ language: 'en', theme: 'light' }),
+}));
+
+vi.mock('@/lib/i18n', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    isRtl: false,
+    formatDate: (d: number | Date) => String(d),
+    formatNumber: (n: number) => String(n),
+    formatFileSize: (b: number) => `${b} B`,
+  }),
+}));
+
+vi.mock('@/lib/ipc', () => ({
+  checkIsTauri: () => false,
+}));
+
+vi.mock('@/hooks/useGlobalShortcuts', () => ({
+  useGlobalShortcuts: vi.fn(),
+}));
+
+vi.mock('@/hooks/useAppInitialization', () => ({
+  useAppInitialization: () => ({ initializeApp: vi.fn() }),
+}));
+
+vi.mock('@/hooks/useOllamaConnection', () => ({
+  useOllamaConnection: () => ({ reconnect: vi.fn() }),
+}));
+
+vi.mock('@/features/conversation', () => ({
+  useTauriEvents: vi.fn(),
+  useConversationMessages: vi.fn(),
+}));
+
+vi.mock('next/dynamic', () => ({
+  default: () => {
+    const Dyn = () => <div data-testid="dynamic" />;
+    Dyn.displayName = 'Dynamic';
+    return Dyn;
+  },
+}));
+
+vi.mock('next/image', () => ({
+  default: ({ alt }: { alt: string }) => <img alt={alt} />,
+}));
+
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: 'div',
+    button: 'button',
+    span: 'span',
+  },
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
 
 describe('AppHeader', () => {
   const baseProps = {
@@ -44,5 +120,14 @@ describe('AppHeader', () => {
   it('renders the app logo with the appName as alt text', () => {
     render(<AppHeader {...baseProps} appName="Musaed" />);
     expect(screen.getByAltText('Musaed')).toBeInTheDocument();
+  });
+});
+
+describe('HomeClient', () => {
+  it('renders a <main> element with id="main" for the skip-to-content target', () => {
+    render(<HomeClient />);
+    const main = document.getElementById('main');
+    expect(main).not.toBeNull();
+    expect(main?.tagName).toBe('MAIN');
   });
 });

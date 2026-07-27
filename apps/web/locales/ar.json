@@ -361,7 +361,8 @@
     "conversationMenu": "إجراءات للمحادثة \"{title}\"",
     "messageMenu": "إجراءات لهذه الرسالة",
     "codeBlockMenu": "إجراءات لكتلة الكود هذه",
-    "dropFiles": "أسقط الملفات لإرفاقها"
+    "dropFiles": "أسقط الملفات لإرفاقها",
+    "skipToContent": "تخطَّ إلى المحتوى الرئيسي"
   },
   "contextMenu": {
     "conversation": {

@@ -361,7 +361,8 @@
     "conversationMenu": "Actions for the \"{title}\" conversation",
     "messageMenu": "Actions for this message",
     "codeBlockMenu": "Actions for this code block",
-    "dropFiles": "Drop files to attach"
+    "dropFiles": "Drop files to attach",
+    "skipToContent": "Skip to main content"
   },
   "contextMenu": {
     "conversation": {
