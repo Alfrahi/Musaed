@@ -115,4 +115,20 @@ describe('SettingsModal', () => {
       expect(document.activeElement).not.toBe(document.body);
     });
   });
+
+  it('renders the panel with responsive height class', () => {
+    render(<SettingsModal isOpen onClose={vi.fn()} />);
+    const dialog = screen.getByRole('dialog', { hidden: true });
+    expect(dialog.className).toContain('h-[min(85vh,640px)]');
+  });
+
+  it('scrolls when content overflows the panel', () => {
+    render(<SettingsModal isOpen onClose={vi.fn()} />);
+    const dialog = screen.getByRole('dialog', { hidden: true });
+    // The inner content area (the <main> inside the flex row) must be
+    // scrollable so tall settings tabs don't clip.
+    const main = dialog.querySelector('main');
+    expect(main).toBeTruthy();
+    expect(main!.className).toContain('overflow-y-auto');
+  });
 });
