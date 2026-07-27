@@ -85,6 +85,20 @@ export async function handleTauriImageUploadInternal(
   if (!selected) return [];
 
   const paths = Array.isArray(selected) ? selected : [selected];
+  return processImagePaths(paths, t);
+}
+
+/**
+ * Processes an array of image file paths into base64 data URLs.
+ * Shared by the image-picker button and the drag-drop handler so both
+ * paths go through the same validation and content-reading pipeline.
+ *
+ * STANDARDS §16 — filesystem access only via Rust IPC.
+ */
+export async function processImagePaths(
+  paths: string[],
+  t: (key: string) => string
+): Promise<string[]> {
   const newImages: string[] = [];
 
   for (const filePath of paths) {
@@ -128,6 +142,22 @@ export async function handleTauriFileUploadInternal(
   if (!selected) return [];
 
   const paths = Array.isArray(selected) ? selected : [selected];
+  return processFilePaths(paths, t);
+}
+
+/**
+ * Processes an array of file paths into FileAttachment objects.
+ * Shared by the file-picker button and the drag-drop handler so both
+ * paths go through the same validation and content-reading pipeline.
+ *
+ * STANDARDS §16 — filesystem access only via Rust IPC. This function
+ * reads file content through the `fs` bridge; the frontend never
+ * touches the filesystem directly.
+ */
+export async function processFilePaths(
+  paths: string[],
+  t: (key: string) => string
+): Promise<FileAttachment[]> {
   const newFiles: FileAttachment[] = [];
 
   for (const filePath of paths) {

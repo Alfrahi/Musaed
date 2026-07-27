@@ -3,9 +3,13 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { clearMocks } from '@tauri-apps/api/mocks';
 import InputArea from './InputArea';
 import { useChatInput } from '@/features/conversation/hooks/useChatInput';
+import { useDropZone } from '@/features/conversation/hooks/useDropZone';
 
 // Mock the hooks
 vi.mock('@/features/conversation/hooks/useChatInput');
+vi.mock('@/features/conversation/hooks/useDropZone', () => ({
+  useDropZone: vi.fn(() => ({ isDragOver: false })),
+}));
 vi.mock('@/lib/i18n', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
@@ -40,6 +44,7 @@ describe('InputArea', () => {
       handleKeyDown: vi.fn(),
       handleTauriImageUpload: vi.fn(),
       handleTauriFileUpload: vi.fn(),
+      handleDroppedFiles: vi.fn(),
       removeImage: vi.fn(),
       removeFile: vi.fn(),
       t: (key: string) => key,
@@ -150,6 +155,30 @@ describe('InputArea', () => {
       // This is already tested by the disabled state of the send button
       const sendButton = screen.getByRole('button', { name: 'a11y.sendMessage' });
       expect(sendButton).toBeDisabled();
+    });
+  });
+
+  describe('Drop zone', () => {
+    it('shows drop hint when isDragOver is true', () => {
+      vi.mocked(useDropZone).mockReturnValue({ isDragOver: true });
+
+      render(<InputArea />);
+      expect(screen.getByText('a11y.dropFiles')).toBeInTheDocument();
+    });
+
+    it('does not show drop hint when isDragOver is false', () => {
+      vi.mocked(useDropZone).mockReturnValue({ isDragOver: false });
+
+      render(<InputArea />);
+      expect(screen.queryByText('a11y.dropFiles')).not.toBeInTheDocument();
+    });
+
+    it('applies ring highlight class when isDragOver is true', () => {
+      vi.mocked(useDropZone).mockReturnValue({ isDragOver: true });
+
+      render(<InputArea />);
+      const container = screen.getByText('a11y.dropFiles').parentElement;
+      expect(container?.className).toContain('ring-2');
     });
   });
 });

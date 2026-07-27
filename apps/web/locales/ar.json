@@ -347,7 +347,8 @@
     "showFewerSources": "اعرض أقل",
     "conversationMenu": "إجراءات للمحادثة \"{title}\"",
     "messageMenu": "إجراءات لهذه الرسالة",
-    "codeBlockMenu": "إجراءات لكتلة الكود هذه"
+    "codeBlockMenu": "إجراءات لكتلة الكود هذه",
+    "dropFiles": "أسقط الملفات لإرفاقها"
   },
   "contextMenu": {
     "conversation": {
