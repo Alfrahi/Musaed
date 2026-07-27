@@ -159,7 +159,7 @@ const HomeClient = () => {
   if (!mounted) return null;
 
   return (
-    <main className="bg-background flex h-screen overflow-hidden font-sans">
+    <main id="main" className="bg-background flex h-screen overflow-hidden font-sans">
       <Sidebar />
       <div className="border-is border-sidebar-border flex min-w-0 flex-1 flex-col">
         <AppHeader

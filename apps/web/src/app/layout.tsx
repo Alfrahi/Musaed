@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { DirectionProvider, ToastProvider, ErrorBoundary } from '@/components/ui';
+import { DirectionProvider, SkipToContent, ToastProvider, ErrorBoundary } from '@/components/ui';
 
 export const metadata: Metadata = {
   title: 'Musaed',
@@ -18,6 +18,7 @@ const RootLayout = ({
         className="bg-background text-foreground flex h-full flex-col overflow-hidden font-sans"
         suppressHydrationWarning
       >
+        <SkipToContent />
         <ErrorBoundary>
           <DirectionProvider>
             <ToastProvider />
