@@ -9,11 +9,12 @@ import { useStreamingStore, selectLiveContent } from '@/store/streaming-store';
 import { useMessageStore } from '@/store/message-store';
 import type { StreamingState } from '@/store/streaming-store';
 import { useSettingsStore } from '@/store';
+import { useModelStore } from '@/store/model-store';
 import { useChatInputStore } from '@/store/chat-input-store';
 import { ErrorFallback } from '@/components/ui';
 import MessageBubble from './MessageBubble';
 import ChatWindowSkeleton from './ChatWindowSkeleton';
-import EmptyState from './EmptyState';
+import EmptyState, { type OnboardingState } from './EmptyState';
 import { useChatActions } from '../hooks/useChatActions';
 import { useRegenerateMessage } from '../hooks/useRegenerateMessage';
 import { useTranslation, type TranslationKey } from '@/lib/i18n';
@@ -105,35 +106,47 @@ function useMessageBubbleActions(
 }
 
 /**
- * Main chat window with virtualized messages.
+ * Derive the onboarding state for the empty/welcome screen. Onboarding CTAs
+ * take priority over the standard welcome message when the system isn't ready
+ * for chat (no models installed or Ollama unreachable).
  */
-const ChatWindow = () => {
-  const currentConversation = useConversationStore(selectCurrentConversation);
-  const currentConversationId = useConversationStore((s) => s.currentConversationId);
-  const storedMessages = useMessageStore((s) =>
-    currentConversationId ? s.messages[currentConversationId] : []
-  );
-  const activeStreams = useStreamingStore((s: StreamingState) => s.activeStreams);
-  const isHydrated = useUIStore((s) => s.isHydrated);
-  const language = useSettingsStore((s) => s.globalSettings.language);
-  const { sendMessage } = useChatActions();
+function getOnboardingState(
+  currentConversation: unknown,
+  modelsLength: number,
+  isOllamaConnected: boolean,
+  onInstallModel?: () => void,
+  onStartOllama?: () => void
+): OnboardingState | undefined {
+  if (currentConversation) return undefined;
+  if (modelsLength > 0 && isOllamaConnected) return undefined;
+  return {
+    noModels: modelsLength === 0,
+    ollamaOffline: !isOllamaConnected,
+    onInstallModel: onInstallModel ?? (() => {}),
+    onStartOllama: onStartOllama ?? (() => {}),
+  };
+}
+
+/**
+ * Hook: builds the virtualized message list (merging live streaming content
+ * into the last message) and manages auto-scroll behavior.
+ */
+function useVirtualizedMessages(
+  currentConversationId: string | null,
+  storedMessages: Message[] | undefined,
+  activeStreams: StreamingState['activeStreams']
+) {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
-  const { t, formatNumber } = useTranslation(language);
-  const messageLabels = useMessageLabels(t);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
-  // Live streaming content — only the last message's buffer changes frequently
   const isStreaming = currentConversationId ? !!activeStreams[currentConversationId] : false;
   const liveContent = useStreamingStore(
     currentConversationId ? selectLiveContent(currentConversationId) : () => null
   );
 
-  // Build the messages list: replace last message content with live buffer during streaming
   const messages: Message[] = useMemo(() => {
     if (!storedMessages || storedMessages.length === 0) return [];
-
     if (!isStreaming || !liveContent) return storedMessages;
-
     const lastIdx = storedMessages.length - 1;
     return storedMessages.map((msg, i) =>
       i === lastIdx ? { ...msg, content: msg.content + liveContent } : msg
@@ -142,7 +155,6 @@ const ChatWindow = () => {
 
   const lastMsgCount = messages.length;
 
-  // Auto-scroll on new messages and when streaming content updates
   useEffect(() => {
     if (virtuosoRef.current && lastMsgCount) {
       virtuosoRef.current.scrollToIndex({
@@ -163,6 +175,39 @@ const ChatWindow = () => {
     }
   }, [messages.length]);
 
+  return { virtuosoRef, messages, showScrollButton, setShowScrollButton, scrollToBottom };
+}
+
+/**
+ * Main chat window with virtualized messages.
+ *
+ * Accepts onboarding callbacks so the parent composition root (HomeClient)
+ * can wire first-run CTAs without EmptyState reaching across feature boundaries.
+ */
+const ChatWindow = ({
+  onInstallModel,
+  onStartOllama,
+}: {
+  onInstallModel?: () => void;
+  onStartOllama?: () => void;
+} = {}) => {
+  const currentConversation = useConversationStore(selectCurrentConversation);
+  const currentConversationId = useConversationStore((s) => s.currentConversationId);
+  const storedMessages = useMessageStore((s) =>
+    currentConversationId ? s.messages[currentConversationId] : []
+  );
+  const activeStreams = useStreamingStore((s: StreamingState) => s.activeStreams);
+  const isHydrated = useUIStore((s) => s.isHydrated);
+  const isOllamaConnected = useUIStore((s) => s.isOllamaConnected);
+  const models = useModelStore((s) => s.models);
+  const language = useSettingsStore((s) => s.globalSettings.language);
+  const { sendMessage } = useChatActions();
+  const { t, formatNumber } = useTranslation(language);
+  const messageLabels = useMessageLabels(t);
+
+  const { virtuosoRef, messages, showScrollButton, setShowScrollButton, scrollToBottom } =
+    useVirtualizedMessages(currentConversationId, storedMessages, activeStreams);
+
   // Detect a structured `error` on the last assistant message — replaces the
   // legacy `content.includes('[Error:')` substring heuristic (Prompt 8).
   const lastError = messages.length > 0 ? messages.findLast((m) => m.error)?.error : undefined;
@@ -180,8 +225,16 @@ const ChatWindow = () => {
     sendMessage
   );
 
+  const onboarding = getOnboardingState(
+    currentConversation,
+    models.length,
+    isOllamaConnected,
+    onInstallModel,
+    onStartOllama
+  );
+
   if (!isHydrated) return <ChatWindowSkeleton />;
-  if (!currentConversation) return <EmptyState />;
+  if (!currentConversation) return <EmptyState onboarding={onboarding} />;
 
   return (
     <div data-testid="chat-window" className="relative flex flex-1 flex-col overflow-hidden">

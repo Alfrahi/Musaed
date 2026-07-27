@@ -52,6 +52,14 @@
   "chat": {
     "welcome": "Welcome to {appName}",
     "selectConversation": "Select a conversation from the sidebar or start a new one to begin chatting with your local models.",
+    "onboarding": {
+      "noModels": "No models installed",
+      "noModelsDescription": "Install a model from the library to start chatting with your local AI.",
+      "installModel": "Install a model",
+      "ollamaOffline": "Ollama is offline",
+      "ollamaOfflineDescription": "Start the Ollama service on your machine to connect to your local models.",
+      "startOllama": "Start Ollama"
+    },
     "askAnything": "Ask anything...",
     "thinking": "Thinking...",
     "thoughtProcess": "Thought Process",

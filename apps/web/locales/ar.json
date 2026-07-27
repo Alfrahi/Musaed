@@ -52,6 +52,14 @@
   "chat": {
     "welcome": "مرحباً بك في {appName}",
     "selectConversation": "اختر محادثة من الشريط الجانبي أو ابدأ واحدة جديدة للدردشة مع نماذجك المحلية.",
+    "onboarding": {
+      "noModels": "لا توجد نماذج مثبتة",
+      "noModelsDescription": "قم بتثبيت نموذج من المكتبة لبدء الدردشة مع ذكائك الاصطناعي المحلي.",
+      "installModel": "تثبيت نموذج",
+      "ollamaOffline": "Ollama غير متصل",
+      "ollamaOfflineDescription": "قم بتشغيل خدمة Ollama على جهازك للاتصال بنماذجك المحلية.",
+      "startOllama": "تشغيل Ollama"
+    },
     "askAnything": "اسأل أي شيء...",
     "thinking": "جاري التفكير...",
     "thoughtProcess": "عملية التفكير",

@@ -326,6 +326,59 @@ function useMessageContextMenu(
   );
 }
 
+interface MessageHeaderProps {
+  isUser: boolean;
+  isStopped: boolean;
+  labels: { user: string; assistant: string; copy: string };
+  message: Message;
+  copied: boolean;
+  handleCopy: () => void;
+  onRegenerate?: () => void;
+  onContinue?: () => void;
+  onEditPrompt?: () => void;
+  onEdit?: () => void;
+  t: (key: string) => string;
+}
+
+const MessageHeader = ({
+  isUser,
+  isStopped,
+  labels,
+  message,
+  copied,
+  handleCopy,
+  onRegenerate,
+  onContinue,
+  onEditPrompt,
+  onEdit,
+  t,
+}: MessageHeaderProps) => (
+  <div className="flex items-center justify-between">
+    <span className="caption-md font-bold text-zinc-400 uppercase">
+      {isUser ? labels.user : labels.assistant}
+      {!isUser && message.model && <span className="ms-3 text-zinc-500">{message.model}</span>}
+    </span>
+    <div className="flex items-center gap-1">
+      <HoverActions
+        isUser={isUser}
+        isStopped={isStopped}
+        onRegenerate={onRegenerate}
+        onContinue={onContinue}
+        onEditPrompt={onEditPrompt}
+        onEdit={onEdit}
+        t={t}
+      />
+      <button
+        onClick={handleCopy}
+        className="hover:text-foreground p-1 text-zinc-400 transition-colors"
+        aria-label={labels.copy}
+      >
+        {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+      </button>
+    </div>
+  </div>
+);
+
 /**
  * Renders a single message bubble in the chat window.
  */
@@ -361,32 +414,19 @@ const MessageBubble = ({
         <MessageAvatar isUser={isUser} />
 
         <div className="min-w-0 flex-1 space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="caption-md font-bold text-zinc-400 uppercase">
-              {isUser ? labels.user : labels.assistant}
-              {!isUser && message.model && (
-                <span className="ms-3 text-zinc-500">{message.model}</span>
-              )}
-            </span>
-            <div className="flex items-center gap-1">
-              <HoverActions
-                isUser={isUser}
-                isStopped={isStopped}
-                onRegenerate={onRegenerate}
-                onContinue={onContinue}
-                onEditPrompt={onEditPrompt}
-                onEdit={onEdit}
-                t={t}
-              />
-              <button
-                onClick={handleCopy}
-                className="hover:text-foreground p-1 text-zinc-400 transition-colors"
-                aria-label={labels.copy}
-              >
-                {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-              </button>
-            </div>
-          </div>
+          <MessageHeader
+            isUser={isUser}
+            isStopped={isStopped}
+            labels={labels}
+            message={message}
+            copied={copied}
+            handleCopy={handleCopy}
+            onRegenerate={onRegenerate}
+            onContinue={onContinue}
+            onEditPrompt={onEditPrompt}
+            onEdit={onEdit}
+            t={t}
+          />
 
           {message.images && message.images.length > 0 && (
             <div className="flex flex-wrap gap-2">

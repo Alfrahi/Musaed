@@ -1,15 +1,100 @@
 'use client';
 
-import { Bot, Plus, Sparkles, Shield } from 'lucide-react';
+import { Bot, Plus, Sparkles, Shield, Download, WifiOff } from 'lucide-react';
 import { useSettingsStore } from '@/store';
 import { useConversationActions } from '@/features/conversation/hooks/useConversationActions';
 import { useTranslation } from '@/lib/i18n';
 
-/** Welcome screen shown when no conversation is active. */
-const EmptyState = () => {
+export interface OnboardingState {
+  /** true when no models are installed locally */
+  noModels: boolean;
+  /** true when Ollama is not reachable */
+  ollamaOffline: boolean;
+  /** opens the Model Library modal */
+  onInstallModel: () => void;
+  /** triggers an Ollama reconnection attempt */
+  onStartOllama: () => void;
+}
+
+/** Onboarding CTA shown when no models are installed. */
+const NoModelsOnboarding = ({
+  t,
+  onInstallModel,
+}: {
+  t: (key: string) => string;
+  onInstallModel: () => void;
+}) => (
+  <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50/30 ps-8 pe-8 dark:bg-zinc-950">
+    <div className="mbe-8 relative">
+      <div className="flex h-20 w-20 rotate-3 items-center justify-center rounded-none border border-amber-200 bg-amber-50 shadow-xl dark:border-amber-800 dark:bg-amber-900/30">
+        <Download size={40} className="text-amber-600" />
+      </div>
+      <div className="inset-be-[-0.5rem] inset-ie-[-0.5rem] absolute flex h-8 w-8 -rotate-12 items-center justify-center rounded-none bg-amber-600 text-white shadow-lg">
+        <Sparkles size={16} />
+      </div>
+    </div>
+    <h2 className="mbe-2 text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
+      {t('chat.onboarding.noModels')}
+    </h2>
+    <p className="mbe-10 max-w-md text-center text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+      {t('chat.onboarding.noModelsDescription')}
+    </p>
+    <button
+      onClick={onInstallModel}
+      className="flex items-center gap-3 rounded-none bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:bg-blue-700 active:scale-95"
+    >
+      <Download size={18} />
+      {t('chat.onboarding.installModel')}
+    </button>
+  </div>
+);
+
+/** Onboarding CTA shown when Ollama is unreachable. */
+const OllamaOfflineOnboarding = ({
+  t,
+  onStartOllama,
+}: {
+  t: (key: string) => string;
+  onStartOllama: () => void;
+}) => (
+  <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50/30 ps-8 pe-8 dark:bg-zinc-950">
+    <div className="mbe-8 relative">
+      <div className="flex h-20 w-20 rotate-3 items-center justify-center rounded-none border border-red-200 bg-red-50 shadow-xl dark:border-red-800 dark:bg-red-900/30">
+        <WifiOff size={40} className="text-red-600" />
+      </div>
+      <div className="inset-be-[-0.5rem] inset-ie-[-0.5rem] absolute flex h-8 w-8 -rotate-12 items-center justify-center rounded-none bg-red-600 text-white shadow-lg">
+        <Sparkles size={16} />
+      </div>
+    </div>
+    <h2 className="mbe-2 text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
+      {t('chat.onboarding.ollamaOffline')}
+    </h2>
+    <p className="mbe-10 max-w-md text-center text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+      {t('chat.onboarding.ollamaOfflineDescription')}
+    </p>
+    <button
+      onClick={onStartOllama}
+      className="flex items-center gap-3 rounded-none border border-red-200 bg-white px-6 py-4 text-sm font-semibold text-red-600 shadow-lg transition-all hover:bg-red-50 active:scale-95 dark:border-red-800 dark:bg-zinc-900 dark:text-red-400 dark:hover:bg-red-950/30"
+    >
+      <WifiOff size={18} />
+      {t('chat.onboarding.startOllama')}
+    </button>
+  </div>
+);
+
+/** Welcome screen shown when no conversation is active, with first-run onboarding CTAs. */
+const EmptyState = ({ onboarding }: { onboarding?: OnboardingState }) => {
   const { createNewConversation } = useConversationActions();
   const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
+
+  if (onboarding?.noModels) {
+    return <NoModelsOnboarding t={t} onInstallModel={onboarding.onInstallModel} />;
+  }
+
+  if (onboarding?.ollamaOffline) {
+    return <OllamaOfflineOnboarding t={t} onStartOllama={onboarding.onStartOllama} />;
+  }
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50/30 ps-8 pe-8 dark:bg-zinc-950">
