@@ -1,6 +1,7 @@
 {
   "common": {
     "appName": "مُساعد",
+    "library": "المكتبة",
     "done": "تم",
     "close": "إغلاق",
     "save": "حفظ",
