@@ -347,7 +347,8 @@
     "showFewerSources": "Show fewer",
     "conversationMenu": "Actions for the \"{title}\" conversation",
     "messageMenu": "Actions for this message",
-    "codeBlockMenu": "Actions for this code block"
+    "codeBlockMenu": "Actions for this code block",
+    "dropFiles": "Drop files to attach"
   },
   "contextMenu": {
     "conversation": {

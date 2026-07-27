@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import { Send, Square, ImageIcon, Paperclip } from 'lucide-react';
 import { useChatInput } from '@/features/conversation/hooks/useChatInput';
 import { abortStreaming } from '@/features/conversation/hooks/useConversationActions';
+import { useDropZone } from '@/features/conversation/hooks/useDropZone';
 import AttachmentPreview from './AttachmentPreview';
 import { ModelSelector } from '@/features/library';
 // RagContextBadge is imported from the components directory to avoid feature-to-feature imports
@@ -129,6 +130,7 @@ export const InputArea = () => {
     handleKeyDown,
     handleTauriImageUpload,
     handleTauriFileUpload,
+    handleDroppedFiles,
     removeImage,
     removeFile,
     t,
@@ -139,6 +141,15 @@ export const InputArea = () => {
   const handleAbort = useCallback(() => {
     if (currentConversationId) abortStreaming(currentConversationId);
   }, [currentConversationId]);
+
+  const { isDragOver } = useDropZone({
+    onDrop: useCallback(
+      (dropped: { imagePaths: string[]; filePaths: string[] }) => {
+        handleDroppedFiles(dropped.imagePaths, dropped.filePaths);
+      },
+      [handleDroppedFiles]
+    ),
+  });
 
   const shortcutLabel = isStreaming
     ? t('chat.shortcutStop')
@@ -160,7 +171,14 @@ export const InputArea = () => {
 
         <RagContextBadge />
 
-        <div className="border-sidebar-border rounded-lg border bg-zinc-50 p-1 transition-all focus-within:ring-1 focus-within:ring-blue-500/50 dark:bg-zinc-950">
+        <div
+          className={`border-sidebar-border rounded-lg border bg-zinc-50 p-1 transition-all focus-within:ring-1 focus-within:ring-blue-500/50 dark:bg-zinc-950 ${isDragOver ? 'ring-offset-background ring-2 ring-blue-500 ring-offset-2' : ''}`}
+        >
+          {isDragOver && (
+            <div className="caption-md pointer-events-none px-3 pt-2 text-center text-blue-600 dark:text-blue-400">
+              {t('a11y.dropFiles')}
+            </div>
+          )}
           <form
             onSubmit={(e) => {
               e.preventDefault();

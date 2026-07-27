@@ -7,6 +7,8 @@ import {
   type FileAttachment,
   handleTauriImageUploadInternal,
   handleTauriFileUploadInternal,
+  processImagePaths,
+  processFilePaths,
 } from './useAttachmentUtils';
 
 /**
@@ -42,11 +44,30 @@ export function useAttachmentManager() {
     setFiles((prev) => [...prev, ...newFiles]);
   }, [t]);
 
+  /**
+   * Processes dropped files through the same attachment-validation pipeline
+   * as the file-picker button. Accepts pre-classified image and file paths
+   * from the Tauri-native drag-drop event so the frontend never reads file
+   * content directly (STANDARDS §16).
+   */
+  const handleDroppedFiles = useCallback(
+    async (imagePaths: string[], filePaths: string[]) => {
+      const [newImages, newFiles] = await Promise.all([
+        processImagePaths(imagePaths, t),
+        processFilePaths(filePaths, t),
+      ]);
+      setImages((prev) => [...prev, ...newImages]);
+      setFiles((prev) => [...prev, ...newFiles]);
+    },
+    [t]
+  );
+
   return {
     images,
     files,
     handleTauriImageUpload,
     handleTauriFileUpload,
+    handleDroppedFiles,
     removeImage,
     removeFile,
     clearAttachments,
