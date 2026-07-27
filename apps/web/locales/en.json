@@ -344,7 +344,24 @@
     "browseFiles": "Browse indexed files in {name}",
     "projectSettings": "Open settings for {name}",
     "showNMoreSources": "Show {count} more…",
-    "showFewerSources": "Show fewer"
+    "showFewerSources": "Show fewer",
+    "conversationMenu": "Actions for the \"{title}\" conversation",
+    "messageMenu": "Actions for this message",
+    "codeBlockMenu": "Actions for this code block"
+  },
+  "contextMenu": {
+    "conversation": {
+      "rename": "Rename",
+      "export": "Export to Markdown",
+      "delete": "Delete"
+    },
+    "message": {
+      "copy": "Copy",
+      "regenerate": "Regenerate"
+    },
+    "codeBlock": {
+      "copy": "Copy"
+    }
   },
   "info": {
     "openInfo": "Open application information",

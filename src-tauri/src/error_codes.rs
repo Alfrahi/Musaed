@@ -68,6 +68,9 @@ pub const CONVERSATION_LOCK_ERROR: &str = "CONVERSATION_LOCK_ERROR";
 // ── Dialog ────────────────────────────────────────────
 pub const DIALOG_ERROR: &str = "DIALOG_ERROR";
 
+// ── Context menu ──────────────────────────────────────
+pub const CONTEXT_MENU_ERROR: &str = "CONTEXT_MENU_ERROR";
+
 // ── URL Opener ────────────────────────────────────────
 pub const URL_BLOCKED: &str = "URL_BLOCKED";
 pub const OPEN_URL_ERROR: &str = "OPEN_URL_ERROR";
@@ -134,6 +137,7 @@ mod tests {
             INTERNAL_ERROR,
             ABORTED,
             UNKNOWN,
+            CONTEXT_MENU_ERROR,
         ];
         let mut seen = std::collections::HashSet::new();
         for &code in &codes {

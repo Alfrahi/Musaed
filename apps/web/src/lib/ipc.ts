@@ -51,6 +51,11 @@ import {
   type RunMigrationsResponse,
   type MigrationStatus,
   type MigrationInfo,
+  // Context menu contracts
+  ContextMenuRequestSchema,
+  ContextMenuResponseSchema,
+  type ContextMenuRequest,
+  type ContextMenuResponse,
 } from '@musaed/contracts';
 import type {
   RagProject,
@@ -389,6 +394,15 @@ export interface CommandMap {
   };
   cmd_get_migration_status: { args: { target: string }; return: MigrationStatus };
   cmd_list_migrations: { args: { target: string }; return: MigrationInfo[] };
+
+  // Context menu — native Tauri popup menu for right-click surfaces
+  // (audit F13, Prompt 12). The frontend sends the surface kind, target id,
+  // screen coordinates, and translated labels; the backend builds a native
+  // menu and returns the selected action id (or null if dismissed).
+  cmd_show_context_menu: {
+    args: ContextMenuRequest & { labels: Record<string, string> };
+    return: ContextMenuResponse;
+  };
 }
 
 const voidSchema = z.preprocess((val) => (val === null ? undefined : val), z.void());
@@ -575,6 +589,12 @@ const CommandInputSchemas: {
   cmd_list_migrations: z.object({
     target: z.enum(['conversations', 'rag']),
   }),
+
+  // Context menu input schema — validates the request from the frontend
+  // before it reaches the Rust command adapter.
+  cmd_show_context_menu: ContextMenuRequestSchema.extend({
+    labels: z.record(z.string(), z.string()),
+  }),
 };
 
 /**
@@ -643,6 +663,9 @@ const CommandReturnSchemas: {
   cmd_rollback_migrations: RunMigrationsResponseSchema,
   cmd_get_migration_status: MigrationStatusSchema,
   cmd_list_migrations: z.array(MigrationInfoSchema),
+
+  // Context menu return schema
+  cmd_show_context_menu: ContextMenuResponseSchema,
 };
 
 /**
@@ -1404,4 +1427,34 @@ export const migrationApi = {
    * @returns Array of migration info (version, description, isRollbackable)
    */
   list: (target: 'conversations' | 'rag') => callInternal('cmd_list_migrations', { target }),
+};
+
+/**
+ * Context Menu API — native Tauri popup menu for right-click surfaces.
+ *
+ * The frontend sends the surface kind (conversation/message/codeBlock),
+ * target id, screen coordinates from the `contextmenu` MouseEvent, and
+ * translated labels. The Rust backend builds a native menu and returns
+ * the selected action id (or null if the user dismissed the menu).
+ *
+ * @see STANDARDS.md §5  IPC System
+ * @see STANDARDS.md §16 Security Model
+ */
+export const contextMenuApi = {
+  /**
+   * Shows a native context menu at the given screen position.
+   * @param kind - Surface kind: 'conversation' | 'message' | 'codeBlock'
+   * @param targetId - Opaque id of the target (conversation id, message id, etc.)
+   * @param x - Screen X coordinate from the contextmenu event
+   * @param y - Screen Y coordinate from the contextmenu event
+   * @param labels - Translated labels for each menu item
+   * @returns The selected action id, or null if dismissed
+   */
+  show: (
+    kind: ContextMenuRequest['kind'],
+    targetId: string,
+    x: number,
+    y: number,
+    labels: Record<string, string>
+  ) => callInternal('cmd_show_context_menu', { kind, targetId, x, y, labels }),
 };

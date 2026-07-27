@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import Image from 'next/image';
 import { Copy, Check, ChevronDown, ChevronUp, FileText, X } from 'lucide-react';
 import { type Message } from '@musaed/contracts';
@@ -12,6 +12,7 @@ import { MessageAvatar } from './MessageAvatar';
 import { MessageStats } from './MessageStats';
 import { useSettingsStore } from '@/store';
 import { useTranslation } from '@/lib/i18n';
+import { useContextMenu } from '@/hooks/useContextMenu';
 import { FileChunkViewer } from '@/features/rag';
 import ModalLayout from '@/components/ui/ModalLayout';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,8 @@ interface MessageBubbleProps {
     tokens: string;
   };
   formatNumber: (num: number, options?: Intl.NumberFormatOptions) => string;
+  /** Called when the user selects "Regenerate" from the context menu. */
+  onRegenerate?: () => void;
 }
 
 interface SourceReference {
@@ -181,7 +184,7 @@ const SourceViewerModal = ({ source, titleId, onClose, t }: SourceViewerModalPro
 /**
  * Renders a single message bubble in the chat window.
  */
-const MessageBubble = ({ message, labels, formatNumber }: MessageBubbleProps) => {
+const MessageBubble = ({ message, labels, formatNumber, onRegenerate }: MessageBubbleProps) => {
   const isUser = message.role === 'user';
   const { copied, handleCopy, tps } = useMessageActions(message);
   const sourceReferences = (message.ragSources ?? []) as SourceReference[];
@@ -195,8 +198,25 @@ const MessageBubble = ({ message, labels, formatNumber }: MessageBubbleProps) =>
 
   const titleId = 'rag-source-title';
 
+  const { showContextMenu } = useContextMenu({
+    onCopy: handleCopy,
+    onRegenerate,
+  });
+
+  const handleContextMenu = useCallback(
+    async (e: React.MouseEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      showContextMenu('message', message.id, e.clientX, e.clientY, {
+        copy: t('contextMenu.message.copy'),
+        regenerate: t('contextMenu.message.regenerate'),
+      });
+    },
+    [message.id, showContextMenu, t]
+  );
+
   return (
     <div
+      onContextMenu={handleContextMenu}
       className={cn(
         'border-be border-sidebar-border w-full transition-colors',
         isUser ? 'bg-background' : 'bg-zinc-50 dark:bg-zinc-900/30'

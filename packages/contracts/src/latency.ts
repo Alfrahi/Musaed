@@ -95,6 +95,10 @@ export const IPC_LATENCY_BUDGETS: Readonly<Record<string, LatencyBudgetMs>> = {
   cmd_rollback_migrations: 10000,
   cmd_get_migration_status: 2000,
   cmd_list_migrations: 1000,
+  /** Native context-menu popup — user-blocking, must appear near-instantly.
+   * Selection wait is bounded by user reaction time, but the show path itself
+   * (menu build + popup_at) must stay well under a second. */
+  cmd_show_context_menu: 1000,
 } as const;
 
 /**
@@ -125,7 +129,8 @@ export type LatencyBudgetCategory =
   | 'rag-mutation'
   | 'rag-heavy'
   | 'conversation'
-  | 'migration';
+  | 'migration'
+  | 'context-menu';
 
 export function getIpcLatencyBudgetCategory(command: string): LatencyBudgetCategory | undefined {
   if (command.startsWith('cmd_ollama_check_') || command === 'cmd_ollama_verify_service') {
@@ -141,6 +146,7 @@ export function getIpcLatencyBudgetCategory(command: string): LatencyBudgetCateg
   if (command === 'cmd_dialog_ask') return 'dialog';
   if (command === 'cmd_export_markdown') return 'export';
   if (command === 'cmd_opener_open_url') return 'opener';
+  if (command === 'cmd_show_context_menu') return 'context-menu';
   if (command.startsWith('cmd_rag_list_') || command.startsWith('cmd_rag_get_')) {
     return 'rag-light';
   }

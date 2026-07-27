@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Check, Copy } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import { useSettingsStore } from '@/store';
+import { useContextMenu } from '@/hooks/useContextMenu';
 
 interface CodeBlockProps {
   language?: string;
@@ -44,10 +45,29 @@ const CodeBlock = ({ language, value }: CodeBlockProps) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const { showContextMenu } = useContextMenu({ onCopy });
+
+  const handleContextMenu = useCallback(
+    async (e: React.MouseEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      showContextMenu(
+        'codeBlock',
+        // Use a stable id derived from the code content so the backend can
+        // identify the surface without knowing about code block internals.
+        `code-${cleanCode.slice(0, 32)}`,
+        e.clientX,
+        e.clientY,
+        { copy: t('contextMenu.codeBlock.copy') }
+      );
+    },
+    [cleanCode, showContextMenu, t]
+  );
+
   const displayLanguage = language || t('common.text');
 
   return (
     <div
+      onContextMenu={handleContextMenu}
       className="group relative my-4 block overflow-hidden rounded-none border border-zinc-200 bg-zinc-950 dark:border-zinc-800"
       role="region"
       aria-label={t('a11y.codeBlock', { language: displayLanguage })}
