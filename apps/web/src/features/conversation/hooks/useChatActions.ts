@@ -15,7 +15,8 @@ import { useCurrentConversationId, useConversations } from '@/store/conversation
 import { useSettingsStore } from '@/store/settings-store';
 import { useModelStore } from '@/store/model-store';
 import { useRagStore } from '@/store/rag-store';
-import { useSetUIError } from '@/store/ui-store';
+import { useSetUIError, useUIStore } from '@/store/ui-store';
+import { useStreamingStore } from '@/store/streaming-store';
 import { persistUserMessage } from '@/features/conversation/utils/message-persistence';
 
 /** Build prompt with file context injected. */
@@ -37,7 +38,6 @@ const handleStreamError = (
   conversationId: string,
   requestId: string,
   updateLastMessage: (id: string, update: Partial<Message>, replace: boolean) => void,
-  stopStreaming: (id: string) => void,
   setError: (msg: string) => void,
   t: (key: string) => string
 ) => {
@@ -55,7 +55,14 @@ const handleStreamError = (
     },
     false
   );
-  stopStreaming(conversationId);
+  // Clean up the streaming store without setting `stopped: true` — this is
+  // a stream failure, not a user-initiated stop (Prompt 14).
+  useStreamingStore.getState().stopStream(conversationId);
+  useStreamingStore.getState().clearStream(conversationId);
+  const { activeStreams } = useStreamingStore.getState();
+  if (Object.keys(activeStreams).length === 0) {
+    useUIStore.getState().setStreaming(false);
+  }
   setError(msg);
   toast.error(msg);
 };
@@ -265,7 +272,6 @@ export const useChatActions = () => {
           conversationId,
           requestId,
           (id, update, replace) => messageStore.updateLastMessage(id, update, replace),
-          stopStreaming,
           (msg) => setErrorMessage(msg),
           t
         );

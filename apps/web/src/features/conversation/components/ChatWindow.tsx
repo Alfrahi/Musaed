@@ -9,6 +9,7 @@ import { useStreamingStore, selectLiveContent } from '@/store/streaming-store';
 import { useMessageStore } from '@/store/message-store';
 import type { StreamingState } from '@/store/streaming-store';
 import { useSettingsStore } from '@/store';
+import { useChatInputStore } from '@/store/chat-input-store';
 import { ErrorFallback } from '@/components/ui';
 import MessageBubble from './MessageBubble';
 import ChatWindowSkeleton from './ChatWindowSkeleton';
@@ -52,6 +53,56 @@ const ScrollButton = ({ onClick, label }: { onClick: () => void; label: string }
     </button>
   </div>
 );
+
+/**
+ * Hook: message bubble action callbacks for Prompt 14 (Continue, Edit prompt, Edit).
+ * Extracted to keep ChatWindow under the max-lines-per-function lint gate.
+ */
+function useMessageBubbleActions(
+  currentConversationId: string | null,
+  messages: Message[],
+  sendMessage: (input: string, images?: string[]) => void
+) {
+  const setEditPrompt = useChatInputStore((s) => s.setEditPrompt);
+
+  const handleRetry = useCallback(() => {
+    if (!currentConversationId) return;
+    const lastUser = messages.findLast((m) => m.role === 'user');
+    if (!lastUser) return;
+    useUIStore.getState().setErrorMessage(null);
+    void sendMessage(lastUser.content, lastUser.images ?? []);
+  }, [currentConversationId, messages, sendMessage]);
+
+  const handleContinue = useCallback(() => {
+    if (!currentConversationId) return;
+    const lastUser = messages.findLast((m) => m.role === 'user');
+    if (!lastUser) return;
+    useUIStore.getState().setErrorMessage(null);
+    void sendMessage(lastUser.content, lastUser.images ?? []);
+  }, [currentConversationId, messages, sendMessage]);
+
+  const handleEditPrompt = useCallback(
+    (assistantMsgId: string) => {
+      const assistantIdx = messages.findIndex((m) => m.id === assistantMsgId);
+      if (assistantIdx === -1) return;
+      const lastUser = messages.slice(0, assistantIdx).findLast((m) => m.role === 'user');
+      if (!lastUser) return;
+      setEditPrompt(lastUser.content);
+    },
+    [messages, setEditPrompt]
+  );
+
+  const handleEdit = useCallback(
+    (userMsgId: string) => {
+      const msg = messages.find((m) => m.id === userMsgId);
+      if (!msg || msg.role !== 'user') return;
+      setEditPrompt(msg.content);
+    },
+    [messages, setEditPrompt]
+  );
+
+  return { handleRetry, handleContinue, handleEditPrompt, handleEdit };
+}
 
 /**
  * Main chat window with virtualized messages.
@@ -117,23 +168,17 @@ const ChatWindow = () => {
   const lastError = messages.length > 0 ? messages.findLast((m) => m.error)?.error : undefined;
   const hasError = Boolean(lastError);
 
-  // Retry wiring: re-invoke `sendMessage` with the content + images of the last
-  // user message in the conversation. `sendMessage` appends a fresh user msg +
-  // a new assistant placeholder, leaving the failed assistant message in
-  // history as a record of the failed attempt (non-destructive retry).
-  const handleRetry = useCallback(() => {
-    if (!currentConversationId) return;
-    const lastUser = messages.findLast((m) => m.role === 'user');
-    if (!lastUser) return;
-    // Clear the global error toast state so the next failure can resurface.
-    useUIStore.getState().setErrorMessage(null);
-    void sendMessage(lastUser.content, lastUser.images ?? []);
-  }, [currentConversationId, messages, sendMessage]);
-
   // Regenerate: find the last user message before the given assistant message
   // and re-invoke `sendMessage` with its content. Used by the context menu on
   // assistant bubbles (audit F13, Prompt 12).
   const { regenerateMessage } = useRegenerateMessage(currentConversationId, messages, sendMessage);
+
+  // Continue / Edit prompt / Edit / Retry callbacks (Prompt 14).
+  const { handleRetry, handleContinue, handleEditPrompt, handleEdit } = useMessageBubbleActions(
+    currentConversationId,
+    messages,
+    sendMessage
+  );
 
   if (!isHydrated) return <ChatWindowSkeleton />;
   if (!currentConversation) return <EmptyState />;
@@ -153,6 +198,9 @@ const ChatWindow = () => {
               labels={messageLabels}
               formatNumber={formatNumber}
               onRegenerate={() => regenerateMessage(msg.id)}
+              onContinue={handleContinue}
+              onEditPrompt={() => handleEditPrompt(msg.id)}
+              onEdit={() => handleEdit(msg.id)}
             />
           </div>
         )}

@@ -83,6 +83,35 @@ describe('Contracts: Zod Schemas', () => {
     expect(MessageSchema.safeParse(malformed).success).toBe(false);
   });
 
+  it('validates a message with a `stopped` field', () => {
+    const messageWithStopped = {
+      id: 'm4',
+      role: 'assistant',
+      content: 'partial response',
+      timestamp: Date.now(),
+      stopped: true,
+    };
+    expect(MessageSchema.safeParse(messageWithStopped).success).toBe(true);
+    const parsed = MessageSchema.safeParse(messageWithStopped);
+    if (parsed.success) {
+      expect(parsed.data.stopped).toBe(true);
+    }
+  });
+
+  it('treats `stopped` as optional on the Message schema', () => {
+    const messageWithoutStopped = {
+      id: 'm5',
+      role: 'user',
+      content: 'hi',
+      timestamp: Date.now(),
+    };
+    const parsed = MessageSchema.safeParse(messageWithoutStopped);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.stopped).toBeUndefined();
+    }
+  });
+
   it('validates default chat settings', () => {
     expect(ChatSettingsSchema.safeParse(DEFAULT_SETTINGS).success).toBe(true);
   });
