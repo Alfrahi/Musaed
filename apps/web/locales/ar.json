@@ -212,6 +212,7 @@
     "cancelIndexing": "إلغاء الفهرسة",
     "retryingIn": "إعادة المحاولة خلال {seconds} ثانية",
     "removeProject": "إزالة المشروع",
+    "removeConfirm": "إزالة المشروع؟ ستستغرق إعادة الفهرسة وقتًا لاحقًا.",
     "projectSettings": "إعدادات المشروع",
     "projectUpdated": "تم تحديث المشروع",
     "embeddingModelUpdated": "تم تحديث نموذج التضمين - ستتم إعادة فهرسة المشروع.",
