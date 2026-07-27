@@ -20,3 +20,6 @@ export * from './model-store';
 
 // RAG domain store (global because conversation, layout, and UI badges consume it)
 export * from './rag-store';
+
+// Chat input coordination store (ephemeral — cross-component signal for "Edit prompt")
+export * from './chat-input-store';

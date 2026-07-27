@@ -5,7 +5,8 @@ import { useRagStore } from '@/store/rag-store';
 import { useModelStore } from '@/store/model-store';
 import { useConversationStore } from '@/store/conversation-store';
 import { useStreamingStore } from '@/store/streaming-store';
-import { registerHydrationCoordination } from './coordination';
+import { useMessageStore } from '@/store/message-store';
+import { registerHydrationCoordination, coordinateStopStream } from './coordination';
 
 beforeEach(() => {
   (window as any).__TAURI_INTERNALS__ = {};
@@ -86,5 +87,48 @@ describe('registerHydrationCoordination', () => {
       cleanup();
     }).not.toThrow();
     expect(useUIStore.getState()._pendingRehydrations).toBe(5);
+  });
+});
+
+describe('coordinateStopStream', () => {
+  beforeEach(() => {
+    useStreamingStore.setState({
+      liveContent: {},
+      pendingMetrics: {},
+      activeStreams: { 'conv-1': 'req-1' },
+      flushedStreams: [],
+    });
+    useMessageStore.setState({
+      messages: {
+        'conv-1': [
+          { id: 'msg-1', role: 'user', content: 'hello', timestamp: 1 },
+          { id: 'msg-2', role: 'assistant', content: 'hi', timestamp: 2, done: true },
+        ],
+      },
+    });
+    useUIStore.setState({ isStreaming: true });
+  });
+
+  it('sets stopped: true on the last assistant message', () => {
+    coordinateStopStream('conv-1');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    expect(messages[messages.length - 1].stopped).toBe(true);
+  });
+
+  it('clears the global streaming flag when no streams remain', () => {
+    coordinateStopStream('conv-1');
+
+    expect(useUIStore.getState().isStreaming).toBe(false);
+  });
+
+  it('does not clear the global streaming flag when other streams are active', () => {
+    useStreamingStore.setState({
+      activeStreams: { 'conv-1': 'req-1', 'conv-2': 'req-2' },
+    });
+
+    coordinateStopStream('conv-1');
+
+    expect(useUIStore.getState().isStreaming).toBe(true);
   });
 });

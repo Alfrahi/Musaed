@@ -75,10 +75,16 @@ export function flushAndStop(conversationId: string): void {
 /**
  * Stops streaming for a conversation — flushes any remaining content,
  * clears the stream, and updates the UI flag if no other streams are active.
+ * Also marks the last assistant message as `stopped: true` so the UI can
+ * render the "Stopped by user • Continue" affordance (Prompt 14).
  */
 export function coordinateStopStream(conversationId: string): void {
   useStreamingStore.getState().stopStream(conversationId);
   useStreamingStore.getState().clearStream(conversationId);
+
+  // Mark the last assistant message as user-stopped so the UI can render
+  // the "Stopped by user • Continue" inline status line.
+  useMessageStore.getState().updateLastMessage(conversationId, { stopped: true });
 
   // Only clear global streaming flag when no streams remain active
   const { activeStreams } = useStreamingStore.getState();

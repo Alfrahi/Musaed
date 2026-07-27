@@ -2,7 +2,17 @@
 
 import React, { useState, useCallback } from 'react';
 import Image from 'next/image';
-import { Copy, Check, ChevronDown, ChevronUp, FileText, X } from 'lucide-react';
+import {
+  Copy,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  X,
+  RefreshCw,
+  Play,
+  Pencil,
+} from 'lucide-react';
 import { type Message } from '@musaed/contracts';
 import { cn } from '@/lib/utils';
 import MessageContent from './MessageContent';
@@ -33,6 +43,13 @@ interface MessageBubbleProps {
   formatNumber: (num: number, options?: Intl.NumberFormatOptions) => string;
   /** Called when the user selects "Regenerate" from the context menu. */
   onRegenerate?: () => void;
+  /** Called when the user clicks "Continue" on a stopped message. */
+  onContinue?: () => void;
+  /** Called when the user clicks "Edit prompt" — pulls the preceding user
+   *  message back into the input for editing. */
+  onEditPrompt?: () => void;
+  /** Called when the user clicks "Edit" on their own message. */
+  onEdit?: () => void;
 }
 
 interface SourceReference {
@@ -182,37 +199,156 @@ const SourceViewerModal = ({ source, titleId, onClose, t }: SourceViewerModalPro
 );
 
 /**
- * Renders a single message bubble in the chat window.
+ * Hover action buttons for message bubbles — discoverable via
+ * group-focus-within so keyboard users can reach them (Prompt 14).
  */
-const MessageBubble = ({ message, labels, formatNumber, onRegenerate }: MessageBubbleProps) => {
-  const isUser = message.role === 'user';
-  const { copied, handleCopy, tps } = useMessageActions(message);
-  const sourceReferences = (message.ragSources ?? []) as SourceReference[];
-  // Expand-by-default when sources are present so the grounding is visible
-  // without an extra click (audit F11, UX-UI-AUDIT remediation Prompt 10).
-  const [isExpanded, setIsExpanded] = useState(sourceReferences.length > 0);
-  const [openSource, setOpenSource] = useState<SourceReference | null>(null);
+interface HoverActionsProps {
+  isUser: boolean;
+  isStopped: boolean;
+  onRegenerate?: () => void;
+  onContinue?: () => void;
+  onEditPrompt?: () => void;
+  onEdit?: () => void;
+  t: (key: string) => string;
+}
 
-  const language = useSettingsStore((s) => s.globalSettings.language);
-  const { t } = useTranslation(language);
+const HoverActions = ({
+  isUser,
+  isStopped,
+  onRegenerate,
+  onContinue,
+  onEditPrompt,
+  onEdit,
+  t,
+}: HoverActionsProps) => {
+  const hasActions =
+    (isUser && onEdit) || (!isUser && (onRegenerate || onContinue || onEditPrompt));
+  if (!hasActions) return null;
 
-  const titleId = 'rag-source-title';
+  return (
+    <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+      {!isUser && onRegenerate && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onRegenerate}
+          aria-label={t('chat.regenerate')}
+          title={t('chat.regenerate')}
+        >
+          <RefreshCw size={14} />
+        </Button>
+      )}
+      {!isUser && isStopped && onContinue && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onContinue}
+          aria-label={t('chat.continue')}
+          title={t('chat.continue')}
+        >
+          <Play size={14} />
+        </Button>
+      )}
+      {!isUser && onEditPrompt && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onEditPrompt}
+          aria-label={t('chat.editPrompt')}
+          title={t('chat.editPrompt')}
+        >
+          <Pencil size={14} />
+        </Button>
+      )}
+      {isUser && onEdit && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onEdit}
+          aria-label={t('chat.editPrompt')}
+          title={t('chat.editPrompt')}
+        >
+          <Pencil size={14} />
+        </Button>
+      )}
+    </div>
+  );
+};
 
-  const { showContextMenu } = useContextMenu({
-    onCopy: handleCopy,
-    onRegenerate,
-  });
+/**
+ * Inline status line rendered below a stopped assistant message.
+ * Shows "Stopped by user • Continue" (Prompt 14).
+ */
+interface StoppedStatusLineProps {
+  isStopped: boolean;
+  onContinue?: () => void;
+  t: (key: string) => string;
+}
 
-  const handleContextMenu = useCallback(
+const StoppedStatusLine = ({ isStopped, onContinue, t }: StoppedStatusLineProps) => {
+  if (!isStopped) return null;
+  return (
+    <div className="flex items-center gap-2 text-xs text-zinc-500">
+      <span>{t('chat.stoppedByUser')}</span>
+      <span>•</span>
+      {onContinue && (
+        <button
+          type="button"
+          onClick={onContinue}
+          className="text-primary font-medium hover:underline"
+        >
+          {t('chat.continue')}
+        </button>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Context menu wiring for a message bubble. Extracted to keep MessageBubble
+ * under the max-lines-per-function lint gate (Prompt 14).
+ */
+function useMessageContextMenu(
+  messageId: string,
+  handleCopy: () => void,
+  onRegenerate: (() => void) | undefined,
+  t: (key: string) => string
+) {
+  const { showContextMenu } = useContextMenu({ onCopy: handleCopy, onRegenerate });
+  return useCallback(
     async (e: React.MouseEvent<HTMLDivElement>) => {
       e.preventDefault();
-      showContextMenu('message', message.id, e.clientX, e.clientY, {
+      showContextMenu('message', messageId, e.clientX, e.clientY, {
         copy: t('contextMenu.message.copy'),
         regenerate: t('contextMenu.message.regenerate'),
       });
     },
-    [message.id, showContextMenu, t]
+    [messageId, showContextMenu, t]
   );
+}
+
+/**
+ * Renders a single message bubble in the chat window.
+ */
+const MessageBubble = ({
+  message,
+  labels,
+  formatNumber,
+  onRegenerate,
+  onContinue,
+  onEditPrompt,
+  onEdit,
+}: MessageBubbleProps) => {
+  const isUser = message.role === 'user';
+  const { copied, handleCopy, tps } = useMessageActions(message);
+  const sourceReferences = (message.ragSources ?? []) as SourceReference[];
+  const [isExpanded, setIsExpanded] = useState(sourceReferences.length > 0);
+  const [openSource, setOpenSource] = useState<SourceReference | null>(null);
+  const language = useSettingsStore((s) => s.globalSettings.language);
+  const { t } = useTranslation(language);
+  const titleId = 'rag-source-title';
+  const handleContextMenu = useMessageContextMenu(message.id, handleCopy, onRegenerate, t);
+  const isStopped = message.stopped === true && message.role === 'assistant';
 
   return (
     <div
@@ -222,7 +358,7 @@ const MessageBubble = ({ message, labels, formatNumber, onRegenerate }: MessageB
         isUser ? 'bg-background' : 'bg-zinc-50 dark:bg-zinc-900/30'
       )}
     >
-      <div className="ms-auto me-auto flex max-w-4xl gap-6 py-8 ps-6 pe-6">
+      <div className="group ms-auto me-auto flex max-w-4xl gap-6 py-8 ps-6 pe-6">
         <MessageAvatar isUser={isUser} />
 
         <div className="min-w-0 flex-1 space-y-4">
@@ -233,13 +369,24 @@ const MessageBubble = ({ message, labels, formatNumber, onRegenerate }: MessageB
                 <span className="ms-3 text-zinc-500">{message.model}</span>
               )}
             </span>
-            <button
-              onClick={handleCopy}
-              className="hover:text-foreground p-1 text-zinc-400 transition-colors"
-              aria-label={labels.copy}
-            >
-              {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-            </button>
+            <div className="flex items-center gap-1">
+              <HoverActions
+                isUser={isUser}
+                isStopped={isStopped}
+                onRegenerate={onRegenerate}
+                onContinue={onContinue}
+                onEditPrompt={onEditPrompt}
+                onEdit={onEdit}
+                t={t}
+              />
+              <button
+                onClick={handleCopy}
+                className="hover:text-foreground p-1 text-zinc-400 transition-colors"
+                aria-label={labels.copy}
+              >
+                {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+              </button>
+            </div>
           </div>
 
           {message.images && message.images.length > 0 && (
@@ -279,6 +426,8 @@ const MessageBubble = ({ message, labels, formatNumber, onRegenerate }: MessageB
             formatNumber={formatNumber}
             tokensLabel={labels.tokens}
           />
+
+          <StoppedStatusLine isStopped={isStopped} onContinue={onContinue} t={t} />
         </div>
       </div>
 

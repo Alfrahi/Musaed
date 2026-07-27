@@ -83,6 +83,10 @@
     "shortcutStop": "ESC to Stop",
     "stop": "Stop",
     "stopStreaming": "Stop streaming",
+    "stoppedByUser": "Stopped by user",
+    "regenerate": "Regenerate",
+    "continue": "Continue",
+    "editPrompt": "Edit prompt",
     "errorPrefix": "Error"
   },
   "settings": {

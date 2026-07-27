@@ -83,6 +83,10 @@
     "shortcutStop": "ESC للإيقاف",
     "stop": "إيقاف",
     "stopStreaming": "إيقاف البث",
+    "stoppedByUser": "أوقفه المستخدم",
+    "regenerate": "إعادة التوليد",
+    "continue": "متابعة",
+    "editPrompt": "تعديل السؤال",
     "errorPrefix": "خطأ"
   },
   "settings": {

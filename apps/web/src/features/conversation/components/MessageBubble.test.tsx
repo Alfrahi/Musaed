@@ -178,3 +178,154 @@ describe('MessageBubble - RAG citations (F11)', () => {
     });
   });
 });
+
+describe('MessageBubble - stopped status line (Prompt 14)', () => {
+  const stoppedMessage: Message = {
+    id: 'msg-stopped',
+    role: 'assistant',
+    content: 'Partial response...',
+    timestamp: Date.now(),
+    stopped: true,
+  };
+
+  it('renders "Stopped by user • Continue" when stopped is true', () => {
+    const onContinue = vi.fn();
+    render(
+      <MessageBubble
+        message={stoppedMessage}
+        labels={baseLabels}
+        formatNumber={formatNumber}
+        onContinue={onContinue}
+      />
+    );
+
+    expect(screen.getByText('chat.stoppedByUser')).toBeInTheDocument();
+    expect(screen.getByText('chat.continue')).toBeInTheDocument();
+  });
+
+  it('calls onContinue when the Continue button is clicked', () => {
+    const onContinue = vi.fn();
+    render(
+      <MessageBubble
+        message={stoppedMessage}
+        labels={baseLabels}
+        formatNumber={formatNumber}
+        onContinue={onContinue}
+      />
+    );
+
+    fireEvent.click(screen.getByText('chat.continue'));
+    expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not render stopped line when stopped is not true', () => {
+    const normalMessage: Message = {
+      id: 'msg-normal',
+      role: 'assistant',
+      content: 'Complete response',
+      timestamp: Date.now(),
+    };
+    render(
+      <MessageBubble message={normalMessage} labels={baseLabels} formatNumber={formatNumber} />
+    );
+
+    expect(screen.queryByText('chat.stoppedByUser')).toBeNull();
+  });
+
+  it('does not render stopped line for user messages even if stopped is true', () => {
+    const userMsg: Message = {
+      id: 'msg-user',
+      role: 'user',
+      content: 'Hello',
+      timestamp: Date.now(),
+      stopped: true,
+    };
+    render(<MessageBubble message={userMsg} labels={baseLabels} formatNumber={formatNumber} />);
+
+    expect(screen.queryByText('chat.stoppedByUser')).toBeNull();
+  });
+});
+
+describe('MessageBubble - hover actions (Prompt 14)', () => {
+  it('renders Regenerate button on assistant messages when onRegenerate is provided', () => {
+    const onRegenerate = vi.fn();
+    const message: Message = {
+      id: 'msg-1',
+      role: 'assistant',
+      content: 'Response',
+      timestamp: Date.now(),
+    };
+    render(
+      <MessageBubble
+        message={message}
+        labels={baseLabels}
+        formatNumber={formatNumber}
+        onRegenerate={onRegenerate}
+      />
+    );
+
+    const btn = screen.getByRole('button', { name: 'chat.regenerate' });
+    expect(btn).toBeInTheDocument();
+    fireEvent.click(btn);
+    expect(onRegenerate).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders Edit prompt button on assistant when onEditPrompt is provided', () => {
+    const onEditPrompt = vi.fn();
+    const message: Message = {
+      id: 'msg-1',
+      role: 'assistant',
+      content: 'Response',
+      timestamp: Date.now(),
+    };
+    render(
+      <MessageBubble
+        message={message}
+        labels={baseLabels}
+        formatNumber={formatNumber}
+        onEditPrompt={onEditPrompt}
+      />
+    );
+
+    const btn = screen.getByRole('button', { name: 'chat.editPrompt' });
+    expect(btn).toBeInTheDocument();
+    fireEvent.click(btn);
+    expect(onEditPrompt).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders Edit button on user messages when onEdit is provided', () => {
+    const onEdit = vi.fn();
+    const message: Message = {
+      id: 'msg-1',
+      role: 'user',
+      content: 'My question',
+      timestamp: Date.now(),
+    };
+    render(
+      <MessageBubble
+        message={message}
+        labels={baseLabels}
+        formatNumber={formatNumber}
+        onEdit={onEdit}
+      />
+    );
+
+    const btn = screen.getByRole('button', { name: 'chat.editPrompt' });
+    expect(btn).toBeInTheDocument();
+    fireEvent.click(btn);
+    expect(onEdit).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not render hover actions when no callbacks are provided', () => {
+    const message: Message = {
+      id: 'msg-1',
+      role: 'assistant',
+      content: 'Response',
+      timestamp: Date.now(),
+    };
+    render(<MessageBubble message={message} labels={baseLabels} formatNumber={formatNumber} />);
+
+    expect(screen.queryByRole('button', { name: 'chat.regenerate' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'chat.editPrompt' })).not.toBeInTheDocument();
+  });
+});

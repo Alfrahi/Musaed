@@ -29,6 +29,7 @@ export const MessageSchema = z.object({
       message: z.string(),
     })
     .nullish(),
+  stopped: z.boolean().nullish(),
 });
 
 export const ConversationSchema = z.object({

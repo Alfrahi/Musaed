@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Send, Square, ImageIcon, Paperclip } from 'lucide-react';
 import { useChatInput } from '@/features/conversation/hooks/useChatInput';
 import { abortStreaming } from '@/features/conversation/hooks/useConversationActions';
@@ -10,6 +10,26 @@ import { ModelSelector } from '@/features/library';
 // RagContextBadge is imported from the components directory to avoid feature-to-feature imports
 import { RagContextBadge } from '@/components/ui/RagContextBadge';
 import { Button } from '@/components/ui/button';
+import { useChatInputStore } from '@/store/chat-input-store';
+
+/**
+ * Watches for "Edit prompt" / "Edit" signals from MessageBubble hover actions
+ * (Prompt 14). One-shot: populates the textarea then clears the signal.
+ */
+function useEditPromptWatcher(
+  setInput: (value: string) => void,
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>
+) {
+  const editPrompt = useChatInputStore((s) => s.editPrompt);
+  const clearEditPrompt = useChatInputStore((s) => s.setEditPrompt);
+  useEffect(() => {
+    if (editPrompt !== null) {
+      setInput(editPrompt);
+      clearEditPrompt(null);
+      textareaRef.current?.focus();
+    }
+  }, [editPrompt, setInput, clearEditPrompt, textareaRef]);
+}
 
 /** Attach action buttons (image + file upload). */
 const AttachButtons = ({
@@ -137,6 +157,8 @@ export const InputArea = () => {
     currentConversationId,
     enterToSend,
   } = useChatInput();
+
+  useEditPromptWatcher(setInput, textareaRef);
 
   const handleAbort = useCallback(() => {
     if (currentConversationId) abortStreaming(currentConversationId);
