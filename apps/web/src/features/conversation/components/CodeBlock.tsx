@@ -50,17 +50,11 @@ const CodeBlock = ({ language, value }: CodeBlockProps) => {
   const handleContextMenu = useCallback(
     async (e: React.MouseEvent<HTMLDivElement>) => {
       e.preventDefault();
-      showContextMenu(
-        'codeBlock',
-        // Use a stable id derived from the code content so the backend can
-        // identify the surface without knowing about code block internals.
-        `code-${cleanCode.slice(0, 32)}`,
-        e.clientX,
-        e.clientY,
-        { copy: t('contextMenu.codeBlock.copy') }
-      );
+      showContextMenu('codeBlock', e.clientX, e.clientY, {
+        copy: t('contextMenu.codeBlock.copy'),
+      });
     },
-    [cleanCode, showContextMenu, t]
+    [showContextMenu, t]
   );
 
   const displayLanguage = language || t('common.text');

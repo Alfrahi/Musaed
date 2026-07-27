@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 import { contextMenuApi } from '@/lib/ipc';
-import type { ContextMenuKind } from '@musaed/contracts';
+import type { ContextMenuKind, ContextMenuLabels } from '@musaed/contracts';
 
 /**
  * Shared hook for native Tauri context-menu dispatch (audit F13, Prompt 12).
@@ -23,14 +23,8 @@ export function useContextMenu(handlers: {
   onRegenerate?: () => void;
 }) {
   const showContextMenu = useCallback(
-    async (
-      kind: ContextMenuKind,
-      targetId: string,
-      x: number,
-      y: number,
-      labels: Record<string, string>
-    ) => {
-      const result = await contextMenuApi.show(kind, targetId, x, y, labels);
+    async (kind: ContextMenuKind, x: number, y: number, labels: Partial<ContextMenuLabels>) => {
+      const result = await contextMenuApi.show(kind, x, y, labels);
       if (!result?.selectedItem) return;
       switch (result.selectedItem) {
         case 'rename':
