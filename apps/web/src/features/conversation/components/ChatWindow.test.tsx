@@ -7,6 +7,7 @@ import { useConversationStore } from '@/store/conversation-store';
 import { useMessageStore } from '@/store/message-store';
 import { useStreamingStore } from '@/store/streaming-store';
 import { useSettingsStore } from '@/store/settings-store';
+import { useModelStore } from '@/store/model-store';
 import { DEFAULT_SETTINGS } from '@musaed/contracts';
 
 vi.mock('@/lib/i18n', async () => {
@@ -87,7 +88,8 @@ describe('ChatWindow', () => {
       searchQuery: '',
     });
     useMessageStore.setState({ messages: {} });
-    useUIStore.setState({ isHydrated: true });
+    useUIStore.setState({ isHydrated: true, isOllamaConnected: true });
+    useModelStore.setState({ models: [{ name: 'llama3.2', size: 2000000000 }] });
     useSettingsStore.setState({
       globalSettings: {
         temperature: 0.7,

@@ -23,6 +23,7 @@ import { checkIsTauri } from '@/lib/ipc';
 
 import { useTauriEvents, useConversationMessages } from '@/features/conversation';
 import { useAppInitialization } from '@/hooks';
+import { useOllamaConnection } from '@/hooks/useOllamaConnection';
 import TaskStatus from '@/components/ui/TaskStatus';
 import OllamaConnectionStatus from '@/components/ui/OllamaConnectionStatus';
 
@@ -131,6 +132,7 @@ const HomeClient = () => {
   const setSettingsOpen = useSetSettingsOpen();
   const setInfoOpen = useSetInfoOpen();
   const { initializeApp } = useAppInitialization();
+  const { reconnect } = useOllamaConnection();
   const [mounted, setMounted] = useState(false);
   const { t, isRtl } = useTranslation(globalSettings.language);
 
@@ -170,7 +172,10 @@ const HomeClient = () => {
           t={t}
         />
         <div className="relative flex min-h-0 flex-1 flex-col">
-          <ChatWindowDynamic />
+          <ChatWindowDynamic
+            onInstallModel={() => setLibraryOpen(true)}
+            onStartOllama={() => void reconnect()}
+          />
           <InputAreaDynamic />
         </div>
       </div>
