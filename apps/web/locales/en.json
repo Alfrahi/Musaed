@@ -212,6 +212,7 @@
     "cancelIndexing": "Cancel indexing",
     "retryingIn": "Retrying in {seconds}s",
     "removeProject": "Remove project",
+    "removeConfirm": "Remove project? Re-indexing later will take time.",
     "projectSettings": "Project Settings",
     "projectUpdated": "Project updated",
     "embeddingModelUpdated": "Embedding model updated — project will be reindexed.",

@@ -1242,9 +1242,23 @@ export async function listen<T>(
  * - `ask`: Shows a confirmation dialog; uses window.confirm in browser.
  * - `save`: Shows a file save dialog; returns null in browser.
  * - `open`: Shows a file/folder open dialog; returns null in browser.
+ *
+ * `ConfirmDialogOptions` mirrors `@tauri-apps/plugin-dialog`'s
+ * `ConfirmDialogOptions` so consumers can pass translated `okLabel` /
+ * `cancelLabel` without casting. The browser fallback ignores labels
+ * (window.confirm has no such customization) but still returns a boolean.
  */
+export interface ConfirmDialogOptions {
+  title?: string;
+  kind?: 'info' | 'warning' | 'error';
+  /** Label for the confirm button. Tauri-only; ignored by browser fallback. */
+  okLabel?: string;
+  /** Label for the cancel button. Tauri-only; ignored by browser fallback. */
+  cancelLabel?: string;
+}
+
 export const dialog = {
-  ask: async (msg: string, opts: { title?: string; kind?: 'info' | 'warning' | 'error' }) =>
+  ask: async (msg: string, opts: ConfirmDialogOptions) =>
     checkIsTauri()
       ? (await import('@tauri-apps/plugin-dialog')).ask(msg, opts)
       : window.confirm(msg),
