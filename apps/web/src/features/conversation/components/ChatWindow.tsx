@@ -14,6 +14,7 @@ import MessageBubble from './MessageBubble';
 import ChatWindowSkeleton from './ChatWindowSkeleton';
 import EmptyState from './EmptyState';
 import { useChatActions } from '../hooks/useChatActions';
+import { useRegenerateMessage } from '../hooks/useRegenerateMessage';
 import { useTranslation, type TranslationKey } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Message } from '@musaed/contracts';
@@ -129,6 +130,11 @@ const ChatWindow = () => {
     void sendMessage(lastUser.content, lastUser.images ?? []);
   }, [currentConversationId, messages, sendMessage]);
 
+  // Regenerate: find the last user message before the given assistant message
+  // and re-invoke `sendMessage` with its content. Used by the context menu on
+  // assistant bubbles (audit F13, Prompt 12).
+  const { regenerateMessage } = useRegenerateMessage(currentConversationId, messages, sendMessage);
+
   if (!isHydrated) return <ChatWindowSkeleton />;
   if (!currentConversation) return <EmptyState />;
 
@@ -142,7 +148,12 @@ const ChatWindow = () => {
         atBottomStateChange={(atBottom) => setShowScrollButton(!atBottom)}
         itemContent={(index, msg) => (
           <div className={cn(index === messages.length - 1 && 'pbe-32')}>
-            <MessageBubble message={msg} labels={messageLabels} formatNumber={formatNumber} />
+            <MessageBubble
+              message={msg}
+              labels={messageLabels}
+              formatNumber={formatNumber}
+              onRegenerate={() => regenerateMessage(msg.id)}
+            />
           </div>
         )}
         followOutput="smooth"

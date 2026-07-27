@@ -3,6 +3,7 @@ use tauri::Manager;
 use tokio::sync::{Mutex, RwLock};
 use tracing_subscriber::layer::SubscriberExt;
 
+pub mod context_menu;
 pub mod conversation;
 pub mod dialog;
 pub mod error_codes;
@@ -146,6 +147,8 @@ pub fn run() {
             conversation::commands::cmd_conversations_clear,
             conversation::commands::cmd_conversation_update,
             conversation::commands::cmd_export_markdown,
+            // Context menu command
+            context_menu::cmd_show_context_menu,
             // Other commands
             dialog::cmd_dialog_ask,
             opener::cmd_opener_open_url,

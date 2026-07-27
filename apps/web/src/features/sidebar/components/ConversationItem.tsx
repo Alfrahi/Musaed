@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { MessageSquare, Trash2, Download, Edit2 } from 'lucide-react';
 import { useCurrentConversationId, useSetCurrentConversationId } from '@/store/conversation-store';
 import { useLanguage } from '@/store';
 import { cn } from '@/lib/utils';
 import { useSidebarActions } from '@/features/sidebar/hooks/useSidebarActions';
 import { useTranslation } from '@/lib/i18n';
+import { useContextMenu } from '@/hooks/useContextMenu';
 import type { ConversationMetadata } from '@/store/conversation-store';
 
 interface ConversationItemProps {
@@ -101,6 +102,14 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const { handleDeleteConversation, handleRenameConversation, handleExport } = useSidebarActions();
+  const { showContextMenu } = useContextMenu({
+    onRename: () => {
+      setEditingId(conversation.id);
+      setEditTitle(conversation.title);
+    },
+    onExport: () => handleExport(conversation),
+    onDelete: () => handleDeleteConversation(conversation.id),
+  });
   const { t } = useTranslation(language);
   const rowRef = useRef<HTMLDivElement>(null);
 
@@ -135,6 +144,18 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
     }
   };
 
+  const handleContextMenu = useCallback(
+    async (e: React.MouseEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      showContextMenu('conversation', conversation.id, e.clientX, e.clientY, {
+        rename: t('contextMenu.conversation.rename'),
+        export: t('contextMenu.conversation.export'),
+        delete: t('contextMenu.conversation.delete'),
+      });
+    },
+    [conversation.id, showContextMenu, t]
+  );
+
   return (
     <div
       ref={rowRef}
@@ -145,6 +166,7 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
       id={`conversation-option-${conversation.id}`}
       onClick={() => setCurrentConversationId(conversation.id)}
       onKeyDown={handleKeyDown}
+      onContextMenu={handleContextMenu}
       className={cn(
         'group relative flex cursor-pointer items-center gap-2.5 border-s-2 px-3 py-2 text-[13px] transition-all',
         // focus-visible ring pairs the global :focus-visible outline from globals.css

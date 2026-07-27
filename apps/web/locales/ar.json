@@ -344,7 +344,24 @@
     "browseFiles": "تصفح ملفات المفهرسة في {name}",
     "projectSettings": "افتح إعدادات {name}",
     "showNMoreSources": "اعرض {count} أخرى…",
-    "showFewerSources": "اعرض أقل"
+    "showFewerSources": "اعرض أقل",
+    "conversationMenu": "إجراءات للمحادثة \"{title}\"",
+    "messageMenu": "إجراءات لهذه الرسالة",
+    "codeBlockMenu": "إجراءات لكتلة الكود هذه"
+  },
+  "contextMenu": {
+    "conversation": {
+      "rename": "إعادة تسمية",
+      "export": "تصدير بصيغة Markdown",
+      "delete": "حذف"
+    },
+    "message": {
+      "copy": "نسخ",
+      "regenerate": "إعادة التوليد"
+    },
+    "codeBlock": {
+      "copy": "نسخ"
+    }
   },
   "info": {
     "openInfo": "فتح معلومات التطبيق",
