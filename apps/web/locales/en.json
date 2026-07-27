@@ -1,6 +1,7 @@
 {
   "common": {
     "appName": "Musaed",
+    "library": "Library",
     "done": "Done",
     "close": "Close",
     "save": "Save",

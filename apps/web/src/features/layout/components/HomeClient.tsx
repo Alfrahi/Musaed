@@ -60,13 +60,14 @@ const ModelLibrary = dynamic(() => import('@/features/library').then((m) => m.Mo
 const InfoModal = dynamic(() => import('@/features/info').then((m) => m.InfoModal), { ssr: false });
 
 /** App header bar with title, connection status, and toolbar buttons. */
-const AppHeader = ({
+export const AppHeader = ({
   isTauri,
   isMac,
   isRtl,
   onLibraryOpen,
   onSettingsOpen,
   appName,
+  t,
 }: {
   isTauri: boolean;
   isMac: boolean;
@@ -74,6 +75,7 @@ const AppHeader = ({
   onLibraryOpen: () => void;
   onSettingsOpen: () => void;
   appName: string;
+  t: ReturnType<typeof useTranslation>['t'];
 }) => (
   <header
     data-tauri-drag-region={isTauri ? 'true' : undefined}
@@ -102,14 +104,16 @@ const AppHeader = ({
       <button
         onClick={onLibraryOpen}
         className="hover:border-sidebar-border flex h-10 w-10 items-center justify-center rounded-none border border-transparent text-zinc-500 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
-        title={appName}
+        title={t('common.library')}
+        aria-label={t('common.library')}
       >
         <Library size={18} />
       </button>
       <button
         onClick={onSettingsOpen}
         className="hover:border-sidebar-border flex h-10 w-10 items-center justify-center rounded-none border border-transparent text-zinc-500 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
-        title={appName}
+        title={t('settings.title')}
+        aria-label={t('settings.title')}
       >
         <Sliders size={18} />
       </button>
@@ -163,6 +167,7 @@ const HomeClient = () => {
           onLibraryOpen={() => setLibraryOpen(true)}
           onSettingsOpen={() => setSettingsOpen(true)}
           appName={t('common.appName')}
+          t={t}
         />
         <div className="relative flex min-h-0 flex-1 flex-col">
           <ChatWindowDynamic />
