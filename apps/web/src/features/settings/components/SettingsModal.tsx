@@ -210,7 +210,7 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
       onClose={onClose}
       titleId={titleId}
       maxWidth="max-w-3xl"
-      className="h-[600px]"
+      className="h-[min(85vh,640px)]"
     >
       <RenderModalHeader t={t} onClose={onClose} titleId={titleId} />
 
