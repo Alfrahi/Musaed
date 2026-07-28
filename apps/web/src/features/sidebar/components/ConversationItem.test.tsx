@@ -159,5 +159,16 @@ describe('ConversationItem', () => {
       fireEvent.click(screen.getByTitle('sidebar.deleteChat'));
       expect(mockHandleDeleteConversation).toHaveBeenCalledWith('conv-1');
     });
+
+    it('action buttons have 24×24 px minimum tap targets (WCAG 2.5.5)', () => {
+      render(<ConversationItem conversation={baseConversation} />);
+      const edit = screen.getByTitle('sidebar.renameChat');
+      const exportBtn = screen.getByTitle('sidebar.exportMarkdown');
+      const del = screen.getByTitle('sidebar.deleteChat');
+      for (const btn of [edit, exportBtn, del]) {
+        expect(btn.className).toMatch(/\bmin-w-6\b/);
+        expect(btn.className).toMatch(/\bmin-h-6\b/);
+      }
+    });
   });
 });

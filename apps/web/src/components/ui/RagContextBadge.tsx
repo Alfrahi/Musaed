@@ -58,11 +58,11 @@ export const RagContextBadge = () => {
         <button
           type="button"
           onClick={() => setActiveProjectId(null)}
-          className="text-muted-foreground hover:bg-accent hover:text-foreground rounded p-0.5"
+          className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex min-h-6 min-w-6 items-center justify-center rounded p-1"
           aria-label={t('rag.deactivateRag')}
           title={t('rag.deactivateRag')}
         >
-          <X className="h-2.5 w-2.5" />
+          <X className="h-3 w-3" />
         </button>
       </div>
 

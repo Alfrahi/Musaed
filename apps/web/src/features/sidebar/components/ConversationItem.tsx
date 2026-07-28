@@ -72,21 +72,21 @@ const ItemActions = ({
     >
       <button
         onClick={onEdit}
-        className="hover:text-foreground p-1 transition-colors hover:bg-zinc-300 dark:hover:bg-zinc-700"
+        className="hover:text-foreground inline-flex min-h-6 min-w-6 items-center justify-center p-1 transition-colors hover:bg-zinc-300 dark:hover:bg-zinc-700"
         title={editTitle}
       >
         <Edit2 size={12} />
       </button>
       <button
         onClick={onExport}
-        className="p-1 transition-colors hover:bg-blue-50 hover:text-blue-500 dark:hover:bg-blue-900/20"
+        className="inline-flex min-h-6 min-w-6 items-center justify-center p-1 transition-colors hover:bg-blue-50 hover:text-blue-500 dark:hover:bg-blue-900/20"
         title={exportTitle}
       >
         <Download size={12} className="mirror-rtl" />
       </button>
       <button
         onClick={onDelete}
-        className="p-1 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+        className="inline-flex min-h-6 min-w-6 items-center justify-center p-1 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
         title={deleteTitle}
       >
         <Trash2 size={12} />

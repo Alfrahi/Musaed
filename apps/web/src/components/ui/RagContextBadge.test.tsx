@@ -130,5 +130,12 @@ describe('RagContextBadge', () => {
       const x = screen.getByTitle('rag.deactivateRag');
       expect(x).toBeInTheDocument();
     });
+
+    it('X button has 24×24 px minimum tap target (WCAG 2.5.5)', () => {
+      render(<RagContextBadge />);
+      const x = screen.getByTitle('rag.deactivateRag');
+      expect(x.className).toMatch(/\bmin-w-6\b/);
+      expect(x.className).toMatch(/\bmin-h-6\b/);
+    });
   });
 });
