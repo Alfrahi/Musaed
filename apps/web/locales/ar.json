@@ -362,7 +362,9 @@
     "messageMenu": "إجراءات لهذه الرسالة",
     "codeBlockMenu": "إجراءات لكتلة الكود هذه",
     "dropFiles": "أسقط الملفات لإرفاقها",
-    "skipToContent": "تخطَّ إلى المحتوى الرئيسي"
+    "skipToContent": "تخطَّ إلى المحتوى الرئيسي",
+    "deselectProject": "إلغاء تحديد المشروع",
+    "removeProject": "إزالة المشروع"
   },
   "contextMenu": {
     "conversation": {
