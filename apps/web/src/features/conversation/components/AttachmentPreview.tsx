@@ -42,9 +42,9 @@ const AttachmentPreview = ({
           />
           <button
             onClick={() => onRemoveImage(idx)}
-            className="inset-bs-0.5 inset-ie-0.5 absolute rounded-full bg-black/50 p-0.5 text-white transition-colors hover:bg-black/70"
+            className="inset-bs-0.5 inset-ie-0.5 absolute inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-black/50 p-1 text-white transition-colors hover:bg-black/70"
           >
-            <X size={10} />
+            <X size={12} />
           </button>
         </div>
       ))}
@@ -65,7 +65,7 @@ const AttachmentPreview = ({
           </div>
           <button
             onClick={() => onRemoveFile(idx)}
-            className="inset-bs-1 inset-ie-1 absolute p-0.5 text-zinc-400 transition-colors hover:text-zinc-600 dark:hover:text-zinc-200"
+            className="inset-bs-1 inset-ie-1 absolute inline-flex min-h-6 min-w-6 items-center justify-center p-1 text-zinc-400 transition-colors hover:text-zinc-600 dark:hover:text-zinc-200"
           >
             <X size={12} />
           </button>
