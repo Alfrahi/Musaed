@@ -362,7 +362,9 @@
     "messageMenu": "Actions for this message",
     "codeBlockMenu": "Actions for this code block",
     "dropFiles": "Drop files to attach",
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Skip to main content",
+    "deselectProject": "Deselect project",
+    "removeProject": "Remove project"
   },
   "contextMenu": {
     "conversation": {

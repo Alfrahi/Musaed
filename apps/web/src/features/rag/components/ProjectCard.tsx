@@ -1,7 +1,16 @@
 'use client';
 
 import { memo, useState, useEffect } from 'react';
-import { FolderOpen, Trash2, RefreshCw, Database, X, FolderTree, Settings2 } from 'lucide-react';
+import {
+  FolderOpen,
+  Trash2,
+  RefreshCw,
+  Database,
+  X,
+  Check,
+  FolderTree,
+  Settings2,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { IndexingProgress } from './IndexingProgress';
 import { RagExplorer } from './RagExplorer';
@@ -72,7 +81,7 @@ const ProjectCard = ({
       )}
       onClick={onSelect}
     >
-      <ProjectHeader project={project} isActive={isActive} onSelect={onSelect} />
+      <ProjectHeader project={project} isActive={isActive} onSelect={onSelect} t={t} />
       <ProjectStats project={project} t={t} />
       {isIndexing && indexProgress && (
         <IndexingProgress progress={indexProgress} onAbort={onAbort} onRetry={onRetry} />
@@ -116,10 +125,12 @@ const ProjectHeader = ({
   project,
   isActive,
   onSelect,
+  t,
 }: {
   project: RagProject;
   isActive: boolean;
   onSelect: () => void;
+  t: (key: string) => string;
 }) => {
   return (
     <div className="flex items-center gap-2">
@@ -129,13 +140,17 @@ const ProjectHeader = ({
         <p className="text-muted-foreground truncate text-xs">{truncateFilePath(project.path)}</p>
       </div>
       {isActive && (
-        <X
-          className="text-muted-foreground hover:text-foreground h-3 w-3 shrink-0"
+        <button
+          className="text-muted-foreground hover:text-foreground shrink-0"
           onClick={(e) => {
             e.stopPropagation();
             onSelect();
           }}
-        />
+          aria-label={t('a11y.deselectProject')}
+          title={t('a11y.deselectProject')}
+        >
+          <Check className="h-3 w-3" />
+        </button>
       )}
     </div>
   );
@@ -316,6 +331,7 @@ const ProjectActions = ({
         }}
         className="text-muted-foreground ms-auto flex items-center gap-0.5 text-xs hover:text-red-400"
         title={t('rag.removeProject')}
+        aria-label={t('a11y.removeProject')}
       >
         <Trash2 className="h-3 w-3" />
       </button>

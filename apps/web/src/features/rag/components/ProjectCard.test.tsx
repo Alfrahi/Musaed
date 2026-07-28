@@ -179,4 +179,38 @@ describe('ProjectCard', () => {
       expect(onSelect).not.toHaveBeenCalled();
     });
   });
+
+  describe('active-state toggle icon', () => {
+    it('renders a Check icon with deselect aria-label when project is active', () => {
+      render(<ProjectCard project={mockProject()} {...baseProps} isActive />);
+      const deselectButton = screen.getByRole('button', { name: 'a11y.deselectProject' });
+      expect(deselectButton).toBeInTheDocument();
+    });
+
+    it('does not render the deselect button when project is not active', () => {
+      render(<ProjectCard project={mockProject()} {...baseProps} isActive={false} />);
+      expect(screen.queryByRole('button', { name: 'a11y.deselectProject' })).toBeNull();
+    });
+
+    it('calls onSelect when the deselect Check button is clicked', () => {
+      const onSelect = vi.fn();
+      render(<ProjectCard project={mockProject()} {...baseProps} isActive onSelect={onSelect} />);
+      fireEvent.click(screen.getByRole('button', { name: 'a11y.deselectProject' }));
+      expect(onSelect).toHaveBeenCalled();
+    });
+  });
+
+  describe('remove button', () => {
+    it('renders with aria-label a11y.removeProject', () => {
+      render(<ProjectCard project={mockProject()} {...baseProps} />);
+      expect(screen.getByRole('button', { name: 'a11y.removeProject' })).toBeInTheDocument();
+    });
+
+    it('calls onRemove when clicked', () => {
+      const onRemove = vi.fn();
+      render(<ProjectCard project={mockProject()} {...baseProps} onRemove={onRemove} />);
+      fireEvent.click(screen.getByRole('button', { name: 'a11y.removeProject' }));
+      expect(onRemove).toHaveBeenCalled();
+    });
+  });
 });
