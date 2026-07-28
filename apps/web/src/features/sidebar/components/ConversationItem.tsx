@@ -193,7 +193,7 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
           onSubmit={handleSubmitRename}
         />
       ) : (
-        <span className="flex-1 truncate py-0.5 tracking-tight">{conversation.title}</span>
+        <span className="flex-1 truncate py-0.5 pe-14 tracking-tight">{conversation.title}</span>
       )}
 
       <ItemActions

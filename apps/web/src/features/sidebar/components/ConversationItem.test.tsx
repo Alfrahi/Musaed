@@ -143,6 +143,14 @@ describe('ConversationItem', () => {
     });
   });
 
+  describe('Title/action overlap prevention (Prompt 24)', () => {
+    it('reserves inline-end padding on the title so action buttons do not overlap text', () => {
+      render(<ConversationItem conversation={baseConversation} />);
+      const title = screen.getByText('Hello world');
+      expect(title.className).toMatch(/\bpe-14\b/);
+    });
+  });
+
   describe('Hover-only action buttons reachable on focus (Phase 2 item 21)', () => {
     it('renders edit action buttons and they remain in the DOM when row is focused', () => {
       render(<ConversationItem conversation={baseConversation} />);
