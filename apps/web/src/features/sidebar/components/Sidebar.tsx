@@ -15,11 +15,13 @@ import {
   useFilteredConversations,
 } from '@/store/conversation-store';
 import { useConversationActions } from '@/features/conversation';
+import { Button } from '@/components/ui/button';
 import SearchInput from './SearchInput';
 import ConversationItem from './ConversationItem';
 import SidebarHeader from './SidebarHeader';
 import SidebarSkeleton from './SidebarSkeleton';
 import SidebarInfo from './SidebarInfo';
+import SidebarResizeHandle from './SidebarResizeHandle';
 import { useSidebarActions } from '@/features/sidebar/hooks/useSidebarActions';
 import { useSidebarGrouping, type SidebarItem } from '@/features/sidebar/hooks/useSidebarGrouping';
 import type { ConversationMetadata } from '@/store/conversation-store';
@@ -39,13 +41,15 @@ const GroupHeader = ({
   <div className="pbs-6 pbe-2 inset-bs-0 bg-sidebar mbe-1 sticky z-10 flex items-center justify-between border-b border-zinc-100 ps-3 pe-3 dark:border-zinc-800">
     <span className="caption-md font-black text-zinc-400 uppercase">{label}</span>
     {showClear && (
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={onClear}
-        className="p-1 text-zinc-400 transition-colors hover:text-red-500"
+        className="h-auto w-auto p-1 text-zinc-400 hover:text-red-500"
         title={clearLabel}
       >
         <Eraser size={10} />
-      </button>
+      </Button>
     )}
   </div>
 );
@@ -173,6 +177,57 @@ const TabButtons = ({
   </div>
 );
 
+/** Chats tab content: search input + virtualized conversation listbox. */
+const ChatsTabContent = ({
+  searchQuery,
+  filteredConversations,
+  virtualItems,
+  loadMore,
+  handleListboxKeyDown,
+  handleClearAll,
+  t,
+}: {
+  searchQuery: string;
+  filteredConversations: ConversationMetadata[];
+  virtualItems: SidebarItem[];
+  loadMore: () => void;
+  handleListboxKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
+  handleClearAll: () => void;
+  t: (key: string) => string;
+}) => (
+  <>
+    <SearchInput />
+    <nav aria-label={t('a11y.conversationList')} className="flex-1 overflow-hidden">
+      <div
+        role="listbox"
+        aria-label={t('a11y.conversationList')}
+        tabIndex={-1}
+        onKeyDown={handleListboxKeyDown}
+        className="h-full"
+      >
+        <Virtuoso
+          style={{ height: '100%' }}
+          data={virtualItems}
+          itemContent={(_index, item) => (
+            <SidebarItemContent
+              item={item}
+              searchQuery={searchQuery}
+              filteredConversations={filteredConversations}
+              handleClearAll={handleClearAll}
+              t={t}
+            />
+          )}
+          endReached={() => {
+            if (virtualItems.length < filteredConversations.length) loadMore();
+          }}
+          overscan={200}
+          increaseViewportBy={200}
+        />
+      </div>
+    </nav>
+  </>
+);
+
 const Sidebar = () => {
   const activeTab = useSidebarTab();
   const setActiveTab = useSetSidebarTab();
@@ -184,6 +239,7 @@ const Sidebar = () => {
   const currentConversationId = useCurrentConversationId();
   const setCurrentConversationId = useSetCurrentConversationId();
   const language = useSettingsStore((s) => s.globalSettings.language);
+  const sidebarWidth = useSettingsStore((s) => s.globalSettings.sidebarWidth);
   const isHydrated = useIsHydrated();
   const { t } = useTranslation(language);
   const { handleClearAll } = useSidebarActions();
@@ -214,7 +270,10 @@ const Sidebar = () => {
 
   if (!isHydrated) {
     return (
-      <div className="bg-sidebar border-sidebar-border flex h-full w-60 flex-col border-e">
+      <div
+        className="bg-sidebar border-sidebar-border flex h-full flex-col border-e"
+        style={{ width: sidebarWidth }}
+      >
         <SidebarSkeleton />
       </div>
     );
@@ -231,44 +290,23 @@ const Sidebar = () => {
   return (
     <div
       data-testid="sidebar"
-      className="bg-sidebar border-sidebar-border flex h-full w-60 flex-col border-e select-none"
+      className="bg-sidebar border-sidebar-border flex h-full flex-col border-e select-none"
+      style={{ width: sidebarWidth }}
     >
       <SidebarHeader activeTab={activeTab} onCreateNew={handleCreateNew} />
 
       <TabButtons activeTab={activeTab} setActiveTab={setActiveTab} t={t} />
 
       {activeTab === 'chats' ? (
-        <>
-          <SearchInput />
-          <nav aria-label={t('a11y.conversationList')} className="flex-1 overflow-hidden">
-            <div
-              role="listbox"
-              aria-label={t('a11y.conversationList')}
-              tabIndex={-1}
-              onKeyDown={handleListboxKeyDown}
-              className="h-full"
-            >
-              <Virtuoso
-                style={{ height: '100%' }}
-                data={virtualItems}
-                itemContent={(_index, item) => (
-                  <SidebarItemContent
-                    item={item}
-                    searchQuery={searchQuery}
-                    filteredConversations={filteredConversations}
-                    handleClearAll={handleClearAll}
-                    t={t}
-                  />
-                )}
-                endReached={() => {
-                  if (virtualItems.length < filteredConversations.length) loadMore();
-                }}
-                overscan={200}
-                increaseViewportBy={200}
-              />
-            </div>
-          </nav>
-        </>
+        <ChatsTabContent
+          searchQuery={searchQuery}
+          filteredConversations={filteredConversations}
+          virtualItems={virtualItems}
+          loadMore={loadMore}
+          handleListboxKeyDown={handleListboxKeyDown}
+          handleClearAll={handleClearAll}
+          t={t}
+        />
       ) : (
         <div className="flex-1 px-2">
           <ProjectList hideHeaderAction />
@@ -283,6 +321,7 @@ const Sidebar = () => {
       )}
 
       <SidebarInfo />
+      <SidebarResizeHandle />
     </div>
   );
 };

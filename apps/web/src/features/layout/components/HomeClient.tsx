@@ -11,7 +11,10 @@ import {
   useSetLibraryOpen,
   useSetSettingsOpen,
   useSetInfoOpen,
+  useSetCheatsheetOpen,
+  useSetCommandPaletteOpen,
 } from '@/store/hooks';
+import { useUIStore } from '@/store/ui-store';
 import { useGlobalSettings } from '@/features/settings';
 import { registerHydrationCoordination } from '@/store/coordination';
 import { Sliders, Library } from 'lucide-react';
@@ -20,6 +23,7 @@ import { useTranslation } from '@/lib/i18n';
 import { useGlobalShortcuts } from '@/hooks/useGlobalShortcuts';
 import { cn } from '@/lib/utils';
 import { checkIsTauri } from '@/lib/ipc';
+import { Button } from '@/components/ui/button';
 
 import { useTauriEvents, useConversationMessages } from '@/features/conversation';
 import { useAppInitialization } from '@/hooks';
@@ -59,6 +63,10 @@ const ModelLibrary = dynamic(() => import('@/features/library').then((m) => m.Mo
   ssr: false,
 });
 const InfoModal = dynamic(() => import('@/features/info').then((m) => m.InfoModal), { ssr: false });
+const CommandPalette = dynamic(() => import('@/components/ui/CommandPalette'), { ssr: false });
+const ShortcutCheatsheet = dynamic(() => import('@/components/ui/ShortcutCheatsheet'), {
+  ssr: false,
+});
 
 /** App header bar with title, connection status, and toolbar buttons. */
 export const AppHeader = ({
@@ -102,22 +110,26 @@ export const AppHeader = ({
     </div>
     <div className="flex items-center gap-2">
       <TaskStatus />
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={onLibraryOpen}
-        className="hover:border-sidebar-border flex h-10 w-10 items-center justify-center rounded-none border border-transparent text-zinc-500 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        className="hover:border-sidebar-border h-10 w-10 rounded-none border border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
         title={t('common.library')}
         aria-label={t('common.library')}
       >
         <Library size={18} />
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={onSettingsOpen}
-        className="hover:border-sidebar-border flex h-10 w-10 items-center justify-center rounded-none border border-transparent text-zinc-500 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        className="hover:border-sidebar-border h-10 w-10 rounded-none border border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
         title={t('settings.title')}
         aria-label={t('settings.title')}
       >
         <Sliders size={18} />
-      </button>
+      </Button>
     </div>
   </header>
 );
@@ -131,6 +143,10 @@ const HomeClient = () => {
   const setLibraryOpen = useSetLibraryOpen();
   const setSettingsOpen = useSetSettingsOpen();
   const setInfoOpen = useSetInfoOpen();
+  const setCheatsheetOpen = useSetCheatsheetOpen();
+  const setCommandPaletteOpen = useSetCommandPaletteOpen();
+  const isCheatsheetOpen = useUIStore((s) => s.isCheatsheetOpen);
+  const isCommandPaletteOpen = useUIStore((s) => s.isCommandPaletteOpen);
   const { initializeApp } = useAppInitialization();
   const { reconnect } = useOllamaConnection();
   const [mounted, setMounted] = useState(false);
@@ -187,6 +203,15 @@ const HomeClient = () => {
           <ModelLibrary isOpen={isLibraryOpen} onClose={() => setLibraryOpen(false)} />
         )}
         {isInfoOpen && <InfoModal isOpen={isInfoOpen} onClose={() => setInfoOpen(false)} />}
+        {isCheatsheetOpen && (
+          <ShortcutCheatsheet isOpen={isCheatsheetOpen} onClose={() => setCheatsheetOpen(false)} />
+        )}
+        {isCommandPaletteOpen && (
+          <CommandPalette
+            isOpen={isCommandPaletteOpen}
+            onClose={() => setCommandPaletteOpen(false)}
+          />
+        )}
       </AnimatePresence>
     </main>
   );

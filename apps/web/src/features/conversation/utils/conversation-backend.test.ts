@@ -47,6 +47,7 @@ describe('Conversation Backend Service', () => {
       enableLatex: false,
       enableMermaid: true,
       density: 1.0,
+      sidebarWidth: 260,
     },
     createdAt: Date.now(),
     updatedAt: Date.now(),

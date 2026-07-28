@@ -5,6 +5,7 @@ import { Check, Copy } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import { useSettingsStore } from '@/store';
 import { useContextMenu } from '@/hooks/useContextMenu';
+import { Button } from '@/components/ui/button';
 
 interface CodeBlockProps {
   language?: string;
@@ -72,9 +73,11 @@ const CodeBlock = ({ language, value }: CodeBlockProps) => {
             {displayLanguage}
           </span>
         </div>
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onCopy}
-          className="caption-xs flex items-center gap-1.5 rounded px-2 py-1 font-bold tracking-widest text-zinc-400 uppercase transition-colors outline-none hover:text-white focus-visible:ring-1 focus-visible:ring-blue-500"
+          className="caption-xs gap-1.5 rounded px-2 py-1 font-bold tracking-widest text-zinc-400 uppercase hover:text-white focus-visible:ring-1 focus-visible:ring-blue-500"
           aria-label={t('a11y.copyCode')}
         >
           {copied ? (
@@ -88,7 +91,7 @@ const CodeBlock = ({ language, value }: CodeBlockProps) => {
               <span>{t('common.copy')}</span>
             </>
           )}
-        </button>
+        </Button>
       </div>
 
       <div className="overflow-x-auto p-4 outline-none focus-visible:ring-2 focus-visible:ring-blue-500">

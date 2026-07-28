@@ -27,6 +27,7 @@ const ThemeSettings = () => {
       </div>
       <div className="flex w-full rounded-none bg-zinc-100 p-1 dark:bg-zinc-800">
         {themes.map(({ id, icon: Icon }) => (
+          // eslint-disable-next-line musaed-buttons/prefer-button-primitive -- segmented control toggle, not an action button
           <button
             key={id}
             onClick={() => updateGlobalSettings({ theme: id })}

@@ -12,6 +12,7 @@ import { useSettingsStore } from '@/store';
 import { useModelStore } from '@/store/model-store';
 import { useChatInputStore } from '@/store/chat-input-store';
 import { ErrorFallback } from '@/components/ui';
+import { Button } from '@/components/ui/button';
 import MessageBubble from './MessageBubble';
 import ChatWindowSkeleton from './ChatWindowSkeleton';
 import EmptyState, { type OnboardingState } from './EmptyState';
@@ -45,13 +46,15 @@ const useMessageLabels = (
 /** Floating scroll-to-bottom button. */
 const ScrollButton = ({ onClick, label }: { onClick: () => void; label: string }) => (
   <div className="inset-be-6 pointer-events-none absolute start-1/2 z-20 flex -translate-x-1/2 justify-center">
-    <button
+    <Button
+      variant="outline"
+      size="icon"
       onClick={onClick}
-      className="pointer-events-auto rounded-none border border-zinc-200 bg-white p-2 text-zinc-500 shadow-lg transition-all hover:text-blue-500 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+      className="pointer-events-auto rounded-none border-zinc-200 bg-white text-zinc-500 shadow-lg hover:text-blue-500 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
       aria-label={label}
     >
       <ArrowDown size={20} />
-    </button>
+    </Button>
   </div>
 );
 

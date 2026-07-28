@@ -241,6 +241,7 @@ describe('Sidebar', () => {
         enableLatex: false,
         enableMermaid: true,
         density: 1.0,
+        sidebarWidth: 260,
       },
     });
   });
@@ -390,6 +391,7 @@ describe('Sidebar', () => {
           enableLatex: false,
           enableMermaid: true,
           density: 1.0,
+          sidebarWidth: 260,
         },
       });
 

@@ -20,6 +20,7 @@ const DiagnosticsSettings = () => {
             <Activity size={14} className="text-zinc-400" />
             <label>{t('settings.systemDiagnostics')}</label>
           </div>
+          {/* eslint-disable-next-line musaed-buttons/prefer-button-primitive -- inline text-link, not a CVA button */}
           <button
             onClick={() => setIsLogViewerOpen(true)}
             className="caption-xs font-bold tracking-widest text-blue-600 uppercase transition-colors hover:text-blue-700"

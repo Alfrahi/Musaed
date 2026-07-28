@@ -23,4 +23,5 @@ export const ChatSettingsSchema = z.object({
   enableLatex: z.boolean().default(false),
   enableMermaid: z.boolean().default(true),
   density: z.number().default(1.0),
+  sidebarWidth: z.number().min(200).max(400).default(260),
 });

@@ -20,4 +20,5 @@ export { useAutoTitle, triggerAutoTitle } from './hooks/useAutoTitle';
 export { useConversationMessages } from './hooks/useConversationMessages';
 export { initializeConversations } from './utils/conversation-backend';
 export { isDefaultTitle, generateConversationTitle } from './utils/title-generator';
+export { attachmentImageSrc } from './image-attachment';
 export { default as ChatFeature } from './feature.manifest';

@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
 import { type Language } from '@musaed/contracts';
 import { useModelCapabilities } from '@/features/library/hooks/useModelCapabilities';
+import { Button } from '@/components/ui/button';
 
 interface InstalledModelCardProps {
   name: string;
@@ -83,12 +84,14 @@ const InstalledModelCard = ({
           {t('common.ready')}
         </div>
         {onDelete && (
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onDelete(name)}
-            className="rounded-lg p-2 text-zinc-400 transition-all hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+            className="rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
           >
             <Trash2 size={18} />
-          </button>
+          </Button>
         )}
       </div>
     </div>

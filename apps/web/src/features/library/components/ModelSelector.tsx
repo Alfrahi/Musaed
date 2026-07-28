@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
 import { useModelActions } from '@/features/library/hooks/useModelActions';
 import { useModelSelectorKeyboard } from '@/features/library/hooks/useModelSelectorKeyboard';
+import { Button } from '@/components/ui/button';
 
 /** Dropdown trigger button with selected model name. */
 const SelectorTrigger = ({
@@ -70,14 +71,15 @@ const RefreshButton = ({
   isStreaming: boolean;
   title: string;
 }) => (
-  <button
-    type="button"
+  <Button
+    variant="ghost"
+    size="icon"
     onClick={onClick}
-    className="focus-visible:ring-offset-background rounded-none p-2 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:hover:bg-zinc-800"
+    className="rounded-none text-zinc-400 hover:bg-zinc-100 hover:text-blue-500 dark:hover:bg-zinc-800"
     title={title}
   >
     <RefreshCw size={14} className={cn(isStreaming && 'animate-spin')} />
-  </button>
+  </Button>
 );
 
 /** Single model option in the dropdown. */
@@ -132,7 +134,7 @@ const EmptyModels = ({ message }: { message: string }) => (
   </div>
 );
 
-/** Dropdown panel with model list. */
+/** Dropdown panel with model list and optional search filter. */
 const ModelDropdown = ({
   listboxId,
   triggerId,
@@ -144,6 +146,9 @@ const ModelDropdown = ({
   onOptionHover,
   headerLabel,
   emptyLabel,
+  searchQuery,
+  onSearchChange,
+  searchPlaceholder,
 }: {
   listboxId: string;
   triggerId: string;
@@ -155,40 +160,60 @@ const ModelDropdown = ({
   onOptionHover: (index: number) => void;
   headerLabel: string;
   emptyLabel: string;
-}) => (
-  <div
-    id={listboxId}
-    className="inset-be-full mbe-2 border-sidebar-border shadow-pro animate-in fade-in slide-in-from-bottom-2 absolute start-0 z-50 min-w-[240px] border bg-white py-1 duration-200 dark:bg-zinc-900"
-    role="listbox"
-    aria-labelledby={triggerId}
-  >
-    <div className="border-be border-sidebar-border mbe-1 py-2.5 ps-4 pe-4">
-      <span className="caption-md font-black text-zinc-400 uppercase">{headerLabel}</span>
+  searchQuery: string;
+  onSearchChange: (q: string) => void;
+  searchPlaceholder: string;
+}) => {
+  const filtered = searchQuery
+    ? models.filter((m) => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : models;
+
+  return (
+    <div
+      id={listboxId}
+      className="inset-be-full mbe-2 border-sidebar-border shadow-pro animate-in fade-in slide-in-from-bottom-2 absolute start-0 z-50 min-w-[240px] border bg-white py-1 duration-200 dark:bg-zinc-900"
+      role="listbox"
+      aria-labelledby={triggerId}
+    >
+      <div className="border-be border-sidebar-border mbe-1 py-2.5 ps-4 pe-4">
+        <span className="caption-md font-black text-zinc-400 uppercase">{headerLabel}</span>
+      </div>
+      <div className="border-be border-sidebar-border px-3 pb-2">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder={searchPlaceholder}
+          className="w-full border-none bg-transparent text-xs outline-none placeholder:text-zinc-400"
+          aria-label={searchPlaceholder}
+        />
+      </div>
+      <div className="max-h-[300px] overflow-y-auto">
+        {filtered.length > 0 ? (
+          filtered.map((m, i) => (
+            <ModelOption
+              key={m.name}
+              id={`${optionIdPrefix}-${i}`}
+              name={m.name}
+              isSelected={selectedModel === m.name}
+              isActive={i === activeIndex}
+              index={i}
+              onSelect={() => onSelect(m.name)}
+              onOptionHover={onOptionHover}
+            />
+          ))
+        ) : (
+          <EmptyModels message={emptyLabel} />
+        )}
+      </div>
     </div>
-    <div className="max-h-[300px] overflow-y-auto">
-      {models.length > 0 ? (
-        models.map((m, i) => (
-          <ModelOption
-            key={m.name}
-            id={`${optionIdPrefix}-${i}`}
-            name={m.name}
-            isSelected={selectedModel === m.name}
-            isActive={i === activeIndex}
-            index={i}
-            onSelect={() => onSelect(m.name)}
-            onOptionHover={onOptionHover}
-          />
-        ))
-      ) : (
-        <EmptyModels message={emptyLabel} />
-      )}
-    </div>
-  </div>
-);
+  );
+};
 
 const ModelSelector = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
+  const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -228,8 +253,10 @@ const ModelSelector = () => {
     if (isOpen) {
       const selectedIdx = modelNames.indexOf(selectedModel);
       setActiveIndex(selectedIdx >= 0 ? selectedIdx : modelNames.length > 0 ? 0 : -1);
+      setSearchQuery('');
     } else {
       setActiveIndex(-1);
+      setSearchQuery('');
       typeAheadRef.current = { keys: '', at: 0 };
     }
   }, [isOpen, modelNames, selectedModel, typeAheadRef]);
@@ -291,6 +318,9 @@ const ModelSelector = () => {
           onOptionHover={setActiveIndex}
           headerLabel={t('a11y.selectModel')}
           emptyLabel={t('library.noModelsFound')}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder={t('a11y.searchModels')}
         />
       )}
     </div>

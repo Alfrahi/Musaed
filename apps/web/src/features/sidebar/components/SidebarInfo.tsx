@@ -4,6 +4,7 @@ import { Info } from 'lucide-react';
 import { useSetInfoOpen } from '@/store/hooks';
 import { useLanguage } from '@/store';
 import { useTranslation } from '@/lib/i18n';
+import { Button } from '@/components/ui/button';
 
 const SidebarInfo = () => {
   const setInfoOpen = useSetInfoOpen();
@@ -13,9 +14,10 @@ const SidebarInfo = () => {
 
   return (
     <div className="border-bs border-sidebar-border shrink-0 bg-zinc-50/50 dark:bg-zinc-900/20">
-      <button
+      <Button
+        variant="ghost"
         onClick={() => setInfoOpen(true)}
-        className="group flex w-full items-center justify-between p-4 text-start transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
+        className="group flex w-full items-center justify-between p-4 text-start hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
         aria-label={t('info.openInfo')}
       >
         <div className="flex min-w-0 items-center gap-3">
@@ -31,7 +33,7 @@ const SidebarInfo = () => {
             </span>
           </div>
         </div>
-      </button>
+      </Button>
     </div>
   );
 };

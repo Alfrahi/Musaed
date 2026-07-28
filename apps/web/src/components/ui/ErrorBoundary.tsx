@@ -8,6 +8,7 @@ import { logger } from '@/lib/logger';
 import { opener } from '@/lib/ipc';
 import { sanitizeError } from '@musaed/contracts';
 import { config } from '@/lib/config';
+import { Button } from '@/components/ui/button';
 
 interface Props {
   children: ReactNode;
@@ -139,18 +140,14 @@ class ErrorBoundary extends Component<Props, State> {
 
             <div className="flex flex-col gap-2">
               {errorUI.actions.map((action, idx) => (
-                <button
+                <Button
                   key={idx}
+                  variant={action.primary ? 'secondary' : 'outline'}
                   onClick={action.onClick}
-                  className={`flex items-center justify-center gap-2 rounded-lg px-4 py-3 font-medium transition-all ${
-                    action.primary
-                      ? 'bg-gray-900 text-white hover:opacity-90 dark:bg-gray-100 dark:text-gray-900'
-                      : 'border border-gray-300 text-gray-900 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-900'
-                  }`}
                 >
                   <RefreshCw size={16} />
                   {action.label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>

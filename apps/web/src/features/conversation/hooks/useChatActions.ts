@@ -280,7 +280,6 @@ export const useChatActions = () => {
     [
       t,
       initiateStreaming,
-      stopStreaming,
       setErrorMessage,
       messageStore,
       currentConversationId,

@@ -7,6 +7,7 @@ import { useIpcLatencyStats } from '@/features/settings/hooks/useIpcLatency';
 import { useLanguage } from '@/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 type Row = {
   command: string;
@@ -111,15 +112,16 @@ const IpcLatencyPanel = () => {
             </span>
           )}
         </div>
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={reset}
-          className="caption-xs flex items-center gap-1 font-bold tracking-widest text-blue-600 uppercase transition-colors hover:text-blue-700"
+          className="caption-xs gap-1 font-bold tracking-widest text-blue-600 uppercase hover:text-blue-700"
           title={t('settings.ipcLatency.clear')}
         >
           <RefreshCw size={12} aria-hidden="true" />
           {t('settings.ipcLatency.clear')}
-        </button>
+        </Button>
       </div>
 
       <p className="caption-md font-bold tracking-widest text-zinc-400 uppercase">

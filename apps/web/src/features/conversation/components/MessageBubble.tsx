@@ -25,6 +25,7 @@ import { useTranslation } from '@/lib/i18n';
 import { useContextMenu } from '@/hooks/useContextMenu';
 import { FileChunkViewer } from '@/features/rag';
 import ModalLayout from '@/components/ui/ModalLayout';
+import AttachmentLightbox from '@/components/ui/AttachmentLightbox';
 import { Button } from '@/components/ui/button';
 
 /** Max number of citation chips rendered before an overflow "Show N more…"
@@ -380,6 +381,39 @@ const MessageHeader = ({
 );
 
 /**
+ * Inline image gallery for user messages. Extracted to keep MessageBubble
+ * under the max-lines-per-function lint gate.
+ */
+const MessageImages = ({
+  images,
+  onImageClick,
+}: {
+  images: string[];
+  onImageClick: (img: string) => void;
+}) => (
+  <div className="flex flex-wrap gap-2">
+    {images.map((img, idx) => (
+      <Button
+        key={idx}
+        variant="ghost"
+        size="icon"
+        onClick={() => onImageClick(img)}
+        className="h-auto w-auto cursor-zoom-in p-0"
+      >
+        <Image
+          src={attachmentImageSrc(img)}
+          alt=""
+          width={384}
+          height={256}
+          unoptimized
+          className="border-sidebar-border max-w-sm border shadow-sm"
+        />
+      </Button>
+    ))}
+  </div>
+);
+
+/**
  * Renders a single message bubble in the chat window.
  */
 const MessageBubble = ({
@@ -396,6 +430,7 @@ const MessageBubble = ({
   const sourceReferences = (message.ragSources ?? []) as SourceReference[];
   const [isExpanded, setIsExpanded] = useState(sourceReferences.length > 0);
   const [openSource, setOpenSource] = useState<SourceReference | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
   const titleId = 'rag-source-title';
@@ -429,19 +464,7 @@ const MessageBubble = ({
           />
 
           {message.images && message.images.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {message.images.map((img, idx) => (
-                <Image
-                  key={idx}
-                  src={attachmentImageSrc(img)}
-                  alt=""
-                  width={384}
-                  height={256}
-                  unoptimized
-                  className="border-sidebar-border max-w-sm border shadow-sm"
-                />
-              ))}
-            </div>
+            <MessageImages images={message.images} onImageClick={setLightboxImage} />
           )}
 
           <div className="text-foreground selection:bg-primary/20 text-[14px] leading-relaxed antialiased">
@@ -475,6 +498,14 @@ const MessageBubble = ({
           titleId={titleId}
           onClose={() => setOpenSource(null)}
           t={t}
+        />
+      )}
+
+      {lightboxImage && (
+        <AttachmentLightbox
+          isOpen
+          onClose={() => setLightboxImage(null)}
+          imageSrc={lightboxImage}
         />
       )}
     </div>

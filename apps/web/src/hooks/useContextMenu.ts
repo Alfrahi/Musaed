@@ -44,13 +44,7 @@ export function useContextMenu(handlers: {
           break;
       }
     },
-    [
-      handlers.onRename,
-      handlers.onExport,
-      handlers.onDelete,
-      handlers.onCopy,
-      handlers.onRegenerate,
-    ]
+    [handlers]
   );
 
   return { showContextMenu };

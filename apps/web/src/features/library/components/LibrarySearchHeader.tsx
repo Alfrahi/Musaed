@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
 import { type Language } from '@musaed/contracts';
 import { opener } from '@/lib/ipc';
+import { Button } from '@/components/ui/button';
 
 interface LibrarySearchHeaderProps {
   language: Language;
@@ -52,22 +53,26 @@ const HeaderBar = ({
       </div>
     </div>
     <div className="flex items-center gap-2">
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={onRefresh}
         className={cn(
-          'rounded-lg p-2 text-zinc-500 transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800',
+          'rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800',
           isRefreshing && 'animate-spin text-blue-500'
         )}
         title={refreshTitle}
       >
         <RefreshCw size={20} />
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={onClose}
-        className="rounded-lg p-2 transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        className="rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
       >
         <X size={24} />
-      </button>
+      </Button>
     </div>
   </div>
 );
@@ -134,14 +139,16 @@ const CustomPullForm = ({
           className="w-full rounded-lg border border-zinc-200 bg-white py-2 ps-9 pe-3 font-mono text-xs transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
         />
       </div>
-      <button
+      <Button
         type="submit"
+        variant="secondary"
+        size="icon"
         disabled={!customModel.trim()}
-        className="rounded-lg bg-zinc-900 p-2 text-white transition-all active:scale-95 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+        className="rounded-lg active:scale-95 disabled:opacity-50"
         title={buttonTitle}
       >
         <Plus size={18} />
-      </button>
+      </Button>
     </form>
   );
 };
@@ -208,6 +215,7 @@ const LibrarySearchHeader = ({
             buttonTitle={t('library.pullModel')}
           />
           <div className="caption-xs hidden items-center gap-4 font-bold tracking-widest text-zinc-500 uppercase lg:flex">
+            {}
             <button
               onClick={() => opener.openUrl('https://ollama.com/library')}
               className="flex items-center gap-1 transition-colors hover:text-blue-500"

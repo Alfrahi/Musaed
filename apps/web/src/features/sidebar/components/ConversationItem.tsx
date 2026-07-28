@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useSidebarActions } from '@/features/sidebar/hooks/useSidebarActions';
 import { useTranslation } from '@/lib/i18n';
 import { useContextMenu } from '@/hooks/useContextMenu';
+import { Button } from '@/components/ui/button';
 import type { ConversationMetadata } from '@/store/conversation-store';
 
 interface ConversationItemProps {
@@ -70,27 +71,33 @@ const ItemActions = ({
       className="absolute end-2 flex items-center gap-1 bg-inherit ps-2 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
       onClick={stop}
     >
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={onEdit}
-        className="hover:text-foreground inline-flex min-h-6 min-w-6 items-center justify-center p-1 transition-colors hover:bg-zinc-300 dark:hover:bg-zinc-700"
+        className="hover:text-foreground h-auto min-h-6 w-auto min-w-6 p-1 hover:bg-zinc-300 dark:hover:bg-zinc-700"
         title={editTitle}
       >
         <Edit2 size={12} />
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={onExport}
-        className="inline-flex min-h-6 min-w-6 items-center justify-center p-1 transition-colors hover:bg-blue-50 hover:text-blue-500 dark:hover:bg-blue-900/20"
+        className="h-auto min-h-6 w-auto min-w-6 p-1 hover:bg-blue-50 hover:text-blue-500 dark:hover:bg-blue-900/20"
         title={exportTitle}
       >
         <Download size={12} className="mirror-rtl" />
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={onDelete}
-        className="inline-flex min-h-6 min-w-6 items-center justify-center p-1 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+        className="h-auto min-h-6 w-auto min-w-6 p-1 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
         title={deleteTitle}
       >
         <Trash2 size={12} />
-      </button>
+      </Button>
     </div>
   );
 };

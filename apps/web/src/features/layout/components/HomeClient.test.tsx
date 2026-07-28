@@ -16,6 +16,17 @@ vi.mock('@/store/hooks', () => ({
   useSetLibraryOpen: () => vi.fn(),
   useSetSettingsOpen: () => vi.fn(),
   useSetInfoOpen: () => vi.fn(),
+  useSetCheatsheetOpen: () => vi.fn(),
+  useSetCommandPaletteOpen: () => vi.fn(),
+}));
+
+vi.mock('@/store/ui-store', () => ({
+  useUIStore: vi.fn((selector) =>
+    selector({
+      isCheatsheetOpen: false,
+      isCommandPaletteOpen: false,
+    })
+  ),
 }));
 
 vi.mock('@/store/coordination', () => ({
@@ -66,19 +77,19 @@ vi.mock('next/dynamic', () => ({
 }));
 
 vi.mock('next/image', () => ({
+  // eslint-disable-next-line @next/next/no-img-element -- test mock for next/image
   default: ({ alt }: { alt: string }) => <img alt={alt} />,
 }));
 
-vi.mock('framer-motion', async (importOriginal) => {
-  const actual = await importOriginal();
+vi.mock('framer-motion', async () => {
   return {
-    ...actual,
     motion: {
       div: 'div',
       button: 'button',
       span: 'span',
     },
     AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    useReducedMotion: () => false,
   };
 });
 

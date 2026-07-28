@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo, useId } from 'react';
-import { X, Settings2, RotateCcw, Cpu, HardDrive, Terminal, Layout } from 'lucide-react';
+import { useState, useMemo, useId, useEffect, useRef } from 'react';
+import { X, Settings2, RotateCcw, Cpu, HardDrive, Terminal, Layout, Search } from 'lucide-react';
 import { useGlobalSettings } from '@/store/settings-store';
 import { useSettingsActions } from '@/features/settings/hooks/useSettingsActions';
 import LanguageSettings from './LanguageSettings';
@@ -98,21 +98,52 @@ interface RenderModalHeaderProps {
   t: (key: string) => string;
   onClose: () => void;
   titleId: string;
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  onSearchKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  searchInputRef: React.RefObject<HTMLInputElement | null>;
 }
 
-const RenderModalHeader = ({ t, onClose, titleId }: RenderModalHeaderProps) => (
-  <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 p-4 dark:border-zinc-800">
-    <div className="flex items-center gap-2 font-semibold">
-      <Settings2 size={18} className="text-blue-500" aria-hidden="true" />
-      <span id={titleId}>{t('settings.title')}</span>
+const RenderModalHeader = ({
+  t,
+  onClose,
+  titleId,
+  searchQuery,
+  onSearchChange,
+  onSearchKeyDown,
+  searchInputRef,
+}: RenderModalHeaderProps) => (
+  <div className="flex shrink-0 flex-col gap-3 border-b border-zinc-100 p-4 dark:border-zinc-800">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2 font-semibold">
+        <Settings2 size={18} className="text-blue-500" aria-hidden="true" />
+        <span id={titleId}>{t('settings.title')}</span>
+      </div>
+      <button
+        onClick={onClose}
+        className="rounded-lg p-2 text-zinc-500 transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        aria-label={t('a11y.closeModal')}
+      >
+        <X size={20} />
+      </button>
     </div>
-    <button
-      onClick={onClose}
-      className="rounded-lg p-2 text-zinc-500 transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800"
-      aria-label={t('a11y.closeModal')}
-    >
-      <X size={20} />
-    </button>
+    <div className="relative w-full">
+      <Search
+        size={16}
+        className="pointer-events-none absolute inset-y-0 start-3 my-auto text-zinc-400"
+        aria-hidden="true"
+      />
+      <input
+        ref={searchInputRef}
+        type="search"
+        value={searchQuery}
+        onChange={(e) => onSearchChange(e.target.value)}
+        onKeyDown={onSearchKeyDown}
+        placeholder={t('settings.searchPlaceholder')}
+        aria-label={t('settings.searchPlaceholder')}
+        className="w-full rounded-lg border border-zinc-200 bg-white py-2 ps-9 pe-3 text-sm text-zinc-900 transition-all outline-none placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+      />
+    </div>
   </div>
 );
 
@@ -163,10 +194,35 @@ const RenderModalFooter = ({ t, onClose }: RenderModalFooterProps) => (
 
 const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const titleId = useId();
   const globalSettings = useGlobalSettings();
   const { resetGlobalSettings } = useSettingsActions();
   const { t } = useTranslation(globalSettings.language);
+
+  // Reset search when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setSearchQuery('');
+    }
+  }, [isOpen]);
+
+  // Listen for Cmd+K while settings is open to focus the search input.
+  // Uses stopImmediatePropagation to prevent the global Cmd+K handler
+  // (useGlobalShortcuts) from also opening the command palette.
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
 
   const handleReset = async () => {
     const confirmed = await dialog.ask(t('settings.confirmReset'), {
@@ -179,30 +235,29 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
 
   const tabs = useMemo(
     () => [
-      {
-        id: 'general' as const,
-        label: t('settings.tabs.general'),
-        icon: Settings2,
-      },
-      {
-        id: 'appearance' as const,
-        label: t('settings.tabs.appearance'),
-        icon: Layout,
-      },
+      { id: 'general' as const, label: t('settings.tabs.general'), icon: Settings2 },
+      { id: 'appearance' as const, label: t('settings.tabs.appearance'), icon: Layout },
       { id: 'ai' as const, label: t('settings.tabs.ai'), icon: Cpu },
-      {
-        id: 'storage' as const,
-        label: t('settings.tabs.storage'),
-        icon: HardDrive,
-      },
-      {
-        id: 'advanced' as const,
-        label: t('settings.tabs.advanced'),
-        icon: Terminal,
-      },
+      { id: 'storage' as const, label: t('settings.tabs.storage'), icon: HardDrive },
+      { id: 'advanced' as const, label: t('settings.tabs.advanced'), icon: Terminal },
     ],
     [t]
   );
+
+  const filteredTabs = searchQuery
+    ? tabs.filter((tab) => tab.label.toLowerCase().includes(searchQuery.toLowerCase()))
+    : tabs;
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && filteredTabs.length > 0) {
+      e.preventDefault();
+      setActiveTab(filteredTabs[0].id);
+      setSearchQuery('');
+    } else if (e.key === 'Escape') {
+      setSearchQuery('');
+      searchInputRef.current?.blur();
+    }
+  };
 
   return (
     <ModalLayout
@@ -212,10 +267,22 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
       maxWidth="max-w-3xl"
       className="h-[min(85vh,640px)]"
     >
-      <RenderModalHeader t={t} onClose={onClose} titleId={titleId} />
+      <RenderModalHeader
+        t={t}
+        onClose={onClose}
+        titleId={titleId}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onSearchKeyDown={handleSearchKeyDown}
+        searchInputRef={searchInputRef}
+      />
 
       <div className="flex flex-1 overflow-hidden">
-        <RenderTabNavigation tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
+        <RenderTabNavigation
+          tabs={filteredTabs}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+        />
 
         <main className="flex-1 overflow-y-auto bg-white p-8 dark:bg-zinc-950/20">
           <RenderContent activeTab={activeTab} t={t} handleReset={handleReset} />

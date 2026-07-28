@@ -7,6 +7,7 @@ import { useSetSidebarTab, useSettingsStore } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 import { RagExplorer } from '@/features/rag';
 import ModalLayout from '@/components/ui/ModalLayout';
+import { Button } from '@/components/ui/button';
 
 /**
  * RAG context indicator that lives in the chat compose surface.
@@ -30,15 +31,16 @@ export const RagContextBadge = () => {
 
   if (!activeProject) {
     return (
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => setSidebarTab('projects')}
-        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs transition-colors"
+        className="text-muted-foreground hover:text-foreground h-auto gap-1 rounded-md px-2 py-0.5 text-xs"
         aria-label={t('rag.addProject')}
       >
         <Plus className="h-3 w-3" />
         <span>{t('rag.addProject')}</span>
-      </button>
+      </Button>
     );
   }
 
@@ -47,23 +49,25 @@ export const RagContextBadge = () => {
     <>
       <div className="bg-accent/50 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs">
         <FolderOpen className="text-muted-foreground h-3 w-3" />
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => setIsExplorerOpen(true)}
-          className="text-muted-foreground hover:text-foreground truncate font-medium transition-colors"
+          className="text-muted-foreground hover:text-foreground h-auto truncate p-0 font-medium"
           title={t('rag.title')}
         >
           {activeProject.name}
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => setActiveProjectId(null)}
-          className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex min-h-6 min-w-6 items-center justify-center rounded p-1"
+          className="text-muted-foreground hover:bg-accent hover:text-foreground h-auto min-h-6 w-auto min-w-6 rounded p-1"
           aria-label={t('rag.deactivateRag')}
           title={t('rag.deactivateRag')}
         >
           <X className="h-3 w-3" />
-        </button>
+        </Button>
       </div>
 
       {isExplorerOpen && (
@@ -79,14 +83,15 @@ export const RagContextBadge = () => {
               <h2 id={titleId} className="text-base font-medium">
                 {activeProject.name}
               </h2>
-              <button
-                type="button"
-                className="hover:bg-accent rounded-md p-1"
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hover:bg-accent rounded-md"
                 onClick={() => setIsExplorerOpen(false)}
                 aria-label={t('a11y.closeModal')}
               >
                 <X className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
             <div className="flex-1 overflow-hidden">
               <RagExplorer />

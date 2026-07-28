@@ -3,6 +3,7 @@
 import React, { useId } from 'react';
 import { Info, Github, Shield, Cpu, X, type LucideIcon } from 'lucide-react';
 import { ModalLayout } from '@/components/ui';
+import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/lib/i18n';
 import { useLanguage } from '@/store';
 import { opener } from '@/lib/ipc';
@@ -57,12 +58,14 @@ const InfoHeader = ({
         <p className="caption-md font-bold tracking-widest text-zinc-500 uppercase">v{version}</p>
       </div>
     </div>
-    <button
+    <Button
+      variant="ghost"
+      size="icon"
       onClick={onClose}
-      className="rounded-xl p-2 transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800"
+      className="rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800"
     >
       <X size={20} />
-    </button>
+    </Button>
   </div>
 );
 
@@ -97,13 +100,14 @@ const InfoModal = ({ isOpen, onClose }: InfoModalProps) => {
           ))}
         </div>
 
-        <button
+        <Button
+          variant="secondary"
           onClick={() => opener.openUrl('https://github.com/alfrahi/musaed')}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 py-3 text-xs font-bold tracking-widest text-white uppercase shadow-sm transition-all hover:opacity-90 dark:bg-zinc-100 dark:text-zinc-900"
+          className="w-full gap-2 rounded-xl text-xs font-bold tracking-widest uppercase shadow-sm"
         >
           <Github size={14} />
           {t('info.github')}
-        </button>
+        </Button>
       </div>
 
       <div className="flex shrink-0 justify-center border-t border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">

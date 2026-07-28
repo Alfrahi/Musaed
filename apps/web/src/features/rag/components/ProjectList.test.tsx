@@ -155,6 +155,7 @@ describe('ProjectList', () => {
         enableLatex: false,
         enableMermaid: true,
         density: 1.0,
+        sidebarWidth: 260,
       },
     });
 

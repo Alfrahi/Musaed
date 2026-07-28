@@ -100,6 +100,7 @@ describe('ProjectCard', () => {
         enableLatex: false,
         enableMermaid: true,
         density: 1.0,
+        sidebarWidth: 260,
       },
     });
     useRagStore.setState({
