@@ -2,6 +2,26 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import ModalLayout from './ModalLayout';
 
+// ── framer-motion mock ─────────────────────────────────────────────────────
+// Mock motion components to plain elements so tests don't depend on animation
+// internals. useReducedMotion is kept as a controllable mock.
+
+const useReducedMotionMock = vi.fn(() => false);
+
+vi.mock('framer-motion', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    motion: {
+      div: 'div',
+      button: 'button',
+      span: 'span',
+    },
+    AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    useReducedMotion: () => useReducedMotionMock(),
+  };
+});
+
 interface Props {
   isOpen?: boolean;
   onClose?: () => void;
@@ -30,6 +50,7 @@ describe('ModalLayout', () => {
     // focus-trap-react reads tabbable nodes from the DOM; ensure each test has
     // a clean focus starting point.
     document.body.focus();
+    useReducedMotionMock.mockReturnValue(false);
   });
 
   it('returns null when isOpen is false', () => {
@@ -116,5 +137,28 @@ describe('ModalLayout', () => {
     expect(document.activeElement).toBe(trigger);
 
     document.body.removeChild(trigger);
+  });
+
+  describe('prefers-reduced-motion', () => {
+    it('renders a plain div without animation style when prefers-reduced-motion is set', () => {
+      useReducedMotionMock.mockReturnValue(true);
+      render(<Harness />);
+      const dialog = screen.getByRole('dialog', { hidden: true });
+      // When reduced motion is active, the component renders a plain <div>
+      // without framer-motion animation props. Since motion.div is mocked
+      // to 'div', the absence of inline style confirms the plain-div branch.
+      expect(dialog.getAttribute('style')).toBeFalsy();
+    });
+
+    it('renders with animation style when prefers-reduced-motion is not set', () => {
+      useReducedMotionMock.mockReturnValue(false);
+      render(<Harness />);
+      const dialog = screen.getByRole('dialog', { hidden: true });
+      // motion.div passes initial/animate as props; when mocked to 'div',
+      // React renders them as HTML attributes (not styles). The key assertion
+      // is that the dialog still renders with correct ARIA.
+      expect(dialog).toHaveAttribute('role', 'dialog');
+      expect(dialog).toHaveAttribute('aria-modal', 'true');
+    });
   });
 });

@@ -2,7 +2,7 @@
 
 import React, { type ReactNode, useCallback, useEffect, useId, useRef } from 'react';
 import FocusTrap from 'focus-trap-react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface ModalLayoutProps {
@@ -47,6 +47,7 @@ const ModalLayout = ({
   const titleId = titleIdProp ?? generatedTitleId;
   const panelRef = useRef<HTMLDivElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const shouldReduceMotion = useReducedMotion() ?? false;
 
   // Capture the previously-focused element on open, restore it on close.
   // Mirrors the WAI-ARIA dialog focus-management contract.
@@ -114,23 +115,41 @@ const ModalLayout = ({
         )}
         onPointerDown={handleBackdropPointerDown}
       >
-        <motion.div
-          ref={panelRef}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={titleId}
-          aria-describedby={describedById}
-          tabIndex={-1}
-          initial={{ opacity: 0, scale: 0.99 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className={cn(
-            'border-sidebar-border shadow-pro flex w-full flex-col overflow-hidden border bg-white outline-none dark:bg-zinc-950',
-            maxWidth,
-            className
-          )}
-        >
-          {children}
-        </motion.div>
+        {shouldReduceMotion ? (
+          <div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            aria-describedby={describedById}
+            tabIndex={-1}
+            className={cn(
+              'border-sidebar-border shadow-pro flex w-full flex-col overflow-hidden border bg-white outline-none dark:bg-zinc-950',
+              maxWidth,
+              className
+            )}
+          >
+            {children}
+          </div>
+        ) : (
+          <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            aria-describedby={describedById}
+            tabIndex={-1}
+            initial={{ opacity: 0, scale: 0.99 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={cn(
+              'border-sidebar-border shadow-pro flex w-full flex-col overflow-hidden border bg-white outline-none dark:bg-zinc-950',
+              maxWidth,
+              className
+            )}
+          >
+            {children}
+          </motion.div>
+        )}
       </div>
     </FocusTrap>
   );
