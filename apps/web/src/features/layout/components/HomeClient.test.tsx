@@ -69,14 +69,18 @@ vi.mock('next/image', () => ({
   default: ({ alt }: { alt: string }) => <img alt={alt} />,
 }));
 
-vi.mock('framer-motion', () => ({
-  motion: {
-    div: 'div',
-    button: 'button',
-    span: 'span',
-  },
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
+vi.mock('framer-motion', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    motion: {
+      div: 'div',
+      button: 'button',
+      span: 'span',
+    },
+    AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  };
+});
 
 describe('AppHeader', () => {
   const baseProps = {
