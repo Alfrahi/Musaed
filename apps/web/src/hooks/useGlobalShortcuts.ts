@@ -2,7 +2,13 @@
 
 import { useEffect } from 'react';
 import { useConversationActions, abortStreaming } from '@/features/conversation';
-import { useSetSettingsOpen, useSetLibraryOpen, useSetInfoOpen } from '@/store/hooks';
+import {
+  useSetSettingsOpen,
+  useSetLibraryOpen,
+  useSetInfoOpen,
+  useSetCheatsheetOpen,
+  useSetCommandPaletteOpen,
+} from '@/store/hooks';
 import { selectIsAnyModalOpen, useUIStore } from '@/store/ui-store';
 import { useConversationStore } from '@/store/conversation-store';
 import { useStreamingStore } from '@/store/streaming-store';
@@ -14,6 +20,8 @@ import { useStreamingStore } from '@/store/streaming-store';
  * - Cmd/Ctrl + N: New Chat
  * - Cmd/Ctrl + ,: Settings
  * - Cmd/Ctrl + L: Model Library
+ * - Cmd/Ctrl + /: Keyboard shortcuts cheatsheet
+ * - Cmd/Ctrl + K: Command palette
  * - Escape: if any modal is open, close modals; otherwise, if the active
  *   conversation is streaming, stop the stream. The two branches are mutually
  *   exclusive so Escape never double-fires (audit F6 — Escape-to-stop contract).
@@ -23,6 +31,8 @@ export function useGlobalShortcuts() {
   const setSettingsOpen = useSetSettingsOpen();
   const setLibraryOpen = useSetLibraryOpen();
   const setInfoOpen = useSetInfoOpen();
+  const setCheatsheetOpen = useSetCheatsheetOpen();
+  const setCommandPaletteOpen = useSetCommandPaletteOpen();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -41,6 +51,16 @@ export function useGlobalShortcuts() {
         setLibraryOpen(true);
       }
 
+      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+        e.preventDefault();
+        setCheatsheetOpen(true);
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen(true);
+      }
+
       if (e.key === 'Escape') {
         // Modal-first routing: read state straight from the store so Escape
         // routing stays current without re-running this effect on every toggle.
@@ -49,6 +69,8 @@ export function useGlobalShortcuts() {
           setSettingsOpen(false);
           setLibraryOpen(false);
           setInfoOpen(false);
+          setCheatsheetOpen(false);
+          setCommandPaletteOpen(false);
           return;
         }
 
@@ -65,5 +87,12 @@ export function useGlobalShortcuts() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [createNewConversation, setSettingsOpen, setLibraryOpen, setInfoOpen]);
+  }, [
+    createNewConversation,
+    setSettingsOpen,
+    setLibraryOpen,
+    setInfoOpen,
+    setCheatsheetOpen,
+    setCommandPaletteOpen,
+  ]);
 }

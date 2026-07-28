@@ -11,6 +11,7 @@ import {
 } from '@/features/conversation/utils/mermaid-utils';
 import { useSettingsStore } from '@/store';
 import { useTranslation } from '@/lib/i18n';
+import { Button } from '@/components/ui/button';
 
 interface MermaidRendererProps {
   content: string;
@@ -70,12 +71,14 @@ const MermaidError = ({
   >
     <div className="mb-3 flex items-start justify-between">
       <div className="font-semibold text-red-700 dark:text-red-400">{errorTitle}</div>
-      <button
+      <Button
+        variant="outline"
+        size="sm"
         onClick={onCopySource}
-        className="rounded-md border border-red-200 bg-white px-3 py-1 text-xs transition-colors hover:bg-zinc-100 dark:border-red-800 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+        className="rounded-md border-red-200 bg-white px-3 py-1 text-xs hover:bg-zinc-100 dark:border-red-800 dark:bg-zinc-800 dark:hover:bg-zinc-700"
       >
         📋 {copyLabel}
-      </button>
+      </Button>
     </div>
     <pre className="overflow-auto rounded-lg border border-red-100 bg-white p-4 font-mono text-xs whitespace-pre-wrap text-red-600 dark:border-red-900 dark:bg-zinc-950 dark:text-red-500">
       {error}

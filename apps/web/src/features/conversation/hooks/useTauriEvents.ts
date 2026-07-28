@@ -119,10 +119,17 @@ const createPullProgressHandler =
       payload.total && payload.completed != null
         ? Math.round((payload.completed / payload.total) * 100)
         : undefined;
-    useModelStore.getState().updatePullStatus(modelKey, { status: payload.status, progress });
+    useModelStore.getState().updatePullStatus(modelKey, {
+      status: payload.status,
+      progress,
+      completed: payload.completed ?? undefined,
+      total: payload.total ?? undefined,
+    });
     if (payload.status === 'success') {
       const data = await ollamaApi.getModels(useSettingsStore.getState().globalSettings.ollamaUrl);
       if (data) useModelStore.getState().setModels(data);
+      const lang = useSettingsStore.getState().globalSettings.language;
+      toast.success(translate('library.pullSuccess', lang));
       setTimeout(
         () => isMountedRef() && useModelStore.getState().updatePullStatus(modelKey, null),
         3000

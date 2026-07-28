@@ -11,6 +11,7 @@ import ProjectCard from './ProjectCard';
 import { AddProjectDialog } from './AddProjectDialog';
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/lib/i18n';
+import { Button } from '@/components/ui/button';
 
 export const ProjectList = ({ hideHeaderAction = false }: { hideHeaderAction?: boolean }) => {
   const { projects, projectIds, removeProjectById } = useRagProjectsHook();
@@ -61,13 +62,15 @@ export const ProjectList = ({ hideHeaderAction = false }: { hideHeaderAction?: b
           <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
             {t('rag.title')}
           </span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setShowAddDialog(true)}
-            className="hover:bg-accent text-muted-foreground hover:text-foreground rounded p-1 transition-colors"
+            className="text-muted-foreground hover:text-foreground h-auto w-auto rounded p-1"
             title={t('rag.addProject')}
           >
             <Plus className="h-3.5 w-3.5" />
-          </button>
+          </Button>
         </div>
       )}
 

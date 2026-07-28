@@ -68,7 +68,7 @@ const manifest: FeatureManifest = {
   persistenceSchemas: {
     rag: 'rag-state',
   },
-  dependencies: [],
+  dependencies: ['library'],
 } as const;
 
 export default manifest;

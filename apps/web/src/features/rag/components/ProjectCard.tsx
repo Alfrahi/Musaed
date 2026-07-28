@@ -371,7 +371,7 @@ type SettingsModalProps = {
   t: (key: string) => string;
 };
 
-const SettingsModal = ({ project, onClose, titleId, t }: SettingsModalProps) => (
+const SettingsModal = ({ project: _project, onClose, titleId, t: _t }: SettingsModalProps) => (
   <ModalLayout isOpen onClose={onClose} titleId={titleId} maxWidth="max-w-2xl" className="h-[70vh]">
     <ProjectSettings onClose={onClose} titleId={titleId} />
   </ModalLayout>

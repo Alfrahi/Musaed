@@ -131,4 +131,71 @@ describe('SettingsModal', () => {
     expect(main).toBeTruthy();
     expect(main!.className).toContain('overflow-y-auto');
   });
+
+  it('renders the search input with placeholder', () => {
+    render(<SettingsModal isOpen onClose={vi.fn()} />);
+    const searchInput = screen.getByPlaceholderText('settings.searchPlaceholder');
+    expect(searchInput).toBeInTheDocument();
+    expect(searchInput).toHaveAttribute('type', 'search');
+    expect(searchInput).toHaveAttribute('aria-label', 'settings.searchPlaceholder');
+  });
+
+  it('filters tabs by search query', () => {
+    render(<SettingsModal isOpen onClose={vi.fn()} />);
+    const searchInput = screen.getByPlaceholderText('settings.searchPlaceholder');
+
+    // All 5 tabs visible initially
+    expect(screen.getByText('settings.tabs.general')).toBeInTheDocument();
+    expect(screen.getByText('settings.tabs.appearance')).toBeInTheDocument();
+    expect(screen.getByText('settings.tabs.ai')).toBeInTheDocument();
+    expect(screen.getByText('settings.tabs.storage')).toBeInTheDocument();
+    expect(screen.getByText('settings.tabs.advanced')).toBeInTheDocument();
+
+    // Filter to "appearance"
+    fireEvent.change(searchInput, { target: { value: 'appearance' } });
+    expect(screen.getByText('settings.tabs.appearance')).toBeInTheDocument();
+    expect(screen.queryByText('settings.tabs.general')).not.toBeInTheDocument();
+    expect(screen.queryByText('settings.tabs.ai')).not.toBeInTheDocument();
+  });
+
+  it('navigates to first filtered tab on Enter', () => {
+    render(<SettingsModal isOpen onClose={vi.fn()} />);
+    const searchInput = screen.getByPlaceholderText('settings.searchPlaceholder');
+
+    // Filter to "storage"
+    fireEvent.change(searchInput, { target: { value: 'storage' } });
+    expect(screen.getByText('settings.tabs.storage')).toBeInTheDocument();
+
+    // Press Enter — should navigate to storage tab and clear search
+    fireEvent.keyDown(searchInput, { key: 'Enter' });
+    // After Enter, search is cleared so all tabs reappear
+    expect(screen.getByText('settings.tabs.general')).toBeInTheDocument();
+  });
+
+  it('clears search on Escape', () => {
+    render(<SettingsModal isOpen onClose={vi.fn()} />);
+    const searchInput = screen.getByPlaceholderText('settings.searchPlaceholder');
+
+    fireEvent.change(searchInput, { target: { value: 'ai' } });
+    expect(screen.queryByText('settings.tabs.general')).not.toBeInTheDocument();
+
+    fireEvent.keyDown(searchInput, { key: 'Escape' });
+    // After Escape, search is cleared so all tabs reappear
+    expect(screen.getByText('settings.tabs.general')).toBeInTheDocument();
+  });
+
+  it('resets search when modal reopens', () => {
+    const { rerender } = render(<SettingsModal isOpen onClose={vi.fn()} />);
+    const searchInput = screen.getByPlaceholderText('settings.searchPlaceholder');
+
+    fireEvent.change(searchInput, { target: { value: 'ai' } });
+    expect(searchInput).toHaveValue('ai');
+
+    // Close and reopen
+    rerender(<SettingsModal isOpen={false} onClose={vi.fn()} />);
+    rerender(<SettingsModal isOpen onClose={vi.fn()} />);
+
+    const newSearchInput = screen.getByPlaceholderText('settings.searchPlaceholder');
+    expect(newSearchInput).toHaveValue('');
+  });
 });

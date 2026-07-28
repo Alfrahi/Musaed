@@ -22,6 +22,7 @@ const LanguageSettings = () => {
       </div>
       <div className="flex w-full rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
         {availableLanguages.map((lang) => (
+          // eslint-disable-next-line musaed-buttons/prefer-button-primitive -- segmented control toggle, not an action button
           <button
             key={lang}
             onClick={() => updateGlobalSettings({ language: lang })}

@@ -53,7 +53,6 @@ import {
   type MigrationInfo,
   // Context menu contracts
   ContextMenuKindSchema,
-  ContextMenuRequestSchema,
   ContextMenuResponseSchema,
   ContextMenuLabelsSchema,
   type ContextMenuKind,

@@ -18,6 +18,8 @@ export {
   useSetSettingsOpen,
   useSetLibraryOpen,
   useSetInfoOpen,
+  useSetCheatsheetOpen,
+  useSetCommandPaletteOpen,
 } from '@/store/ui-store';
 
 // Coordination hooks - re-export from coordination module

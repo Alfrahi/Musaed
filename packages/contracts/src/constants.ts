@@ -26,4 +26,5 @@ export const DEFAULT_SETTINGS: ChatSettings = {
   enableLatex: false,
   enableMermaid: true,
   density: 1.0,
+  sidebarWidth: 260,
 };

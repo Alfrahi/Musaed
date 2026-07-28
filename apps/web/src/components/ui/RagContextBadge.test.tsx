@@ -64,6 +64,7 @@ describe('RagContextBadge', () => {
         enableLatex: false,
         enableMermaid: true,
         density: 1.0,
+        sidebarWidth: 260,
       },
     });
     useUIStore.setState({ sidebarTab: 'chats' });

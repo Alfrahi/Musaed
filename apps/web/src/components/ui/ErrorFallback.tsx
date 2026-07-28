@@ -4,6 +4,7 @@ import { AlertCircle, RefreshCw, WifiOff, Server, FileX, Ban } from 'lucide-reac
 import { useTranslation } from '@/lib/i18n';
 import { useSettingsStore } from '@/store';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 export type FallbackType = 'general' | 'network' | 'ollama' | 'notFound' | 'forbidden';
 
@@ -107,16 +108,10 @@ export const ErrorFallback = ({
       </div>
 
       {onRetry && (
-        <button
-          onClick={onRetry}
-          className={cn(
-            'inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-all hover:opacity-90 active:scale-95 dark:bg-zinc-100 dark:text-zinc-900',
-            compact ? 'px-3 py-1.5 text-xs' : ''
-          )}
-        >
+        <Button variant="secondary" size={compact ? 'sm' : 'md'} onClick={onRetry}>
           <RefreshCw size={14} />
           {t('fallback.retry')}
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -144,13 +139,15 @@ export const InlineError = ({
       <AlertCircle size={16} className="shrink-0" />
       <span className="flex-1">{message}</span>
       {onDismiss && (
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onDismiss}
           className="shrink-0 text-red-500 hover:text-red-700 dark:hover:text-red-300"
           aria-label={t('common.close')}
         >
           <span className="text-lg leading-none">&times;</span>
-        </button>
+        </Button>
       )}
     </div>
   );

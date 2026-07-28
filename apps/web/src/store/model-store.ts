@@ -19,6 +19,10 @@ const MODEL_MIGRATIONS: Record<number, (data: unknown) => unknown> = {
 interface PullStatus {
   status: string;
   progress?: number;
+  /** Bytes downloaded so far (from Ollama pull-progress events). */
+  completed?: number;
+  /** Total bytes to download (from Ollama pull-progress events). */
+  total?: number;
 }
 
 interface ModelState {

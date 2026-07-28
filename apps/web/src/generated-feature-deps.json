@@ -3,7 +3,7 @@
   "info": [],
   "layout": ["conversation", "sidebar"],
   "library": [],
-  "rag": [],
+  "rag": ["library"],
   "settings": ["library"],
   "sidebar": ["conversation", "rag"]
 }

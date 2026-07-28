@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Brain, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { useSettingsStore } from '@/store';
 import { useTranslation } from '@/lib/i18n';
+import { Button } from '@/components/ui/button';
 
 interface ThinkingBlockProps {
   content: string;
@@ -39,9 +40,10 @@ const ThinkingBlock = ({
       aria-label={t('a11y.thinkingSection')}
       aria-busy={isStreaming}
     >
-      <button
+      <Button
+        variant="ghost"
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="flex w-full items-center justify-between py-2.5 ps-4 pe-4 transition-colors outline-none hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800/50"
+        className="flex w-full items-center justify-between rounded-none py-2.5 ps-4 pe-4 hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800/50"
         aria-expanded={!isCollapsed}
       >
         <div className="flex items-center gap-2 text-zinc-500">
@@ -61,7 +63,7 @@ const ThinkingBlock = ({
             <ChevronUp size={14} aria-hidden="true" />
           )}
         </div>
-      </button>
+      </Button>
 
       {!isCollapsed && (
         <div

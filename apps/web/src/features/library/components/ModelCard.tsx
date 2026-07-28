@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   CheckCircle2,
   Download,
@@ -12,10 +12,12 @@ import {
   Code,
   BrainCircuit,
   HardDrive,
+  XCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
 import { type Language } from '@musaed/contracts';
+import { Button } from '@/components/ui/button';
 
 interface ModelCardProps {
   name: string;
@@ -27,8 +29,9 @@ interface ModelCardProps {
     family?: string | null;
   };
   isDownloaded: boolean;
-  pullStatus?: { status: string; progress?: number };
+  pullStatus?: { status: string; progress?: number; completed?: number; total?: number };
   onPull?: (name: string) => void;
+  onAbortPull?: (name: string) => void;
   onDelete?: (name: string) => void;
   language: Language;
   variant?: 'featured' | 'installed';
@@ -103,12 +106,14 @@ const InstalledModelCard = ({
           {t('common.ready')}
         </div>
         {onDelete && (
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onDelete(name)}
-            className="rounded-lg p-2 text-zinc-400 transition-all hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+            className="rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
           >
             <Trash2 size={18} />
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -191,29 +196,38 @@ const PullControl = ({
   isDownloaded,
   pullStatus,
   onPull,
+  onAbortPull,
   language,
 }: {
   name: string;
   isDownloaded: boolean;
-  pullStatus?: { status: string; progress?: number };
+  pullStatus?: { status: string; progress?: number; completed?: number; total?: number };
   onPull?: (name: string) => void;
+  onAbortPull?: (name: string) => void;
   language: Language;
 }) => {
   const { t, formatNumber } = useTranslation(language);
 
   if (pullStatus) {
-    return <PullProgressBar pullStatus={pullStatus} formatNumber={formatNumber} />;
+    return (
+      <PullProgressBar
+        pullStatus={pullStatus}
+        formatNumber={formatNumber}
+        onAbortPull={onAbortPull ? () => onAbortPull(name) : undefined}
+        t={t}
+      />
+    );
   }
 
   return (
-    <button
+    <Button
+      variant={isDownloaded ? 'ghost' : 'secondary'}
+      size="md"
       onClick={() => onPull?.(name)}
       disabled={isDownloaded}
       className={cn(
-        'caption-xs flex h-10 w-full items-center justify-center gap-2 rounded-lg font-bold tracking-widest uppercase shadow-sm transition-all',
-        isDownloaded
-          ? 'cursor-default bg-zinc-100 text-zinc-400 dark:bg-zinc-800'
-          : 'bg-zinc-900 text-white hover:opacity-90 active:scale-95 dark:bg-zinc-100 dark:text-zinc-900'
+        'caption-xs w-full gap-2 font-bold tracking-widest uppercase shadow-sm',
+        isDownloaded && 'cursor-default text-zinc-400'
       )}
     >
       {isDownloaded ? (
@@ -224,42 +238,119 @@ const PullControl = ({
           {t('library.pullModel')}
         </>
       )}
-    </button>
+    </Button>
   );
 };
 
-/** Progress bar during model pull. */
+/** Format bytes as human-readable string. */
+const formatBytes = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+};
+
+/** Format seconds as human-readable duration. */
+const formatDuration = (seconds: number): string => {
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
+  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+};
+
+/** Progress bar during model pull with bytes/sec, ETA, and Cancel. */
 const PullProgressBar = ({
   pullStatus,
   formatNumber,
+  onAbortPull,
+  t,
 }: {
-  pullStatus: { status: string; progress?: number };
+  pullStatus: { status: string; progress?: number; completed?: number; total?: number };
   formatNumber: (n: number) => string;
-}) => (
-  <div className="space-y-2">
-    <div className="caption-xs flex items-center justify-between font-bold tracking-widest text-zinc-500 uppercase">
-      <span className="flex items-center gap-2">
-        {pullStatus.status.toLowerCase().includes('success') ? (
-          <CheckCircle2 size={12} className="text-green-500" />
-        ) : (
-          <Loader2 size={12} className="animate-spin text-blue-500" />
-        )}
-        {pullStatus.status}
-      </span>
+  onAbortPull?: () => void;
+  t: (key: string, values?: Record<string, string | number | boolean>) => string;
+}) => {
+  const prevCompletedRef = useRef<number | undefined>(undefined);
+  const prevTimeRef = useRef<number>(Date.now());
+  const rateRef = useRef<number>(0);
+
+  // Compute download rate (bytes/sec) from consecutive completed-bytes samples.
+  if (
+    pullStatus.completed != null &&
+    prevCompletedRef.current != null &&
+    pullStatus.completed > prevCompletedRef.current
+  ) {
+    const now = Date.now();
+    const deltaBytes = pullStatus.completed - prevCompletedRef.current;
+    const deltaMs = now - prevTimeRef.current;
+    if (deltaMs > 0) {
+      // Exponential moving average (α=0.3) to smooth jitter.
+      const instantRate = (deltaBytes / deltaMs) * 1000;
+      rateRef.current =
+        rateRef.current === 0 ? instantRate : rateRef.current * 0.7 + instantRate * 0.3;
+    }
+  }
+  prevCompletedRef.current = pullStatus.completed;
+  prevTimeRef.current = Date.now();
+
+  // ETA from remaining bytes / current rate.
+  const eta =
+    pullStatus.total != null &&
+    pullStatus.completed != null &&
+    rateRef.current > 0 &&
+    pullStatus.total > pullStatus.completed
+      ? (pullStatus.total - pullStatus.completed) / rateRef.current
+      : undefined;
+
+  const isSuccess = pullStatus.status.toLowerCase().includes('success');
+
+  return (
+    <div className="space-y-2">
+      <div className="caption-xs flex items-center justify-between font-bold tracking-widest text-zinc-500 uppercase">
+        <span className="flex items-center gap-2">
+          {isSuccess ? (
+            <CheckCircle2 size={12} className="text-green-500" />
+          ) : (
+            <Loader2 size={12} className="animate-spin text-blue-500" />
+          )}
+          {pullStatus.status}
+        </span>
+        <span className="flex items-center gap-2">
+          {pullStatus.progress !== undefined && (
+            <span className="font-mono">{formatNumber(pullStatus.progress)}%</span>
+          )}
+          {onAbortPull && !isSuccess && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onAbortPull}
+              className="h-auto w-auto p-0 hover:text-red-500 focus-visible:ring-2 focus-visible:ring-blue-500"
+              aria-label={t('library.cancelPull')}
+              title={t('library.cancelPull')}
+            >
+              <XCircle size={14} />
+            </Button>
+          )}
+        </span>
+      </div>
       {pullStatus.progress !== undefined && (
-        <span className="font-mono">{formatNumber(pullStatus.progress)}%</span>
+        <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+          <div
+            className="h-full bg-blue-500 transition-all duration-300"
+            style={{ width: `${pullStatus.progress}%` }}
+          />
+        </div>
+      )}
+      {(rateRef.current > 0 || eta != null) && !isSuccess && (
+        <div className="caption-xs flex items-center gap-3 font-mono text-zinc-400">
+          {rateRef.current > 0 && (
+            <span>{t('library.bytesPerSec', { rate: formatBytes(rateRef.current) })}</span>
+          )}
+          {eta != null && <span>{t('library.eta', { time: formatDuration(eta) })}</span>}
+        </div>
       )}
     </div>
-    {pullStatus.progress !== undefined && (
-      <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-        <div
-          className="h-full bg-blue-500 transition-all duration-300"
-          style={{ width: `${pullStatus.progress}%` }}
-        />
-      </div>
-    )}
-  </div>
-);
+  );
+};
 
 /** Featured card variant for the model library grid. */
 const FeaturedModelCard = ({
@@ -268,6 +359,7 @@ const FeaturedModelCard = ({
   isDownloaded,
   pullStatus,
   onPull,
+  onAbortPull,
   language,
   capabilities,
   hardwareFit,
@@ -275,8 +367,9 @@ const FeaturedModelCard = ({
   name: string;
   description?: string;
   isDownloaded: boolean;
-  pullStatus?: { status: string; progress?: number };
+  pullStatus?: { status: string; progress?: number; completed?: number; total?: number };
   onPull?: (name: string) => void;
+  onAbortPull?: (name: string) => void;
   language: Language;
   capabilities: ReturnType<typeof getModelCapabilities>;
   hardwareFit: ReturnType<typeof getHardwareFit>;
@@ -307,6 +400,7 @@ const FeaturedModelCard = ({
           isDownloaded={isDownloaded}
           pullStatus={pullStatus}
           onPull={onPull}
+          onAbortPull={onAbortPull}
           language={language}
         />
       </div>
@@ -361,6 +455,7 @@ const ModelCard = ({
   isDownloaded,
   pullStatus,
   onPull,
+  onAbortPull,
   onDelete,
   language,
   variant = 'featured',
@@ -392,6 +487,7 @@ const ModelCard = ({
       isDownloaded={isDownloaded}
       pullStatus={pullStatus}
       onPull={onPull}
+      onAbortPull={onAbortPull}
       language={language}
       capabilities={capabilities}
       hardwareFit={hardwareFit}

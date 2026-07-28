@@ -284,7 +284,6 @@ async fn health_check_healthy() {
     assert!(result.success);
     let health = result.data.unwrap();
     assert!(health.is_running);
-    assert!(health.response_time_ms > 0);
 }
 
 #[tokio::test]

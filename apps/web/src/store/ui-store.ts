@@ -19,6 +19,8 @@ interface UIState {
   isSettingsOpen: boolean;
   isLibraryOpen: boolean;
   isInfoOpen: boolean;
+  isCheatsheetOpen: boolean;
+  isCommandPaletteOpen: boolean;
   sidebarTab: SidebarTab;
   /** Counter for pending store rehydrations. Decremented by each store's onRehydrateStorage callback. */
   _pendingRehydrations: number;
@@ -30,6 +32,8 @@ interface UIState {
   setSettingsOpen: (isSettingsOpen: boolean) => void;
   setLibraryOpen: (isLibraryOpen: boolean) => void;
   setInfoOpen: (isInfoOpen: boolean) => void;
+  setCheatsheetOpen: (isCheatsheetOpen: boolean) => void;
+  setCommandPaletteOpen: (isCommandPaletteOpen: boolean) => void;
   setSidebarTab: (tab: SidebarTab) => void;
   /** Called before rehydration starts. Increments the pending counter by `count`. */
   setPendingRehydrations: (count: number) => void;
@@ -39,7 +43,11 @@ interface UIState {
 
 // Selectors for the UI store
 export const selectIsAnyModalOpen = (state: UIState) =>
-  state.isSettingsOpen || state.isLibraryOpen || state.isInfoOpen;
+  state.isSettingsOpen ||
+  state.isLibraryOpen ||
+  state.isInfoOpen ||
+  state.isCheatsheetOpen ||
+  state.isCommandPaletteOpen;
 
 export const selectHasError = (state: UIState) => !!state.errorMessage;
 
@@ -53,6 +61,8 @@ export const useUIStore = createWithEqualityFn<UIState>()(
     isSettingsOpen: false,
     isLibraryOpen: false,
     isInfoOpen: false,
+    isCheatsheetOpen: false,
+    isCommandPaletteOpen: false,
     sidebarTab: 'chats',
     _pendingRehydrations: 0,
     setStreaming: (isStreaming) => set({ isStreaming }),
@@ -63,6 +73,8 @@ export const useUIStore = createWithEqualityFn<UIState>()(
     setSettingsOpen: (isSettingsOpen) => set({ isSettingsOpen }),
     setLibraryOpen: (isLibraryOpen) => set({ isLibraryOpen }),
     setInfoOpen: (isInfoOpen) => set({ isInfoOpen }),
+    setCheatsheetOpen: (isCheatsheetOpen) => set({ isCheatsheetOpen }),
+    setCommandPaletteOpen: (isCommandPaletteOpen) => set({ isCommandPaletteOpen }),
     setSidebarTab: (sidebarTab) => set({ sidebarTab }),
     setPendingRehydrations: (count) => set({ _pendingRehydrations: count }),
     onStoreRehydrated: () =>
@@ -95,5 +107,7 @@ export const useSetUIError = () => useUIStore((s) => s.setErrorMessage);
 export const useSetSettingsOpen = () => useUIStore((s) => s.setSettingsOpen);
 export const useSetLibraryOpen = () => useUIStore((s) => s.setLibraryOpen);
 export const useSetInfoOpen = () => useUIStore((s) => s.setInfoOpen);
+export const useSetCheatsheetOpen = () => useUIStore((s) => s.setCheatsheetOpen);
+export const useSetCommandPaletteOpen = () => useUIStore((s) => s.setCommandPaletteOpen);
 export const useSidebarTab = () => useUIStore((s) => s.sidebarTab);
 export const useSetSidebarTab = () => useUIStore((s) => s.setSidebarTab);

@@ -15,6 +15,7 @@ import { dialog } from '@/lib/ipc';
 import { ErrorFallback } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { ModalLayout } from '@/components/ui';
+import { Button } from '@/components/ui/button';
 import type { Language } from '@musaed/contracts';
 
 interface ModelLibraryProps {
@@ -41,13 +42,15 @@ const FeaturedGrid = ({
   filteredFeatured,
   pullStatus,
   handlePull,
+  handleAbortPull,
   translateOllamaStatus,
   language,
 }: {
   models: { name: string }[];
   filteredFeatured: ((typeof FEATURED_MODELS_LIST)[number] & { description: string })[];
-  pullStatus: Record<string, { status: string }>;
+  pullStatus: Record<string, { status: string; completed?: number; total?: number }>;
   handlePull: (name: string) => void;
+  handleAbortPull: (name: string) => void;
   translateOllamaStatus: (s: string) => string;
   language: Language;
 }) => (
@@ -72,6 +75,7 @@ const FeaturedGrid = ({
             : undefined
         }
         onPull={handlePull}
+        onAbortPull={handleAbortPull}
         language={language}
       />
     )}
@@ -83,6 +87,8 @@ const InstalledList = ({
   filteredInstalled,
   handleDelete,
   language,
+  emptyCta,
+  onBrowseLibrary,
 }: {
   filteredInstalled: {
     name: string;
@@ -95,31 +101,50 @@ const InstalledList = ({
   }[];
   handleDelete: (name: string) => void;
   language: Language;
-}) => (
-  <Virtuoso
-    style={{ height: '100%' }}
-    data={filteredInstalled}
-    itemContent={(idx, model) => (
-      <div
-        className={cn(
-          'pbe-4 ps-6 pe-6',
-          idx === 0 && 'pbs-6',
-          idx === filteredInstalled.length - 1 && 'pbe-12'
-        )}
-      >
-        <ModelCard
-          name={model.name}
-          size={model.size}
-          details={model.details || undefined}
-          isDownloaded={true}
-          onDelete={handleDelete}
-          language={language}
-          variant="installed"
-        />
+  emptyCta: string;
+  onBrowseLibrary: () => void;
+}) => {
+  if (filteredInstalled.length === 0) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-6">
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">{emptyCta}</p>
+        <Button
+          variant="secondary"
+          onClick={onBrowseLibrary}
+          className="rounded-lg text-xs font-bold tracking-widest uppercase"
+        >
+          {emptyCta}
+        </Button>
       </div>
-    )}
-  />
-);
+    );
+  }
+
+  return (
+    <Virtuoso
+      style={{ height: '100%' }}
+      data={filteredInstalled}
+      itemContent={(idx, model) => (
+        <div
+          className={cn(
+            'pbe-4 ps-6 pe-6',
+            idx === 0 && 'pbs-6',
+            idx === filteredInstalled.length - 1 && 'pbe-12'
+          )}
+        >
+          <ModelCard
+            name={model.name}
+            size={model.size}
+            details={model.details || undefined}
+            isDownloaded={true}
+            onDelete={handleDelete}
+            language={language}
+            variant="installed"
+          />
+        </div>
+      )}
+    />
+  );
+};
 
 /** Connection warning banner. */
 const ConnectionWarning = ({ message }: { message: string }) => (
@@ -143,12 +168,82 @@ const LibraryFooter = ({
     <span className="caption-md font-bold tracking-widest text-zinc-400 uppercase">
       {storageLabel}
     </span>
-    <button
+    <Button
+      variant="secondary"
       onClick={onClose}
-      className="h-10 rounded-lg bg-zinc-900 ps-6 pe-6 text-xs font-bold tracking-widest text-white uppercase shadow-sm transition-all hover:opacity-90 active:scale-95 dark:bg-zinc-100 dark:text-zinc-900"
+      className="h-10 rounded-lg ps-6 pe-6 text-xs font-bold tracking-widest uppercase shadow-sm"
     >
       {closeLabel}
-    </button>
+    </Button>
+  </div>
+);
+
+/** Main content area: error state, featured grid, or installed list. */
+const LibraryContent = ({
+  fetchError,
+  isOllamaConnected,
+  activeTab,
+  models,
+  filteredFeatured,
+  pullStatus,
+  handlePull,
+  handleAbortPull,
+  translateOllamaStatus,
+  language,
+  filteredInstalled,
+  handleDelete,
+  fetchCta,
+  browseCta,
+  onBrowseLibrary,
+}: {
+  fetchError: string | null;
+  isOllamaConnected: boolean;
+  activeTab: 'featured' | 'installed';
+  models: { name: string }[];
+  filteredFeatured: ((typeof FEATURED_MODELS_LIST)[number] & { description: string })[];
+  pullStatus: Record<string, { status: string; completed?: number; total?: number }>;
+  handlePull: (name: string) => void;
+  handleAbortPull: (name: string) => void;
+  translateOllamaStatus: (s: string) => string;
+  language: Language;
+  filteredInstalled: {
+    name: string;
+    size?: number | null;
+    details?: {
+      parameterSize?: string | null;
+      quantizationLevel?: string | null;
+      family?: string | null;
+    } | null;
+  }[];
+  handleDelete: (name: string) => void;
+  fetchCta: () => void;
+  browseCta: string;
+  onBrowseLibrary: () => void;
+}) => (
+  <div className="flex-1 overflow-hidden bg-white dark:bg-zinc-950/20">
+    {fetchError && !isOllamaConnected ? (
+      <div className="flex h-full items-center justify-center">
+        <ErrorFallback type="ollama" description={fetchError} onRetry={fetchCta} />
+      </div>
+    ) : activeTab === 'featured' ? (
+      <FeaturedGrid
+        models={models}
+        filteredFeatured={filteredFeatured}
+        pullStatus={pullStatus}
+        handlePull={handlePull}
+        handleAbortPull={handleAbortPull}
+        translateOllamaStatus={translateOllamaStatus}
+        language={language}
+      />
+    ) : (
+      <InstalledList
+        filteredInstalled={filteredInstalled}
+        handleDelete={handleDelete}
+        language={language}
+        emptyCta={browseCta}
+        onBrowseLibrary={onBrowseLibrary}
+      />
+    )}
   </div>
 );
 
@@ -163,7 +258,7 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
   const [isRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'featured' | 'installed'>('featured');
   const { t } = useTranslation(language);
-  const { handlePull, translateOllamaStatus } = useModelPulling();
+  const { handlePull, handleAbortPull, translateOllamaStatus } = useModelPulling();
   const titleId = useId();
 
   const featuredModels = useMemo(
@@ -224,32 +319,23 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
 
       {!isOllamaConnected && <ConnectionWarning message={t('chat.connectionFailed')} />}
 
-      <div className="flex-1 overflow-hidden bg-white dark:bg-zinc-950/20">
-        {fetchError && !isOllamaConnected ? (
-          <div className="flex h-full items-center justify-center">
-            <ErrorFallback
-              type="ollama"
-              description={fetchError}
-              onRetry={() => fetchModels(true)}
-            />
-          </div>
-        ) : activeTab === 'featured' ? (
-          <FeaturedGrid
-            models={models}
-            filteredFeatured={filteredFeatured}
-            pullStatus={pullStatus}
-            handlePull={handlePull}
-            translateOllamaStatus={translateOllamaStatus}
-            language={language}
-          />
-        ) : (
-          <InstalledList
-            filteredInstalled={filteredInstalled}
-            handleDelete={handleDelete}
-            language={language}
-          />
-        )}
-      </div>
+      <LibraryContent
+        fetchError={fetchError}
+        isOllamaConnected={isOllamaConnected}
+        activeTab={activeTab}
+        models={models}
+        filteredFeatured={filteredFeatured}
+        pullStatus={pullStatus}
+        handlePull={handlePull}
+        handleAbortPull={handleAbortPull}
+        translateOllamaStatus={translateOllamaStatus}
+        language={language}
+        filteredInstalled={filteredInstalled}
+        handleDelete={handleDelete}
+        fetchCta={() => fetchModels(true)}
+        browseCta={t('library.browseLibrary')}
+        onBrowseLibrary={() => setActiveTab('featured')}
+      />
 
       <LibraryFooter
         storageLabel={t('logs.logStorageInfo')}

@@ -8,6 +8,7 @@ import { useActiveRagProject } from '@/store/rag-store';
 import { useLanguage, useOllamaUrl } from '@/store';
 import { ollamaApi, ragApi } from '@/lib/ipc';
 import { useTranslation } from '@/lib/i18n';
+import { Button } from '@/components/ui/button';
 
 interface ProjectSettingsProps {
   onClose: () => void;
@@ -88,22 +89,13 @@ const ProjectSettingsActions = ({
   t: (key: string) => string;
 }) => (
   <div className="flex justify-end gap-2 border-t pt-2">
-    <button
-      type="button"
-      className="hover:bg-accent rounded-md border px-4 py-2 text-sm"
-      onClick={onClose}
-    >
+    <Button variant="outline" className="text-sm" onClick={onClose}>
       {t('common.cancel')}
-    </button>
-    <button
-      type="button"
-      className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm disabled:opacity-50"
-      onClick={onSave}
-      disabled={isSaving}
-    >
+    </Button>
+    <Button variant="primary" className="gap-2 text-sm" onClick={onSave} disabled={isSaving}>
       {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
       {t('common.save')}
-    </button>
+    </Button>
   </div>
 );
 
@@ -214,9 +206,14 @@ const ProjectSettings = ({ onClose, titleId: titleIdProp }: ProjectSettingsProps
         <h2 id={titleId} className="text-lg font-medium">
           {t('rag.projectSettings')}
         </h2>
-        <button type="button" className="hover:bg-accent rounded-md p-1" onClick={onClose}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hover:bg-accent rounded-md"
+          onClick={onClose}
+        >
           <X className="h-4 w-4" />
-        </button>
+        </Button>
       </div>
       <ProjectSettingsForm onClose={onClose} />
     </div>

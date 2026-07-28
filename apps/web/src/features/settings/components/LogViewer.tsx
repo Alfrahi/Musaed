@@ -9,6 +9,7 @@ import { useTranslation } from '@/lib/i18n';
 import { useLogActions } from '@/features/settings/hooks/useLogActions';
 import { useIpcViolations } from '@/features/settings/hooks/useIpcViolations';
 import { ModalLayout } from '@/components/ui';
+import { Button } from '@/components/ui/button';
 
 interface ParsedLog {
   level: 'error' | 'warn' | 'info' | 'debug';
@@ -124,9 +125,11 @@ const LogViewerHeader = ({
       </div>
     </div>
     <div className="flex items-center gap-2">
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={fetchLogs}
-        className="rounded-xl p-2 text-zinc-500 transition-all outline-none hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
+        className="rounded-xl text-zinc-500 hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
         title={t('logs.refreshLogs')}
       >
         <RefreshCw
@@ -134,21 +137,25 @@ const LogViewerHeader = ({
           className={cn(isLoading && 'animate-spin text-blue-500')}
           aria-hidden="true"
         />
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={clearLogs}
-        className="rounded-xl p-2 text-zinc-500 transition-all outline-none hover:bg-zinc-100 hover:text-red-500 focus-visible:ring-2 focus-visible:ring-red-500 dark:hover:bg-zinc-800"
+        className="rounded-xl text-zinc-500 hover:bg-zinc-100 hover:text-red-500 focus-visible:ring-2 focus-visible:ring-red-500 dark:hover:bg-zinc-800"
         title={t('logs.clearLogs')}
       >
         <Trash2 size={20} aria-hidden="true" />
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={onClose}
-        className="rounded-xl p-2 text-zinc-500 transition-all outline-none hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
+        className="rounded-xl text-zinc-500 hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
         aria-label={t('a11y.closeModal')}
       >
         <X size={24} aria-hidden="true" />
-      </button>
+      </Button>
     </div>
   </div>
 );
@@ -163,12 +170,13 @@ const LogViewerFooter = ({ t, onClose }: LogViewerFooterProps) => (
     <span className="caption-md font-bold tracking-widest text-zinc-400 uppercase">
       {t('logs.logStorageInfo')}
     </span>
-    <button
+    <Button
+      variant="secondary"
       onClick={onClose}
-      className="rounded-xl bg-zinc-900 py-2 ps-6 pe-6 text-sm font-bold text-white shadow-sm transition-all outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-zinc-100 dark:text-zinc-900"
+      className="rounded-xl py-2 ps-6 pe-6 text-sm font-bold shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500"
     >
       {t('common.done')}
-    </button>
+    </Button>
   </div>
 );
 

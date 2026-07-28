@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useId } from 'react';
-import { X, FolderOpen, Loader2 } from 'lucide-react';
+import { useState, useId, useMemo } from 'react';
+import { X, FolderOpen, Loader2, Download } from 'lucide-react';
 import { dialog } from '@/lib/ipc';
 import { useRagProjects as useRagProjectsHook } from '@/features/rag/hooks/useRagProjects';
 import { useTranslation } from '@/lib/i18n';
 import { useSettingsStore, useModelStore } from '@/store';
+import { useModelPulling } from '@/features/library';
 import { ModalLayout } from '@/components/ui';
+import { Button } from '@/components/ui/button';
 
 interface AddProjectDialogProps {
   onClose: () => void;
@@ -60,6 +62,13 @@ async function browseFolder(
   }
 }
 
+function parseIgnorePatterns(raw: string): string[] {
+  return raw
+    .split('\n')
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+}
+
 function useHandleAdd(
   form: ReturnType<typeof useFormState>,
   addNewProject: (data: {
@@ -81,10 +90,7 @@ function useHandleAdd(
     form.setErrorMessage(null);
 
     try {
-      const patterns = form.ignorePatterns
-        .split('\n')
-        .map((p) => p.trim())
-        .filter((p) => p.length > 0);
+      const patterns = parseIgnorePatterns(form.ignorePatterns);
       const result = await addNewProject({
         name: form.name.trim(),
         path: form.path.trim(),
@@ -109,6 +115,7 @@ export const AddProjectDialog = ({ onClose, onAdded }: AddProjectDialogProps) =>
   const { t } = useTranslation(language);
   const handleAdd = useHandleAdd(form, addNewProject, onAdded, t);
   const titleId = useId();
+  const { pullStatus, handlePull } = useModelPulling();
 
   return (
     <ModalLayout isOpen onClose={onClose} titleId={titleId} maxWidth="max-w-md">
@@ -117,101 +124,149 @@ export const AddProjectDialog = ({ onClose, onAdded }: AddProjectDialogProps) =>
           <h2 id={titleId} className="text-lg font-semibold">
             {t('rag.addProject')}
           </h2>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            className="hover:bg-accent rounded p-1"
+            className="hover:bg-accent rounded"
             aria-label={t('a11y.closeModal')}
           >
             <X className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
 
         <p className="text-muted-foreground text-sm">{t('rag.addProjectDescription')}</p>
 
-        <div className="space-y-1">
-          <label className="text-sm font-medium">{t('rag.projectName')}</label>
-          <input
-            type="text"
-            value={form.name}
-            onChange={(e) => form.setName(e.target.value)}
-            placeholder={t('rag.projectName')}
-            className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-sm font-medium">{t('rag.projectFolder')}</label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={form.path}
-              onChange={(e) => form.setPath(e.target.value)}
-              placeholder="/path/to/project"
-              className="border-input bg-background flex-1 rounded-md border px-3 py-2 text-sm"
-            />
-            <button
-              onClick={() => browseFolder(form.setPath, form.setName, form.name)}
-              className="border-input bg-background hover:bg-accent flex items-center gap-1 rounded-md border px-3 py-2 text-sm"
-            >
-              <FolderOpen className="h-4 w-4" />
-              {t('rag.browse')}
-            </button>
-          </div>
-        </div>
-
-        <EmbeddingModelSelect
-          value={form.embeddingModel}
-          onChange={form.setEmbeddingModel}
-          models={embeddingModels}
+        <AddProjectFormFields
+          form={form}
+          embeddingModels={embeddingModels}
+          pullStatus={pullStatus}
+          handlePull={handlePull}
+          handleAdd={handleAdd}
+          onClose={onClose}
           t={t}
         />
-
-        <div className="space-y-1">
-          <label className="text-sm font-medium">{t('rag.ignorePatterns')}</label>
-          <textarea
-            value={form.ignorePatterns}
-            onChange={(e) => form.setIgnorePatterns(e.target.value)}
-            rows={3}
-            placeholder="node_modules&#10;dist&#10;.git"
-            className="border-input bg-background w-full rounded-md border px-3 py-2 font-mono text-sm"
-          />
-          <p className="text-muted-foreground text-xs">{t('rag.ignorePatternsDescription')}</p>
-        </div>
-
-        {form.errorMessage && <p className="text-sm text-red-500">{form.errorMessage}</p>}
-
-        <div className="flex justify-end gap-2 pt-2">
-          <button
-            onClick={onClose}
-            className="border-input bg-background hover:bg-accent rounded-md border px-4 py-2 text-sm"
-          >
-            {t('common.cancel')}
-          </button>
-          <button
-            onClick={handleAdd}
-            disabled={form.isAdding}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 rounded-md px-4 py-2 text-sm disabled:opacity-50"
-          >
-            {form.isAdding && <Loader2 className="h-4 w-4 animate-spin" />}
-            {t('rag.addProjectAction')}
-          </button>
-        </div>
       </div>
     </ModalLayout>
   );
 };
+
+const AddProjectFormFields = ({
+  form,
+  embeddingModels,
+  pullStatus,
+  handlePull,
+  handleAdd,
+  onClose,
+  t,
+}: {
+  form: ReturnType<typeof useFormState>;
+  embeddingModels: { name: string }[];
+  pullStatus: Record<
+    string,
+    { status: string; progress?: number; completed?: number; total?: number }
+  >;
+  handlePull: (name: string) => void;
+  handleAdd: () => Promise<void>;
+  onClose: () => void;
+  t: (key: string, values?: Record<string, string | number | boolean>) => string;
+}) => (
+  <>
+    <div className="space-y-1">
+      <label className="text-sm font-medium">{t('rag.projectName')}</label>
+      <input
+        type="text"
+        value={form.name}
+        onChange={(e) => form.setName(e.target.value)}
+        placeholder={t('rag.projectName')}
+        className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+      />
+    </div>
+
+    <div className="space-y-1">
+      <label className="text-sm font-medium">{t('rag.projectFolder')}</label>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={form.path}
+          onChange={(e) => form.setPath(e.target.value)}
+          placeholder="/path/to/project"
+          className="border-input bg-background flex-1 rounded-md border px-3 py-2 text-sm"
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => browseFolder(form.setPath, form.setName, form.name)}
+          className="gap-1"
+        >
+          <FolderOpen className="h-4 w-4" />
+          {t('rag.browse')}
+        </Button>
+      </div>
+    </div>
+
+    <EmbeddingModelSelect
+      value={form.embeddingModel}
+      onChange={form.setEmbeddingModel}
+      models={embeddingModels}
+      t={t}
+      pullStatus={pullStatus}
+      onPullModel={handlePull}
+    />
+
+    <div className="space-y-1">
+      <label className="text-sm font-medium">{t('rag.ignorePatterns')}</label>
+      <textarea
+        value={form.ignorePatterns}
+        onChange={(e) => form.setIgnorePatterns(e.target.value)}
+        rows={3}
+        placeholder="node_modules&#10;dist&#10;.git"
+        className="border-input bg-background w-full rounded-md border px-3 py-2 font-mono text-sm"
+      />
+      <p className="text-muted-foreground text-xs">{t('rag.ignorePatternsDescription')}</p>
+    </div>
+
+    {form.errorMessage && <p className="text-sm text-red-500">{form.errorMessage}</p>}
+
+    <div className="flex justify-end gap-2 pt-2">
+      <Button variant="outline" onClick={onClose} className="text-sm">
+        {t('common.cancel')}
+      </Button>
+      <Button
+        variant="primary"
+        onClick={handleAdd}
+        disabled={form.isAdding}
+        className="gap-2 text-sm"
+      >
+        {form.isAdding && <Loader2 className="h-4 w-4 animate-spin" />}
+        {t('rag.addProjectAction')}
+      </Button>
+    </div>
+  </>
+);
 
 const EmbeddingModelSelect = ({
   value,
   onChange,
   models,
   t,
+  pullStatus,
+  onPullModel,
 }: {
   value: string;
   onChange: (v: string) => void;
   models: { name: string }[];
   t: (key: string, values?: Record<string, string | number | boolean>) => string;
+  pullStatus: Record<
+    string,
+    { status: string; progress?: number; completed?: number; total?: number }
+  >;
+  onPullModel: (name: string) => void;
 }) => {
+  const installedModelNames = useMemo(() => new Set(models.map((m) => m.name)), [models]);
+  const isInstalled = installedModelNames.has(value);
+  const isPulling = !!pullStatus[value];
+
   return (
     <div className="space-y-1">
       <label className="text-sm font-medium">{t('rag.embeddingModel')}</label>
@@ -239,6 +294,35 @@ const EmbeddingModelSelect = ({
           className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
         />
       )}
+
+      {!isInstalled && value.trim() && (
+        <div className="flex items-center gap-2 pt-1">
+          <p className="text-xs text-amber-600 dark:text-amber-400">
+            {t('rag.modelMissing', { model: value })}
+          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onPullModel(value)}
+            disabled={isPulling}
+            className="gap-1 rounded-md bg-amber-100 text-xs font-medium text-amber-700 hover:bg-amber-200 disabled:opacity-50 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50"
+          >
+            {isPulling ? (
+              <>
+                <Loader2 size={12} className="animate-spin" />
+                {t('library.pulling')}
+              </>
+            ) : (
+              <>
+                <Download size={12} />
+                {t('rag.pullModel')}
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+
       <p className="text-muted-foreground text-xs">
         {t('rag.embeddingModelNote', { model: 'nomic-embed-text-v2-moe' })}
       </p>

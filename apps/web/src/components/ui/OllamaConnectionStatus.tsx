@@ -6,7 +6,6 @@ import { useTranslation } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/settings-store';
 import { AlertCircle, CheckCircle2, Loader2, WifiOff } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import type { ReactNode } from 'react';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -32,6 +31,7 @@ const StatusContent = ({ isChecking, connectionState, reconnect, t }: StatusCont
           <WifiOff size={14} />
           <span className="hidden sm:inline">{t('chat.offline')}</span>
         </div>
+        {/* eslint-disable-next-line musaed-buttons/prefer-button-primitive -- inline text-link, not a CVA button */}
         <button
           onClick={reconnect}
           className="caption-xs font-bold text-blue-600 motion-safe:transition-colors motion-safe:hover:text-blue-700"
@@ -47,6 +47,7 @@ const StatusContent = ({ isChecking, connectionState, reconnect, t }: StatusCont
           <AlertCircle size={14} />
           <span className="hidden sm:inline">{t('error.connectionError')}</span>
         </div>
+        {/* eslint-disable-next-line musaed-buttons/prefer-button-primitive -- inline text-link, not a CVA button */}
         <button
           onClick={reconnect}
           className="caption-xs font-bold text-blue-600 motion-safe:transition-colors motion-safe:hover:text-blue-700"

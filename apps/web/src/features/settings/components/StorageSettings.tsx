@@ -5,6 +5,7 @@ import { useGlobalSettings, useLanguage } from '@/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 import { useStorageActions } from '@/features/settings/hooks/useStorageActions';
 import { useSettingsActions } from '@/features/settings/hooks/useSettingsActions';
+import { Button } from '@/components/ui/button';
 
 /** Storage size display card. */
 const SizeCard = ({ label, value }: { label: string; value: string }) => (
@@ -30,30 +31,33 @@ const ExportActions = ({
 }) => (
   <div className="pbs-2 flex flex-col gap-2">
     <div className="flex gap-2">
-      <button
+      <Button
+        variant="ghost"
         onClick={onExportJson}
-        className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-zinc-100 py-2 text-xs font-bold tracking-widest uppercase transition-all hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+        className="flex-1 gap-2 rounded-lg bg-zinc-100 py-2 text-xs font-bold tracking-widest uppercase hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
       >
         <Download size={14} />
         {labels.exportJson}
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="ghost"
         disabled
         onClick={onImportJson}
-        className="flex flex-1 cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-zinc-100 py-2 text-xs font-bold tracking-widest uppercase opacity-40 grayscale transition-all dark:bg-zinc-800"
+        className="flex-1 cursor-not-allowed gap-2 rounded-lg bg-zinc-100 py-2 text-xs font-bold tracking-widest uppercase opacity-40 grayscale dark:bg-zinc-800"
         title={comingSoon}
       >
         <Upload size={14} />
         {labels.importData}
-      </button>
+      </Button>
     </div>
-    <button
+    <Button
+      variant="outline"
       onClick={onExportMarkdown}
-      className="flex items-center justify-center gap-2 rounded-lg border border-zinc-200 py-2 text-xs font-bold tracking-widest text-zinc-600 uppercase transition-all hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+      className="gap-2 rounded-lg py-2 text-xs font-bold tracking-widest text-zinc-600 uppercase hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800"
     >
       <FileText size={14} />
       {labels.exportMarkdown}
-    </button>
+    </Button>
   </div>
 );
 

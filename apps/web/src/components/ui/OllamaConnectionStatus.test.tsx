@@ -7,10 +7,8 @@ import OllamaConnectionStatus from './OllamaConnectionStatus';
 const mockReconnect = vi.fn();
 const useReducedMotionMock = vi.fn(() => false);
 
-vi.mock('framer-motion', async (importOriginal) => {
-  const actual = await importOriginal();
+vi.mock('framer-motion', async () => {
   return {
-    ...actual,
     motion: {
       div: 'div',
       button: 'button',

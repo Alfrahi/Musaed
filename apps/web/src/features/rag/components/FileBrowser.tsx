@@ -7,6 +7,7 @@ import { useLanguage } from '@/store';
 import { Loader2, Folder, File, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
+import { Button } from '@/components/ui/button';
 
 interface FileBrowserProps {
   onFileSelect?: (filePath: string) => void;
@@ -109,14 +110,10 @@ const FileBrowser = ({ onFileSelect }: FileBrowserProps) => {
     return (
       <div className="text-destructive p-4 text-sm">
         <p>{errorMessage}</p>
-        <button
-          type="button"
-          className="hover:bg-accent mt-2 inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm"
-          onClick={handleRefresh}
-        >
+        <Button variant="outline" size="sm" className="mt-2 gap-2" onClick={handleRefresh}>
           <RefreshCw className="h-4 w-4" />
           {t('common.retry')}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -125,9 +122,14 @@ const FileBrowser = ({ onFileSelect }: FileBrowserProps) => {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b p-2">
         <h3 className="text-sm font-medium">{t('rag.indexedFiles')}</h3>
-        <button type="button" className="hover:bg-accent rounded-md p-1" onClick={handleRefresh}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hover:bg-accent rounded-md"
+          onClick={handleRefresh}
+        >
           <RefreshCw className="h-4 w-4" />
-        </button>
+        </Button>
       </div>
       <div className="flex-1 overflow-auto p-2">
         {fileTree.length > 0 ? (
