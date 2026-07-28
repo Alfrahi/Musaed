@@ -58,6 +58,7 @@ const MessageContent = ({ message, isUser }: { message: Message; isUser: boolean
     <div
       className="prose prose-sm md:prose-base dark:prose-invert max-w-none break-words"
       dir="auto"
+      aria-busy={isStreaming}
     >
       {!isUser && (parsed.thinking || !parsed.isFinished) && (
         <ThinkingBlock
