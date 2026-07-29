@@ -4,6 +4,7 @@
 //! `packages/contracts/src/validation-limits.ts`) and re-exported here for
 //! backward compatibility.
 
+use crate::error_codes;
 use crate::payloads::{ApiResponse, BackendError};
 use crate::validation::is_valid_model_name;
 
@@ -175,7 +176,10 @@ pub fn rag_validation_error<T>(message: impl Into<String>) -> ApiResponse<T> {
     ApiResponse {
         success: false,
         data: None,
-        error: Some(BackendError::new("RAG_VALIDATION_ERROR", message)),
+        error: Some(BackendError::new(
+            error_codes::RAG_VALIDATION_ERROR,
+            message,
+        )),
     }
 }
 

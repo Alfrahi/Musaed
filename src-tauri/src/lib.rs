@@ -8,6 +8,7 @@ pub mod conversation;
 pub mod dialog;
 pub mod error_codes;
 pub mod generated_validation;
+pub mod logging;
 pub mod migrations;
 pub mod ollama;
 pub mod ollama_url;
@@ -16,7 +17,6 @@ pub mod payloads;
 pub mod rag;
 pub mod rate_limiter;
 pub mod shared;
-pub mod trace_domain;
 pub mod validation;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -48,11 +48,11 @@ pub fn run() {
 
     builder = builder.setup(|app| -> Result<(), Box<dyn std::error::Error>> {
         // Initialize file logger and get the channel sender for tracing
-        let log_tx = trace_domain::init_file_logger(app.handle())
+        let log_tx = logging::init_file_logger(app.handle())
             .map_err(|e| format!("Failed to initialize file logger: {}", e))?;
 
         // Create a tracing layer that forwards events to the log channel
-        let tracing_layer = trace_domain::TracingLayer::new(log_tx);
+        let tracing_layer = logging::TracingLayer::new(log_tx);
         let subscriber = tracing_subscriber::Registry::default().with(tracing_layer);
         tracing::subscriber::set_global_default(subscriber)
             .map_err(|e| format!("Failed to set tracing subscriber: {}", e))?;
@@ -108,14 +108,14 @@ pub fn run() {
             ollama::models::cmd_ollama_verify_service,
             ollama::title::cmd_ollama_generate_title,
             // Logging commands
-            trace_domain::commands::cmd_logs_append,
-            trace_domain::commands::cmd_logs_request_clear_token,
-            trace_domain::commands::cmd_logs_clear,
+            logging::commands::cmd_logs_append,
+            logging::commands::cmd_logs_request_clear_token,
+            logging::commands::cmd_logs_clear,
             // Trace domain commands
-            trace_domain::commands::cmd_trace_append,
-            trace_domain::commands::cmd_trace_start,
-            trace_domain::commands::cmd_trace_complete,
-            trace_domain::commands::cmd_trace_get_context,
+            logging::commands::cmd_trace_append,
+            logging::commands::cmd_trace_start,
+            logging::commands::cmd_trace_complete,
+            logging::commands::cmd_trace_get_context,
             // Migration commands
             migrations::cmd_run_migrations,
             migrations::cmd_rollback_migrations,
@@ -146,9 +146,9 @@ pub fn run() {
             conversation::commands::cmd_conversation_delete,
             conversation::commands::cmd_conversations_clear,
             conversation::commands::cmd_conversation_update,
-            conversation::commands::cmd_export_markdown,
+            conversation::commands::cmd_conversation_export_markdown,
             // Context menu command
-            context_menu::cmd_show_context_menu,
+            context_menu::cmd_context_menu_show,
             // Other commands
             dialog::cmd_dialog_ask,
             opener::cmd_opener_open_url,

@@ -1,12 +1,13 @@
 // Thin‑adapter service layer for Trace Domain commands.
 // All business logic (validation, span handling, logging) lives here.
 
+use crate::error_codes;
 use crate::generated_validation::{
     MAX_ACTION_NAME_LEN, MAX_FEATURE_NAME_LEN, MAX_TRACE_CONTEXT_FIELDS,
     MAX_TRACE_CONTEXT_VALUE_LEN, MAX_TRACE_MESSAGE_LEN,
 };
 use crate::payloads::{ApiResponse, BackendError};
-use crate::trace_domain::{
+use crate::logging::{
     LogLevel, Span, TraceContext, TraceEntry, TraceEntryInput, TraceSource, TraceStatus,
     ACTIVE_SPANS,
 };
@@ -97,7 +98,7 @@ pub fn emit_trace(entry: TraceEntry) {
     };
 
     // Log through the channel logger (project‑wide logger)
-    crate::trace_domain::logger::ChannelLogger::log_direct(format!("{}\n", json));
+    crate::logging::logger::ChannelLogger::log_direct(format!("{}\n", json));
 
     // Optionally echo to console in debug builds
     #[cfg(debug_assertions)]
@@ -134,7 +135,7 @@ pub async fn append(input: TraceEntryInput) -> ApiResponse<()> {
         return ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new("VALIDATION_ERROR", e)),
+            error: Some(BackendError::new(error_codes::VALIDATION_ERROR, e)),
         };
     }
 

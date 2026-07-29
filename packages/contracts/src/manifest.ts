@@ -83,4 +83,21 @@ export interface FeatureManifest {
    * Empty array means no dependencies.
    */
   dependencies: readonly string[];
+
+  /**
+   * Failure mode documentation for this feature's IPC endpoints.
+   * Each key is an IPC command name; the value describes fallback
+   * behavior, retry policy, and the i18n key for the user-visible message.
+   *
+   * Optional — CI warns (does not fail) when a feature with IPC endpoints
+   * has no failureModes defined.
+   */
+  failureModes?: Record<
+    string,
+    {
+      fallback: string;
+      retry: 'none' | 'once' | 'exponential';
+      messageKey: string;
+    }
+  >;
 }

@@ -6,6 +6,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use crate::error_codes;
 use crate::payloads::{ApiResponse, BackendError};
 use crate::rag::context_assembler;
 use crate::rag::embedder::OllamaEmbedder;
@@ -218,7 +219,7 @@ pub async fn add_project<'a>(req: AddProjectRequest<'a>) -> ApiResponse<RagProje
         Err(e) => ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new("RAG_CREATE_ERROR", e)),
+            error: Some(BackendError::new(error_codes::RAG_CREATE_ERROR, e)),
         },
     }
 }
@@ -238,7 +239,7 @@ pub async fn remove_project<'a>(req: RemoveProjectRequest<'a>) -> ApiResponse<bo
         Err(e) => ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new("RAG_DELETE_ERROR", e)),
+            error: Some(BackendError::new(error_codes::RAG_DELETE_ERROR, e)),
         },
     }
 }
@@ -260,7 +261,7 @@ pub async fn update_project<'a>(req: UpdateProjectRequest<'a>) -> ApiResponse<Ra
         return ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new("RAG_UPDATE_ERROR", e)),
+            error: Some(BackendError::new(error_codes::RAG_UPDATE_ERROR, e)),
         };
     }
     match s.get_project(&req.project_id).await {
@@ -272,12 +273,15 @@ pub async fn update_project<'a>(req: UpdateProjectRequest<'a>) -> ApiResponse<Ra
         Ok(None) => ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new("RAG_NOT_FOUND", "Project not found")),
+            error: Some(BackendError::new(
+                error_codes::RAG_NOT_FOUND,
+                "Project not found",
+            )),
         },
         Err(e) => ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
+            error: Some(BackendError::new(error_codes::RAG_FETCH_ERROR, e)),
         },
     }
 }
@@ -294,7 +298,7 @@ pub async fn list_projects<'a>(req: ListProjectsRequest<'a>) -> ApiResponse<Vec<
         Err(e) => ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new("RAG_LIST_ERROR", e)),
+            error: Some(BackendError::new(error_codes::RAG_LIST_ERROR, e)),
         },
     }
 }
@@ -314,12 +318,15 @@ pub async fn get_project<'a>(req: GetProjectRequest<'a>) -> ApiResponse<RagProje
         Ok(None) => ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new("RAG_NOT_FOUND", "Project not found")),
+            error: Some(BackendError::new(
+                error_codes::RAG_NOT_FOUND,
+                "Project not found",
+            )),
         },
         Err(e) => ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
+            error: Some(BackendError::new(error_codes::RAG_FETCH_ERROR, e)),
         },
     }
 }
@@ -386,14 +393,17 @@ pub async fn start_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResp
                 return ApiResponse {
                     success: false,
                     data: None,
-                    error: Some(BackendError::new("RAG_NOT_FOUND", "Project not found")),
+                    error: Some(BackendError::new(
+                        error_codes::RAG_NOT_FOUND,
+                        "Project not found",
+                    )),
                 }
             }
             Err(e) => {
                 return ApiResponse {
                     success: false,
                     data: None,
-                    error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
+                    error: Some(BackendError::new(error_codes::RAG_FETCH_ERROR, e)),
                 }
             }
         }
@@ -502,12 +512,12 @@ pub async fn start_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResp
     crate::shared::RAG_INDEX_ABORT_HANDLES.remove(&req.project_id);
     let _ = req.app_handle.emit(
         crate::shared::EVENT_RAG_INDEX_ERROR,
-        &BackendError::new("RAG_INDEX_ERROR", last_error.clone()),
+        &BackendError::new(error_codes::RAG_INDEX_ERROR, last_error.clone()),
     );
     ApiResponse {
         success: false,
         data: None,
-        error: Some(BackendError::new("RAG_INDEX_ERROR", last_error)),
+        error: Some(BackendError::new(error_codes::RAG_INDEX_ERROR, last_error)),
     }
 }
 
@@ -524,14 +534,17 @@ pub async fn search<'a>(req: SearchRequest<'a>) -> ApiResponse<Vec<SearchResult>
                 return ApiResponse {
                     success: false,
                     data: None,
-                    error: Some(BackendError::new("RAG_NOT_FOUND", "Project not found")),
+                    error: Some(BackendError::new(
+                        error_codes::RAG_NOT_FOUND,
+                        "Project not found",
+                    )),
                 }
             }
             Err(e) => {
                 return ApiResponse {
                     success: false,
                     data: None,
-                    error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
+                    error: Some(BackendError::new(error_codes::RAG_FETCH_ERROR, e)),
                 }
             }
         }
@@ -562,7 +575,7 @@ pub async fn search<'a>(req: SearchRequest<'a>) -> ApiResponse<Vec<SearchResult>
         Err(e) => ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new("RAG_SEARCH_ERROR", e)),
+            error: Some(BackendError::new(error_codes::RAG_SEARCH_ERROR, e)),
         },
     }
 }
@@ -579,14 +592,17 @@ pub async fn get_file_chunks<'a>(req: GetFileChunksRequest<'a>) -> ApiResponse<V
             return ApiResponse {
                 success: false,
                 data: None,
-                error: Some(BackendError::new("RAG_NOT_FOUND", "Project not found")),
+                error: Some(BackendError::new(
+                    error_codes::RAG_NOT_FOUND,
+                    "Project not found",
+                )),
             }
         }
         Err(e) => {
             return ApiResponse {
                 success: false,
                 data: None,
-                error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
+                error: Some(BackendError::new(error_codes::RAG_FETCH_ERROR, e)),
             }
         }
     };
@@ -612,7 +628,7 @@ pub async fn get_file_chunks<'a>(req: GetFileChunksRequest<'a>) -> ApiResponse<V
                     Err(e) => ApiResponse {
                         success: false,
                         data: None,
-                        error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
+                        error: Some(BackendError::new(error_codes::RAG_FETCH_ERROR, e)),
                     },
                 }
             } else {
@@ -631,7 +647,7 @@ pub async fn get_file_chunks<'a>(req: GetFileChunksRequest<'a>) -> ApiResponse<V
         Err(e) => ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
+            error: Some(BackendError::new(error_codes::RAG_FETCH_ERROR, e)),
         },
     }
 }
@@ -651,7 +667,7 @@ pub async fn get_project_stats<'a>(req: GetProjectStatsRequest<'a>) -> ApiRespon
         Err(e) => ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new("RAG_STATS_ERROR", e)),
+            error: Some(BackendError::new(error_codes::RAG_STATS_ERROR, e)),
         },
     }
 }
@@ -672,7 +688,7 @@ pub async fn set_embedding_model<'a>(req: SetEmbeddingModelRequest<'a>) -> ApiRe
         return ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new("RAG_UPDATE_ERROR", e)),
+            error: Some(BackendError::new(error_codes::RAG_UPDATE_ERROR, e)),
         };
     }
     ApiResponse {
@@ -705,7 +721,7 @@ pub async fn validate_embedding_model(
         Err(e) => ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new("RAG_VALIDATION_ERROR", e)),
+            error: Some(BackendError::new(error_codes::RAG_VALIDATION_ERROR, e)),
         },
     }
 }
@@ -731,14 +747,17 @@ pub async fn assemble_context<'a>(
                 return ApiResponse {
                     success: false,
                     data: None,
-                    error: Some(BackendError::new("RAG_NOT_FOUND", "Project not found")),
+                    error: Some(BackendError::new(
+                        error_codes::RAG_NOT_FOUND,
+                        "Project not found",
+                    )),
                 }
             }
             Err(e) => {
                 return ApiResponse {
                     success: false,
                     data: None,
-                    error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
+                    error: Some(BackendError::new(error_codes::RAG_FETCH_ERROR, e)),
                 }
             }
         }
@@ -766,7 +785,7 @@ pub async fn assemble_context<'a>(
             return ApiResponse {
                 success: false,
                 data: None,
-                error: Some(BackendError::new("RAG_SEARCH_ERROR", e)),
+                error: Some(BackendError::new(error_codes::RAG_SEARCH_ERROR, e)),
             }
         }
     };

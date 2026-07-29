@@ -13,6 +13,16 @@
  * rule degrades to a hard ban (every cross-feature import errors), so a
  * misconfigured tree fails loud and early rather than silently passing.
  */
+
+/**
+ * Features exempt from cross-feature import rules.
+ *
+ * These features are composition roots that mount other features by design.
+ * Adding a feature to this list is a Tier 3 architectural change
+ * (STANDARDS.md §20) and requires updating STANDARDS.md §3.
+ */
+const EXEMPT_FEATURES = ['layout'];
+
 const featureDeps = loadFeatureDeps();
 
 function loadFeatureDeps() {
@@ -26,7 +36,9 @@ function loadFeatureDeps() {
 
 function buildCrossFeatureRules() {
   const features = ['conversation', 'info', 'library', 'rag', 'settings', 'sidebar'];
-  return features.map((feature) => {
+  return features
+    .filter((feature) => !EXEMPT_FEATURES.includes(feature))
+    .map((feature) => {
     const allowed = featureDeps?.[feature] ?? [];
     // Build a regex that matches a path under ANY feature dir EXCEPT:
     //   - the source feature itself (intra-feature imports are fine)

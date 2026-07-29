@@ -3,6 +3,7 @@
 //! Contains [`strip_think_blocks`] for cleaning model output and the
 //! [`cmd_ollama_generate_title`] Tauri command that produces a short conversation title.
 
+use crate::error_codes;
 use crate::payloads::{ApiResponse, BackendError};
 use crate::validation::{
     is_valid_language, is_valid_model_name, validation_error, MAX_TITLE_INPUT_LEN,
@@ -261,7 +262,7 @@ pub async fn cmd_ollama_generate_title<R: Runtime>(
             return ApiResponse {
                 success: false,
                 data: None,
-                error: Some(BackendError::new("RATE_LIMITED", msg)),
+                error: Some(BackendError::new(error_codes::RATE_LIMITED, msg)),
             }
         }
     };
@@ -372,7 +373,7 @@ pub async fn cmd_ollama_generate_title<R: Runtime>(
                     ApiResponse {
                         success: false,
                         data: None,
-                        error: Some(BackendError::new("PARSE_ERROR", e.to_string())),
+                        error: Some(BackendError::new(error_codes::PARSE_ERROR, e.to_string())),
                     }
                 }
             }
@@ -400,7 +401,7 @@ pub async fn cmd_ollama_generate_title<R: Runtime>(
                 success: false,
                 data: None,
                 error: Some(
-                    BackendError::new("NETWORK_ERROR", e.to_string())
+                    BackendError::new(error_codes::NETWORK_ERROR, e.to_string())
                         .with_context("Failed to generate title".to_string())
                         .retryable(),
                 ),

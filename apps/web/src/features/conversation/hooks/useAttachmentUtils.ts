@@ -2,6 +2,7 @@
 
 import { checkIsTauri, dialog, fs } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
+import { fileNameFromPath } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 export interface FileAttachment {
@@ -14,13 +15,6 @@ export interface FileAttachment {
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'] as const;
-
-/**
- * Extracts filename from a full file path.
- */
-export function fileNameFromPath(path: string): string {
-  return path.split(/[/\\]/).pop() || path;
-}
 
 /**
  * Returns MIME type based on file extension.

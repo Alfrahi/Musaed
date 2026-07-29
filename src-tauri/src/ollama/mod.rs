@@ -16,6 +16,7 @@ pub mod client;
 pub mod commands;
 pub mod error;
 pub mod health_service;
+pub mod model_service;
 pub mod models;
 pub mod service;
 pub mod streaming;

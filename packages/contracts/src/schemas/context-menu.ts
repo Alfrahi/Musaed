@@ -4,7 +4,7 @@ import { VALIDATION_LIMITS } from '../constants';
 /**
  * Context-menu contracts (UX-UI-AUDIT Prompt 12, F13).
  *
- * The frontend fires `cmd_show_context_menu` on a `contextmenu` event with
+ * The frontend fires `cmd_context_menu_show` on a `contextmenu` event with
  * the kind of surface it came from and the target id. The Rust backend builds
  * a native Tauri menu for that kind, pops it up at `(x, y)`, and returns the
  * selected item id (or `null` if the user dismissed the menu).

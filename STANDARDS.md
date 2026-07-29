@@ -67,7 +67,7 @@ Each feature MUST include:
 - `hooks/`
 - `utils/` (optional)
 - `index.ts` (PUBLIC API ONLY)
-- optional `feature.manifest.ts` (REQUIRED FOR COMPLEX FEATURES)
+- `feature.manifest.ts` (REQUIRED)
 
 ---
 
@@ -117,11 +117,30 @@ import rule. Its `HomeClient.tsx` mounts every other feature by design. No
 feature with the same exemption is a Tier 3 architectural change (see §20)
 and requires updating this section plus `.dependency-cruiser.js`.
 
+The exemption is declared in `.dependency-cruiser.js` via the
+`EXEMPT_FEATURES` array.
+
+### Shared UI component guard
+
+Components in `@/components/ui/` SHOULD be feature-agnostic design
+primitives (buttons, modals, skeletons, badges). If a component needs
+feature-specific behavior, it SHOULD live in the feature that owns it.
+A dep-cruiser rule with severity `warn` flags `components/ui/` → feature
+imports for review.
+
+### Store composition
+
+Hooks may read from multiple stores via Zustand selectors. This is the
+intended pattern for cross-domain state access. Store-to-store imports
+are restricted to the exceptions listed in §9. Cross-store coordination
+that requires writing to multiple stores belongs in
+`src/store/coordination.ts`.
+
 ---
 
 # **4. FEATURE CONTRACT SYSTEM (NEW CORE MODEL)**
 
-Each feature SHOULD define:
+Each feature MUST define:
 
 ```txt id="manifest"
 feature.manifest.ts
@@ -129,11 +148,12 @@ feature.manifest.ts
 
 Contains:
 
-- public API surface
-- IPC endpoints used
-- state schema version
-- persistence schema version
-- dependency list
+- public API surface (`publicApi.hooks`, `publicApi.components`)
+- IPC endpoints used (`ipcEndpoints`)
+- state schema version (`stateSchemas`)
+- persistence schema version (`persistenceSchemas`)
+- dependency list (`dependencies`)
+- failure modes (`failureModes`) — optional, but CI warns when absent
 
 ---
 
@@ -205,6 +225,15 @@ The `COMMAND_VERSIONS` map in `packages/contracts/src/command-versions.ts` is
 a command registry (not a version map) — the frontend IPC bridge consults it
 in development to warn about unregistered commands, and `latency.test.ts`
 enumerates its keys to confirm every command has a latency budget.
+
+---
+
+## IPC ENDPOINT OWNERSHIP
+
+Each IPC endpoint MUST have a single owning feature declared in its
+manifest's `ipcEndpoints` array. Other features that need the endpoint
+MUST declare the owning feature as a dependency and consume it through
+that feature's public API, not by calling the IPC directly.
 
 ---
 
@@ -301,8 +330,16 @@ cmd_* functions MUST NOT contain business logic
 ## RULES
 
 - Zustand stores MUST be domain-separated
-- No cross-store imports
 - No direct store mutation outside actions layer
+- Cross-store imports are permitted only for:
+  - **Hydration coordination**: Persisted stores may call
+    `useUIStore.getState().onStoreRehydrated()` in their
+    `onRehydrateStorage` callback.
+  - **Stream orchestration**: `store/coordination.ts` may import all
+    stores using `.getState()` exclusively for stream lifecycle
+    management.
+- No other cross-store imports are permitted. No store may subscribe to
+  another store's state via hooks.
 
 ---
 
@@ -365,13 +402,21 @@ apps/web/locales/{lang}.json
 
 ---
 
-## FAILURE MODE RULE (NEW)
+## FAILURE MODE RULE
 
-Every feature MUST define:
+Each feature SHOULD document its failure modes in its
+`feature.manifest.ts`:
 
-- fallback behavior
-- retry policy
-- user-visible message (i18n)
+```typescript
+failureModes?: Record<string, {
+  fallback: string;      // Description of fallback behavior
+  retry: 'none' | 'once' | 'exponential';
+  messageKey: string;    // i18n key for user-visible message
+}>;
+```
+
+CI warns (does not fail) when a feature with IPC endpoints has no
+`failureModes` defined.
 
 ---
 

@@ -45,10 +45,10 @@ Renders the conversation sidebar — conversation list with grouping by time, se
 
 ## IPC Endpoints
 
-| Command               | Purpose                              |
-| --------------------- | ------------------------------------ |
-| `cmd_dialog_ask`      | Confirmation dialogs (delete, clear) |
-| `cmd_export_markdown` | Export conversation to Markdown file |
+| Command                            | Purpose                              |
+| ---------------------------------- | ------------------------------------ |
+| `cmd_dialog_ask`                   | Confirmation dialogs (delete, clear) |
+| `cmd_conversation_export_markdown` | Export conversation to Markdown file |
 
 ## State Schemas
 

@@ -91,7 +91,7 @@ pub(crate) fn format_conversation_as_markdown(conversation: &Conversation) -> St
 /// store errors and `error_codes::FILE_SYSTEM_ERROR` on write failures.
 ///
 /// This is the service-level entry point used by the
-/// `cmd_export_markdown` command adapter in `conversation::commands`.
+/// `cmd_conversation_export_markdown` command adapter in `conversation::commands`.
 pub(crate) async fn export_markdown(
     store: Arc<Mutex<ConversationStore>>,
     conversation_id: String,
