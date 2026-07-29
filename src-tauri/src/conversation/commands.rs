@@ -65,7 +65,7 @@ pub async fn cmd_conversation_update(
 }
 
 #[tauri::command]
-pub async fn cmd_export_markdown(
+pub async fn cmd_conversation_export_markdown(
     app: tauri::AppHandle,
     conversation_id: String,
     path: String,

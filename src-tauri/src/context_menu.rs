@@ -5,7 +5,7 @@
 //! the frontend. Lives in `tauri::menu` core API — no new plugin dependency.
 //!
 //! Architecture (STANDARDS §6):
-//! - `commands::cmd_show_context_menu` — thin IPC adapter only.
+//! - `commands::cmd_context_menu_show` — thin IPC adapter only.
 //! - `service::show_context_menu`     — domain logic (item list per kind,
 //!   menu construction, popup, awaiting selection).
 //!
@@ -235,7 +235,7 @@ pub async fn dispatch_show_context_menu(
 /// frontend ships translated labels so the backend stays locale-agnostic
 /// (STANDARDS §11).
 #[tauri::command]
-pub async fn cmd_show_context_menu(
+pub async fn cmd_context_menu_show(
     app: AppHandle,
     kind: ContextMenuKind,
     labels: ContextMenuLabels,

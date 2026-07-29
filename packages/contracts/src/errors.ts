@@ -19,6 +19,7 @@ export enum BackendErrorCode {
   InvalidInput = 'INVALID_INPUT',
   InvalidUrl = 'INVALID_URL',
   InvalidResponse = 'INVALID_RESPONSE',
+  ValidationError = 'VALIDATION_ERROR',
 
   // ── Rate limiting / concurrency ───────────────────────
   RateLimited = 'RATE_LIMITED',
@@ -51,6 +52,7 @@ export enum BackendErrorCode {
   RagStatsError = 'RAG_STATS_ERROR',
   RagValidationError = 'RAG_VALIDATION_ERROR',
   RagAlreadyIndexing = 'RAG_ALREADY_INDEXING',
+  RagIndexError = 'RAG_INDEX_ERROR',
 
   // ── Conversation ──────────────────────────────────────
   ConversationNotFound = 'CONVERSATION_NOT_FOUND',

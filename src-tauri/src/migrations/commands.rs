@@ -6,6 +6,7 @@
 //! - Checking migration status
 //! - Listing available migrations
 
+use crate::payloads::ApiResponse;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -74,18 +75,18 @@ pub async fn cmd_run_migrations(
     target: String,
     target_version: Option<u32>,
     allow_rollback: bool,
-) -> Result<RunMigrationsResponse, String> {
+) -> Result<ApiResponse<RunMigrationsResponse>, String> {
     let request = RunMigrationsRequest {
         target,
         target_version,
         allow_rollback,
     };
-    crate::migrations::service::run(
+    Ok(crate::migrations::service::run(
         conversation_store.inner().clone(),
         rag_store.inner().clone(),
         request,
     )
-    .await
+    .await)
 }
 
 /// Rollback to a previous version
@@ -95,14 +96,14 @@ pub async fn cmd_rollback_migrations(
     rag_store: State<'_, Arc<Mutex<Connection>>>,
     target: String,
     to_version: u32,
-) -> Result<RunMigrationsResponse, String> {
-    crate::migrations::service::rollback(
+) -> Result<ApiResponse<RunMigrationsResponse>, String> {
+    Ok(crate::migrations::service::rollback(
         conversation_store.inner().clone(),
         rag_store.inner().clone(),
         target,
         to_version,
     )
-    .await
+    .await)
 }
 
 /// Get migration status for a target database
@@ -111,17 +112,17 @@ pub async fn cmd_get_migration_status(
     conversation_store: State<'_, Arc<Mutex<Connection>>>,
     rag_store: State<'_, Arc<Mutex<Connection>>>,
     target: String,
-) -> Result<MigrationStatus, String> {
-    crate::migrations::service::status(
+) -> Result<ApiResponse<MigrationStatus>, String> {
+    Ok(crate::migrations::service::status(
         conversation_store.inner().clone(),
         rag_store.inner().clone(),
         target,
     )
-    .await
+    .await)
 }
 
 /// List available migrations for a target
 #[tauri::command]
-pub fn cmd_list_migrations(target: String) -> Result<Vec<MigrationInfo>, String> {
+pub fn cmd_list_migrations(target: String) -> ApiResponse<Vec<MigrationInfo>> {
     crate::migrations::service::list(target)
 }

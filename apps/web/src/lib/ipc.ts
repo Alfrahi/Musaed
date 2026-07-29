@@ -330,7 +330,10 @@ export interface CommandMap {
   cmd_dialog_ask: { args: { title: string; message: string; kind?: string }; return: boolean };
 
   // Export commands
-  cmd_export_markdown: { args: { conversationId: string; path: string }; return: boolean };
+  cmd_conversation_export_markdown: {
+    args: { conversationId: string; path: string };
+    return: boolean;
+  };
 
   // Opener commands
   cmd_opener_open_url: { args: { url: string }; return: boolean };
@@ -404,8 +407,8 @@ export interface CommandMap {
   // and returns the selected action id (or null if dismissed).
   // Args are declared inline (not via ContextMenuRequest) so the CI
   // contract validator can cross-check field names against the Rust
-  // `cmd_show_context_menu` signature (STANDARDS §10).
-  cmd_show_context_menu: {
+  // `cmd_context_menu_show` signature (STANDARDS §10).
+  cmd_context_menu_show: {
     args: {
       kind: ContextMenuKind;
       labels: Partial<ContextMenuLabels>;
@@ -480,7 +483,7 @@ const CommandInputSchemas: {
   }),
 
   // Export command input schemas
-  cmd_export_markdown: z.object({
+  cmd_conversation_export_markdown: z.object({
     conversationId: z.string().min(1),
     path: z.string().min(1).max(RAG_VALIDATION_LIMITS.MAX_FILE_PATH_LEN),
   }),
@@ -603,8 +606,8 @@ const CommandInputSchemas: {
 
   // Context menu input schema — validates the request from the frontend
   // before it reaches the Rust command adapter. Fields match the Rust
-  // `cmd_show_context_menu` signature exactly (kind, labels, x, y).
-  cmd_show_context_menu: z.object({
+  // `cmd_context_menu_show` signature exactly (kind, labels, x, y).
+  cmd_context_menu_show: z.object({
     kind: ContextMenuKindSchema,
     labels: ContextMenuLabelsSchema,
     x: z.number().finite(),
@@ -643,7 +646,7 @@ const CommandReturnSchemas: {
   cmd_dialog_ask: z.boolean(),
 
   // Export command return schemas
-  cmd_export_markdown: z.boolean(),
+  cmd_conversation_export_markdown: z.boolean(),
 
   // Opener command return schemas
   cmd_opener_open_url: z.boolean(),
@@ -680,7 +683,7 @@ const CommandReturnSchemas: {
   cmd_list_migrations: z.array(MigrationInfoSchema),
 
   // Context menu return schema
-  cmd_show_context_menu: ContextMenuResponseSchema,
+  cmd_context_menu_show: ContextMenuResponseSchema,
 };
 
 /**
@@ -1110,7 +1113,7 @@ export const exportApi = {
    * @returns true if export succeeded, false otherwise
    */
   markdown: (conversationId: string, path: string) =>
-    callInternal('cmd_export_markdown', { conversationId, path }),
+    callInternal('cmd_conversation_export_markdown', { conversationId, path }),
 };
 
 /**
@@ -1533,5 +1536,5 @@ export const contextMenuApi = {
     x: number,
     y: number,
     labels: Partial<ContextMenuLabels>
-  ) => callInternal('cmd_show_context_menu', { kind, x, y, labels }),
+  ) => callInternal('cmd_context_menu_show', { kind, x, y, labels }),
 };

@@ -28,7 +28,7 @@ export function useNativeUX() {
     // The previous global `contextmenu` `preventDefault` in production is gone
     // (audit F13, Prompt 12). Right-click surfaces own their `onContextMenu`
     // handlers now and route through the native Tauri context-menu IPC
-    // (`cmd_show_context_menu`). A blanket `preventDefault` here would suppress
+    // (`cmd_context_menu_show`). A blanket `preventDefault` here would suppress
     // the platform-native menu on surfaces that have opted into it without
     // repairing anything, so it has been removed. Drag-region preventive
     // behavior still targets `[data-tauri-drag-region]` via

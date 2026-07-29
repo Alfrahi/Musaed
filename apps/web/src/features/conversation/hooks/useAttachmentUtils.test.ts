@@ -1,10 +1,10 @@
 import {
-  fileNameFromPath,
   mimeFromExtension,
   validateFileSize,
   handleTauriFileUploadInternal,
   handleTauriImageUploadInternal,
 } from './useAttachmentUtils';
+import { fileNameFromPath } from '@/lib/utils';
 import { describe, it, expect, vi } from 'vitest';
 import { dialog, fs } from '@/lib/ipc';
 import toast from 'react-hot-toast';

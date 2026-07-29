@@ -117,7 +117,7 @@ export type TraceEntry = z.infer<typeof TraceEntrySchema>;
 
 /**
  * Input payload for creating a new trace entry (cmd_trace_append).
- * Mirrors Rust `TraceEntryInput` (src-tauri/src/trace_domain/mod.rs).
+ * Mirrors Rust `TraceEntryInput` (src-tauri/src/logging/mod.rs).
  * Unlike `TraceEntry`, this omits `timestamp`/`spanId` because the backend
  * assigns those on receipt.
  */

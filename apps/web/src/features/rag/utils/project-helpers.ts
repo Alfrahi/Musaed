@@ -1,11 +1,6 @@
-/**
- * Extracts the filename from a full file path.
- * @param path - The full file path.
- * @returns The filename extracted from the path.
- */
-export function fileNameFromPath(path: string): string {
-  return path.split(/[/\\]/).pop() || path;
-}
+import { fileNameFromPath } from '@/lib/utils';
+
+export { fileNameFromPath };
 
 /**
  * Truncates a file path to a specified maximum length, preserving the filename.

@@ -27,6 +27,7 @@ const manifest: FeatureManifest = {
   dependencies: [
     'conversation', // Composition dependency (exempt from import rules)
     'sidebar', // Composition dependency (exempt from import rules)
+    'settings', // HomeClient.tsx imports SettingsModal from @/features/settings
   ],
 } as const;
 

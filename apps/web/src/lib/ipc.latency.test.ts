@@ -39,7 +39,7 @@ describe('IPC Latency Budgets', () => {
     expect(IPC_LATENCY_BUDGETS.cmd_ollama_check_health).toBeTypeOf('number');
     expect(IPC_LATENCY_BUDGETS.cmd_ollama_get_models).toBeTypeOf('number');
     expect(IPC_LATENCY_BUDGETS.cmd_rag_search).toBeTypeOf('number');
-    expect(IPC_LATENCY_BUDGETS.cmd_export_markdown).toBeTypeOf('number');
+    expect(IPC_LATENCY_BUDGETS.cmd_conversation_export_markdown).toBeTypeOf('number');
     expect(IPC_LATENCY_BUDGETS.cmd_conversations_list).toBeTypeOf('number');
     expect(IPC_LATENCY_BUDGETS.cmd_ollama_chat).toBeGreaterThan(0);
   });

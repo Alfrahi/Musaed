@@ -129,7 +129,7 @@ pub async fn cmd_logs_clear<R: tauri::Runtime>(
 /// Append a structured trace entry (frontend entry point).
 #[tauri::command]
 pub async fn cmd_trace_append(input: TraceEntryInput) -> ApiResponse<()> {
-    crate::trace_domain::service::append(input).await
+    crate::logging::service::append(input).await
 }
 
 /// Start a new trace span and return its context for IPC propagation.
@@ -139,7 +139,7 @@ pub async fn cmd_trace_start(
     feature: String,
     action: String,
 ) -> ApiResponse<TraceContext> {
-    crate::trace_domain::service::start(trace_id, feature, action).await
+    crate::logging::service::start(trace_id, feature, action).await
 }
 
 /// Complete an active trace span with a status.
@@ -150,13 +150,13 @@ pub async fn cmd_trace_complete(
     message: Option<String>,
     context: Option<HashMap<String, serde_json::Value>>,
 ) -> ApiResponse<()> {
-    crate::trace_domain::service::complete(trace_id, status, message, context).await
+    crate::logging::service::complete(trace_id, status, message, context).await
 }
 
 /// Get the current trace context for an active trace.
 #[tauri::command]
 pub async fn cmd_trace_get_context(trace_id: String) -> ApiResponse<TraceContext> {
-    crate::trace_domain::service::get_context(trace_id).await
+    crate::logging::service::get_context(trace_id).await
 }
 
 // ---------------------------------------------------------------------------

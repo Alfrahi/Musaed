@@ -22,6 +22,7 @@ pub const INVALID_REQUEST: &str = "INVALID_REQUEST";
 pub const INVALID_INPUT: &str = "INVALID_INPUT";
 pub const INVALID_URL: &str = "INVALID_URL";
 pub const INVALID_RESPONSE: &str = "INVALID_RESPONSE";
+pub const VALIDATION_ERROR: &str = "VALIDATION_ERROR";
 
 // ── Rate limiting / concurrency ───────────────────────
 pub const RATE_LIMITED: &str = "RATE_LIMITED";
@@ -54,6 +55,7 @@ pub const RAG_SEARCH_ERROR: &str = "RAG_SEARCH_ERROR";
 pub const RAG_STATS_ERROR: &str = "RAG_STATS_ERROR";
 pub const RAG_VALIDATION_ERROR: &str = "RAG_VALIDATION_ERROR";
 pub const RAG_ALREADY_INDEXING: &str = "RAG_ALREADY_INDEXING";
+pub const RAG_INDEX_ERROR: &str = "RAG_INDEX_ERROR";
 
 // ── Conversation ──────────────────────────────────────
 pub const CONVERSATION_NOT_FOUND: &str = "CONVERSATION_NOT_FOUND";
@@ -129,6 +131,8 @@ mod tests {
             RAG_STATS_ERROR,
             RAG_VALIDATION_ERROR,
             RAG_ALREADY_INDEXING,
+            RAG_INDEX_ERROR,
+            VALIDATION_ERROR,
             CONVERSATION_NOT_FOUND,
             CONVERSATION_FETCH_ERROR,
             CONVERSATION_LIST_ERROR,

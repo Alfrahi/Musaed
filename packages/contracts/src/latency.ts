@@ -61,7 +61,7 @@ export const IPC_LATENCY_BUDGETS: Readonly<Record<string, LatencyBudgetMs>> = {
   cmd_trace_get_context: 500,
   /** UI dialogs and export — user-blocking, fast required */
   cmd_dialog_ask: 1000,
-  cmd_export_markdown: 3000,
+  cmd_conversation_export_markdown: 3000,
   cmd_opener_open_url: 1000,
   /** RAG management — lightweight metadata ops */
   cmd_rag_list_projects: 2000,
@@ -98,7 +98,7 @@ export const IPC_LATENCY_BUDGETS: Readonly<Record<string, LatencyBudgetMs>> = {
   /** Native context-menu popup — user-blocking, must appear near-instantly.
    * Selection wait is bounded by user reaction time, but the show path itself
    * (menu build + popup_at) must stay well under a second. */
-  cmd_show_context_menu: 1000,
+  cmd_context_menu_show: 1000,
 } as const;
 
 /**
@@ -144,9 +144,9 @@ export function getIpcLatencyBudgetCategory(command: string): LatencyBudgetCateg
   if (command.startsWith('cmd_logs_')) return 'logging';
   if (command.startsWith('cmd_trace_')) return 'tracing';
   if (command === 'cmd_dialog_ask') return 'dialog';
-  if (command === 'cmd_export_markdown') return 'export';
+  if (command === 'cmd_conversation_export_markdown') return 'export';
   if (command === 'cmd_opener_open_url') return 'opener';
-  if (command === 'cmd_show_context_menu') return 'context-menu';
+  if (command === 'cmd_context_menu_show') return 'context-menu';
   if (command.startsWith('cmd_rag_list_') || command.startsWith('cmd_rag_get_')) {
     return 'rag-light';
   }
