@@ -6,11 +6,11 @@ use crate::generated_validation::{
     MAX_ACTION_NAME_LEN, MAX_FEATURE_NAME_LEN, MAX_TRACE_CONTEXT_FIELDS,
     MAX_TRACE_CONTEXT_VALUE_LEN, MAX_TRACE_MESSAGE_LEN,
 };
-use crate::payloads::{ApiResponse, BackendError};
 use crate::logging::{
     LogLevel, Span, TraceContext, TraceEntry, TraceEntryInput, TraceSource, TraceStatus,
     ACTIVE_SPANS,
 };
+use crate::payloads::{ApiResponse, BackendError};
 use chrono::Utc;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -173,7 +173,7 @@ pub async fn start(trace_id: String, feature: String, action: String) -> ApiResp
             success: false,
             data: None,
             error: Some(BackendError::new(
-                "INVALID_TRACE_ID",
+                error_codes::INVALID_TRACE_ID,
                 "trace_id must be a valid UUID",
             )),
         };
@@ -183,7 +183,7 @@ pub async fn start(trace_id: String, feature: String, action: String) -> ApiResp
             success: false,
             data: None,
             error: Some(BackendError::new(
-                "INVALID_FEATURE",
+                error_codes::INVALID_FEATURE,
                 format!("feature must be 1-{} chars", MAX_FEATURE_NAME_LEN),
             )),
         };
@@ -193,7 +193,7 @@ pub async fn start(trace_id: String, feature: String, action: String) -> ApiResp
             success: false,
             data: None,
             error: Some(BackendError::new(
-                "INVALID_ACTION",
+                error_codes::INVALID_ACTION,
                 format!("action must be 1-{} chars", MAX_ACTION_NAME_LEN),
             )),
         };
@@ -229,7 +229,7 @@ pub async fn complete(
             success: false,
             data: None,
             error: Some(BackendError::new(
-                "SPAN_NOT_FOUND",
+                error_codes::SPAN_NOT_FOUND,
                 format!("No active span found for trace_id '{}'", trace_id),
             )),
         };
@@ -279,7 +279,7 @@ pub async fn get_context(trace_id: String) -> ApiResponse<TraceContext> {
             success: false,
             data: None,
             error: Some(BackendError::new(
-                "SPAN_NOT_FOUND",
+                error_codes::SPAN_NOT_FOUND,
                 format!("No active span found for trace_id '{}'", trace_id),
             )),
         };

@@ -83,6 +83,12 @@ pub const EXPORT_ERROR: &str = "EXPORT_ERROR";
 // ── Migration ─────────────────────────────────────────
 pub const MIGRATION_ERROR: &str = "MIGRATION_ERROR";
 
+// ── Trace / logging ───────────────────────────────────
+pub const INVALID_TRACE_ID: &str = "INVALID_TRACE_ID";
+pub const INVALID_FEATURE: &str = "INVALID_FEATURE";
+pub const INVALID_ACTION: &str = "INVALID_ACTION";
+pub const SPAN_NOT_FOUND: &str = "SPAN_NOT_FOUND";
+
 // ── Generic ───────────────────────────────────────────
 pub const INTERNAL_ERROR: &str = "INTERNAL_ERROR";
 pub const ABORTED: &str = "ABORTED";
@@ -146,6 +152,10 @@ mod tests {
             UNKNOWN,
             CONTEXT_MENU_ERROR,
             MIGRATION_ERROR,
+            INVALID_TRACE_ID,
+            INVALID_FEATURE,
+            INVALID_ACTION,
+            SPAN_NOT_FOUND,
         ];
         let mut seen = std::collections::HashSet::new();
         for &code in &codes {
