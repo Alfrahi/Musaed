@@ -8,6 +8,7 @@ import { type Message } from '@musaed/contracts';
 import { createTauriStorage } from '@/lib/tauri-storage';
 import { useUIStore } from '@/store/ui-store';
 import { traceStoreMutation, traceAppendToken, resetTokenCounter } from '@/lib/store-tracing';
+import { logger } from '@/lib/logger';
 
 /** Internal buffer for efficient stream accumulation. */
 interface StreamingBuffer {
@@ -260,7 +261,7 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
       onRehydrateStorage: () => {
         return (_state, error) => {
           if (error) {
-            console.error('Streaming store rehydration failed:', error);
+            logger.error('Streaming store rehydration failed:', { error: String(error) });
           }
           useUIStore.getState().onStoreRehydrated();
         };

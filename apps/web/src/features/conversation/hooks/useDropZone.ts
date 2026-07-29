@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { checkIsTauri } from '@/lib/ipc';
+import { checkIsTauri, listenDragDrop } from '@/lib/ipc';
 
 /**
  * Distinguishes image files from other files by extension.
@@ -47,16 +47,15 @@ export function useDropZone({ onDrop }: UseDropZoneOptions) {
     let unlisten: (() => void) | undefined;
 
     const setup = async () => {
-      const { getCurrentWebview } = await import('@tauri-apps/api/webview');
-      unlisten = await getCurrentWebview().onDragDropEvent((event) => {
-        switch (event.payload.type) {
+      unlisten = await listenDragDrop((event) => {
+        switch (event.type) {
           case 'enter':
           case 'over':
             setIsDragOver(true);
             break;
           case 'drop': {
             setIsDragOver(false);
-            const paths = event.payload.paths;
+            const paths = event.paths;
             if (paths.length === 0) return;
 
             const imagePaths: string[] = [];

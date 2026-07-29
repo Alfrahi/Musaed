@@ -10,7 +10,7 @@ use tokio::sync::Mutex;
 #[tauri::command]
 pub async fn cmd_conversations_list(
     state: State<'_, Arc<Mutex<ConversationStore>>>,
-) -> Result<ApiResponse<Vec<Conversation>>, tauri::Error> {
+) -> Result<ApiResponse<Vec<Conversation>>, String> {
     Ok(service::list_conversations(state.inner().clone()).await)
 }
 
@@ -18,7 +18,7 @@ pub async fn cmd_conversations_list(
 pub async fn cmd_conversation_get(
     state: State<'_, Arc<Mutex<ConversationStore>>>,
     id: String,
-) -> Result<ApiResponse<Conversation>, tauri::Error> {
+) -> Result<ApiResponse<Conversation>, String> {
     Ok(service::get_conversation(state.inner().clone(), id).await)
 }
 
@@ -26,7 +26,7 @@ pub async fn cmd_conversation_get(
 pub async fn cmd_conversation_create(
     state: State<'_, Arc<Mutex<ConversationStore>>>,
     conversation: Conversation,
-) -> Result<ApiResponse<String>, tauri::Error> {
+) -> Result<ApiResponse<String>, String> {
     Ok(service::create_conversation(state.inner().clone(), conversation).await)
 }
 
@@ -35,7 +35,7 @@ pub async fn cmd_message_append(
     state: State<'_, Arc<Mutex<ConversationStore>>>,
     conversation_id: String,
     message: Message,
-) -> Result<ApiResponse<()>, tauri::Error> {
+) -> Result<ApiResponse<()>, String> {
     Ok(service::append_message(state.inner().clone(), conversation_id, message).await)
 }
 
@@ -43,14 +43,14 @@ pub async fn cmd_message_append(
 pub async fn cmd_conversation_delete(
     state: State<'_, Arc<Mutex<ConversationStore>>>,
     id: String,
-) -> Result<ApiResponse<()>, tauri::Error> {
+) -> Result<ApiResponse<()>, String> {
     Ok(service::delete_conversation(state.inner().clone(), id).await)
 }
 
 #[tauri::command]
 pub async fn cmd_conversations_clear(
     state: State<'_, Arc<Mutex<ConversationStore>>>,
-) -> Result<ApiResponse<()>, tauri::Error> {
+) -> Result<ApiResponse<()>, String> {
     Ok(service::clear_all_conversations(state.inner().clone()).await)
 }
 
@@ -60,7 +60,7 @@ pub async fn cmd_conversation_update(
     id: String,
     title: String,
     updated_at: i64,
-) -> Result<ApiResponse<()>, tauri::Error> {
+) -> Result<ApiResponse<()>, String> {
     Ok(service::update_conversation(state.inner().clone(), id, title, updated_at).await)
 }
 

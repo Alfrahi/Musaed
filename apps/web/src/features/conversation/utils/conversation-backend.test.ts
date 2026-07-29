@@ -99,8 +99,8 @@ describe('Conversation Backend Service', () => {
 
       expect(result).toBeNull();
       expect(consoleSpy).toHaveBeenCalledWith(
-        'Failed to initialize conversations from backend:',
-        expect.any(Error)
+        '[ERROR] Failed to initialize conversations from backend:',
+        { error: 'Error: Network error' }
       );
       consoleSpy.mockRestore();
     });

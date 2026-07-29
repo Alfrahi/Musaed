@@ -87,7 +87,7 @@ export function useAutoTitle() {
 
       useConversationStore.getState().updateConversation(conversationId, { title });
       backendUpdateConversation(conversationId, title, Date.now()).catch((e) =>
-        console.error('Failed to persist auto-title:', e)
+        logger.error('Failed to persist auto-title:', { error: String(e) })
       );
       logger.info('Auto-generated conversation title', { conversationId, title });
     } catch (err) {
@@ -180,7 +180,7 @@ export async function triggerAutoTitle(conversationId: string): Promise<void> {
 
     useConversationStore.getState().updateConversation(conversationId, { title });
     backendUpdateConversation(conversationId, title, Date.now()).catch((e) =>
-      console.error('Failed to persist auto-title:', e)
+      logger.error('Failed to persist auto-title:', { error: String(e) })
     );
     logger.info('Auto-generated conversation title', { conversationId, title });
   } catch (err) {

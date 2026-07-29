@@ -6,6 +6,7 @@ import { useRagProjects } from './useRagProjects';
 import type { RagProject } from '@musaed/contracts';
 
 vi.mock('@/lib/ipc', () => ({
+  checkIsTauri: () => false,
   ragApi: {
     listProjects: vi.fn(),
     addProject: vi.fn(),

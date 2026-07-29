@@ -78,6 +78,9 @@ pub const OPEN_URL_ERROR: &str = "OPEN_URL_ERROR";
 // ── Export ────────────────────────────────────────────
 pub const EXPORT_ERROR: &str = "EXPORT_ERROR";
 
+// ── Migration ─────────────────────────────────────────
+pub const MIGRATION_ERROR: &str = "MIGRATION_ERROR";
+
 // ── Generic ───────────────────────────────────────────
 pub const INTERNAL_ERROR: &str = "INTERNAL_ERROR";
 pub const ABORTED: &str = "ABORTED";
@@ -138,6 +141,7 @@ mod tests {
             ABORTED,
             UNKNOWN,
             CONTEXT_MENU_ERROR,
+            MIGRATION_ERROR,
         ];
         let mut seen = std::collections::HashSet::new();
         for &code in &codes {

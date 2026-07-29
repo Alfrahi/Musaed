@@ -1276,6 +1276,70 @@ export async function listen<T>(
 }
 
 /**
+ * Wrapper around Tauri's drag-drop event listener.
+ *
+ * Encapsulates the `@tauri-apps/api/webview` import so that no other module
+ * needs to reach outside the IPC layer for drag-drop events (STANDARDS §5).
+ *
+ * @param handler - Callback receiving the typed drag-drop event
+ * @returns A function that unsubscribes from the event when called
+ */
+export async function listenDragDrop(
+  handler: (
+    event:
+      | {
+          type: 'enter';
+          paths: string[];
+          position: { x: number; y: number };
+        }
+      | {
+          type: 'over';
+          position: { x: number; y: number };
+        }
+      | {
+          type: 'drop';
+          paths: string[];
+          position: { x: number; y: number };
+        }
+      | {
+          type: 'leave';
+        }
+  ) => void
+): Promise<() => void> {
+  if (!checkIsTauri()) return () => {};
+
+  const { getCurrentWebview } = await import('@tauri-apps/api/webview');
+  return await getCurrentWebview().onDragDropEvent((event) => {
+    const { type } = event.payload;
+    switch (type) {
+      case 'enter':
+        handler({
+          type,
+          paths: event.payload.paths,
+          position: event.payload.position,
+        });
+        break;
+      case 'over':
+        handler({
+          type,
+          position: event.payload.position,
+        });
+        break;
+      case 'drop':
+        handler({
+          type,
+          paths: event.payload.paths,
+          position: event.payload.position,
+        });
+        break;
+      case 'leave':
+        handler({ type });
+        break;
+    }
+  });
+}
+
+/**
  * Wrapper around Tauri's dialog plugin with browser fallbacks.
  * - `ask`: Shows a confirmation dialog; uses window.confirm in browser.
  * - `save`: Shows a file save dialog; returns null in browser.

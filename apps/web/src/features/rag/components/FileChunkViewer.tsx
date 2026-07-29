@@ -7,6 +7,7 @@ import { useLanguage } from '@/store';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import type { ChunkRecord } from '@musaed/contracts';
+import { logger } from '@/lib/logger';
 
 interface FileChunkViewerProps {
   filePath: string;
@@ -86,7 +87,7 @@ const FileChunkViewer = ({ filePath, targetStartLine }: FileChunkViewerProps) =>
       })
       .catch((err: unknown) => {
         setErrorMessage('Failed to fetch file chunks.');
-        console.error('Error fetching file chunks:', err);
+        logger.error('Error fetching file chunks:', { error: String(err) });
       })
       .finally(() => {
         setIsLoading(false);

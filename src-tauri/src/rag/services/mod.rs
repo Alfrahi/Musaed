@@ -183,24 +183,21 @@ pub struct AssembleContextRequest<'a> {
 
 // ---------- Implementations (same as original file) ----------
 
-pub async fn add_project<'a>(
-    req: AddProjectRequest<'a>,
-) -> Result<ApiResponse<RagProject>, String> {
+pub async fn add_project<'a>(req: AddProjectRequest<'a>) -> ApiResponse<RagProject> {
     if let Err(e) = validate_add_project(
         &req.name,
         &req.path,
         &req.embedding_model,
         &req.ignore_patterns,
     ) {
-        return Ok(rag_validation_error(e));
+        return rag_validation_error(e);
     }
-    let canonical_path = std::path::Path::new(&req.path)
-        .canonicalize()
-        .map_err(|e| format!("Failed to resolve project path: {}", e))?;
+    let canonical_path = match std::path::Path::new(&req.path).canonicalize() {
+        Ok(p) => p,
+        Err(e) => return rag_validation_error(format!("Failed to resolve project path: {}", e)),
+    };
     if !canonical_path.is_dir() {
-        return Ok(rag_validation_error(
-            "Project path must be a valid directory".to_string(),
-        ));
+        return rag_validation_error("Project path must be a valid directory".to_string());
     }
     let store = req.state.inner();
     let s = store.write().await;
@@ -213,28 +210,26 @@ pub async fn add_project<'a>(
         )
         .await
     {
-        Ok(project) => Ok(ApiResponse {
+        Ok(project) => ApiResponse {
             success: true,
             data: Some(project),
             error: None,
-        }),
-        Err(e) => Ok(ApiResponse {
+        },
+        Err(e) => ApiResponse {
             success: false,
             data: None,
             error: Some(BackendError::new("RAG_CREATE_ERROR", e)),
-        }),
+        },
     }
 }
 
-pub async fn remove_project<'a>(
-    req: RemoveProjectRequest<'a>,
-) -> Result<ApiResponse<bool>, String> {
+pub async fn remove_project<'a>(req: RemoveProjectRequest<'a>) -> ApiResponse<bool> {
     if let Err(e) = validate_project_id(&req.project_id) {
-        return Ok(rag_validation_error(e));
+        return rag_validation_error(e);
     }
     let store = req.state.inner();
     let s = store.write().await;
-    Ok(match s.delete_project(&req.project_id).await {
+    match s.delete_project(&req.project_id).await {
         Ok(()) => ApiResponse {
             success: true,
             data: Some(true),
@@ -245,14 +240,12 @@ pub async fn remove_project<'a>(
             data: None,
             error: Some(BackendError::new("RAG_DELETE_ERROR", e)),
         },
-    })
+    }
 }
 
-pub async fn update_project<'a>(
-    req: UpdateProjectRequest<'a>,
-) -> Result<ApiResponse<RagProject>, String> {
+pub async fn update_project<'a>(req: UpdateProjectRequest<'a>) -> ApiResponse<RagProject> {
     if let Err(e) = validate_project_id(&req.project_id) {
-        return Ok(rag_validation_error(e));
+        return rag_validation_error(e);
     }
     let store = req.state.inner();
     let s = store.write().await;
@@ -264,13 +257,13 @@ pub async fn update_project<'a>(
         )
         .await
     {
-        return Ok(ApiResponse {
+        return ApiResponse {
             success: false,
             data: None,
             error: Some(BackendError::new("RAG_UPDATE_ERROR", e)),
-        });
+        };
     }
-    Ok(match s.get_project(&req.project_id).await {
+    match s.get_project(&req.project_id).await {
         Ok(Some(project)) => ApiResponse {
             success: true,
             data: Some(project),
@@ -286,15 +279,13 @@ pub async fn update_project<'a>(
             data: None,
             error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
         },
-    })
+    }
 }
 
-pub async fn list_projects<'a>(
-    req: ListProjectsRequest<'a>,
-) -> Result<ApiResponse<Vec<RagProject>>, String> {
+pub async fn list_projects<'a>(req: ListProjectsRequest<'a>) -> ApiResponse<Vec<RagProject>> {
     let store = req.state.inner();
     let s = store.read().await;
-    Ok(match s.list_projects().await {
+    match s.list_projects().await {
         Ok(projects) => ApiResponse {
             success: true,
             data: Some(projects),
@@ -305,18 +296,16 @@ pub async fn list_projects<'a>(
             data: None,
             error: Some(BackendError::new("RAG_LIST_ERROR", e)),
         },
-    })
+    }
 }
 
-pub async fn get_project<'a>(
-    req: GetProjectRequest<'a>,
-) -> Result<ApiResponse<RagProject>, String> {
+pub async fn get_project<'a>(req: GetProjectRequest<'a>) -> ApiResponse<RagProject> {
     if let Err(e) = validate_project_id(&req.project_id) {
-        return Ok(rag_validation_error(e));
+        return rag_validation_error(e);
     }
     let store = req.state.inner();
     let s = store.read().await;
-    Ok(match s.get_project(&req.project_id).await {
+    match s.get_project(&req.project_id).await {
         Ok(Some(project)) => ApiResponse {
             success: true,
             data: Some(project),
@@ -332,17 +321,15 @@ pub async fn get_project<'a>(
             data: None,
             error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
         },
-    })
+    }
 }
 
-pub async fn get_index_status(
-    req: GetIndexStatusRequest,
-) -> Result<ApiResponse<IndexStatus>, String> {
+pub async fn get_index_status(req: GetIndexStatusRequest) -> ApiResponse<IndexStatus> {
     if let Err(e) = validate_project_id(&req.project_id) {
-        return Ok(rag_validation_error(e));
+        return rag_validation_error(e);
     }
     let is_indexing = crate::shared::RAG_INDEX_ABORT_HANDLES.contains_key(&req.project_id);
-    Ok(ApiResponse {
+    ApiResponse {
         success: true,
         data: Some(IndexStatus {
             project_id: req.project_id,
@@ -350,47 +337,41 @@ pub async fn get_index_status(
             progress: None,
         }),
         error: None,
-    })
-}
-
-pub async fn abort_index(req: AbortIndexRequest) -> Result<ApiResponse<bool>, String> {
-    if let Err(e) = validate_project_id(&req.project_id) {
-        return Ok(rag_validation_error(e));
     }
-    Ok(
-        if let Some((_, token)) = crate::shared::RAG_INDEX_ABORT_HANDLES.remove(&req.project_id) {
-            token.cancel();
-            ApiResponse {
-                success: true,
-                data: Some(true),
-                error: None,
-            }
-        } else {
-            ApiResponse {
-                success: true,
-                data: Some(false),
-                error: None,
-            }
-        },
-    )
 }
 
-pub async fn reindex_project<'a, R: Runtime>(
-    req: IndexRequest<'a, R>,
-) -> Result<ApiResponse<bool>, String> {
+pub async fn abort_index(req: AbortIndexRequest) -> ApiResponse<bool> {
+    if let Err(e) = validate_project_id(&req.project_id) {
+        return rag_validation_error(e);
+    }
+    if let Some((_, token)) = crate::shared::RAG_INDEX_ABORT_HANDLES.remove(&req.project_id) {
+        token.cancel();
+        ApiResponse {
+            success: true,
+            data: Some(true),
+            error: None,
+        }
+    } else {
+        ApiResponse {
+            success: true,
+            data: Some(false),
+            error: None,
+        }
+    }
+}
+
+pub async fn reindex_project<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResponse<bool> {
     let mut req = req;
     req.force = Some(true);
     start_indexing(req).await
 }
 
-pub async fn start_indexing<'a, R: Runtime>(
-    req: IndexRequest<'a, R>,
-) -> Result<ApiResponse<bool>, String> {
+pub async fn start_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResponse<bool> {
     if let Err(e) = RATE_LIMITER.check_rate_limit(req.window.label(), "cmd_rag_index_project") {
-        return Ok(rag_validation_error(e.message.clone()));
+        return rag_validation_error(e.message.clone());
     }
     if let Err(e) = validate_project_id(&req.project_id) {
-        return Ok(rag_validation_error(e));
+        return rag_validation_error(e);
     }
     let (project_path, embedding_model, ignore_patterns) = {
         let store = req.state.inner();
@@ -402,18 +383,18 @@ pub async fn start_indexing<'a, R: Runtime>(
                 p.ignore_patterns.clone(),
             ),
             Ok(None) => {
-                return Ok(ApiResponse {
+                return ApiResponse {
                     success: false,
                     data: None,
                     error: Some(BackendError::new("RAG_NOT_FOUND", "Project not found")),
-                })
+                }
             }
             Err(e) => {
-                return Ok(ApiResponse {
+                return ApiResponse {
                     success: false,
                     data: None,
                     error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
-                })
+                }
             }
         }
     };
@@ -483,11 +464,11 @@ pub async fn start_indexing<'a, R: Runtime>(
                         req.project_id
                     );
                 }
-                return Ok(ApiResponse {
+                return ApiResponse {
                     success: true,
                     data: Some(true),
                     error: None,
-                });
+                };
             }
             Err(e) => {
                 last_error = e.clone();
@@ -523,16 +504,16 @@ pub async fn start_indexing<'a, R: Runtime>(
         crate::shared::EVENT_RAG_INDEX_ERROR,
         &BackendError::new("RAG_INDEX_ERROR", last_error.clone()),
     );
-    Ok(ApiResponse {
+    ApiResponse {
         success: false,
         data: None,
         error: Some(BackendError::new("RAG_INDEX_ERROR", last_error)),
-    })
+    }
 }
 
-pub async fn search<'a>(req: SearchRequest<'a>) -> Result<ApiResponse<Vec<SearchResult>>, String> {
+pub async fn search<'a>(req: SearchRequest<'a>) -> ApiResponse<Vec<SearchResult>> {
     if let Err(e) = validate_search(&req.project_id, &req.query, req.top_k, req.threshold) {
-        return Ok(rag_validation_error(e));
+        return rag_validation_error(e);
     }
     let store = req.state.inner();
     let project = {
@@ -540,126 +521,128 @@ pub async fn search<'a>(req: SearchRequest<'a>) -> Result<ApiResponse<Vec<Search
         match s.get_project(&req.project_id).await {
             Ok(Some(p)) => p,
             Ok(None) => {
-                return Ok(ApiResponse {
+                return ApiResponse {
                     success: false,
                     data: None,
                     error: Some(BackendError::new("RAG_NOT_FOUND", "Project not found")),
-                })
+                }
             }
             Err(e) => {
-                return Ok(ApiResponse {
+                return ApiResponse {
                     success: false,
                     data: None,
                     error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
-                })
+                }
             }
         }
     };
     let base_url_val = match req.base_url {
-        Some(url) => crate::ollama_url::parse_ollama_base_url(&url)?.to_string(),
+        Some(url) => match crate::ollama_url::parse_ollama_base_url(&url) {
+            Ok(u) => u.to_string(),
+            Err(e) => return rag_validation_error(e),
+        },
         None => "http://localhost:11434".to_string(),
     };
-    Ok(
-        match RagSearchEngine::search(
-            store.clone(),
-            &req.project_id,
-            &req.query,
-            &base_url_val,
-            &project.embedding_model,
-            req.top_k,
-            req.threshold,
-        )
-        .await
-        {
-            Ok(results) => ApiResponse {
-                success: true,
-                data: Some(results),
-                error: None,
-            },
-            Err(e) => ApiResponse {
-                success: false,
-                data: None,
-                error: Some(BackendError::new("RAG_SEARCH_ERROR", e)),
-            },
-        },
+    match RagSearchEngine::search(
+        store.clone(),
+        &req.project_id,
+        &req.query,
+        &base_url_val,
+        &project.embedding_model,
+        req.top_k,
+        req.threshold,
     )
+    .await
+    {
+        Ok(results) => ApiResponse {
+            success: true,
+            data: Some(results),
+            error: None,
+        },
+        Err(e) => ApiResponse {
+            success: false,
+            data: None,
+            error: Some(BackendError::new("RAG_SEARCH_ERROR", e)),
+        },
+    }
 }
 
-pub async fn get_file_chunks<'a>(
-    req: GetFileChunksRequest<'a>,
-) -> Result<ApiResponse<Vec<ChunkRecord>>, String> {
+pub async fn get_file_chunks<'a>(req: GetFileChunksRequest<'a>) -> ApiResponse<Vec<ChunkRecord>> {
     if let Err(e) = validate_project_id(&req.project_id) {
-        return Ok(rag_validation_error(e));
+        return rag_validation_error(e);
     }
     let store = req.state.inner();
     let s = store.read().await;
-    let project = s
-        .get_project(&req.project_id)
-        .await
-        .map_err(|e| format!("Failed to fetch project: {}", e))?;
-    let project = match project {
-        Some(p) => p,
-        None => {
-            return Ok(ApiResponse {
+    let project = match s.get_project(&req.project_id).await {
+        Ok(Some(p)) => p,
+        Ok(None) => {
+            return ApiResponse {
                 success: false,
                 data: None,
                 error: Some(BackendError::new("RAG_NOT_FOUND", "Project not found")),
-            })
-        }
-    };
-    let canonical_path =
-        validate_and_canonicalize_file_path(std::path::Path::new(&project.path), &req.file_path)
-            .map_err(|e| format!("Invalid file path: {}", e))?;
-    Ok(
-        match s
-            .get_file_by_path(&req.project_id, &canonical_path.to_string_lossy())
-            .await
-        {
-            Ok(Some(file)) => {
-                if let Some(file_id) = file.id {
-                    match s.get_file_chunks(file_id).await {
-                        Ok(chunks) => ApiResponse {
-                            success: true,
-                            data: Some(chunks),
-                            error: None,
-                        },
-                        Err(e) => ApiResponse {
-                            success: false,
-                            data: None,
-                            error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
-                        },
-                    }
-                } else {
-                    ApiResponse {
-                        success: true,
-                        data: Some(vec![]),
-                        error: None,
-                    }
-                }
             }
-            Ok(None) => ApiResponse {
-                success: true,
-                data: Some(vec![]),
-                error: None,
-            },
-            Err(e) => ApiResponse {
+        }
+        Err(e) => {
+            return ApiResponse {
                 success: false,
                 data: None,
                 error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
-            },
+            }
+        }
+    };
+    let canonical_path = match validate_and_canonicalize_file_path(
+        std::path::Path::new(&project.path),
+        &req.file_path,
+    ) {
+        Ok(p) => p,
+        Err(e) => return rag_validation_error(format!("Invalid file path: {}", e)),
+    };
+    match s
+        .get_file_by_path(&req.project_id, &canonical_path.to_string_lossy())
+        .await
+    {
+        Ok(Some(file)) => {
+            if let Some(file_id) = file.id {
+                match s.get_file_chunks(file_id).await {
+                    Ok(chunks) => ApiResponse {
+                        success: true,
+                        data: Some(chunks),
+                        error: None,
+                    },
+                    Err(e) => ApiResponse {
+                        success: false,
+                        data: None,
+                        error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
+                    },
+                }
+            } else {
+                ApiResponse {
+                    success: true,
+                    data: Some(vec![]),
+                    error: None,
+                }
+            }
+        }
+        Ok(None) => ApiResponse {
+            success: true,
+            data: Some(vec![]),
+            error: None,
         },
-    )
+        Err(e) => ApiResponse {
+            success: false,
+            data: None,
+            error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
+        },
+    }
 }
 
-pub async fn get_project_stats<'a>(
-    req: GetProjectStatsRequest<'a>,
-) -> Result<ApiResponse<ProjectStats>, String> {
+pub async fn get_project_stats<'a>(req: GetProjectStatsRequest<'a>) -> ApiResponse<ProjectStats> {
     if let Err(e) = validate_project_id(&req.project_id) {
-        return Ok(rag_validation_error(e));
+        return rag_validation_error(e);
     }
     let store = req.state.inner();
     let s = store.read().await;
-    Ok(match s.get_project_stats(&req.project_id).await {
+    match s.get_project_stats(&req.project_id).await {
         Ok(stats) => ApiResponse {
             success: true,
             data: Some(stats),
@@ -670,20 +653,15 @@ pub async fn get_project_stats<'a>(
             data: None,
             error: Some(BackendError::new("RAG_STATS_ERROR", e)),
         },
-    })
+    }
 }
 
-pub async fn set_embedding_model<'a>(
-    req: SetEmbeddingModelRequest<'a>,
-) -> Result<ApiResponse<bool>, String> {
+pub async fn set_embedding_model<'a>(req: SetEmbeddingModelRequest<'a>) -> ApiResponse<bool> {
     if let Err(e) = validate_project_id(&req.project_id) {
-        return Ok(rag_validation_error(e));
+        return rag_validation_error(e);
     }
     if !crate::validation::is_valid_model_name(&req.model_name) {
-        return Ok(rag_validation_error(format!(
-            "Invalid model name: {:?}",
-            req.model_name
-        )));
+        return rag_validation_error(format!("Invalid model name: {:?}", req.model_name));
     }
     let store = req.state.inner();
     let s = store.write().await;
@@ -691,34 +669,34 @@ pub async fn set_embedding_model<'a>(
         .update_embedding_model(&req.project_id, &req.model_name)
         .await
     {
-        return Ok(ApiResponse {
+        return ApiResponse {
             success: false,
             data: None,
             error: Some(BackendError::new("RAG_UPDATE_ERROR", e)),
-        });
+        };
     }
-    Ok(ApiResponse {
+    ApiResponse {
         success: true,
         data: Some(true),
         error: None,
-    })
+    }
 }
 
 pub async fn validate_embedding_model(
     req: ValidateEmbeddingModelRequest,
-) -> Result<ApiResponse<RagModelValidation>, String> {
+) -> ApiResponse<RagModelValidation> {
     if !crate::validation::is_valid_model_name(&req.model_name) {
-        return Ok(rag_validation_error(format!(
-            "Invalid model name: {:?}",
-            req.model_name
-        )));
+        return rag_validation_error(format!("Invalid model name: {:?}", req.model_name));
     }
     let ollama_url = match req.base_url {
-        Some(url) => crate::ollama_url::parse_ollama_base_url(&url)?.to_string(),
+        Some(url) => match crate::ollama_url::parse_ollama_base_url(&url) {
+            Ok(u) => u.to_string(),
+            Err(e) => return rag_validation_error(e),
+        },
         None => "http://localhost:11434".to_string(),
     };
     let embedder = OllamaEmbedder::new(&ollama_url, &req.model_name);
-    Ok(match embedder.validate().await {
+    match embedder.validate().await {
         Ok(val) => ApiResponse {
             success: true,
             data: Some(val),
@@ -729,12 +707,12 @@ pub async fn validate_embedding_model(
             data: None,
             error: Some(BackendError::new("RAG_VALIDATION_ERROR", e)),
         },
-    })
+    }
 }
 
 pub async fn assemble_context<'a>(
     req: AssembleContextRequest<'a>,
-) -> Result<ApiResponse<AssembledContext>, String> {
+) -> ApiResponse<AssembledContext> {
     if let Err(e) = validate_assemble_context(
         &req.project_id,
         &req.query,
@@ -742,7 +720,7 @@ pub async fn assemble_context<'a>(
         req.threshold,
         req.max_chars,
     ) {
-        return Ok(rag_validation_error(e));
+        return rag_validation_error(e);
     }
     let store = req.state.inner();
     let project = {
@@ -750,23 +728,26 @@ pub async fn assemble_context<'a>(
         match s.get_project(&req.project_id).await {
             Ok(Some(p)) => p,
             Ok(None) => {
-                return Ok(ApiResponse {
+                return ApiResponse {
                     success: false,
                     data: None,
                     error: Some(BackendError::new("RAG_NOT_FOUND", "Project not found")),
-                })
+                }
             }
             Err(e) => {
-                return Ok(ApiResponse {
+                return ApiResponse {
                     success: false,
                     data: None,
                     error: Some(BackendError::new("RAG_FETCH_ERROR", e)),
-                })
+                }
             }
         }
     };
     let base_url_val = match req.base_url {
-        Some(url) => crate::ollama_url::parse_ollama_base_url(&url)?.to_string(),
+        Some(url) => match crate::ollama_url::parse_ollama_base_url(&url) {
+            Ok(u) => u.to_string(),
+            Err(e) => return rag_validation_error(e),
+        },
         None => "http://localhost:11434".to_string(),
     };
     let results = match RagSearchEngine::search(
@@ -782,19 +763,19 @@ pub async fn assemble_context<'a>(
     {
         Ok(r) => r,
         Err(e) => {
-            return Ok(ApiResponse {
+            return ApiResponse {
                 success: false,
                 data: None,
                 error: Some(BackendError::new("RAG_SEARCH_ERROR", e)),
-            })
+            }
         }
     };
     let assembled = context_assembler::assemble_context(&results, &project.path, req.max_chars);
-    Ok(ApiResponse {
+    ApiResponse {
         success: true,
         data: Some(assembled),
         error: None,
-    })
+    }
 }
 
 // Re-export sub‑modules for external use

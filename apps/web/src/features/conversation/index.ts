@@ -1,13 +1,8 @@
 // Conversation feature public API.
 //
 // Global Zustand stores (conversation-store, message-store, streaming-store)
-// live in `@/store/`, not in this feature, because sidebar/settings/layout all
-// depend on them. This barrel re-exports their public selectors so non-feature
-// callers can still reach them via the documented public surface. Feature
-// callers should import directly from `@/store/...`. See STANDARDS.md §22.
-export * from '@/store/conversation-store';
-export * from '@/store/message-store';
-export * from '@/store/streaming-store';
+// live in `@/store/`, not in this feature. Consumers import directly from
+// `@/store/...`. See STANDARDS.md §3, §22.
 export { useChatActions } from './hooks/useChatActions';
 export { useConversationActions } from './hooks/useConversationActions';
 // Public stop primitive consumed by the global Escape-to-stop shortcut

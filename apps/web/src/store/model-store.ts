@@ -6,6 +6,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { type OllamaModel, ModelStateSchema, DEFAULT_MODEL_STATE } from '@musaed/contracts';
 import { createTauriStorage } from '@/lib/tauri-storage';
 import { useUIStore } from '@/store/ui-store';
+import { logger } from '@/lib/logger';
 
 // Migration for model state: ensure schema integrity on rehydration
 const MODEL_MIGRATIONS: Record<number, (data: unknown) => unknown> = {
@@ -86,14 +87,13 @@ export const useModelStore = createWithEqualityFn<ModelState>()(
       onRehydrateStorage: () => {
         return (state, error) => {
           if (error) {
-            console.error('Model store rehydration failed:', error);
+            logger.error('Model store rehydration failed:', { error: String(error) });
           } else if (state) {
             const result = ModelStateSchema.safeParse({ selectedModel: state.selectedModel });
             if (!result.success) {
-              console.warn(
-                'Rehydrated model state failed validation, resetting to defaults',
-                result.error
-              );
+              logger.warn('Rehydrated model state failed validation, resetting to defaults', {
+                error: result.error,
+              });
               state.selectedModel = DEFAULT_MODEL_STATE.selectedModel;
             }
           }

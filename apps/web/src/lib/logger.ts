@@ -1,6 +1,5 @@
 'use client';
 
-import { checkIsTauri, store, logApi } from '@/lib/ipc';
 import { sanitizeError } from '@musaed/contracts';
 import { config } from '@/lib/config';
 
@@ -14,6 +13,18 @@ interface LogEntry {
 }
 
 const MAX_LOG_MESSAGE_LENGTH = 2048;
+
+/**
+ * Inline Tauri detection so logger does not depend on the `checkIsTauri`
+ * export from `@/lib/ipc`. Tests that mock `@/lib/ipc` without including
+ * `checkIsTauri` would otherwise break when the logger is loaded.
+ */
+function isTauri(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    !!(window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__
+  );
+}
 
 /**
  * Safely serializes an object, handling circular references by omitting them.
@@ -69,8 +80,9 @@ export const logger = {
 
     const logString = JSON.stringify(entry);
 
-    if (checkIsTauri()) {
+    if (isTauri()) {
       try {
+        const { store, logApi } = await import('@/lib/ipc');
         const logStore = await store.load('logs.json', { autoSave: true });
         if (logStore) {
           const logs = (await logStore.get<string[]>('entries')) || [];

@@ -6,6 +6,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { ChatSettingsSchema, type ChatSettings, DEFAULT_SETTINGS } from '@musaed/contracts';
 import { createTauriStorage } from '@/lib/tauri-storage';
 import { useUIStore } from '@/store/ui-store';
+import { logger } from '@/lib/logger';
 
 /**
  * Migration registry for settings-store. Add handlers as schema evolves.
@@ -92,15 +93,14 @@ export const useSettingsStore = createWithEqualityFn<SettingsState>()(
       onRehydrateStorage: () => {
         return (state, error) => {
           if (error) {
-            console.error('Settings store rehydration failed:', error);
+            logger.error('Settings store rehydration failed:', { error: String(error) });
           } else if (state) {
             // Validate rehydrated state against schema
             const result = ChatSettingsSchema.safeParse(state.globalSettings);
             if (!result.success) {
-              console.warn(
-                'Rehydrated settings failed validation, resetting to defaults:',
-                result.error
-              );
+              logger.warn('Rehydrated settings failed validation, resetting to defaults:', {
+                error: result.error,
+              });
               state.globalSettings = DEFAULT_SETTINGS;
             }
           }
