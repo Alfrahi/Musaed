@@ -146,6 +146,17 @@ module.exports = {
       to: { path: '^src/features/' },
       severity: 'error',
     },
+
+    // ── 8. components/ui/ should be feature-agnostic ────────
+    {
+      name: 'no-components-ui-to-feature',
+      comment:
+        'components/ui/ should be design primitives. Feature-specific ' +
+        'components belong in the owning feature. See STANDARDS.md §3.',
+      from: { path: '^src/components/ui/' },
+      to: { path: '^src/features/' },
+      severity: 'warn',
+    },
   ],
 
   options: {

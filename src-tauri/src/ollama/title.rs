@@ -335,7 +335,7 @@ pub async fn cmd_ollama_generate_title<R: Runtime>(
                             success: false,
                             data: None,
                             error: Some(BackendError::new(
-                                "EMPTY_TITLE",
+                                error_codes::EMPTY_TITLE,
                                 "Model returned empty title after stripping thinking blocks",
                             )),
                         };
@@ -352,7 +352,7 @@ pub async fn cmd_ollama_generate_title<R: Runtime>(
                             success: false,
                             data: None,
                             error: Some(BackendError::new(
-                                "REASONING_INSTEAD_OF_TITLE",
+                                error_codes::REASONING_INSTEAD_OF_TITLE,
                                 "Model produced reasoning instead of a title",
                             )),
                         };
@@ -386,7 +386,7 @@ pub async fn cmd_ollama_generate_title<R: Runtime>(
                 success: false,
                 data: None,
                 error: Some(BackendError::new(
-                    "OLLAMA_ERROR",
+                    error_codes::OLLAMA_ERROR,
                     format!(
                         "HTTP {}: {}",
                         status,

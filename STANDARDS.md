@@ -280,6 +280,22 @@ cmd_* functions MUST NOT contain business logic
 
 ---
 
+## SERVICE PATTERN
+
+Domain services SHOULD use `Arc<RwLock<Store>>` for read-heavy stores
+(e.g. `RagStore` with its connection pool) and `Arc<Mutex<Store>>` for
+write-heavy stores (e.g. `ConversationStore`). New services MUST follow
+the canonical pattern established by `OllamaChatService`:
+
+- A struct with `Arc`-wrapped dependencies.
+- A `new()` constructor that accepts dependencies explicitly.
+- Public methods that take typed request structs and return
+  `ApiResponse<T>` or `Result<ApiResponse<T>, BackendError>`.
+- No direct Tauri state (`State<>`, `AppHandle`, `Window`) inside the
+  service — those stay in the command adapter layer.
+
+---
+
 # **7. OLLAMA SYSTEM (LOCAL AI ENGINE)**
 
 - Fully offline only
@@ -444,6 +460,18 @@ All logs MUST be structured:
 - RAG indexing/search
 - Ollama streaming lifecycle
 - store mutations
+
+CI MUST verify trace coverage:
+
+- Every Rust domain module MUST contain at least one `tracing::` call
+  (grep-enforced: `grep -L 'tracing::' src-tauri/src/{domain}/*.rs` fails
+  the build when a domain module has zero trace instrumentation).
+- Every frontend store MUST contain at least one `traceStoreMutation` or
+  `traceApi` call (grep-enforced per store file).
+- Every IPC method in `CommandMap` MUST emit a trace span via
+  `dispatchIpcViolationTrace` or `recordIpcLatency` (grep-enforced:
+  `grep -c 'dispatchIpcViolationTrace\|recordIpcLatency'` must equal the
+  number of entries in `CommandMap`).
 
 ---
 

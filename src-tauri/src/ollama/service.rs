@@ -79,7 +79,7 @@ impl OllamaChatService {
         }
         if req.messages.len() > MAX_MESSAGES_COUNT {
             return Err(BackendError::new(
-                "INVALID_INPUT",
+                error_codes::INVALID_INPUT,
                 format!(
                     "Too many messages: {} (max {})",
                     req.messages.len(),
@@ -107,7 +107,7 @@ impl OllamaChatService {
 
         if total_b64_len > (MAX_TOTAL_IMAGE_SIZE_BYTES * 4 / 3 + 1024) {
             return Err(BackendError::new(
-                "FILE_TOO_LARGE",
+                error_codes::FILE_TOO_LARGE,
                 format!(
                     "Total image size exceeds {} MiB limit",
                     MAX_TOTAL_IMAGE_SIZE_BYTES / 1024 / 1024
@@ -142,7 +142,7 @@ impl OllamaChatService {
             Err(_) => {
                 REQUEST_CACHE.remove(&req.request_id);
                 return Err(BackendError::new(
-                    "RATE_LIMITED",
+                    error_codes::RATE_LIMITED,
                     "Too many concurrent requests",
                 ));
             }

@@ -219,6 +219,30 @@ function extractExports(filePath) {
 }
 
 /**
+ * Extract ipcEndpoints from a feature manifest file.
+ * @param {string} filePath - Path to the feature manifest file.
+ * @returns {string[]} - ipcEndpoints array.
+ */
+function extractIpcEndpoints(filePath) {
+  const content = readFileSync(filePath, "utf-8");
+  const match = content.match(/ipcEndpoints:\s*\[([^\]]*)\]/);
+  if (!match) return [];
+  return match[1].split(",")
+    .map(s => s.trim().replace(/["'\s]/g, ""))
+    .filter(s => s.length > 0 && !s.startsWith("//"));
+}
+
+/**
+ * Check if a feature manifest has failureModes defined.
+ * @param {string} filePath - Path to the feature manifest file.
+ * @returns {boolean} - Whether failureModes is present.
+ */
+function hasFailureModes(filePath) {
+  const content = readFileSync(filePath, "utf-8");
+  return /failureModes\s*:\s*\{/.test(content);
+}
+
+/**
  * Validate all feature manifests against their corresponding stores and exports.
  */
 function validateManifests() {
@@ -355,6 +379,13 @@ function validateManifests() {
           console.log(`  ✅ Util '${util}' is exported`);
         }
       }
+    }
+
+    // ── failureModes warning (STANDARDS.md §13) ──
+    const ipcEndpoints = extractIpcEndpoints(manifestPath);
+    if (ipcEndpoints.length > 0 && !hasFailureModes(manifestPath)) {
+      console.warn("  ⚠️  Feature '" + feature + "' has " + ipcEndpoints.length + " IPC endpoint(s) but no failureModes defined.");
+      console.warn("     See STANDARDS.md §13 — each feature SHOULD document failure modes.");
     }
   }
   
