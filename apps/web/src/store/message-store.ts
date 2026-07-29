@@ -16,6 +16,7 @@ interface MessageState {
   addMessages: (conversationId: string, messages: Message[]) => void;
   updateLastMessage: (conversationId: string, update: Partial<Message>, replace?: boolean) => void;
   clearMessages: (conversationId: string) => void;
+  clearAllMessages: () => void;
 }
 
 export const useMessageStore = createWithEqualityFn<MessageState>()(
@@ -86,6 +87,8 @@ export const useMessageStore = createWithEqualityFn<MessageState>()(
         const { [conversationId]: _, ...rest } = state.messages;
         return { messages: rest };
       }),
+
+    clearAllMessages: () => set({ messages: {} }),
   }),
   shallow
 );

@@ -29,7 +29,7 @@ pub async fn cmd_rag_add_project(
         state,
         app_handle: _app_handle,
     };
-    add_project(req).await
+    Ok(add_project(req).await)
 }
 
 #[tauri::command]
@@ -38,7 +38,7 @@ pub async fn cmd_rag_remove_project(
     state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<bool>, String> {
     let req = RemoveProjectRequest { project_id, state };
-    remove_project(req).await
+    Ok(remove_project(req).await)
 }
 
 #[tauri::command]
@@ -54,7 +54,7 @@ pub async fn cmd_rag_update_project(
         ignore_patterns,
         state,
     };
-    update_project(req).await
+    Ok(update_project(req).await)
 }
 
 #[tauri::command]
@@ -62,7 +62,7 @@ pub async fn cmd_rag_list_projects(
     state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<Vec<RagProject>>, String> {
     let req = ListProjectsRequest { state };
-    list_projects(req).await
+    Ok(list_projects(req).await)
 }
 
 #[tauri::command]
@@ -71,7 +71,7 @@ pub async fn cmd_rag_get_project(
     state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<RagProject>, String> {
     let req = GetProjectRequest { project_id, state };
-    get_project(req).await
+    Ok(get_project(req).await)
 }
 
 // ====================== INDEXING COMMANDS ======================
@@ -93,11 +93,11 @@ pub async fn cmd_rag_index_project<R: Runtime>(
         state,
         app_handle,
     };
-    start_indexing(req).await
+    Ok(start_indexing(req).await)
 }
 
 #[tauri::command]
-pub async fn cmd_rag_abort_index(project_id: String) -> Result<ApiResponse<bool>, String> {
+pub async fn cmd_rag_abort_index(project_id: String) -> ApiResponse<bool> {
     let req = AbortIndexRequest { project_id };
     abort_index(req).await
 }
@@ -118,7 +118,7 @@ pub async fn cmd_rag_reindex_project<R: Runtime>(
         state,
         app_handle,
     };
-    start_indexing(req).await
+    Ok(start_indexing(req).await)
 }
 
 #[tauri::command]
@@ -137,13 +137,11 @@ pub async fn cmd_rag_retry_index_project<R: Runtime>(
         state,
         app_handle,
     };
-    start_indexing(req).await
+    Ok(start_indexing(req).await)
 }
 
 #[tauri::command]
-pub async fn cmd_rag_get_index_status(
-    project_id: String,
-) -> Result<ApiResponse<IndexStatus>, String> {
+pub async fn cmd_rag_get_index_status(project_id: String) -> ApiResponse<IndexStatus> {
     let req = GetIndexStatusRequest { project_id };
     get_index_status(req).await
 }
@@ -168,7 +166,7 @@ pub async fn cmd_rag_search(
         base_url,
         state,
     };
-    search(req).await
+    Ok(search(req).await)
 }
 
 #[tauri::command]
@@ -182,7 +180,7 @@ pub async fn cmd_rag_get_file_chunks(
         file_path,
         state,
     };
-    get_file_chunks(req).await
+    Ok(get_file_chunks(req).await)
 }
 
 #[tauri::command]
@@ -191,7 +189,7 @@ pub async fn cmd_rag_get_project_stats(
     state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<ProjectStats>, String> {
     let req = GetProjectStatsRequest { project_id, state };
-    get_project_stats(req).await
+    Ok(get_project_stats(req).await)
 }
 
 // ====================== EMBEDDING MODEL COMMANDS ======================
@@ -207,7 +205,7 @@ pub async fn cmd_rag_set_embedding_model(
         model_name,
         state,
     };
-    set_embedding_model(req).await
+    Ok(set_embedding_model(req).await)
 }
 
 #[tauri::command]
@@ -215,7 +213,7 @@ pub async fn cmd_rag_validate_embedding_model(
     base_url: Option<String>,
     model_name: String,
     _app_handle: AppHandle,
-) -> Result<ApiResponse<RagModelValidation>, String> {
+) -> ApiResponse<RagModelValidation> {
     let req = ValidateEmbeddingModelRequest {
         base_url,
         model_name,
@@ -244,7 +242,7 @@ pub async fn cmd_rag_assemble_context(
         base_url,
         state,
     };
-    assemble_context(req).await
+    Ok(assemble_context(req).await)
 }
 
 // ====================== TESTS (unchanged) ======================

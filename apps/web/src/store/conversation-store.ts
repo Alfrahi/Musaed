@@ -7,6 +7,7 @@ import { type Conversation } from '@musaed/contracts';
 import { createTauriStorage } from '@/lib/tauri-storage';
 import { useUIStore } from '@/store/ui-store';
 import { traceStoreMutation } from '@/lib/store-tracing';
+import { logger } from '@/lib/logger';
 
 // Default state for conversation store
 const DEFAULT_CONVERSATION_STATE = {
@@ -162,7 +163,7 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
       onRehydrateStorage: () => {
         return (_state, error) => {
           if (error) {
-            console.error('Conversation store rehydration failed:', error);
+            logger.error('Conversation store rehydration failed:', { error: String(error) });
           }
           useUIStore.getState().onStoreRehydrated();
         };

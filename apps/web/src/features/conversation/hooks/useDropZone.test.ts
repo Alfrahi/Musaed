@@ -10,17 +10,12 @@ const handlerBox: { current: ((event: unknown) => void) | null } = { current: nu
 
 vi.mock('@/lib/ipc', () => ({
   checkIsTauri: vi.fn(() => true),
-}));
-
-vi.mock('@tauri-apps/api/webview', () => ({
-  getCurrentWebview: () => ({
-    onDragDropEvent: (handler: (event: unknown) => void) => {
-      handlerBox.current = handler;
-      return () => {
-        handlerBox.current = null;
-      };
-    },
-  }),
+  listenDragDrop: (handler: (event: unknown) => void) => {
+    handlerBox.current = handler;
+    return () => {
+      handlerBox.current = null;
+    };
+  },
 }));
 
 /**
@@ -44,11 +39,9 @@ function renderHook<Result>(hook: () => Result) {
 
 function makeDragEvent(type: string, paths: string[] = []) {
   return {
-    payload: {
-      type,
-      paths,
-      position: { x: 100, y: 200 },
-    },
+    type,
+    paths,
+    position: { x: 100, y: 200 },
   };
 }
 

@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import { ragApi } from '@/lib/ipc';
 import { useOllamaUrl } from '@/store/settings-store';
+import { logger } from '@/lib/logger';
 
 interface FileNode {
   name: string;
@@ -39,7 +40,7 @@ export function useRagFileBrowser() {
         }
       } catch (err) {
         setErrorMessage('Failed to fetch indexed files.');
-        console.error('Error fetching indexed files:', err);
+        logger.error('Error fetching indexed files:', { error: String(err) });
       } finally {
         setIsLoading(false);
       }
@@ -53,7 +54,7 @@ export function useRagFileBrowser() {
       const chunks = await ragApi.getFileChunks(projectId, filePath);
       return chunks;
     } catch (err) {
-      console.error('Error fetching file chunks:', err);
+      logger.error('Error fetching file chunks:', { error: String(err) });
       throw err;
     }
   }, []);

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
-import { useSearchQuery, useSetSearchQuery } from '@/features/conversation';
+import { useSearchQuery, useSetSearchQuery } from '@/store/conversation-store';
 import { useLanguage } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 

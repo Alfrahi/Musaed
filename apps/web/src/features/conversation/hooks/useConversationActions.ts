@@ -16,6 +16,7 @@ import { coordinateStartStream, coordinateStopStream, flushAndStop } from '@/sto
 import { useTranslation } from '@/lib/i18n';
 import { updateConversation as backendUpdateConversation } from '@/features/conversation/utils/conversation-backend';
 import type { ConversationMetadata, ConversationState } from '@/store/conversation-store';
+import { logger } from '@/lib/logger';
 
 /**
  * Abort active streaming for a conversation.
@@ -96,7 +97,7 @@ export const useConversationActions = () => {
         try {
           await conversationApi.deleteConversation(id);
         } catch (e) {
-          console.error('Failed to delete conversation on backend:', e);
+          logger.error('Failed to delete conversation on backend:', { error: String(e) });
         }
       })();
 
@@ -112,7 +113,7 @@ export const useConversationActions = () => {
       updateConversation(id, { title, updatedAt });
       // Persist title update to Rust backend
       backendUpdateConversation(id, title, updatedAt).catch((e) =>
-        console.error('Failed to persist title update:', e)
+        logger.error('Failed to persist title update:', { error: String(e) })
       );
     },
     [updateConversation]
@@ -126,7 +127,7 @@ export const useConversationActions = () => {
       try {
         await conversationApi.clearAllConversations();
       } catch (e) {
-        console.error('Failed to clear conversations on backend:', e);
+        logger.error('Failed to clear conversations on backend:', { error: String(e) });
       }
     })();
 
@@ -137,7 +138,7 @@ export const useConversationActions = () => {
     }));
 
     // Clear all messages
-    useMessageStore.setState({ messages: {} });
+    useMessageStore.getState().clearAllMessages();
   }, [batchUpdate]);
 
   const initiateStreaming = useCallback((conversationId: string, requestId: string) => {

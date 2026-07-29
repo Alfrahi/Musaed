@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback } from 'react';
 import { ragApi } from '@/lib/ipc';
+import { logger } from '@/lib/logger';
 import {
   useRagProjects as useRagProjectsFromStore,
   useRagProjectIds,
@@ -26,7 +27,7 @@ export function useRagProjects() {
         setProjects(result);
       }
     } catch (err) {
-      console.error('Failed to load projects:', err);
+      logger.error('Failed to load projects:', { error: String(err) });
     }
   }, [setProjects]);
 

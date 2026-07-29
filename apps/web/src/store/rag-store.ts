@@ -7,6 +7,7 @@ import type { RagProject, IndexProgress, SearchResult } from '@musaed/contracts'
 import { createTauriStorage } from '@/lib/tauri-storage';
 import { useUIStore } from '@/store/ui-store';
 import { ragMigrations, validateRag } from '@/lib/migrations';
+import { logger } from '@/lib/logger';
 
 const RAG_STORE_VERSION = 3;
 
@@ -169,7 +170,7 @@ export const useRagStore = createWithEqualityFn<RagState>()(
           try {
             data = migration(data);
           } catch (err) {
-            console.error(`RAG persist-migrate v${v} failed`, err);
+            logger.error(`RAG persist-migrate v${v} failed`, { error: String(err) });
             return persistedState;
           }
         }
@@ -177,7 +178,7 @@ export const useRagStore = createWithEqualityFn<RagState>()(
           const validated = validateRag(data);
           return validated;
         } catch (err) {
-          console.error('RAG persist-migrate validation failed', err);
+          logger.error('RAG persist-migrate validation failed', { error: String(err) });
           return persistedState;
         }
       },
@@ -191,7 +192,7 @@ export const useRagStore = createWithEqualityFn<RagState>()(
       onRehydrateStorage: () => {
         return (_state, error) => {
           if (error) {
-            console.error('RAG store rehydration failed:', error);
+            logger.error('RAG store rehydration failed:', { error: String(error) });
           }
           useUIStore.getState().onStoreRehydrated();
         };

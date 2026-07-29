@@ -62,6 +62,22 @@ export enum BackendErrorCode {
   MessageAppendError = 'MESSAGE_APPEND_ERROR',
   ConversationLockError = 'CONVERSATION_LOCK_ERROR',
 
+  // ── Dialog ────────────────────────────────────────────
+  DialogError = 'DIALOG_ERROR',
+
+  // ── Context menu ──────────────────────────────────────
+  ContextMenuError = 'CONTEXT_MENU_ERROR',
+
+  // ── URL Opener ────────────────────────────────────────
+  UrlBlocked = 'URL_BLOCKED',
+  OpenUrlError = 'OPEN_URL_ERROR',
+
+  // ── Export ────────────────────────────────────────────
+  ExportError = 'EXPORT_ERROR',
+
+  // ── Migration ─────────────────────────────────────────
+  MigrationError = 'MIGRATION_ERROR',
+
   // ── Generic ───────────────────────────────────────────
   InternalError = 'INTERNAL_ERROR',
   Aborted = 'ABORTED',

@@ -1,5 +1,6 @@
 import { conversationApi } from '@/lib/ipc';
 import type { Conversation, Message } from '@musaed/contracts';
+import { logger } from '@/lib/logger';
 
 /**
  * Conversation Backend Service
@@ -24,7 +25,7 @@ export async function initializeConversations(): Promise<ConversationMetadata[] 
     }
     return null;
   } catch (error) {
-    console.error('Failed to initialize conversations from backend:', error);
+    logger.error('Failed to initialize conversations from backend:', { error: String(error) });
     return null;
   }
 }
@@ -38,7 +39,7 @@ export async function loadConversation(id: string): Promise<Conversation | null>
     const result = await conversationApi.getConversation(id);
     return result;
   } catch (error) {
-    console.error(`Failed to load conversation ${id} from backend:`, error);
+    logger.error(`Failed to load conversation ${id} from backend:`, { error: String(error) });
     return null;
   }
 }
@@ -52,7 +53,7 @@ export async function createConversation(conversation: Conversation): Promise<st
     const result = await conversationApi.createConversation(conversation);
     return result;
   } catch (error) {
-    console.error('Failed to create conversation in backend:', error);
+    logger.error('Failed to create conversation in backend:', { error: String(error) });
     return null;
   }
 }
@@ -67,7 +68,9 @@ export async function addMessage(conversationId: string, message: Message): Prom
     await conversationApi.appendMessage(conversationId, message);
     return true;
   } catch (error) {
-    console.error(`Failed to add message to conversation ${conversationId} in backend:`, error);
+    logger.error(`Failed to add message to conversation ${conversationId} in backend:`, {
+      error: String(error),
+    });
     return false;
   }
 }
@@ -81,7 +84,7 @@ export async function deleteConversation(id: string): Promise<boolean> {
     await conversationApi.deleteConversation(id);
     return true;
   } catch (error) {
-    console.error(`Failed to delete conversation ${id} from backend:`, error);
+    logger.error(`Failed to delete conversation ${id} from backend:`, { error: String(error) });
     return false;
   }
 }
@@ -94,7 +97,7 @@ export async function clearAllConversations(): Promise<boolean> {
     await conversationApi.clearAllConversations();
     return true;
   } catch (error) {
-    console.error('Failed to clear all conversations from backend:', error);
+    logger.error('Failed to clear all conversations from backend:', { error: String(error) });
     return false;
   }
 }
@@ -114,7 +117,7 @@ export async function updateConversation(
     await conversationApi.updateConversation(id, title, updatedAt);
     return true;
   } catch (error) {
-    console.error(`Failed to update conversation ${id} in backend:`, error);
+    logger.error(`Failed to update conversation ${id} in backend:`, { error: String(error) });
     return false;
   }
 }
