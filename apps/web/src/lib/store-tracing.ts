@@ -2,6 +2,7 @@
 
 import { type TraceEntryInput } from '@musaed/contracts';
 import { traceApi } from '@/lib/ipc';
+import { generateTraceId } from '@/lib/trace-id';
 
 /**
  * Store-mutation observability helper (STANDARDS.md §14).
@@ -17,17 +18,6 @@ const TOKEN_TRACE_EVERY_N = 16;
 
 const lastTraceAt: Map<string, number> = new Map();
 const tokenCounters: Map<string, number> = new Map();
-
-/**
- * UUID v4 with a deterministic fallback for environments lacking
- * `crypto.randomUUID` (e.g. legacy test runners).
- */
-function generateTraceId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `store-mut-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
 
 interface StoreTraceOptions {
   feature: string;

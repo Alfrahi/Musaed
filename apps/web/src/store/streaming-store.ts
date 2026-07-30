@@ -230,14 +230,12 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
         createTauriStorage('streaming-state.json', 2, STREAMING_MIGRATIONS)
       ),
       version: 2,
-      migrate: (persistedState, version) => {
-        const migration = STREAMING_MIGRATIONS[version];
-        if (migration && typeof persistedState === 'object' && persistedState !== null) {
-          return migration(persistedState);
-        }
+      migrate: (_persistedState, _version) => {
+        // Migrations are handled by createTauriStorage (canonical path).
+        // This is a safety-net default-state merge only.
         const persisted =
-          typeof persistedState === 'object' && persistedState !== null
-            ? (persistedState as Partial<StreamingState>)
+          typeof _persistedState === 'object' && _persistedState !== null
+            ? (_persistedState as Partial<StreamingState>)
             : {};
         return {
           ...DEFAULT_STREAMING_STATE,

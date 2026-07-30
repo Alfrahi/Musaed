@@ -152,12 +152,13 @@ export const useConversationStore = createWithEqualityFn<ConversationState>()(
         createTauriStorage('conversation-state.json', 3, CONVERSATION_MIGRATIONS)
       ),
       version: 3,
-      migrate: (persistedState, version) => {
-        const migration = CONVERSATION_MIGRATIONS[version];
-        if (migration && typeof persistedState === 'object' && persistedState !== null) {
-          return migration(persistedState);
-        }
-        return { ...DEFAULT_CONVERSATION_STATE, ...(persistedState as Partial<ConversationState>) };
+      migrate: (_persistedState, _version) => {
+        // Migrations are handled by createTauriStorage (canonical path).
+        // This is a safety-net default-state merge only.
+        return {
+          ...DEFAULT_CONVERSATION_STATE,
+          ...(_persistedState as Partial<ConversationState>),
+        };
       },
       skipHydration: true,
       onRehydrateStorage: () => {
