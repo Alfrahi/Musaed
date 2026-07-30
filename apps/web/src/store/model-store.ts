@@ -72,14 +72,12 @@ export const useModelStore = createWithEqualityFn<ModelState>()(
       name: 'musaed-model-storage',
       storage: createJSONStorage(() => createTauriStorage('model-state.json', 1, MODEL_MIGRATIONS)),
       version: 1,
-      migrate: (persistedState, _version) => {
-        const migration = MODEL_MIGRATIONS[1];
-        if (migration && typeof persistedState === 'object' && persistedState !== null) {
-          return migration(persistedState);
-        }
+      migrate: (_persistedState, _version) => {
+        // Migrations are handled by createTauriStorage (canonical path).
+        // This is a safety-net default-state merge only.
         const persisted =
-          typeof persistedState === 'object'
-            ? (persistedState as Partial<{ selectedModel: string }>)
+          typeof _persistedState === 'object'
+            ? (_persistedState as Partial<{ selectedModel: string }>)
             : {};
         return { ...DEFAULT_MODEL_STATE, ...persisted };
       },

@@ -1,7 +1,11 @@
 //! RAG domain services – thin wrappers that contain the business logic formerly
-//! All command‑level orchestration (validation, rate limiting, abort handling, store interaction)
-//! has been moved here. Each public async function mirrors a Tauri command but operates on
-//! request structs that bundle the original arguments.
+//! inlined in Tauri commands. Each public async function mirrors a Tauri command
+//! but operates on request structs that bundle the original arguments.
+//!
+//! Project CRUD lives in [`projects`]; indexing, search, embedding-model, and
+//! stats each have their own sub-module.
+
+pub mod projects;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -14,12 +18,10 @@ use crate::rag::indexing::{self, IndexOptions};
 use crate::rag::search::RagSearchEngine;
 use crate::rag::store::RagStore;
 use crate::rag::types::{
-    AssembledContext, ChunkRecord, IndexStatus, ProjectStats, RagModelValidation, RagProject,
-    SearchResult,
+    AssembledContext, ChunkRecord, IndexStatus, ProjectStats, RagModelValidation, SearchResult,
 };
 use crate::rag::validation::{
-    rag_validation_error, validate_add_project, validate_assemble_context, validate_project_id,
-    validate_search,
+    rag_validation_error, validate_assemble_context, validate_project_id, validate_search,
 };
 use crate::rate_limiter::RATE_LIMITER;
 use tauri::{Emitter, Runtime};
@@ -92,8 +94,7 @@ pub(crate) fn validate_and_canonicalize_file_path(
     canonicalize_path_within_project(project_root, &full_path)
 }
 
-// ---------- Request structs (already declared in original file) ----------
-// (kept here to preserve public API)
+// ---------- Request structs ----------
 pub struct IndexRequest<'a, R: Runtime> {
     pub window: tauri::Window<R>,
     pub project_id: String,
@@ -103,35 +104,11 @@ pub struct IndexRequest<'a, R: Runtime> {
     pub app_handle: tauri::AppHandle,
 }
 
-pub struct AddProjectRequest<'a> {
-    pub name: String,
-    pub path: String,
-    pub embedding_model: String,
-    pub ignore_patterns: Vec<String>,
-    pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
-    pub app_handle: tauri::AppHandle,
-}
-
-pub struct RemoveProjectRequest<'a> {
-    pub project_id: String,
-    pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
-}
-
-pub struct UpdateProjectRequest<'a> {
-    pub project_id: String,
-    pub name: Option<String>,
-    pub ignore_patterns: Option<Vec<String>>,
-    pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
-}
-
-pub struct ListProjectsRequest<'a> {
-    pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
-}
-
-pub struct GetProjectRequest<'a> {
-    pub project_id: String,
-    pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
-}
+// Project CRUD request structs and functions live in `projects` sub-module.
+pub use projects::{
+    add_project, get_project, list_projects, remove_project, update_project, AddProjectRequest,
+    GetProjectRequest, ListProjectsRequest, RemoveProjectRequest, UpdateProjectRequest,
+};
 
 pub struct GetIndexStatusRequest {
     pub project_id: String,
@@ -182,154 +159,7 @@ pub struct AssembleContextRequest<'a> {
     pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
 }
 
-// ---------- Implementations (same as original file) ----------
-
-pub async fn add_project<'a>(req: AddProjectRequest<'a>) -> ApiResponse<RagProject> {
-    if let Err(e) = validate_add_project(
-        &req.name,
-        &req.path,
-        &req.embedding_model,
-        &req.ignore_patterns,
-    ) {
-        return rag_validation_error(e);
-    }
-    let canonical_path = match std::path::Path::new(&req.path).canonicalize() {
-        Ok(p) => p,
-        Err(e) => return rag_validation_error(format!("Failed to resolve project path: {}", e)),
-    };
-    if !canonical_path.is_dir() {
-        return rag_validation_error("Project path must be a valid directory".to_string());
-    }
-    let store = req.state.inner();
-    let s = store.write().await;
-    match s
-        .create_project_with_params(
-            &req.name,
-            &req.path,
-            &req.embedding_model,
-            &req.ignore_patterns,
-        )
-        .await
-    {
-        Ok(project) => ApiResponse {
-            success: true,
-            data: Some(project),
-            error: None,
-        },
-        Err(e) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new(error_codes::RAG_CREATE_ERROR, e)),
-        },
-    }
-}
-
-pub async fn remove_project<'a>(req: RemoveProjectRequest<'a>) -> ApiResponse<bool> {
-    if let Err(e) = validate_project_id(&req.project_id) {
-        return rag_validation_error(e);
-    }
-    let store = req.state.inner();
-    let s = store.write().await;
-    match s.delete_project(&req.project_id).await {
-        Ok(()) => ApiResponse {
-            success: true,
-            data: Some(true),
-            error: None,
-        },
-        Err(e) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new(error_codes::RAG_DELETE_ERROR, e)),
-        },
-    }
-}
-
-pub async fn update_project<'a>(req: UpdateProjectRequest<'a>) -> ApiResponse<RagProject> {
-    if let Err(e) = validate_project_id(&req.project_id) {
-        return rag_validation_error(e);
-    }
-    let store = req.state.inner();
-    let s = store.write().await;
-    if let Err(e) = s
-        .update_project_metadata(
-            &req.project_id,
-            req.name.as_deref(),
-            req.ignore_patterns.as_deref(),
-        )
-        .await
-    {
-        return ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new(error_codes::RAG_UPDATE_ERROR, e)),
-        };
-    }
-    match s.get_project(&req.project_id).await {
-        Ok(Some(project)) => ApiResponse {
-            success: true,
-            data: Some(project),
-            error: None,
-        },
-        Ok(None) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new(
-                error_codes::RAG_NOT_FOUND,
-                "Project not found",
-            )),
-        },
-        Err(e) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new(error_codes::RAG_FETCH_ERROR, e)),
-        },
-    }
-}
-
-pub async fn list_projects<'a>(req: ListProjectsRequest<'a>) -> ApiResponse<Vec<RagProject>> {
-    let store = req.state.inner();
-    let s = store.read().await;
-    match s.list_projects().await {
-        Ok(projects) => ApiResponse {
-            success: true,
-            data: Some(projects),
-            error: None,
-        },
-        Err(e) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new(error_codes::RAG_LIST_ERROR, e)),
-        },
-    }
-}
-
-pub async fn get_project<'a>(req: GetProjectRequest<'a>) -> ApiResponse<RagProject> {
-    if let Err(e) = validate_project_id(&req.project_id) {
-        return rag_validation_error(e);
-    }
-    let store = req.state.inner();
-    let s = store.read().await;
-    match s.get_project(&req.project_id).await {
-        Ok(Some(project)) => ApiResponse {
-            success: true,
-            data: Some(project),
-            error: None,
-        },
-        Ok(None) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new(
-                error_codes::RAG_NOT_FOUND,
-                "Project not found",
-            )),
-        },
-        Err(e) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new(error_codes::RAG_FETCH_ERROR, e)),
-        },
-    }
-}
+// ---------- Implementations ----------
 
 pub async fn get_index_status(req: GetIndexStatusRequest) -> ApiResponse<IndexStatus> {
     if let Err(e) = validate_project_id(&req.project_id) {
@@ -797,8 +627,7 @@ pub async fn assemble_context<'a>(
     }
 }
 
-// Re-export sub‑modules for external use
-pub mod index;
-pub mod model;
-pub mod search;
-pub mod stats;
+// Re-export sub‑modules for external use.
+// `projects` is declared at the top of this file.
+// The old placeholder shims (index.rs, model.rs, search.rs, stats.rs)
+// have been removed; project CRUD lives in `projects.rs`.

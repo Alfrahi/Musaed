@@ -11,12 +11,9 @@
 //! All commands are thin adapters that delegate business logic to
 //! [`super::model_service::ModelService`].
 
-use crate::error_codes;
 use crate::payloads::{ApiResponse, ModelValidation, OllamaModel};
-use crate::validation::{is_valid_model_name, validation_error};
 use tauri::{AppHandle, Runtime};
 
-use super::client::PULL_ABORT_HANDLES;
 use super::model_service::{ModelService, PullModelRequest};
 
 // ==================== MODEL LISTING ====================
@@ -100,27 +97,7 @@ pub async fn cmd_ollama_pull_model<R: Runtime>(
 
 #[tauri::command]
 pub async fn cmd_ollama_abort_pull(name: String) -> ApiResponse<()> {
-    tracing::info!("Aborting model pull: {}", name);
-
-    if !is_valid_model_name(&name) {
-        return validation_error(
-            error_codes::INVALID_INPUT,
-            format!("Invalid model name: {:?}", name),
-        );
-    }
-
-    if let Some((_, token)) = PULL_ABORT_HANDLES.remove(&name) {
-        token.cancel();
-        tracing::info!("Model pull {} cancelled successfully", name);
-    } else {
-        tracing::warn!("No active pull found for model: {}", name);
-    }
-
-    ApiResponse {
-        success: true,
-        data: Some(()),
-        error: None,
-    }
+    crate::ollama::abort_service::abort_pull(name).await
 }
 
 // ==================== MODEL DELETION ====================

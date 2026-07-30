@@ -1,4 +1,5 @@
 use crate::payloads::ApiResponse;
+use crate::rag::services::projects;
 use crate::rag::services::*;
 use crate::rag::store::RagStore;
 use crate::rag::types::{
@@ -21,15 +22,14 @@ pub async fn cmd_rag_add_project(
     state: State<'_, Arc<RwLock<RagStore>>>,
     _app_handle: AppHandle,
 ) -> Result<ApiResponse<RagProject>, String> {
-    let req = AddProjectRequest {
+    let req = projects::AddProjectRequest {
         name,
         path,
         embedding_model,
         ignore_patterns,
-        state,
-        app_handle: _app_handle,
+        store: state.inner().clone(),
     };
-    Ok(add_project(req).await)
+    Ok(projects::add_project(req).await)
 }
 
 #[tauri::command]
@@ -37,8 +37,11 @@ pub async fn cmd_rag_remove_project(
     project_id: String,
     state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<bool>, String> {
-    let req = RemoveProjectRequest { project_id, state };
-    Ok(remove_project(req).await)
+    let req = projects::RemoveProjectRequest {
+        project_id,
+        store: state.inner().clone(),
+    };
+    Ok(projects::remove_project(req).await)
 }
 
 #[tauri::command]
@@ -48,21 +51,23 @@ pub async fn cmd_rag_update_project(
     ignore_patterns: Option<Vec<String>>,
     state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<RagProject>, String> {
-    let req = UpdateProjectRequest {
+    let req = projects::UpdateProjectRequest {
         project_id,
         name,
         ignore_patterns,
-        state,
+        store: state.inner().clone(),
     };
-    Ok(update_project(req).await)
+    Ok(projects::update_project(req).await)
 }
 
 #[tauri::command]
 pub async fn cmd_rag_list_projects(
     state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<Vec<RagProject>>, String> {
-    let req = ListProjectsRequest { state };
-    Ok(list_projects(req).await)
+    let req = projects::ListProjectsRequest {
+        store: state.inner().clone(),
+    };
+    Ok(projects::list_projects(req).await)
 }
 
 #[tauri::command]
@@ -70,8 +75,11 @@ pub async fn cmd_rag_get_project(
     project_id: String,
     state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<RagProject>, String> {
-    let req = GetProjectRequest { project_id, state };
-    Ok(get_project(req).await)
+    let req = projects::GetProjectRequest {
+        project_id,
+        store: state.inner().clone(),
+    };
+    Ok(projects::get_project(req).await)
 }
 
 // ====================== INDEXING COMMANDS ======================

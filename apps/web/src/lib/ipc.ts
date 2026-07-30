@@ -72,6 +72,38 @@ import type {
 import toast from 'react-hot-toast';
 import { translate, getActiveLanguage } from '@/lib/i18n';
 import { config } from '@/lib/config';
+import { isValidOllamaUrl, sanitizeOllamaUrl, isOpenerUrlAllowed } from '@/lib/url-allowlist';
+import { generateTraceId } from '@/lib/trace-id';
+import { checkIsTauri } from '@/lib/tauri-detection';
+import {
+  ipcStats,
+  IPC_VIOLATION_HISTORY_MAX,
+  IPC_VIOLATION_TRACE_THROTTLE_MS,
+  ipcViolationHistory,
+  lastViolationTraceAt,
+  notifyIpcViolationSubscribers,
+  snapshotIpcStats,
+  resetIpcStats,
+  resetIpcViolations,
+  getIpcViolations,
+  getIpcViolationsSince,
+  subscribeIpcViolations,
+  type IpcViolationRecord,
+} from '@/lib/ipc-latency';
+
+// Re-export for backward compatibility
+export { isValidOllamaUrl, sanitizeOllamaUrl };
+export { checkIsTauri };
+export {
+  ipcStats,
+  snapshotIpcStats,
+  resetIpcStats,
+  resetIpcViolations,
+  getIpcViolations,
+  getIpcViolationsSince,
+  subscribeIpcViolations,
+  type IpcViolationRecord,
+};
 
 /**
  * Re-export of the latency budgets from `@musaed/contracts`.
@@ -86,105 +118,6 @@ export { IPC_LATENCY_BUDGETS };
 export type { IpcCallStat, IpcStats };
 
 export type { IpcStats as LatencyStats };
-
-/**
- * Aggregated IPC performance statistics for monitoring and CI enforcement.
- * Exposed globally so tests and observability tooling can assert on budget compliance.
- *
- * @example
- * // In a test after performing IPC calls:
- * expect(ipcStats.violationCount).toBe(0);
- * // Or check specific commands:
- * const violations = ipcStats.calls.filter(c => c.status === 'violation');
- * expect(violations).toHaveLength(0);
- */
-export const ipcStats: IpcStats = {
-  /** Total IPC calls made */
-  callCount: 0,
-
-  /** Total IPC calls that exceeded their latency budget */
-  violationCount: 0,
-
-  /** Per-call records: command → { latencyMs, budgetMs, status }.
-   *  Useful for debugging and per-command analytics. */
-  calls: [],
-};
-
-/**
- * Maximum number of violation entries retained in `ipcViolationHistory`.
- * Prevents unbounded growth in long-running sessions.
- */
-const IPC_VIOLATION_HISTORY_MAX = 200;
-
-/**
- * Throttle window (ms) for trace emission per over-budget command.
- * Once a violation is dispatched, subsequent violations of the same
- * command within this window are dropped to avoid trace-store spam.
- */
-const IPC_VIOLATION_TRACE_THROTTLE_MS = 30_000;
-
-/**
- * Structured record of an IPC latency violation that was dispatched
- * to the trace pipeline. The `traceId` matches the value written to
- * the trace store so the Diagnostics UI can correlate the entry in
- * `LogViewer` with the in-process `ipcStats` counter.
- */
-export interface IpcViolationRecord {
-  /** UUID identifying this violation trace (matches trace store entry). */
-  traceId: string;
-  /** ISO timestamp at moment of detection. */
-  timestamp: string;
-  /** Command name that overran its budget. */
-  command: string;
-  /** Observed latency in milliseconds. */
-  latencyMs: number;
-  /** Configured budget in milliseconds. */
-  budgetMs: number;
-  /** Percentage overage (rounded). */
-  overagePct: number;
-}
-
-/**
- * Rolling window of structured IPC violations. Surfaced to the
- * Diagnostics UI via `getIpcViolations()` and `getIpcViolationsSince()`
- * so users can correlate trace entries with IPC perf counters.
- */
-const ipcViolationHistory: IpcViolationRecord[] = [];
-
-/**
- * Last dispatch timestamp (ms) per command, used to enforce the
- * per-command throttle window for trace emission.
- */
-const lastViolationTraceAt: Map<string, number> = new Map();
-
-/**
- * Subscribers to mutation of `ipcViolationHistory`. Used by
- * `subscribeIpcViolations()` so long-lived UI surfaces can re-render
- * without polling. Returns an unsubscribe function.
- */
-const ipcViolationSubscribers: Set<() => void> = new Set();
-
-function notifyIpcViolationSubscribers(): void {
-  for (const subscriber of ipcViolationSubscribers) {
-    try {
-      subscriber();
-    } catch {
-      // Subscriber errors must not break the IPC pipeline.
-    }
-  }
-}
-
-/**
- * Generates a UUID v4 for trace IDs. Falls back to a deterministic
- * value in environments without `crypto.randomUUID` (e.g., legacy
- * test runners), keeping the trace pipeline non-fatal.
- */
-function generateTraceId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `ipc-viol-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
 
 /**
  * Dispatches a structured `budget_violation` trace entry through
@@ -686,49 +619,9 @@ const CommandReturnSchemas: {
   cmd_context_menu_show: ContextMenuResponseSchema,
 };
 
-/**
- * Checks if the current runtime environment is a Tauri desktop application.
- * @returns true if running inside Tauri, false otherwise (e.g., browser dev mode)
- */
-export const checkIsTauri = (): boolean =>
-  typeof window !== 'undefined' &&
-  !!(window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
-
-/**
- * Validates that the provided URL is a safe local-only target.
- * Only allows localhost, loopback, private IP ranges, and .local hostnames.
- * Strips any path, query, or fragment to prevent SSRF via path injection.
- * @param url - The URL to validate (full URL string)
- * @returns true if the URL is a permitted local address, false otherwise
- */
-export const isValidOllamaUrl = (url: string): boolean => {
-  try {
-    const parsed = new URL(url);
-    const { hostname } = parsed;
-    const isLocal =
-      ['localhost', '127.0.0.1', '::1'].includes(hostname) || hostname.endsWith('.local');
-    const isPrivateIP = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(hostname);
-    return isLocal || isPrivateIP;
-  } catch {
-    return false;
-  }
-};
-
-/**
- * Sanitizes a user-supplied Ollama URL by stripping path, query, and fragment.
- * Returns only scheme + host + port to prevent injection attacks.
- * If URL parsing fails, returns the original string unchanged.
- * @param url - The URL to sanitize
- * @returns A sanitized URL string containing only protocol, host, and optional port
- */
-export const sanitizeOllamaUrl = (url: string): string => {
-  try {
-    const parsed = new URL(url);
-    return `${parsed.protocol}//${parsed.host}`;
-  } catch {
-    return url;
-  }
-};
+// ============================================================================
+// URL Security — delegated to url-allowlist.ts (Finding 12)
+// ============================================================================
 
 /**
  * Internal helper to perform typed IPC calls via Tauri.
@@ -857,79 +750,6 @@ function recordIpcLatency(command: string, latencyMs: number, budgetMs: number):
       );
     }
   }
-}
-
-/**
- * Returns a deep copy snapshot of the current IPC stats. Useful for
- * long-lived subscribers (e.g. Diagnostics UI) that want to re-render
- * without mutating the live counters.
- */
-export function snapshotIpcStats(): IpcStats {
-  return {
-    callCount: ipcStats.callCount,
-    violationCount: ipcStats.violationCount,
-    calls: [...ipcStats.calls],
-  };
-}
-
-/**
- * Resets all IPC perf counters. Intended for tests and for the
- * Diagnostics UI's "clear counters" affordance.
- */
-export function resetIpcStats(): void {
-  ipcStats.callCount = 0;
-  ipcStats.violationCount = 0;
-  ipcStats.calls.length = 0;
-}
-
-/**
- * Clears all IPC latency tracking state: perf counters, violation
- * history, and the per-command throttle window. Used by tests and
- * the Diagnostics UI "clear counters" affordance.
- */
-export function resetIpcViolations(): void {
-  ipcStats.callCount = 0;
-  ipcStats.violationCount = 0;
-  ipcStats.calls.length = 0;
-  ipcViolationHistory.length = 0;
-  lastViolationTraceAt.clear();
-  notifyIpcViolationSubscribers();
-}
-
-/**
- * Returns a copy of the rolling IPC violation history (most-recent
- * first is not guaranteed — entries are in insertion order). The
- * list is bounded at `IPC_VIOLATION_HISTORY_MAX`.
- */
-export function getIpcViolations(): IpcViolationRecord[] {
-  return [...ipcViolationHistory];
-}
-
-/**
- * Returns violations whose `traceId` differs from the supplied
- * marker — i.e., entries that arrived *after* the marker. Pass the
- * last-seen `traceId` from a prior call to obtain an incremental
- * update. Returns the full history when the marker is not found.
- *
- * The Diagnostics UI uses this to re-render only when new violations
- * arrive, avoiding polling churn.
- */
-export function getIpcViolationsSince(traceId: string): IpcViolationRecord[] {
-  const idx = ipcViolationHistory.findIndex((entry) => entry.traceId === traceId);
-  if (idx === -1) return [...ipcViolationHistory];
-  return ipcViolationHistory.slice(idx + 1);
-}
-
-/**
- * Subscribes to mutation of the IPC violation history. Returns an
- * unsubscribe function. Long-lived UI surfaces (LogViewer,
- * DiagnosticsSettings) use this to re-render without polling.
- */
-export function subscribeIpcViolations(listener: () => void): () => void {
-  ipcViolationSubscribers.add(listener);
-  return () => {
-    ipcViolationSubscribers.delete(listener);
-  };
 }
 
 /**
@@ -1379,21 +1199,6 @@ export const dialog = {
   }): Promise<string | string[] | null> =>
     checkIsTauri() ? (await import('@tauri-apps/plugin-dialog')).open(opts) : null,
 };
-
-/**
- * Allowed URL patterns for the opener plugin.
- * Must stay in sync with `src-tauri/capabilities/default.json`.
- */
-const OPENER_ALLOWED_PATTERNS: readonly RegExp[] = [
-  /^https:\/\/github\.com\/[Aa]lfrahi\/[Mm]usaed(?:\/.+)?$/,
-  /^https:\/\/ollama\.com(?:\/.+)?$/,
-  /^https:\/\/ollama\.ai(?:\/.+)?$/,
-  /^mailto:/,
-];
-
-function isOpenerUrlAllowed(url: string): boolean {
-  return OPENER_ALLOWED_PATTERNS.some((pattern) => pattern.test(url));
-}
 
 /**
  * Wrapper around Tauri's opener plugin.

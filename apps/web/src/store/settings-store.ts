@@ -77,16 +77,14 @@ export const useSettingsStore = createWithEqualityFn<SettingsState>()(
         createTauriStorage('settings-state.json', 2, SETTINGS_MIGRATIONS)
       ),
       version: 2,
-      migrate: (persistedState: unknown, version: number) => {
-        if (!persistedState || typeof persistedState !== 'object') {
+      migrate: (_persistedState: unknown, _version: number) => {
+        // Migrations are handled by createTauriStorage (canonical path).
+        // This is a safety-net default-state merge only.
+        if (!_persistedState || typeof _persistedState !== 'object') {
           return { globalSettings: DEFAULT_SETTINGS };
         }
-        const persistedRoot = persistedState as { globalSettings?: Partial<ChatSettings> };
-        let settings = persistedRoot.globalSettings ?? {};
-        for (let v = (version ?? 0) + 1; v <= 2; v++) {
-          const migration = SETTINGS_MIGRATIONS[v];
-          if (migration) settings = migration(settings);
-        }
+        const persistedRoot = _persistedState as { globalSettings?: Partial<ChatSettings> };
+        const settings = persistedRoot.globalSettings ?? {};
         return { globalSettings: { ...DEFAULT_SETTINGS, ...settings } };
       },
       skipHydration: true,
