@@ -56,7 +56,6 @@ impl OllamaChatService {
     /// Returns `Ok(())` on successful spawn of the streaming task.
     /// Returns `Err(BackendError)` on any failure before or during HTTP request.
     pub async fn chat<R: Runtime>(&self, req: OllamaChatRequest<R>) -> Result<(), BackendError> {
-        // Rate limiting check moved from command to service (thin‑adapter rule)
         RATE_LIMITER.check_rate_limit(&req.window_label, "cmd_ollama_chat")?;
         tracing::info!(
             "Starting chat request: request_id={}, model={}",
@@ -64,160 +63,47 @@ impl OllamaChatService {
             req.model
         );
         let start = Instant::now();
-        // --- Input validation ---
-        if !is_valid_model_name(&req.model) {
-            return Err(BackendError::new(
-                error_codes::INVALID_INPUT,
-                format!("Invalid model name: {:?}", req.model),
-            ));
-        }
-        if !is_valid_request_id(&req.request_id) {
-            return Err(BackendError::new(
-                error_codes::INVALID_INPUT,
-                format!("Invalid request_id: {:?}", req.request_id),
-            ));
-        }
-        if req.messages.len() > MAX_MESSAGES_COUNT {
-            return Err(BackendError::new(
-                error_codes::INVALID_INPUT,
-                format!(
-                    "Too many messages: {} (max {})",
-                    req.messages.len(),
-                    MAX_MESSAGES_COUNT
-                ),
-            ));
-        }
-        for msg in &req.messages {
-            if let Err(e) = validate_chat_message(msg) {
-                return Err(BackendError::new(error_codes::INVALID_INPUT, e));
-            }
-        }
-        if let Err(e) = validate_chat_options(&req.options) {
-            return Err(BackendError::new(error_codes::INVALID_INPUT, e));
-        }
 
-        // Image size safety check
-        let total_b64_len: usize = req
-            .messages
-            .iter()
-            .filter_map(|m| m.images.as_ref())
-            .flatten()
-            .map(|s| s.len())
-            .sum();
+        validate_chat_inputs(&req)?;
+        let url = ollama_endpoint(&req.base_url, "api/chat")
+            .map_err(|msg| BackendError::new(error_codes::INVALID_URL, msg))?;
 
-        if total_b64_len > (MAX_TOTAL_IMAGE_SIZE_BYTES * 4 / 3 + 1024) {
-            return Err(BackendError::new(
-                error_codes::FILE_TOO_LARGE,
-                format!(
-                    "Total image size exceeds {} MiB limit",
-                    MAX_TOTAL_IMAGE_SIZE_BYTES / 1024 / 1024
-                ),
-            ));
-        }
+        let _global_permit = acquire_global_permit()
+            .await
+            .map_err(|msg| BackendError::new(error_codes::RATE_LIMITED, msg))?;
 
-        let url = match ollama_endpoint(&req.base_url, "api/chat") {
-            Ok(u) => u,
-            Err(msg) => return Err(BackendError::new(error_codes::INVALID_URL, msg)),
-        };
-
-        let _global_permit = match acquire_global_permit().await {
-            Ok(p) => p,
-            Err(msg) => {
-                return Err(BackendError::new(error_codes::RATE_LIMITED, msg));
-            }
-        };
-
-        // Atomic duplicate check (bounded insert with LRU eviction)
         if !request_cache_try_insert(req.request_id.clone()) {
             tracing::warn!("Duplicate request detected: {}", req.request_id);
             return Err(BackendError::new(
                 error_codes::DUPLICATE_REQUEST,
                 "Request already in progress",
             )
-            .with_request_id(req.request_id));
+            .with_request_id(req.request_id.clone()));
         }
 
-        let permit = match CONCURRENT_SEMAPHORE.acquire().await {
-            Ok(p) => p,
-            Err(_) => {
-                REQUEST_CACHE.remove(&req.request_id);
-                return Err(BackendError::new(
-                    error_codes::RATE_LIMITED,
-                    "Too many concurrent requests",
-                ));
-            }
-        };
+        let permit = CONCURRENT_SEMAPHORE.acquire().await.map_err(|_| {
+            REQUEST_CACHE.remove(&req.request_id);
+            BackendError::new(error_codes::RATE_LIMITED, "Too many concurrent requests")
+        })?;
 
         let cancel_token = Arc::new(CancellationToken::new());
         ABORT_HANDLES.insert(req.request_id.clone(), cancel_token.clone());
-        // Remaining code unchanged, using `req` fields where appropriate.
 
-        let payload = json!({
-            "model": req.model,
-            "messages": req.messages,
-            "options": req.options,
-            "stream": true
-        });
+        let response = send_chat_request(&req, &url).await?;
 
-        // Initial request with timeout + retry
-        let response = match retry_with_backoff(
-            || {
-                let url = url.clone();
-                let payload = payload.clone();
-                async move {
-                    HTTP_CLIENT
-                        .post(&url)
-                        .json(&payload)
-                        .timeout(Duration::from_secs(INITIAL_REQUEST_TIMEOUT_SECS))
-                        .send()
-                        .await
-                }
-            },
-            2,
-            500,
-        )
-        .await
-        {
-            Ok(resp) => resp,
-            Err(e) => {
-                tracing::error!("Failed to send chat request: {}", e);
-                ABORT_HANDLES.remove(&req.request_id);
-                REQUEST_CACHE.remove(&req.request_id);
-                return Err(
-                    BackendError::new(error_codes::INTERNAL_ERROR, e.to_string())
-                        .with_request_id(req.request_id.clone())
-                        .with_context("Failed to connect to Ollama chat endpoint".to_string())
-                        .retryable(),
-                );
-            }
-        };
-
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let error_text = response.text().await.unwrap_or_default();
-            tracing::error!("Ollama returned error status {}: {}", status, error_text);
-
-            ABORT_HANDLES.remove(&req.request_id);
-            REQUEST_CACHE.remove(&req.request_id);
-            return Err(BackendError::new(error_codes::OLLAMA_ERROR, error_text)
-                .with_request_id(req.request_id.clone())
-                .with_context(format!("HTTP Status: {}", status)));
-        }
-
-        let request_id_clone = req.request_id.clone();
-        let app_clone = req.app.clone();
+        let request_id = req.request_id.clone();
+        let app = req.app.clone();
 
         tokio::spawn(async move {
-            // Hold both permits for the entire lifetime of the stream
             let _permit = permit;
             let _global = _global_permit;
 
             defer! {
-                ABORT_HANDLES.remove(&request_id_clone);
-                REQUEST_CACHE.remove(&request_id_clone);
+                ABORT_HANDLES.remove(&request_id);
+                REQUEST_CACHE.remove(&request_id);
             }
 
-            tracing::debug!("Starting streaming for request_id: {}", request_id_clone);
+            tracing::debug!("Starting streaming for request_id: {}", request_id);
 
             let stream_start = Instant::now();
             let mut token_count = 0;
@@ -225,8 +111,8 @@ impl OllamaChatService {
             let stream_result = time::timeout(
                 Duration::from_secs(STREAM_ABSOLUTE_TIMEOUT_SECS),
                 process_chat_stream(
-                    &TauriEmitter::new(&app_clone),
-                    &request_id_clone,
+                    &TauriEmitter::new(&app),
+                    &request_id,
                     response,
                     &cancel_token,
                     Duration::from_secs(STREAM_IDLE_TIMEOUT_SECS),
@@ -239,18 +125,18 @@ impl OllamaChatService {
                 tracing::warn!(
                     "Chat stream timed out after {} seconds for request_id: {}",
                     STREAM_ABSOLUTE_TIMEOUT_SECS,
-                    request_id_clone
+                    request_id
                 );
-                let _ = app_clone.emit(
+                let _ = app.emit(
                     EVENT_OLLAMA_ERROR,
                     &BackendError::new(error_codes::STREAM_TIMEOUT, "Chat stream timed out")
-                        .with_request_id(request_id_clone.clone()),
+                        .with_request_id(request_id.clone()),
                 );
             }
 
             tracing::info!(
                 "Stream completed for request_id: {} (tokens: {}, duration: {:?})",
-                request_id_clone,
+                request_id,
                 token_count,
                 stream_start.elapsed()
             );
@@ -330,4 +216,121 @@ impl OllamaChatService {
             }
         }
     }
+}
+
+// ====================== EXTRACTED HELPERS ======================
+
+/// Validate all chat inputs: model name, request ID, message count, message
+/// content, options, and total image size.
+fn validate_chat_inputs<R: Runtime>(req: &OllamaChatRequest<R>) -> Result<(), BackendError> {
+    if !is_valid_model_name(&req.model) {
+        return Err(BackendError::new(
+            error_codes::INVALID_INPUT,
+            format!("Invalid model name: {:?}", req.model),
+        ));
+    }
+    if !is_valid_request_id(&req.request_id) {
+        return Err(BackendError::new(
+            error_codes::INVALID_INPUT,
+            format!("Invalid request_id: {:?}", req.request_id),
+        ));
+    }
+    if req.messages.len() > MAX_MESSAGES_COUNT {
+        return Err(BackendError::new(
+            error_codes::INVALID_INPUT,
+            format!(
+                "Too many messages: {} (max {})",
+                req.messages.len(),
+                MAX_MESSAGES_COUNT
+            ),
+        ));
+    }
+    for msg in &req.messages {
+        if let Err(e) = validate_chat_message(msg) {
+            return Err(BackendError::new(error_codes::INVALID_INPUT, e));
+        }
+    }
+    if let Err(e) = validate_chat_options(&req.options) {
+        return Err(BackendError::new(error_codes::INVALID_INPUT, e));
+    }
+
+    let total_b64_len: usize = req
+        .messages
+        .iter()
+        .filter_map(|m| m.images.as_ref())
+        .flatten()
+        .map(|s| s.len())
+        .sum();
+
+    if total_b64_len > (MAX_TOTAL_IMAGE_SIZE_BYTES * 4 / 3 + 1024) {
+        return Err(BackendError::new(
+            error_codes::FILE_TOO_LARGE,
+            format!(
+                "Total image size exceeds {} MiB limit",
+                MAX_TOTAL_IMAGE_SIZE_BYTES / 1024 / 1024
+            ),
+        ));
+    }
+
+    Ok(())
+}
+
+/// Send the initial HTTP request to the Ollama chat endpoint with retry.
+async fn send_chat_request<R: Runtime>(
+    req: &OllamaChatRequest<R>,
+    url: &str,
+) -> Result<reqwest::Response, BackendError> {
+    let payload = json!({
+        "model": req.model,
+        "messages": req.messages,
+        "options": req.options,
+        "stream": true
+    });
+
+    let url_owned = url.to_string();
+    let response = match retry_with_backoff(
+        || {
+            let url = url_owned.clone();
+            let payload = payload.clone();
+            async move {
+                HTTP_CLIENT
+                    .post(url)
+                    .json(&payload)
+                    .timeout(Duration::from_secs(INITIAL_REQUEST_TIMEOUT_SECS))
+                    .send()
+                    .await
+            }
+        },
+        2,
+        500,
+    )
+    .await
+    {
+        Ok(resp) => resp,
+        Err(e) => {
+            tracing::error!("Failed to send chat request: {}", e);
+            ABORT_HANDLES.remove(&req.request_id);
+            REQUEST_CACHE.remove(&req.request_id);
+            return Err(
+                BackendError::new(error_codes::INTERNAL_ERROR, e.to_string())
+                    .with_request_id(req.request_id.clone())
+                    .with_context("Failed to connect to Ollama chat endpoint".to_string())
+                    .retryable(),
+            );
+        }
+    };
+
+    if !response.status().is_success() {
+        let status = response.status().as_u16();
+        let error_text = response.text().await.unwrap_or_default();
+        tracing::error!("Ollama returned error status {}: {}", status, error_text);
+
+        ABORT_HANDLES.remove(&req.request_id);
+        REQUEST_CACHE.remove(&req.request_id);
+        return Err(BackendError::new(error_codes::OLLAMA_ERROR, error_text)
+            .with_request_id(req.request_id.clone())
+            .with_context(format!("HTTP Status: {}", status)));
+    }
+
+    Ok(response)
 }
