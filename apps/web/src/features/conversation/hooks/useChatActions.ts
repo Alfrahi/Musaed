@@ -7,7 +7,7 @@ import { chatApi, ragApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
 import { config } from '@/lib/config';
 import toast from 'react-hot-toast';
-import { flushAndStop } from '@/store/batch-manager';
+import { flushAndStop } from '@/store/coordination';
 import { useConversationActions } from './useConversationActions';
 import { type FileAttachment } from './useAttachmentUtils';
 import { useMessageStore } from '@/store/message-store';

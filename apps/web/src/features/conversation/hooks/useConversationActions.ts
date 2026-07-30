@@ -14,7 +14,6 @@ import { useSettingsStore, useLanguage } from '@/store/settings-store';
 import { chatApi, conversationApi } from '@/lib/ipc';
 import { coordinateStartStream, coordinateStopStream, flushAndStop } from '@/store/coordination';
 import { useTranslation } from '@/lib/i18n';
-import { updateConversation as backendUpdateConversation } from '@/features/conversation/utils/conversation-backend';
 import type { ConversationMetadata, ConversationState } from '@/store/conversation-store';
 import { logger } from '@/lib/logger';
 
@@ -112,9 +111,9 @@ export const useConversationActions = () => {
       const updatedAt = Date.now();
       updateConversation(id, { title, updatedAt });
       // Persist title update to Rust backend
-      backendUpdateConversation(id, title, updatedAt).catch((e) =>
-        logger.error('Failed to persist title update:', { error: String(e) })
-      );
+      conversationApi
+        .updateConversation(id, title, updatedAt)
+        .catch((e) => logger.error('Failed to persist title update:', { error: String(e) }));
     },
     [updateConversation]
   );

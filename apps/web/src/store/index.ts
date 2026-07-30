@@ -7,7 +7,6 @@ export * from './ui-store';
 
 // Hydration coordination (fires once after all persisted stores have rehydrated)
 export * from './coordination';
-export * from './batch-manager';
 
 // Conversation domain stores (global because sidebar, settings, layout all import them)
 export * from './conversation-store';

@@ -37,8 +37,10 @@ vi.mock('@/store/settings-store', () => {
   return { useSettingsStore };
 });
 
-vi.mock('@/features/conversation/utils/conversation-backend', () => ({
-  backendUpdateConversation: vi.fn().mockResolvedValue(true),
+vi.mock('@/lib/ipc', () => ({
+  conversationApi: {
+    updateConversation: vi.fn().mockResolvedValue(undefined),
+  },
 }));
 
 vi.mock('@/lib/logger', () => ({
@@ -166,7 +168,7 @@ describe('triggerAutoTitle', () => {
 
     await triggerAutoTitle('conv123');
 
-    expect(mockLogger.warn).toHaveBeenCalledTimes(3);
+    expect(mockLogger.warn).toHaveBeenCalledTimes(2);
     expect(titleGenerator.generateConversationTitle).toHaveBeenCalled();
     expect(mockUpdateConversation).toHaveBeenCalledWith('conv123', {
       title: 'Generated Title',

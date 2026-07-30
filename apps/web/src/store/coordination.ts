@@ -124,7 +124,7 @@ const PERSISTED_STORES: ReadonlyArray<PersistedStore> = [
   useRagStore,
   useModelStore,
   useConversationStore,
-  useStreamingStore as unknown as PersistedStore,
+  useStreamingStore,
 ];
 
 const STORES_TO_HYDRATE = PERSISTED_STORES.length;

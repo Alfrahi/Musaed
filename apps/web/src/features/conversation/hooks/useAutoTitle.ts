@@ -4,7 +4,7 @@ import { useCallback, useRef } from 'react';
 import { useConversationStore } from '@/store/conversation-store';
 import { useMessageStore } from '@/store/message-store';
 import { useSettingsStore } from '@/store/settings-store';
-import { updateConversation as backendUpdateConversation } from '@/features/conversation/utils/conversation-backend';
+import { conversationApi } from '@/lib/ipc';
 import {
   generateConversationTitle,
   isDefaultTitle,
@@ -14,124 +14,42 @@ import { logger } from '@/lib/logger';
 /** Module-level set tracking in-flight auto-title requests across all hook instances. */
 export const pendingAutoTitles = new Set<string>();
 
-/**
- * Hook that provides a function to auto-generate a conversation title.
- * Only generates for conversations that still have the default title.
- * Deduplicates in-flight requests globally.
- */
-export function useAutoTitle() {
-  const pendingRef = useRef(pendingAutoTitles);
+type ConversationSnapshot = ReturnType<
+  typeof useConversationStore.getState
+>['conversations'][string];
 
-  const generateTitle = useCallback(async (conversationId: string) => {
-    if (pendingRef.current.has(conversationId)) return;
+const MAX_RETRY_ATTEMPTS = 5;
+const RETRY_DELAY_MS = 150;
 
-    // Retry conversation lookup to handle race conditions during initialization
-    let conversation:
-      | ReturnType<typeof useConversationStore.getState>['conversations'][string]
-      | undefined;
-    let attempts = 0;
-    const maxAttempts = 5; // Increased from 3 to 5 for slower initialization scenarios
-
-    while (attempts < maxAttempts) {
-      const state = useConversationStore.getState();
-      conversation = state.conversations[conversationId];
-      if (conversation) break;
-      attempts++;
-      logger.warn('Auto-title: conversation not found in store, retrying', {
-        conversationId,
-        attempt: attempts,
-        totalAttempts: maxAttempts,
-        availableConversationIds: Object.keys(state.conversations),
-      });
-      if (attempts < maxAttempts) {
-        await new Promise((resolve) => setTimeout(resolve, 150)); // Increased from 100ms
-      }
+/** Retry conversation lookup to handle race conditions during initialization. */
+async function lookupConversation(
+  conversationId: string
+): Promise<ConversationSnapshot | undefined> {
+  for (let attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
+    const state = useConversationStore.getState();
+    const conversation = state.conversations[conversationId];
+    if (conversation) return conversation;
+    logger.warn('Auto-title: conversation not found in store, retrying', {
+      conversationId,
+      attempt: attempt + 1,
+      totalAttempts: MAX_RETRY_ATTEMPTS,
+      availableConversationIds: Object.keys(state.conversations),
+    });
+    if (attempt < MAX_RETRY_ATTEMPTS - 1) {
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
     }
-
-    if (!conversation) {
-      logger.error('Auto-title: conversation never appeared in store', { conversationId });
-      return;
-    }
-    if (!isDefaultTitle(conversation.title)) {
-      logger.info('Auto-title: conversation already has custom title', {
-        conversationId,
-        title: conversation.title,
-      });
-      return;
-    }
-
-    const messages = useMessageStore.getState().messages[conversationId] || [];
-    const hasUser = messages.some((m) => m.role === 'user');
-    const hasAssistant = messages.some((m) => m.role === 'assistant');
-    if (!hasUser || !hasAssistant) {
-      logger.warn('Auto-title: missing user or assistant messages', {
-        conversationId,
-        messageCount: messages.length,
-      });
-      return;
-    }
-
-    pendingRef.current.add(conversationId);
-
-    try {
-      const ollamaUrl = useSettingsStore.getState().globalSettings.ollamaUrl;
-      const lang = useSettingsStore.getState().globalSettings.language;
-
-      const title = await generateConversationTitle(conversation, messages, ollamaUrl, lang);
-      if (!title) return;
-
-      // Re-check that the conversation still has the default title before updating
-      const currentState = useConversationStore.getState();
-      const currentConv = currentState.conversations[conversationId];
-      if (!currentConv || !isDefaultTitle(currentConv.title)) return;
-
-      useConversationStore.getState().updateConversation(conversationId, { title });
-      backendUpdateConversation(conversationId, title, Date.now()).catch((e) =>
-        logger.error('Failed to persist auto-title:', { error: String(e) })
-      );
-      logger.info('Auto-generated conversation title', { conversationId, title });
-    } catch (err) {
-      logger.warn('Auto-title generation failed', { conversationId, error: err });
-    } finally {
-      pendingRef.current.delete(conversationId);
-    }
-  }, []);
-
-  return { generateTitle };
+  }
+  return undefined;
 }
 
 /**
- * Imperative version of auto-title generation for use outside React components
- * (e.g. event listeners). Shares the same deduplication set as `useAutoTitle`.
- * Retries conversation lookup up to 5 times with 150ms delay to handle
- * race conditions during app initialization.
+ * Core auto-generation logic shared by the hook and the imperative export.
+ * Deduplicates via the given Set (module-level or per-hook ref).
  */
-export async function triggerAutoTitle(conversationId: string): Promise<void> {
-  if (pendingAutoTitles.has(conversationId)) return;
+async function runAutoGenerate(conversationId: string, pending: Set<string>): Promise<void> {
+  if (pending.has(conversationId)) return;
 
-  // Retry conversation lookup to handle race conditions during initialization
-  let conversation:
-    | ReturnType<typeof useConversationStore.getState>['conversations'][string]
-    | undefined;
-  let attempts = 0;
-  const maxAttempts = 5;
-
-  while (attempts < maxAttempts) {
-    const state = useConversationStore.getState();
-    conversation = state.conversations[conversationId];
-    if (conversation) break;
-    attempts++;
-    logger.warn('Auto-title: conversation not found in store, retrying', {
-      conversationId,
-      attempt: attempts,
-      totalAttempts: maxAttempts,
-      availableConversationIds: Object.keys(state.conversations),
-    });
-    if (attempts < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, 150));
-    }
-  }
-
+  const conversation = await lookupConversation(conversationId);
   if (!conversation) {
     logger.error('Auto-title: conversation never appeared in store', { conversationId });
     return;
@@ -155,37 +73,54 @@ export async function triggerAutoTitle(conversationId: string): Promise<void> {
     return;
   }
 
-  pendingAutoTitles.add(conversationId);
+  pending.add(conversationId);
 
   try {
     const settings = useSettingsStore.getState().globalSettings;
-    logger.info('Auto-title: starting title generation', {
-      conversationId,
-      model: conversation.model,
-      language: settings.language,
-    });
     const title = await generateConversationTitle(
       conversation,
       messages,
       settings.ollamaUrl,
       settings.language
     );
-    if (!title) {
-      logger.warn('Auto-title: title generation returned null', { conversationId });
-      return;
-    }
+    if (!title) return;
 
+    // Re-check that the conversation still has the default title before updating
     const current = useConversationStore.getState().conversations[conversationId];
     if (!current || !isDefaultTitle(current.title)) return;
 
     useConversationStore.getState().updateConversation(conversationId, { title });
-    backendUpdateConversation(conversationId, title, Date.now()).catch((e) =>
-      logger.error('Failed to persist auto-title:', { error: String(e) })
-    );
+    conversationApi
+      .updateConversation(conversationId, title, Date.now())
+      .catch((e) => logger.error('Failed to persist auto-title:', { error: String(e) }));
     logger.info('Auto-generated conversation title', { conversationId, title });
   } catch (err) {
     logger.warn('Auto-title generation failed', { conversationId, error: err });
   } finally {
-    pendingAutoTitles.delete(conversationId);
+    pending.delete(conversationId);
   }
+}
+
+/**
+ * Hook that provides a function to auto-generate a conversation title.
+ * Only generates for conversations that still have the default title.
+ * Deduplicates in-flight requests globally.
+ */
+export function useAutoTitle() {
+  const pendingRef = useRef(pendingAutoTitles);
+
+  const generateTitle = useCallback(
+    (conversationId: string) => runAutoGenerate(conversationId, pendingRef.current),
+    []
+  );
+
+  return { generateTitle };
+}
+
+/**
+ * Imperative version of auto-title generation for use outside React components
+ * (e.g. event listeners). Shares the same deduplication set as `useAutoTitle`.
+ */
+export function triggerAutoTitle(conversationId: string): Promise<void> {
+  return runAutoGenerate(conversationId, pendingAutoTitles);
 }

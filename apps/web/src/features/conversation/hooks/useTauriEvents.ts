@@ -8,7 +8,7 @@ import { useStreamingStore } from '@/store/streaming-store';
 import { useModelStore } from '@/store/model-store';
 import { listen, ollamaApi } from '@/lib/ipc';
 import { translate } from '@/lib/i18n';
-import { flushAndStop } from '@/store/batch-manager';
+import { flushAndStop } from '@/store/coordination';
 import { coordinateStopStream } from '@/store/coordination';
 import { useMessageStore } from '@/store/message-store';
 import { triggerAutoTitle } from './useAutoTitle';

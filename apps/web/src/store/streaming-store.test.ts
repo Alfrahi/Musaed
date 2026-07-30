@@ -276,12 +276,12 @@ describe('useStreamingStore', () => {
         useStreamingStore.getState().appendToken('conv1', ' ');
         useStreamingStore.getState().appendToken('conv1', 'world');
 
-        const result = useStreamingStore.getState(selectLiveContent('conv1'));
+        const result = selectLiveContent('conv1')(useStreamingStore.getState());
         expect(result).toBe('hello world');
       });
 
       it('should return null for conversation without content', () => {
-        const result = useStreamingStore.getState(selectLiveContent('conv1'));
+        const result = selectLiveContent('conv1')(useStreamingStore.getState());
         expect(result).toBeNull();
       });
     });
@@ -290,12 +290,12 @@ describe('useStreamingStore', () => {
       it('should return true for active stream', () => {
         useStreamingStore.getState().startStream('conv1', 'req1');
 
-        const result = useStreamingStore.getState(selectIsLiveStreaming('conv1'));
+        const result = selectIsLiveStreaming('conv1')(useStreamingStore.getState());
         expect(result).toBe(true);
       });
 
       it('should return false for inactive stream', () => {
-        const result = useStreamingStore.getState(selectIsLiveStreaming('conv1'));
+        const result = selectIsLiveStreaming('conv1')(useStreamingStore.getState());
         expect(result).toBe(false);
       });
 
@@ -303,7 +303,7 @@ describe('useStreamingStore', () => {
         useStreamingStore.getState().startStream('conv1', 'req1');
         useStreamingStore.getState().stopStream('conv1');
 
-        const result = useStreamingStore.getState(selectIsLiveStreaming('conv1'));
+        const result = selectIsLiveStreaming('conv1')(useStreamingStore.getState());
         expect(result).toBe(false);
       });
     });
@@ -312,12 +312,12 @@ describe('useStreamingStore', () => {
       it('should return requestId for active stream', () => {
         useStreamingStore.getState().startStream('conv1', 'req123');
 
-        const result = useStreamingStore.getState(selectActiveRequestId('conv1'));
+        const result = selectActiveRequestId('conv1')(useStreamingStore.getState());
         expect(result).toBe('req123');
       });
 
       it('should return null for non-existent stream', () => {
-        const result = useStreamingStore.getState(selectActiveRequestId('conv1'));
+        const result = selectActiveRequestId('conv1')(useStreamingStore.getState());
         expect(result).toBeNull();
       });
     });
@@ -327,7 +327,7 @@ describe('useStreamingStore', () => {
     it('should handle complete streaming lifecycle', () => {
       // Start stream
       useStreamingStore.getState().startStream('conv1', 'req1');
-      expect(useStreamingStore.getState(selectIsLiveStreaming('conv1'))).toBe(true);
+      expect(selectIsLiveStreaming('conv1')(useStreamingStore.getState())).toBe(true);
 
       // Append tokens
       useStreamingStore.getState().appendToken('conv1', 'chunk1');
@@ -348,7 +348,7 @@ describe('useStreamingStore', () => {
 
       // Clear stream
       useStreamingStore.getState().clearStream('conv1');
-      expect(useStreamingStore.getState(selectIsLiveStreaming('conv1'))).toBe(false);
+      expect(selectIsLiveStreaming('conv1')(useStreamingStore.getState())).toBe(false);
     });
 
     it('should handle appendToken after clearStream (zombie buffer prevention)', () => {
@@ -357,7 +357,7 @@ describe('useStreamingStore', () => {
       useStreamingStore.getState().clearStream('conv1');
       useStreamingStore.getState().appendToken('conv1', 'after');
 
-      const result = useStreamingStore.getState(selectLiveContent('conv1'));
+      const result = selectLiveContent('conv1')(useStreamingStore.getState());
       expect(result).toBeNull(); // 'after' should be ignored
     });
   });

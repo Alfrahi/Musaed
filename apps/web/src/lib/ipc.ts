@@ -1385,14 +1385,9 @@ export const dialog = {
  * Must stay in sync with `src-tauri/capabilities/default.json`.
  */
 const OPENER_ALLOWED_PATTERNS: readonly RegExp[] = [
-  /^https:\/\/github\.com\/alfrahi\/musaed\/.+$/,
-  /^https:\/\/github\.com\/Alfrahi\/Musaed\/.+$/,
-  /^https:\/\/github\.com\/alfrahi\/musaed$/,
-  /^https:\/\/github\.com\/Alfrahi\/Musaed$/,
-  /^https:\/\/ollama\.com\/.+$/,
-  /^https:\/\/ollama\.com$/,
-  /^https:\/\/ollama\.ai\/.+$/,
-  /^https:\/\/ollama\.ai$/,
+  /^https:\/\/github\.com\/[Aa]lfrahi\/[Mm]usaed(?:\/.+)?$/,
+  /^https:\/\/ollama\.com(?:\/.+)?$/,
+  /^https:\/\/ollama\.ai(?:\/.+)?$/,
   /^mailto:/,
 ];
 
