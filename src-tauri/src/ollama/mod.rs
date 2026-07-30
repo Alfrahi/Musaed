@@ -21,6 +21,7 @@ pub mod models;
 pub mod service;
 pub mod streaming;
 pub mod title;
+pub mod title_service;
 pub mod types; // placeholder for health refactor
 
 // ---- Public re-exports: every Tauri command is available as `ollama::<name>` ----
