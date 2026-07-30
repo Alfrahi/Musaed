@@ -4,26 +4,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('@/lib/ipc', () => ({
   conversationApi: {
     listConversations: vi.fn(),
-    getConversation: vi.fn(),
-    createConversation: vi.fn(),
-    appendMessage: vi.fn(),
-    deleteConversation: vi.fn(),
-    clearAllConversations: vi.fn(),
-    updateConversation: vi.fn(),
   },
 }));
 
-import {
-  initializeConversations,
-  loadConversation,
-  createConversation,
-  addMessage,
-  deleteConversation,
-  clearAllConversations,
-  updateConversation,
-} from './conversation-backend';
+import { initializeConversations } from './conversation-backend';
 import { conversationApi } from '@/lib/ipc';
-import type { Conversation, Message } from '@musaed/contracts';
+import type { Conversation } from '@musaed/contracts';
 
 describe('Conversation Backend Service', () => {
   const mockConversation: Conversation = {
@@ -52,13 +38,6 @@ describe('Conversation Backend Service', () => {
     createdAt: Date.now(),
     updatedAt: Date.now(),
     messages: [],
-  };
-
-  const mockMessage: Message = {
-    id: 'msg-1',
-    role: 'user',
-    content: 'Hello',
-    timestamp: Date.now(),
   };
 
   beforeEach(() => {
@@ -102,142 +81,6 @@ describe('Conversation Backend Service', () => {
         '[ERROR] Failed to initialize conversations from backend:',
         { error: 'Error: Network error' }
       );
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe('loadConversation', () => {
-    it('should return full conversation with messages on success', async () => {
-      vi.mocked(conversationApi.getConversation).mockResolvedValue(mockConversation);
-
-      const result = await loadConversation('test-1');
-
-      expect(result).toEqual(mockConversation);
-      expect(conversationApi.getConversation).toHaveBeenCalledWith('test-1');
-    });
-
-    it('should return null on failure', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      vi.mocked(conversationApi.getConversation).mockRejectedValue(new Error('Not found'));
-
-      const result = await loadConversation('test-1');
-
-      expect(result).toBeNull();
-      expect(consoleSpy).toHaveBeenCalled();
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe('createConversation', () => {
-    it('should return conversation ID on success', async () => {
-      vi.mocked(conversationApi.createConversation).mockResolvedValue('test-1');
-
-      const result = await createConversation(mockConversation);
-
-      expect(result).toBe('test-1');
-      expect(conversationApi.createConversation).toHaveBeenCalledWith(mockConversation);
-    });
-
-    it('should return null on failure', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      vi.mocked(conversationApi.createConversation).mockRejectedValue(new Error('DB error'));
-
-      const result = await createConversation(mockConversation);
-
-      expect(result).toBeNull();
-      expect(consoleSpy).toHaveBeenCalled();
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe('addMessage', () => {
-    it('should return true on success', async () => {
-      vi.mocked(conversationApi.appendMessage).mockResolvedValue(undefined);
-
-      const result = await addMessage('test-1', mockMessage);
-
-      expect(result).toBe(true);
-      expect(conversationApi.appendMessage).toHaveBeenCalledWith('test-1', mockMessage);
-    });
-
-    it('should return false on failure', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      vi.mocked(conversationApi.appendMessage).mockRejectedValue(new Error('DB error'));
-
-      const result = await addMessage('test-1', mockMessage);
-
-      expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalled();
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe('deleteConversation', () => {
-    it('should return true on success', async () => {
-      vi.mocked(conversationApi.deleteConversation).mockResolvedValue(undefined);
-
-      const result = await deleteConversation('test-1');
-
-      expect(result).toBe(true);
-      expect(conversationApi.deleteConversation).toHaveBeenCalledWith('test-1');
-    });
-
-    it('should return false on failure', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      vi.mocked(conversationApi.deleteConversation).mockRejectedValue(new Error('DB error'));
-
-      const result = await deleteConversation('test-1');
-
-      expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalled();
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe('clearAllConversations', () => {
-    it('should return true on success', async () => {
-      vi.mocked(conversationApi.clearAllConversations).mockResolvedValue(undefined);
-
-      const result = await clearAllConversations();
-
-      expect(result).toBe(true);
-      expect(conversationApi.clearAllConversations).toHaveBeenCalled();
-    });
-
-    it('should return false on failure', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      vi.mocked(conversationApi.clearAllConversations).mockRejectedValue(new Error('DB error'));
-
-      const result = await clearAllConversations();
-
-      expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalled();
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe('updateConversation', () => {
-    it('should return true on success', async () => {
-      vi.mocked(conversationApi.updateConversation).mockResolvedValue(undefined);
-
-      const result = await updateConversation('test-1', 'New Title', Date.now());
-
-      expect(result).toBe(true);
-      expect(conversationApi.updateConversation).toHaveBeenCalledWith(
-        'test-1',
-        'New Title',
-        expect.any(Number)
-      );
-    });
-
-    it('should return false on failure', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      vi.mocked(conversationApi.updateConversation).mockRejectedValue(new Error('DB error'));
-
-      const result = await updateConversation('test-1', 'New Title', Date.now());
-
-      expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalled();
       consoleSpy.mockRestore();
     });
   });

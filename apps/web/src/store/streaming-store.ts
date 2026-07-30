@@ -3,7 +3,6 @@
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { StoreApi, UseBoundStore } from 'zustand';
 import { type Message } from '@musaed/contracts';
 import { createTauriStorage } from '@/lib/tauri-storage';
 import { useUIStore } from '@/store/ui-store';
@@ -125,17 +124,6 @@ export interface StreamingState {
   markFlushed: (conversationId: string) => void;
   clearAll: () => void;
 }
-
-// Store instance with a custom getState overload that accepts an optional
-// selector — used by the test suite. We preserve the full zustand store API
-// (call signature, setState, subscribe) and only widen the getState signature.
-type StreamingStoreBase = UseBoundStore<StoreApi<StreamingState>>;
-export type StreamingStore = StreamingStoreBase & {
-  getState: {
-    (): StreamingState;
-    <T>(selector: (state: StreamingState) => T): T;
-  };
-};
 
 const _useStreamingStore = createWithEqualityFn<StreamingState>()(
   persist(
@@ -271,17 +259,7 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
   shallow
 );
 
-// Enhance getState to accept a selector function (as used in the test suite).
-// The default Zustand getState only returns the full state; we add an optional
-// selector overload for convenient one-shot reads.
-const _rawGetState = _useStreamingStore.getState;
-const getStateWithSelector = ((selector?: (state: StreamingState) => unknown) => {
-  const state = _rawGetState();
-  return typeof selector === 'function' ? selector(state) : state;
-}) as StreamingStore['getState'];
-
-export const useStreamingStore = _useStreamingStore as unknown as StreamingStore;
-useStreamingStore.getState = getStateWithSelector;
+export const useStreamingStore = _useStreamingStore;
 
 // ---------------------------------------------------------------------------
 // Selectors

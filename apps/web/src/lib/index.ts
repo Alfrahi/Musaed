@@ -45,8 +45,6 @@ export type { TranslationKey } from '@/lib/i18n';
 
 // Logging & observability - shared infrastructure
 export { logger } from '@/lib/logger';
-export { traceLogger, structuredLogger, traceAsync } from '@/lib/trace-logger';
-export type { TraceSpan, TraceOptions, TraceCompleteOptions } from '@/lib/trace-logger';
 
 // Utilities - pure functions
 export { cn } from '@/lib/utils';
