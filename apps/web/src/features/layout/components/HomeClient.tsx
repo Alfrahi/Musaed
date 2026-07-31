@@ -15,7 +15,7 @@ import {
   useSetCommandPaletteOpen,
 } from '@/store/hooks';
 import { useUIStore } from '@/store/ui-store';
-import { useGlobalSettings } from '@/features/settings';
+import { useGlobalSettings } from '@/store/settings-store';
 import { registerHydrationCoordination } from '@/store/coordination';
 import { Sliders, Library } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
