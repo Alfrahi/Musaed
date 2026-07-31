@@ -96,7 +96,8 @@
     "regenerate": "Regenerate",
     "continue": "Continue",
     "editPrompt": "Edit prompt",
-    "errorPrefix": "Error"
+    "errorPrefix": "Error",
+    "ragContextFailed": "RAG context lookup failed — continuing without project context"
   },
   "settings": {
     "title": "Settings",

@@ -359,6 +359,29 @@ the canonical pattern established by `OllamaChatService`:
 
 ---
 
+## Global Store Centralization
+
+All 8 Zustand stores live in `src/store/` and are globally accessible. This is
+a deliberate architectural choice for a single-user desktop application:
+
+- **Single-user, single-window**: There is no multi-tenant isolation concern.
+  Every feature reads from the same conversation, settings, model, and RAG
+  state because the user has exactly one active session at a time.
+- **Cross-feature read patterns are the norm**: The sidebar reads conversation
+  state, the chat input reads model state, the layout reads settings state,
+  and RAG badges read RAG state. Forcing these reads through feature barrels
+  would create a spiderweb of feature-to-feature dependencies.
+- **Store layer is the memory layer** (§22): Stores are infrastructure, not
+  feature-owned domain logic. They are the system's memory — a single source
+  of truth that every feature reads from.
+- **Write coordination lives in `store/coordination.ts`**: Cross-store writes
+  (e.g. stream lifecycle) are centralized in a single coordination module
+  rather than scattered across features.
+
+A store belongs in `src/store/` if more than one feature imports it. A store
+that is truly feature-private (imported by exactly one feature) may live in
+`features/{x}/store/`.
+
 ## Persistence
 
 - Uses `tauri-plugin-store`
