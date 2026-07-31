@@ -71,7 +71,8 @@ const handleStreamError = (
 async function fetchRagContext(
   query: string,
   activeRagProject: { id: string; path: string } | null,
-  ollamaUrl: string
+  ollamaUrl: string,
+  t: (key: string) => string
 ): Promise<
   | {
       context: string;
@@ -97,6 +98,7 @@ async function fetchRagContext(
     }
   } catch (err) {
     logger.warn('RAG context assembly failed, continuing without context:', { error: String(err) });
+    toast.error(t('chat.ragContextFailed'));
   }
   return undefined;
 }
@@ -240,7 +242,7 @@ export const useChatActions = () => {
       initiateStreaming(conversationId, requestId);
 
       const fullPrompt = buildPromptWithContext(trimmedInput, files, t);
-      const ragResult = await fetchRagContext(trimmedInput, activeRagProject, ollamaUrl);
+      const ragResult = await fetchRagContext(trimmedInput, activeRagProject, ollamaUrl, t);
       const ragSources = ragResult?.sources.map((s) => ({
         filePath: s.filePath,
         startLine: s.startLine,

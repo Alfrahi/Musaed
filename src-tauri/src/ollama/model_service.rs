@@ -212,9 +212,8 @@ impl ModelService {
             let _global = _global_permit;
             let pull_start = Instant::now();
 
-            let pull_result = time::timeout(
-                Duration::from_secs(PULL_ABSOLUTE_TIMEOUT_SECS),
-                async {
+            let pull_result =
+                time::timeout(Duration::from_secs(PULL_ABSOLUTE_TIMEOUT_SECS), async {
                     match HTTP_CLIENT
                         .post(&url)
                         .json(&json!({ "name": name, "stream": true }))
@@ -248,14 +247,8 @@ impl ModelService {
 
                             tracing::info!("Pull request accepted for model: {}", name);
 
-                            process_pull_stream(
-                                &app,
-                                &name,
-                                response,
-                                &cancel_token,
-                                pull_start,
-                            )
-                            .await;
+                            process_pull_stream(&app, &name, response, &cancel_token, pull_start)
+                                .await;
                         }
                         Err(e) => {
                             tracing::error!("Pull request failed for model {}: {}", name, e);
@@ -269,9 +262,8 @@ impl ModelService {
                             );
                         }
                     }
-                },
-            )
-            .await;
+                })
+                .await;
 
             if pull_result.is_err() {
                 tracing::warn!(

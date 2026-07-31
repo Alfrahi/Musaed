@@ -49,7 +49,14 @@ impl PhaseContext<'_> {
     }
 
     fn emit(&self, phase: IndexPhase, current: usize, total: usize, message: String) {
-        emit_progress(&self.app_handle, self.project_id, phase, current, total, message);
+        emit_progress(
+            &self.app_handle,
+            self.project_id,
+            phase,
+            current,
+            total,
+            message,
+        );
     }
 }
 
@@ -114,7 +121,8 @@ pub async fn index_project(
     // Mark project as indexing
     {
         let s = ctx.store.write().await;
-        s.set_status(ctx.project_id, &ProjectStatus::Indexing).await?;
+        s.set_status(ctx.project_id, &ProjectStatus::Indexing)
+            .await?;
     }
 
     let discovered = phase_discover(&ctx)?;
@@ -132,7 +140,12 @@ pub async fn index_project(
 
 /// Discover files in the project directory, respecting ignore patterns.
 fn phase_discover(ctx: &PhaseContext) -> Result<Vec<crate::rag::ignore::DiscoveredFile>, String> {
-    ctx.emit(IndexPhase::DiscoveringFiles, 0, 1, "Discovering files...".to_string());
+    ctx.emit(
+        IndexPhase::DiscoveringFiles,
+        0,
+        1,
+        "Discovering files...".to_string(),
+    );
 
     let discovered = discover_files(ctx.project_path, ctx.ignore_patterns)?;
     let total_files = discovered.len();
@@ -157,7 +170,12 @@ async fn phase_diff(
     discovered: &[crate::rag::ignore::DiscoveredFile],
 ) -> Result<DiffOutput, String> {
     let total_files = discovered.len();
-    ctx.emit(IndexPhase::DiffingFiles, 0, total_files, "Checking for changes...".to_string());
+    ctx.emit(
+        IndexPhase::DiffingFiles,
+        0,
+        total_files,
+        "Checking for changes...".to_string(),
+    );
 
     let tracked_files = {
         let s = ctx.store.read().await;
@@ -166,7 +184,9 @@ async fn phase_diff(
 
     let tracked_map: HashMap<String, (String, i64)> = tracked_files
         .iter()
-        .filter_map(|f| f.id.map(|id| (f.relative_path.clone(), (f.file_hash.clone(), id))))
+        .filter_map(|f| {
+            f.id.map(|id| (f.relative_path.clone(), (f.file_hash.clone(), id)))
+        })
         .collect();
 
     let mut files_to_index: Vec<(String, u64, String)> = Vec::new();
@@ -200,7 +220,8 @@ async fn phase_diff(
         }
     }
 
-    let discovered_set: HashSet<String> = discovered.iter().map(|f| f.relative_path.clone()).collect();
+    let discovered_set: HashSet<String> =
+        discovered.iter().map(|f| f.relative_path.clone()).collect();
     for (path, (_, file_id)) in &tracked_map {
         if !discovered_set.contains(path) {
             files_to_delete.push(*file_id);
@@ -211,10 +232,18 @@ async fn phase_diff(
         IndexPhase::DiffingFiles,
         total_files,
         total_files,
-        format!("{} new/modified, {} deleted", files_to_index.len(), files_to_delete.len()),
+        format!(
+            "{} new/modified, {} deleted",
+            files_to_index.len(),
+            files_to_delete.len()
+        ),
     );
 
-    Ok(DiffOutput { files_to_index, files_to_delete, file_contents })
+    Ok(DiffOutput {
+        files_to_index,
+        files_to_delete,
+        file_contents,
+    })
 }
 
 // ====================== PHASE 3: DELETE STALE ======================
@@ -255,7 +284,12 @@ async fn phase_delete_stale(ctx: &PhaseContext<'_>, files_to_delete: &[i64]) -> 
 /// cached during the diff phase to avoid re-reading files from disk.
 async fn phase_chunk(ctx: &PhaseContext<'_>, diff: &DiffOutput) -> Result<ChunkOutput, String> {
     let file_count = diff.files_to_index.len();
-    ctx.emit(IndexPhase::ReadingFiles, 0, file_count, "Reading files...".to_string());
+    ctx.emit(
+        IndexPhase::ReadingFiles,
+        0,
+        file_count,
+        "Reading files...".to_string(),
+    );
 
     let mut all_raw_chunks: Vec<(String, u64, String, Vec<RawChunk>)> = Vec::new();
 
@@ -295,22 +329,25 @@ async fn phase_chunk(ctx: &PhaseContext<'_>, diff: &DiffOutput) -> Result<ChunkO
         format!("Total: {} chunks from {} files", total_chunks, file_count),
     );
 
-    Ok(ChunkOutput { all_raw_chunks, total_chunks })
+    Ok(ChunkOutput {
+        all_raw_chunks,
+        total_chunks,
+    })
 }
 
 // ====================== PHASE 5: EMBED ======================
 
 /// Generate embeddings for all chunks via the Ollama embedder.
 /// Detects the embedding dimension on the first run and stores it.
-async fn phase_embed(
-    ctx: &PhaseContext<'_>,
-    chunked: &ChunkOutput,
-) -> Result<EmbedOutput, String> {
+async fn phase_embed(ctx: &PhaseContext<'_>, chunked: &ChunkOutput) -> Result<EmbedOutput, String> {
     ctx.emit(
         IndexPhase::EmbeddingChunks,
         0,
         chunked.total_chunks,
-        format!("Embedding {} chunks via {}...", chunked.total_chunks, ctx.embedding_model),
+        format!(
+            "Embedding {} chunks via {}...",
+            chunked.total_chunks, ctx.embedding_model
+        ),
     );
 
     let mut embedder = OllamaEmbedder::new(ctx.base_url, ctx.embedding_model);
@@ -348,7 +385,10 @@ async fn phase_embed(
                     IndexPhase::EmbeddingChunks,
                     chunks_done,
                     total_chunks,
-                    format!("Embedding batch {}/{} ({} chunks)", batch_idx, _total_batches, chunks_done),
+                    format!(
+                        "Embedding batch {}/{} ({} chunks)",
+                        batch_idx, _total_batches, chunks_done
+                    ),
                 );
             })),
         )

@@ -651,23 +651,21 @@ fn build_markdown_metadata(heading_chain: &[String]) -> serde_json::Value {
 }
 
 /// Find a good sentence break point within a string, searching backwards from
-/// the end to find the last sentence-ending punctuation.
+/// the end to find the last sentence-ending punctuation followed by whitespace.
 fn find_sentence_break(text: &str) -> usize {
-    let search_start = if text.len() > MAX_CHUNK_CHARS {
+    let search_end = if text.len() > MAX_CHUNK_CHARS {
         text.len().saturating_sub(OVERLAP_CHARS)
     } else {
         text.len() / 2
     };
 
-    for (i, c) in text.char_indices().rev().take(text.len()) {
-        if i < search_start.saturating_sub(100) {
-            break;
-        }
-        if (c == '.' || c == '!' || c == '?') && i > MIN_CHUNK_CHARS {
-            // Check if followed by whitespace or end of string
-            let after = &text[i + c.len_utf8()..];
-            if !after.is_empty() && after.starts_with(char::is_whitespace) {
-                return i + c.len_utf8();
+    // Search backwards for the last sentence-ending punctuation followed by whitespace.
+    let haystack = &text[..search_end];
+    if let Some(pos) = haystack.rfind(['.', '!', '?']) {
+        if pos > MIN_CHUNK_CHARS {
+            let after = &text[pos + 1..];
+            if after.starts_with(char::is_whitespace) {
+                return pos + 1;
             }
         }
     }

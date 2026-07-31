@@ -96,7 +96,8 @@
     "regenerate": "إعادة التوليد",
     "continue": "متابعة",
     "editPrompt": "تعديل السؤال",
-    "errorPrefix": "خطأ"
+    "errorPrefix": "خطأ",
+    "ragContextFailed": "فشل البحث في سياق RAG — المتابعة بدون سياق المشروع"
   },
   "settings": {
     "title": "الإعدادات",
