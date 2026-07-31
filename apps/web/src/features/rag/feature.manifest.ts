@@ -31,17 +31,18 @@ const manifest: FeatureManifest = {
     'cmd_rag_remove_project',
     'cmd_rag_update_project',
     'cmd_rag_list_projects',
-    'cmd_rag_get_project',
     'cmd_rag_index_project',
     'cmd_rag_abort_index',
     'cmd_rag_reindex_project',
-    'cmd_rag_get_index_status',
+    'cmd_rag_retry_index_project',
     'cmd_rag_search',
     'cmd_rag_assemble_context',
     'cmd_rag_get_file_chunks',
-    'cmd_rag_get_project_stats',
     'cmd_rag_set_embedding_model',
-    'cmd_rag_validate_embedding_model',
+    // Cross-feature IPC: ProjectSettings needs embedding model list.
+    // TODO: route through library's public API to eliminate dual-ownership
+    // (CodebaseAudits/Architecture.md Finding 2a/2b)
+    'cmd_ollama_get_models',
   ],
   /**
    * Performance-sensitive IPC endpoints owned by this feature. The actual
@@ -50,12 +51,7 @@ const manifest: FeatureManifest = {
    * @see STANDARDS.md §15 Performance Rules — IPC latency budgets per feature
    */
   latencyProfiles: {
-    interactive: [
-      'cmd_rag_list_projects',
-      'cmd_rag_get_project',
-      'cmd_rag_get_index_status',
-      'cmd_rag_get_project_stats',
-    ],
+    interactive: ['cmd_rag_list_projects'],
     heavy: [
       'cmd_rag_index_project',
       'cmd_rag_reindex_project',

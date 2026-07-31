@@ -15,13 +15,7 @@ const manifest: FeatureManifest = {
     hooks: [], // No hooks - pure composition layer
     utils: [],
   },
-  ipcEndpoints: [
-    // Layout orchestrates Tauri events and chat initialization
-    'cmd_ollama_chat',
-    'cmd_ollama_abort_chat',
-    'cmd_message_append',
-    'cmd_conversation_create',
-  ],
+  ipcEndpoints: [], // Composition root — IPC is delegated to mounted features
   stateSchemas: {}, // No feature-specific state (uses global stores)
   persistenceSchemas: {}, // No persistent storage
   dependencies: [
