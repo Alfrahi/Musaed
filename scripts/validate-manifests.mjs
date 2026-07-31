@@ -9,6 +9,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, "..");
 const FEATURES_DIR = join(PROJECT_ROOT, "apps/web/src/features");
 const STORE_DIR = join(PROJECT_ROOT, "apps/web/src/store");
+const IPC_TS = join(PROJECT_ROOT, "apps/web/src/lib/ipc.ts");
 
 /**
  * Extract stateSchemas from a feature manifest file.
@@ -243,6 +244,124 @@ function hasFailureModes(filePath) {
 }
 
 /**
+ * Parse ipc.ts and build a map of `NamespaceApi.method` → `cmd_xxx`.
+ *
+ * The IPC layer exports typed API namespaces (ragApi, chatApi, ollamaApi, etc.)
+ * whose methods delegate to `callInternal('cmd_xxx', ...)`. This function
+ * statically maps each namespace method to its underlying command name so the drift check can work at the namespace level (which is what feature code uses)
+ * rather than requiring literal `cmd_` string lookups in feature source.
+ *
+ * @returns {Map<string, string>} - Map of `"namespaceApi.method"` → `"cmd_xxx"`.
+ */
+function parseIpcNamespaceToCommandMap() {
+  const content = readFileSync(IPC_TS, "utf-8");
+  const map = new Map();
+
+  // Match: export const <name>Api = { ... }
+  const namespaceRegex = /export\s+const\s+(\w+Api)\s*=\s*\{/g;
+  let nsMatch;
+  while ((nsMatch = namespaceRegex.exec(content)) !== null) {
+    const nsName = nsMatch[1];
+    const nsBodyStart = nsMatch.index + nsMatch[0].length;
+    // Find the matching closing brace for this object
+    let depth = 1;
+    let nsBodyEnd = nsBodyStart;
+    for (let i = nsBodyStart; i < content.length; i++) {
+      if (content[i] === '{') depth++;
+      else if (content[i] === '}') {
+        depth--;
+        if (depth === 0) { nsBodyEnd = i; break; }
+      }
+    }
+    const nsBody = content.substring(nsBodyStart, nsBodyEnd);
+
+    // Match each method → callInternal('cmd_xxx', ...)
+    const methodRegex = /(\w+)\s*[:(].*?callInternal\(\s*['"]([^'\"]+)['\"]/gs;
+    let mMatch;
+    while ((mMatch = methodRegex.exec(nsBody)) !== null) {
+      const methodName = mMatch[1];
+      const cmdName = mMatch[2];
+      map.set(`${nsName}.${methodName}`, cmdName);
+    }
+  }
+  return map;
+}
+
+/**
+ * Scan all .ts/.tsx files in a feature directory for IPC namespace API usage
+ * and return the set of `cmd_xxx` commands actually invoked.
+ *
+ * @param {string} featureDir - Path to the feature root directory.
+ * @param {Map<string, string>} nsToCmd - Map from parseIpcNamespaceToCommandMap().
+ * @returns {Set<string>} - Set of `cmd_xxx` names found in feature source.
+ */
+function scanFeatureIpcUsage(featureDir, nsToCmd) {
+  const used = new Set();
+  // Build a regex that matches any `namespaceApi.method` call.
+  const patterns = [];
+  for (const [nsKey] of nsToCmd) {
+    const [ns, method] = nsKey.split('.');
+    patterns.push(`${ns}\\.${method}\\b`);
+  }
+  const combined = new RegExp(patterns.join('|'), 'g');
+
+  function walkDir(dir) {
+    let entries;
+    try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const entry of entries) {
+      if (entry.name.includes('.test.') || entry.name.includes('.spec.')) continue;
+      if (entry.name === 'node_modules' || entry.name === '__tests__') continue;
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walkDir(full);
+      } else if (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) {
+        const content = readFileSync(full, 'utf-8');
+        let match;
+        while ((match = combined.exec(content)) !== null) {
+          const nsKey = match[0];
+          const cmd = nsToCmd.get(nsKey);
+          if (cmd) used.add(cmd);
+        }
+      }
+    }
+  }
+  walkDir(featureDir);
+  return used;
+}
+
+/**
+ * Check IPC endpoint drift between a feature's manifest and its actual source.
+ *
+ * Reports two kinds of drift:
+ *  1. Manifest declares an endpoint the feature source never calls.
+ *  2. Feature source calls an endpoint not listed in the manifest.
+ *
+ * @param {string} feature - Feature name.
+ * @param {string} manifestPath - Path to feature.manifest.ts.
+ * @param {string} featureDir - Path to the feature directory.
+ * @param {Map<string, string>} nsToCmd - Map from parseIpcNamespaceToCommandMap().
+ * @returns {boolean} - True if any drift was found.
+ */
+function checkIpcEndpointDrift(feature, manifestPath, featureDir, nsToCmd) {
+  const declared = new Set(extractIpcEndpoints(manifestPath));
+  const actual = scanFeatureIpcUsage(featureDir, nsToCmd);
+  let drift = false;
+  for (const cmd of declared) {
+    if (!actual.has(cmd)) {
+      console.error(`  ❌ IPC drift: manifest of ${feature} declares '${cmd}' but source never calls it.`);
+      drift = true;
+    }
+  }
+  for (const cmd of actual) {
+    if (!declared.has(cmd)) {
+      console.error(`  ❌ IPC drift: feature ${feature} calls '${cmd}' but manifest does not declare it.`);
+      drift = true;
+    }
+  }
+  return drift;
+}
+
+/**
  * Validate all feature manifests against their corresponding stores and exports.
  */
 function validateManifests() {
@@ -386,6 +505,11 @@ function validateManifests() {
     if (ipcEndpoints.length > 0 && !hasFailureModes(manifestPath)) {
       console.warn("  ⚠️  Feature '" + feature + "' has " + ipcEndpoints.length + " IPC endpoint(s) but no failureModes defined.");
       console.warn("     See STANDARDS.md §13 — each feature SHOULD document failure modes.");
+    }
+
+    // ── IPC endpoint drift check ──
+    if (checkIpcEndpointDrift(feature, manifestPath, join(FEATURES_DIR, feature), nsToCmd)) {
+      hasErrors = true;
     }
   }
   

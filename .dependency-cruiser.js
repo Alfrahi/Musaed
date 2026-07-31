@@ -147,15 +147,36 @@ module.exports = {
       severity: 'error',
     },
 
-    // ── 8. components/ui/ should be feature-agnostic ────────
+    // ── 8. components/ui/ composition layer ────────────────
+    // components/ui/ is a composition layer that may import from features
+    // when the component exists solely to avoid a cross-feature boundary
+    // (e.g. conversation→rag). These components are owned by the consuming
+    // feature but live at components/ui/ so dep-cruiser doesn't flag the
+    // import. See STANDARDS.md §3 and the per-file JSDoc headers.
+    // This rule is intentionally absent — no ban on components/ui/ → features.
+
+    // ── 9. hooks/ must not depend on features (allow-listed) ──
     {
-      name: 'no-components-ui-to-feature',
+      name: 'no-hooks-to-features',
       comment:
-        'components/ui/ should be design primitives. Feature-specific ' +
-        'components belong in the owning feature. See STANDARDS.md §3.',
-      from: { path: '^src/components/ui/' },
-      to: { path: '^src/features/' },
-      severity: 'warn',
+        'src/hooks/ is shared infrastructure. Hooks that cross feature ' +
+        'boundaries must be explicitly allow-listed. See STANDARDS.md §3.',
+      from: { path: '^src/hooks/' },
+      to: {
+        path: '^src/features/',
+        pathNot: [
+          // useAppInitialization — boot orchestrator that coordinates
+          // settings, library, and conversation at startup. Lives in
+          // hooks/ because no single feature owns cross-feature init.
+          '^src/features/settings/index\\.ts$',
+          '^src/features/library/index\\.ts$',
+          '^src/features/conversation/index\\.ts$',
+          // useGlobalShortcuts — registers app-wide keyboard shortcuts
+          // that span conversation, settings, library, and info features.
+          '^src/features/conversation/index\\.ts$',
+        ],
+      },
+      severity: 'error',
     },
   ],
 
