@@ -38,7 +38,8 @@ const manifest: FeatureManifest = {
   },
   stateSchemas: {
     settingsStore: 2,
-    conversationStore: 3,
+    // `conversationStore` is owned by the `conversation` feature — settings
+    // reads it via `useStorageActions` but does not own its schema.
   },
   persistenceSchemas: {
     settings: 'musaed-settings-storage',
