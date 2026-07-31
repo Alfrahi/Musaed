@@ -26,9 +26,6 @@ export {
 } from './orchestrator';
 
 // Version-specific migrations
-// Feature-owned migrations live in their respective feature directories.
-// These re-exports preserve the `@/lib/migrations` public API for existing
-// consumers (rag-store.ts, tauri-storage.ts, etc.).
 export {
   settingsMigrations,
   settingsBidirectionalMigrations,
@@ -37,7 +34,7 @@ export {
   migrateSettingsToV2,
   rollbackSettingsToV0,
   rollbackSettingsToV1,
-} from '@/features/settings/store/migrations';
+} from './versions/settings';
 
 export {
   modelMigrations,
@@ -52,12 +49,10 @@ export {
   validateRag,
   migrateRagToV1,
   migrateRagToV2,
-  migrateRagToV3,
   rollbackRagToV0,
   rollbackRagToV1,
-  rollbackRagToV2,
   RAG_STORE_VERSION,
-} from '@/features/rag/store/migrations';
+} from './versions/rag';
 
 // Shared contracts (re-export from @musaed/contracts)
 export type {
