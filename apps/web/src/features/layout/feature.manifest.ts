@@ -11,7 +11,7 @@ const manifest: FeatureManifest = {
   name: 'layout',
   version: '1.0.0',
   publicApi: {
-    components: ['HomeClient'],
+    components: ['HomeClient', 'CommandPalette'],
     hooks: [], // No hooks - pure composition layer
     utils: [],
   },

@@ -22,6 +22,7 @@ const manifest: FeatureManifest = {
       'RagExplorer',
       'ProjectSettings',
       'FileChunkViewer',
+      'RagContextBadge',
     ],
     utils: ['fileNameFromPath', 'truncateFilePath', 'getRelativeFilePath'],
   },

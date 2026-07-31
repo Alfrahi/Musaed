@@ -63,7 +63,7 @@ const ModelLibrary = dynamic(() => import('@/features/library').then((m) => m.Mo
   ssr: false,
 });
 const InfoModal = dynamic(() => import('@/features/info').then((m) => m.InfoModal), { ssr: false });
-const CommandPalette = dynamic(() => import('@/components/ui/CommandPalette'), { ssr: false });
+const CommandPalette = dynamic(() => import('./CommandPalette'), { ssr: false });
 const ShortcutCheatsheet = dynamic(() => import('@/components/ui/ShortcutCheatsheet'), {
   ssr: false,
 });

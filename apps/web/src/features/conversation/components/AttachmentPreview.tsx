@@ -7,7 +7,7 @@ import { useTranslation } from '@/lib/i18n';
 import { useSettingsStore } from '@/store';
 import { type FileAttachment } from '@/features/conversation/hooks/useAttachmentUtils';
 import { attachmentImageSrc } from '../image-attachment';
-import AttachmentLightbox from '@/components/ui/AttachmentLightbox';
+import AttachmentLightbox from './AttachmentLightbox';
 import { Button } from '@/components/ui/button';
 
 interface AttachmentPreviewProps {

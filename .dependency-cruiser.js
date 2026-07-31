@@ -147,13 +147,21 @@ module.exports = {
       severity: 'error',
     },
 
-    // ── 8. components/ui/ composition layer ────────────────
-    // components/ui/ is a composition layer that may import from features
-    // when the component exists solely to avoid a cross-feature boundary
-    // (e.g. conversation→rag). These components are owned by the consuming
-    // feature but live at components/ui/ so dep-cruiser doesn't flag the
-    // import. See STANDARDS.md §3 and the per-file JSDoc headers.
-    // This rule is intentionally absent — no ban on components/ui/ → features.
+    // ── 8. components/ui/ must stay feature-agnostic ─────────
+    // STANDARDS.md §3: components in @/components/ui/ SHOULD be feature-agnostic
+    // design primitives (buttons, modals, skeletons, badges). A component that
+    // needs feature-specific behavior SHOULD live in the feature that owns it.
+    // This `warn` rule flags any components/ui/ → @/features/* import so the
+    // workaround pattern (relocating a feature component into the shared UI
+    // layer to dodge cross-feature import rules) can be caught in review.
+    {
+      name: 'no-ui-to-feature',
+      comment:
+        'components/ui/ should be feature-agnostic primitives. Move feature-specific components into the owning feature. See STANDARDS.md §3.',
+      from: { path: '^src/components/ui/' },
+      to: { path: '^src/features/' },
+      severity: 'warn',
+    },
 
     // ── 9. hooks/ must not depend on features (allow-listed) ──
     {

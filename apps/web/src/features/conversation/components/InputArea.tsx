@@ -7,8 +7,7 @@ import { abortStreaming } from '@/features/conversation/hooks/useConversationAct
 import { useDropZone } from '@/features/conversation/hooks/useDropZone';
 import AttachmentPreview from './AttachmentPreview';
 import { ModelSelector } from '@/features/library';
-// RagContextBadge is imported from the components directory to avoid feature-to-feature imports
-import { RagContextBadge } from '@/components/ui/RagContextBadge';
+import { RagContextBadge } from '@/features/rag';
 import { Button } from '@/components/ui/button';
 import { useChatInputStore } from '@/store/chat-input-store';
 

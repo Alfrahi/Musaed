@@ -5,15 +5,17 @@ import { FolderOpen, Plus, X } from 'lucide-react';
 import { useActiveRagProject, useSetActiveRagProjectId } from '@/store/rag-store';
 import { useSetSidebarTab, useSettingsStore } from '@/store';
 import { useTranslation } from '@/lib/i18n';
-import { RagExplorer } from '@/features/rag';
+import { RagExplorer } from './RagExplorer';
 import ModalLayout from '@/components/ui/ModalLayout';
 import { Button } from '@/components/ui/button';
 
 /**
  * RAG context indicator that lives in the chat compose surface.
  *
- * Mounted at `components/ui` (not the `rag` feature) so that the conversation
- * feature can use it without crossing the feature boundary (STANDARDS §3).
+ * Owned by the `rag` feature. The `conversation` feature imports it through
+ * the rag barrel (`@/features/rag`) — conversation already declares `rag` as
+ * a dependency in its manifest.
+ *
  * Two states:
  *
  *  - inactive: a "Add RAG Project" pill button that routes the user to the
