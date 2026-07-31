@@ -35,6 +35,18 @@ const manifest: FeatureManifest = {
     conversations: 'musaed-conversation-storage',
     // messages store is handled by Rust backend - in-memory cache only
   },
+  /**
+   * Failure modes for this feature's IPC endpoints.
+   *
+   * @see STANDARDS.md §13 — Failure Mode Rule
+   */
+  failureModes: {
+    cmd_dialog_ask: {
+      fallback: 'Treat as user cancellation — no action taken',
+      retry: 'none',
+      messageKey: 'error.genericError',
+    },
+  },
   // Sidebar is the conversation-list composition layer. It imports from
   // conversation (display + actions), rag (project browser), and settings
   // (i18n + theme) — declared here so dep-cruiser honors them as the

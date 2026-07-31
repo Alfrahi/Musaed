@@ -54,6 +54,68 @@ const manifest: FeatureManifest = {
     conversation: 'musaed-conversation-storage',
     // message store is handled by Rust backend - in-memory cache only
   },
+  /**
+   * Failure modes for this feature's IPC endpoints.
+   *
+   * @see STANDARDS.md §13 — Failure Mode Rule
+   */
+  failureModes: {
+    cmd_ollama_chat: {
+      fallback: 'Show error toast and keep user input intact for retry',
+      retry: 'once',
+      messageKey: 'error.chat.title',
+    },
+    cmd_ollama_abort_chat: {
+      fallback: 'Silently ignore — abort is fire-and-forget',
+      retry: 'none',
+      messageKey: 'error.genericError',
+    },
+    cmd_ollama_generate_title: {
+      fallback: 'Use default title — title generation is non-critical',
+      retry: 'none',
+      messageKey: 'error.genericError',
+    },
+    cmd_ollama_get_models: {
+      fallback: 'Show cached model list if available, otherwise show empty library',
+      retry: 'once',
+      messageKey: 'error.failedToFetchModels',
+    },
+    cmd_conversation_create: {
+      fallback: 'Show error toast and keep the create dialog open',
+      retry: 'once',
+      messageKey: 'error.genericError',
+    },
+    cmd_conversation_delete: {
+      fallback: 'Show error toast; conversation remains in list',
+      retry: 'once',
+      messageKey: 'error.genericError',
+    },
+    cmd_conversation_get: {
+      fallback: 'Show error toast and redirect to conversation list',
+      retry: 'once',
+      messageKey: 'error.genericError',
+    },
+    cmd_conversations_clear: {
+      fallback: 'Show error toast; conversations remain in list',
+      retry: 'once',
+      messageKey: 'error.genericError',
+    },
+    cmd_conversations_list: {
+      fallback: 'Show empty conversation list with error banner',
+      retry: 'once',
+      messageKey: 'error.genericError',
+    },
+    cmd_message_append: {
+      fallback: 'Message is already displayed in UI; retry save in background',
+      retry: 'exponential',
+      messageKey: 'error.messageSaveFailed',
+    },
+    cmd_opener_open_url: {
+      fallback: 'Show error toast with the URL so user can copy it manually',
+      retry: 'none',
+      messageKey: 'error.unsupportedLink',
+    },
+  },
   // `library` is a declared dependency because InputArea.tsx composes the
   // library feature's ModelSelector component into the chat input chrome.
   // `rag` is a declared dependency because MessageBubble renders RAG cite
