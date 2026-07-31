@@ -1,0 +1,82 @@
+'use client';
+
+import { useCallback } from 'react';
+import { type Message } from '@musaed/contracts';
+import toast from 'react-hot-toast';
+import { flushAndStop } from '@/store/coordination';
+import { useStreamingStore } from '@/store/streaming-store';
+import { useUIStore, useSetUIError } from '@/store/ui-store';
+import { useConversationActions } from './useConversationActions';
+import { logger } from '@/lib/logger';
+
+/**
+ * Streaming lifecycle + stream-failure error handling for the chat send
+ * pipeline. Extracted from the former `useChatActions` God hook (audit F4).
+ *
+ * `handleStreamError` flushes buffered tokens, marks the assistant message
+ * with the error, clears the stream (without setting `stopped: true` — this
+ * is a failure, not a user-initiated stop, Prompt 14), and notifies the user.
+ *
+ * `abortMessage` delegates to `useConversationActions.stopStreaming`, which
+ * is the single owner of the abort/flush/clear sequence.
+ */
+export function useChatStream(): {
+  handleStreamError: (
+    err: unknown,
+    conversationId: string,
+    requestId: string,
+    updateLastMessage: (id: string, update: Partial<Message>, replace: boolean) => void,
+    t: (key: string) => string
+  ) => void;
+  abortMessage: (conversationId: string | null) => void;
+} {
+  const setErrorMessage = useSetUIError();
+  const { stopStreaming } = useConversationActions();
+
+  const handleStreamError = useCallback(
+    (
+      err: unknown,
+      conversationId: string,
+      requestId: string,
+      updateLastMessage: (id: string, update: Partial<Message>, replace: boolean) => void,
+      t: (key: string) => string
+    ) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.toLowerCase().includes('aborted')) return;
+      logger.error('Chat error', { error: msg, requestId });
+      // Flush any buffered tokens before appending the error message
+      flushAndStop(conversationId);
+      updateLastMessage(
+        conversationId,
+        {
+          content: `\n\n[${t('chat.errorPrefix')}: ${msg}]`,
+          done: true,
+          error: { code: 'STREAM_FAILED', message: msg },
+        },
+        false
+      );
+      // Clean up the streaming store without setting `stopped: true` — this is
+      // a stream failure, not a user-initiated stop (Prompt 14).
+      useStreamingStore.getState().stopStream(conversationId);
+      useStreamingStore.getState().clearStream(conversationId);
+      const { activeStreams } = useStreamingStore.getState();
+      if (Object.keys(activeStreams).length === 0) {
+        useUIStore.getState().setStreaming(false);
+      }
+      setErrorMessage(msg);
+      toast.error(msg);
+    },
+    [setErrorMessage]
+  );
+
+  const abortMessage = useCallback(
+    (conversationId: string | null) => {
+      if (conversationId) {
+        stopStreaming(conversationId);
+      }
+    },
+    [stopStreaming]
+  );
+
+  return { handleStreamError, abortMessage };
+}

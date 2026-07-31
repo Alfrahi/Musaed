@@ -155,7 +155,12 @@ const mockStoreHooks = {
     addMessages: mockStores.messageStore.addMessages,
     updateLastMessage: mockStores.messageStore.updateLastMessage,
   })),
-  useStreamingStore: vi.fn(() => mockStores.streamingStore),
+  useStreamingStore: Object.assign(
+    vi.fn(() => mockStores.streamingStore),
+    {
+      getState: () => mockStores.streamingStore,
+    }
+  ),
   useModelStore: vi.fn(() => ({
     ...mockStores.modelStore,
     selectedModel: mockStores.modelStore.selectedModel,
