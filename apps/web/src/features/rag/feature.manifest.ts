@@ -14,6 +14,7 @@ const manifest: FeatureManifest = {
       'useRagIndexing',
       'useRagSearch',
       'useRagContext',
+      'useRagAssembleContext',
       'useRagFileBrowser',
     ],
     components: [
@@ -43,6 +44,7 @@ const manifest: FeatureManifest = {
     // TODO: route through library's public API to eliminate dual-ownership
     // (CodebaseAudits/Architecture.md Finding 2a/2b)
     'cmd_ollama_get_models',
+    'cmd_dialog_ask',
   ],
   /**
    * Performance-sensitive IPC endpoints owned by this feature. The actual

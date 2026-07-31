@@ -13,7 +13,7 @@ import InputSettings from './InputSettings';
 import StorageSettings from './StorageSettings';
 import MarkdownSettings from './MarkdownSettings';
 import { useTranslation } from '@/lib/i18n';
-import { dialog } from '@/lib/ipc';
+import { dialogApi } from '@/lib/ipc';
 import { ModalLayout } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -225,10 +225,11 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
   }, [isOpen]);
 
   const handleReset = async () => {
-    const confirmed = await dialog.ask(t('settings.confirmReset'), {
-      title: t('settings.resetPreferences'),
-      kind: 'warning',
-    });
+    const confirmed = await dialogApi.ask(
+      t('settings.resetPreferences'),
+      t('settings.confirmReset'),
+      'warning'
+    );
 
     if (confirmed) resetGlobalSettings();
   };

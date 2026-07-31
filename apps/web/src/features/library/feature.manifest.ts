@@ -18,6 +18,8 @@ const manifest: FeatureManifest = {
     'cmd_ollama_delete_model',
     'cmd_ollama_pull_model',
     'cmd_ollama_abort_pull',
+    'cmd_dialog_ask',
+    'cmd_opener_open_url',
   ],
   /**
    * Performance-sensitive IPC endpoints owned by this feature. The actual

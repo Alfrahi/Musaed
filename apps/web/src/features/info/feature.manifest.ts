@@ -14,7 +14,7 @@ const manifest: FeatureManifest = {
     hooks: [],
     utils: [],
   },
-  ipcEndpoints: [], // Uses opener plugin wrapper directly; no Rust command invoked (see CodebaseAudits/Architecture.md Finding 6)
+  ipcEndpoints: ['cmd_opener_open_url'],
   stateSchemas: {}, // No feature-specific state
   persistenceSchemas: {}, // No persistent storage
   dependencies: [], // Standalone feature with no dependencies

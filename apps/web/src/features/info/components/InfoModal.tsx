@@ -6,7 +6,7 @@ import { ModalLayout } from '@/components/ui';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/lib/i18n';
 import { useLanguage } from '@/store';
-import { opener } from '@/lib/ipc';
+import { openerApi } from '@/lib/ipc';
 
 interface InfoModalProps {
   isOpen: boolean;
@@ -102,7 +102,7 @@ const InfoModal = ({ isOpen, onClose }: InfoModalProps) => {
 
         <Button
           variant="secondary"
-          onClick={() => opener.openUrl('https://github.com/alfrahi/musaed')}
+          onClick={() => openerApi.openUrl('https://github.com/alfrahi/musaed')}
           className="w-full gap-2 rounded-xl text-xs font-bold tracking-widest uppercase shadow-sm"
         >
           <Github size={14} />

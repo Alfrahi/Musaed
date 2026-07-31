@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from '@/lib/i18n';
 import { useLanguage } from '@/store/settings-store';
-import { checkIsTauri, logApi, store, dialog } from '@/lib/ipc';
+import { checkIsTauri, logApi, store, dialogApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
 import toast from 'react-hot-toast';
 
@@ -43,10 +43,7 @@ export function useLogActions() {
   const clearLogs = useCallback(async () => {
     if (!isTauri) return;
 
-    const confirmed = await dialog.ask(t('logs.confirmClear'), {
-      title: t('logs.clearLogs'),
-      kind: 'warning',
-    });
+    const confirmed = await dialogApi.ask(t('logs.clearLogs'), t('logs.confirmClear'), 'warning');
 
     if (confirmed) {
       try {

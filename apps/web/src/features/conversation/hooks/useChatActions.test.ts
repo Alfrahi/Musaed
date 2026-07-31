@@ -20,10 +20,13 @@ vi.mock('@/lib/ipc', () => ({
     deleteConversation: vi.fn().mockResolvedValue(undefined),
     clearAllConversations: vi.fn().mockResolvedValue(undefined),
   },
-  ragApi: {
-    search: vi.fn().mockResolvedValue([]),
-    assembleContext: vi.fn().mockResolvedValue({ assembledContext: '', citations: [] }),
-  },
+}));
+
+vi.mock('@/features/rag', () => ({
+  useRagAssembleContext: () => ({
+    assembleContext: vi.fn().mockResolvedValue(null),
+    activeProject: null,
+  }),
 }));
 
 vi.mock('@/lib/logger', () => ({
@@ -44,6 +47,10 @@ vi.mock('react-hot-toast', () => ({
 }));
 
 vi.mock('@/store/batch-manager', () => ({
+  flushAndStop: vi.fn(),
+}));
+
+vi.mock('@/store/coordination', () => ({
   flushAndStop: vi.fn(),
 }));
 
@@ -111,10 +118,6 @@ vi.mock('@/store/settings-store', () => ({
 
 vi.mock('@/store/model-store', () => ({
   useModelStore: vi.fn(() => ({ selectedModel: 'llama3.2:latest' })),
-}));
-
-vi.mock('@/store/rag-store', () => ({
-  useRagStore: vi.fn(() => ({ activeProjectId: null, projects: {} })),
 }));
 
 vi.mock('@/lib/i18n', () => ({

@@ -11,7 +11,7 @@ import ModelCard from './ModelCard';
 import LibrarySearchHeader from './LibrarySearchHeader';
 import { useModelPulling } from '@/features/library/hooks/useModelPulling';
 import { useModelActions } from '@/features/library/hooks/useModelActions';
-import { dialog } from '@/lib/ipc';
+import { dialogApi } from '@/lib/ipc';
 import { ErrorFallback } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { ModalLayout } from '@/components/ui';
@@ -268,10 +268,11 @@ const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
 
   const handleDelete = useCallback(
     async (name: string) => {
-      const confirmed = await dialog.ask(t('library.confirmDeleteNamed', { name }), {
-        title: t('library.deleteModel'),
-        kind: 'warning',
-      });
+      const confirmed = await dialogApi.ask(
+        t('library.deleteModel'),
+        t('library.confirmDeleteNamed', { name }),
+        'warning'
+      );
       if (confirmed) await deleteModel(name);
     },
     [deleteModel, t]
