@@ -5,7 +5,7 @@ import { Search, ExternalLink, RefreshCw, X, HardDrive, Plus, Terminal } from 'l
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
 import { type Language } from '@musaed/contracts';
-import { opener } from '@/lib/ipc';
+import { openerApi } from '@/lib/ipc';
 import { Button } from '@/components/ui/button';
 
 interface LibrarySearchHeaderProps {
@@ -217,7 +217,7 @@ const LibrarySearchHeader = ({
           <div className="caption-xs hidden items-center gap-4 font-bold tracking-widest text-zinc-500 uppercase lg:flex">
             {}
             <button
-              onClick={() => opener.openUrl('https://ollama.com/library')}
+              onClick={() => openerApi.openUrl('https://ollama.com/library')}
               className="flex items-center gap-1 transition-colors hover:text-blue-500"
             >
               {t('library.ollamaLibrary')} <ExternalLink size={12} className="mirror-rtl" />

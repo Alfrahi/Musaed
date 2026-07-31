@@ -6,7 +6,7 @@ import { useRagProjects as useRagProjectsHook } from '@/features/rag/hooks/useRa
 import { useRagIndexing } from '@/features/rag/hooks/useRagIndexing';
 import { useActiveRagProjectId, useSetActiveRagProjectId } from '@/store/rag-store';
 import { useSettingsStore } from '@/store';
-import { dialog } from '@/lib/ipc';
+import { dialogApi } from '@/lib/ipc';
 import ProjectCard from './ProjectCard';
 import { AddProjectDialog } from './AddProjectDialog';
 import { useState, useEffect } from 'react';
@@ -42,12 +42,11 @@ export const ProjectList = ({ hideHeaderAction = false }: { hideHeaderAction?: b
   };
 
   const handleRemove = async (projectId: string) => {
-    const confirmed = await dialog.ask(t('rag.removeConfirm'), {
-      title: t('rag.removeProject'),
-      kind: 'warning',
-      okLabel: t('common.delete'),
-      cancelLabel: t('common.cancel'),
-    });
+    const confirmed = await dialogApi.ask(
+      t('rag.removeProject'),
+      t('rag.removeConfirm'),
+      'warning'
+    );
     if (!confirmed) return;
     await removeProjectById(projectId);
     if (activeProjectId === projectId) {

@@ -3,7 +3,7 @@
 import { useCallback } from 'react';
 import { useSettingsStore } from '@/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
-import { dialog } from '@/lib/ipc';
+import { dialogApi } from '@/lib/ipc';
 import { exportToMarkdown } from '@/features/sidebar/utils/export';
 import { useConversationActions } from '@/features/conversation';
 import { useMessageStore } from '@/store/message-store';
@@ -17,10 +17,11 @@ export function useSidebarActions() {
     useConversationActions();
 
   const handleClearAll = useCallback(async () => {
-    const confirmed = await dialog.ask(t('sidebar.confirmClearAll'), {
-      title: t('sidebar.clearAll'),
-      kind: 'warning',
-    });
+    const confirmed = await dialogApi.ask(
+      t('sidebar.clearAll'),
+      t('sidebar.confirmClearAll'),
+      'warning'
+    );
 
     if (confirmed) {
       logger.info('Clearing all conversations');
@@ -30,10 +31,11 @@ export function useSidebarActions() {
 
   const handleDeleteConversation = useCallback(
     async (id: string) => {
-      const confirmed = await dialog.ask(t('sidebar.confirmDelete'), {
-        title: t('sidebar.deleteChat'),
-        kind: 'warning',
-      });
+      const confirmed = await dialogApi.ask(
+        t('sidebar.deleteChat'),
+        t('sidebar.confirmDelete'),
+        'warning'
+      );
 
       if (confirmed) {
         logger.info('Deleting conversation', { id });

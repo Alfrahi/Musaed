@@ -3,7 +3,8 @@
 import { useCallback } from 'react';
 import { type Message } from '@musaed/contracts';
 import { useTranslation } from '@/lib/i18n';
-import { chatApi, ragApi } from '@/lib/ipc';
+import { chatApi } from '@/lib/ipc';
+import { useRagAssembleContext } from '@/features/rag';
 import { logger } from '@/lib/logger';
 import { config } from '@/lib/config';
 import toast from 'react-hot-toast';
@@ -14,7 +15,6 @@ import { useMessageStore } from '@/store/message-store';
 import { useCurrentConversationId, useConversations } from '@/store/conversation-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { useModelStore } from '@/store/model-store';
-import { useRagStore } from '@/store/rag-store';
 import { useSetUIError, useUIStore } from '@/store/ui-store';
 import { useStreamingStore } from '@/store/streaming-store';
 import { persistUserMessage } from '@/features/conversation/utils/message-persistence';
@@ -66,42 +66,6 @@ const handleStreamError = (
   setError(msg);
   toast.error(msg);
 };
-
-/** Build RAG context for the chat query if an active project is set. */
-async function fetchRagContext(
-  query: string,
-  activeRagProject: { id: string; path: string } | null,
-  ollamaUrl: string,
-  t: (key: string) => string
-): Promise<
-  | {
-      context: string;
-      sources: Array<{
-        filePath: string;
-        startLine: number;
-        endLine: number;
-        language: string | null;
-      }>;
-    }
-  | undefined
-> {
-  if (!activeRagProject) return undefined;
-  try {
-    const result = await ragApi.assembleContext({
-      projectId: activeRagProject.id,
-      query,
-      topK: 10,
-      baseUrl: ollamaUrl,
-    });
-    if (result && result.assembledContext) {
-      return { context: result.assembledContext, sources: result.citations };
-    }
-  } catch (err) {
-    logger.warn('RAG context assembly failed, continuing without context:', { error: String(err) });
-    toast.error(t('chat.ragContextFailed'));
-  }
-  return undefined;
-}
 
 /** Create user and assistant message objects for a new chat turn. */
 function createChatMessages(
@@ -208,7 +172,7 @@ export const useChatActions = () => {
   const currentConversationId = useCurrentConversationId();
   const conversations = useConversations();
   const modelStore = useModelStore();
-  const ragStore = useRagStore();
+  const { assembleContext } = useRagAssembleContext();
 
   const sendMessage = useCallback(
     async (input: string, images: string[] = [], files: FileAttachment[] = []) => {
@@ -220,8 +184,6 @@ export const useChatActions = () => {
         settingsStore.globalSettings ||
         ({ language: 'en', ollamaUrl: 'http://localhost:11434' } as const);
       const ollamaUrl: string = globalSettings.ollamaUrl || 'http://localhost:11434';
-      const activeRagProjectId = ragStore.activeProjectId;
-      const activeRagProject = activeRagProjectId ? ragStore.projects?.[activeRagProjectId] : null;
 
       if (!config.isTest) {
         if (
@@ -242,8 +204,8 @@ export const useChatActions = () => {
       initiateStreaming(conversationId, requestId);
 
       const fullPrompt = buildPromptWithContext(trimmedInput, files, t);
-      const ragResult = await fetchRagContext(trimmedInput, activeRagProject, ollamaUrl, t);
-      const ragSources = ragResult?.sources.map((s) => ({
+      const ragResult = await assembleContext(trimmedInput);
+      const ragSources = ragResult?.citations.map((s) => ({
         filePath: s.filePath,
         startLine: s.startLine,
         endLine: s.endLine,
@@ -288,8 +250,7 @@ export const useChatActions = () => {
       conversations,
       settingsStore.globalSettings,
       modelStore.selectedModel,
-      ragStore.activeProjectId,
-      ragStore.projects,
+      assembleContext,
     ]
   );
 

@@ -20,7 +20,12 @@ const manifest: FeatureManifest = {
     components: ['SettingsModal'],
     utils: [],
   },
-  ipcEndpoints: ['cmd_ollama_verify_service', 'cmd_logs_request_clear_token', 'cmd_logs_clear'],
+  ipcEndpoints: [
+    'cmd_ollama_verify_service',
+    'cmd_logs_request_clear_token',
+    'cmd_logs_clear',
+    'cmd_dialog_ask',
+  ],
   /**
    * Performance-sensitive IPC endpoints owned by this feature. The actual
    * thresholds (ms) live in `@musaed/contracts` (`IPC_LATENCY_BUDGETS`).

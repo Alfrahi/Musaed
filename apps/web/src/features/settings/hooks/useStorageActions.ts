@@ -9,7 +9,7 @@ import {
 import { useModels } from '@/store/model-store';
 import { useGlobalSettings } from '@/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
-import { checkIsTauri, dialog, fs } from '@/lib/ipc';
+import { checkIsTauri, dialogApi, dialog, fs } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
 import toast from 'react-hot-toast';
 import { ConversationSchema, type OllamaModel, type Message } from '@musaed/contracts';
@@ -209,10 +209,11 @@ const useImportJson = (
   t: (key: string) => string
 ) => {
   const handleImportJson = useCallback(async () => {
-    const confirmed = await dialog.ask(t('settings.storage.confirmImport'), {
-      title: t('settings.storage.importData'),
-      kind: 'warning',
-    });
+    const confirmed = await dialogApi.ask(
+      t('settings.storage.importData'),
+      t('settings.storage.confirmImport'),
+      'warning'
+    );
 
     if (!confirmed) return;
 

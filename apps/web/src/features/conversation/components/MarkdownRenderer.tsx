@@ -12,7 +12,7 @@ import 'highlight.js/styles/github-dark.css';
 import 'katex/dist/katex.min.css';
 
 import CodeBlock from './CodeBlock';
-import { opener } from '@/lib/ipc';
+import { openerApi } from '@/lib/ipc';
 import { useSettingsStore } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 
@@ -212,7 +212,7 @@ const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
         return;
       }
       e.preventDefault();
-      await opener.openUrl(safeHref);
+      await openerApi.openUrl(safeHref);
     },
     []
   );
