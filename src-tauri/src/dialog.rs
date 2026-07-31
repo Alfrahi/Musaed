@@ -1,4 +1,5 @@
 use crate::payloads::ApiResponse;
+use serde::Deserialize;
 use tauri::AppHandle;
 use tauri_plugin_dialog::DialogExt;
 
@@ -57,6 +58,141 @@ fn to_dialog_kind(kind: &str) -> tauri_plugin_dialog::MessageDialogKind {
         "warning" => tauri_plugin_dialog::MessageDialogKind::Warning,
         "error" => tauri_plugin_dialog::MessageDialogKind::Error,
         _ => tauri_plugin_dialog::MessageDialogKind::Info,
+    }
+}
+
+// ── File dialog filter ────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileFilter {
+    pub name: String,
+    pub extensions: Vec<String>,
+}
+
+// ── File open dialog ──────────────────────────────────────────────────
+
+/// Shows a native file/folder open dialog and returns the selected path(s).
+///
+/// # Arguments
+/// * `app` - Tauri app handle
+/// * `filters` - Optional file extension filters
+/// * `multiple` - Whether to allow multiple selection
+/// * `directory` - Whether to select directories instead of files
+/// * `default_path` - Optional default path to open the dialog at
+///
+/// # Returns
+/// `ApiResponse<Option<Vec<String>>>` — selected path(s), or None if cancelled
+#[tauri::command]
+pub async fn cmd_dialog_open_file(
+    app: AppHandle,
+    filters: Option<Vec<FileFilter>>,
+    multiple: Option<bool>,
+    directory: Option<bool>,
+    default_path: Option<String>,
+) -> ApiResponse<Option<Vec<String>>> {
+    let mut builder = app.dialog().file();
+
+    if let Some(f) = filters {
+        for ff in &f {
+            let exts: Vec<&str> = ff.extensions.iter().map(|s| s.as_str()).collect();
+            builder = builder.add_filter(&ff.name, &exts);
+        }
+    }
+
+    if let Some(path) = default_path {
+        builder = builder.set_directory(path);
+    }
+
+    let is_multi = multiple.unwrap_or(false);
+    let is_dir = directory.unwrap_or(false);
+
+    let result: Option<Vec<String>> = if is_dir {
+        if is_multi {
+            builder.blocking_pick_folders().map(|paths| {
+                paths
+                    .iter()
+                    .filter_map(|p| p.as_path().map(|pb| pb.to_string_lossy().to_string()))
+                    .collect()
+            })
+        } else {
+            builder
+                .blocking_pick_folder()
+                .and_then(|p| p.as_path().map(|pb| vec![pb.to_string_lossy().to_string()]))
+        }
+    } else {
+        if is_multi {
+            builder.blocking_pick_files().map(|paths| {
+                paths
+                    .iter()
+                    .filter_map(|p| p.as_path().map(|pb| pb.to_string_lossy().to_string()))
+                    .collect()
+            })
+        } else {
+            builder
+                .blocking_pick_file()
+                .and_then(|p| p.as_path().map(|pb| vec![pb.to_string_lossy().to_string()]))
+        }
+    };
+
+    match result {
+        Some(paths) if !paths.is_empty() => ApiResponse {
+            success: true,
+            data: Some(Some(paths)),
+            error: None,
+        },
+        _ => ApiResponse {
+            success: true,
+            data: Some(None),
+            error: None,
+        },
+    }
+}
+
+// ── File save dialog ──────────────────────────────────────────────────
+
+/// Shows a native file save dialog and returns the selected path.
+///
+/// # Arguments
+/// * `app` - Tauri app handle
+/// * `filters` - File extension filters
+/// * `default_path` - Optional default filename/path
+///
+/// # Returns
+/// `ApiResponse<Option<String>>` — the selected save path, or None if cancelled
+#[tauri::command]
+pub async fn cmd_dialog_save_file(
+    app: AppHandle,
+    filters: Option<Vec<FileFilter>>,
+    default_path: Option<String>,
+) -> ApiResponse<Option<String>> {
+    let mut builder = app.dialog().file();
+
+    if let Some(f) = filters {
+        for ff in &f {
+            let exts: Vec<&str> = ff.extensions.iter().map(|s| s.as_str()).collect();
+            builder = builder.add_filter(&ff.name, &exts);
+        }
+    }
+
+    if let Some(path) = default_path {
+        builder = builder.set_file_name(path);
+    }
+
+    match builder.blocking_save_file() {
+        Some(path) => {
+            let path_str = path.as_path().map(|pb| pb.to_string_lossy().to_string());
+            ApiResponse {
+                success: true,
+                data: Some(path_str),
+                error: None,
+            }
+        }
+        None => ApiResponse {
+            success: true,
+            data: Some(None),
+            error: None,
+        },
     }
 }
 

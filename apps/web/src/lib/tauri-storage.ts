@@ -2,7 +2,7 @@
 
 import { type StateStorage } from 'zustand/middleware';
 import { z } from 'zod';
-import { checkIsTauri, store } from '@/lib/ipc';
+import { checkIsTauri, storeApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
 import {
   runMigrations as runStoreMigrations,
@@ -15,22 +15,14 @@ import {
 export type { MigrationFn };
 
 /**
- * Minimal interface for a Tauri Store instance used during migrations.
- */
-interface TauriStoreLike {
-  get: <T>(key: string) => Promise<T | undefined | null>;
-  set: (key: string, val: unknown) => Promise<void>;
-  save: () => Promise<void>;
-  delete: (key: string) => Promise<boolean>;
-}
-
-/**
  * Runs sequential migrations on stored data with enhanced error handling and logging.
  * Uses the new migration framework for better tracking and rollback support.
+ *
+ * This version uses the command-based storeApi instead of the direct
+ * tauri-plugin-store wrapper (STANDARDS §5, §16).
  */
 async function runMigrations(
   filename: string,
-  appStore: TauriStoreLike,
   storageKey: string,
   currentVersion: number,
   migrations?: Record<number, MigrationFn>
@@ -38,7 +30,8 @@ async function runMigrations(
   const versionKey = `__musaed_store_version_${filename}`;
 
   try {
-    const rawVersion = await appStore.get<number>(versionKey);
+    await storeApi.load(filename);
+    const rawVersion = await storeApi.get(filename, versionKey);
     const storedVersion = z.number().catch(0).parse(rawVersion);
 
     // No migration needed
@@ -53,11 +46,11 @@ async function runMigrations(
 
     logger.info(`[${filename}] Migrating from v${storedVersion} to v${currentVersion}`);
 
-    const rawData = await appStore.get<string>(storageKey);
+    const rawData = await storeApi.get(filename, storageKey);
     if (!rawData) {
       logger.debug(`[${filename}] No data to migrate, initializing at v${currentVersion}`);
-      await appStore.set(versionKey, currentVersion);
-      await appStore.save();
+      await storeApi.set(filename, versionKey, currentVersion);
+      await storeApi.save(filename);
       return {
         success: true,
         fromVersion: 0,
@@ -77,9 +70,9 @@ async function runMigrations(
     });
 
     if (result.success && result.data) {
-      await appStore.set(storageKey, JSON.stringify(result.data));
-      await appStore.set(versionKey, result.toVersion);
-      await appStore.save();
+      await storeApi.set(filename, storageKey, JSON.stringify(result.data));
+      await storeApi.set(filename, versionKey, result.toVersion);
+      await storeApi.save(filename);
       logger.info(
         `[${filename}] Migration successful: v${result.fromVersion} → v${result.toVersion}`
       );
@@ -114,8 +107,14 @@ async function runMigrations(
 }
 
 /**
- * Creates a Zustand-compatible storage engine that utilizes Tauri's secure storage plugin.
- * Falls back to localStorage in non-Tauri environments.
+ * Creates a Zustand-compatible storage engine that utilizes Tauri's secure
+ * store plugin via Rust commands. Falls back to localStorage in non-Tauri
+ * environments.
+ *
+ * All store operations now route through `storeApi` (command-based IPC)
+ * instead of the direct `@tauri-apps/plugin-store` wrapper. This provides
+ * Zod validation, latency tracking, and error sanitization per STANDARDS
+ * §5 and §16.
  *
  * @param filename - The target JSON file for the store.
  * @param version - The current version of the store schema.
@@ -133,11 +132,10 @@ export const createTauriStorage = (
       return localStorage.getItem(name);
     }
     try {
-      const appStore = (await store.load(filename, { autoSave: true })) as TauriStoreLike | null;
-      if (!appStore) return null;
-      await runMigrations(filename, appStore, name, version, migrations);
-      const value = await appStore.get<string>(name);
-      return value !== undefined && value !== null ? value : null;
+      await runMigrations(filename, name, version, migrations);
+      const value = await storeApi.get(filename, name);
+      if (value === null || value === undefined) return null;
+      return typeof value === 'string' ? value : JSON.stringify(value);
     } catch (_err) {
       return null;
     }
@@ -149,10 +147,9 @@ export const createTauriStorage = (
       return;
     }
     try {
-      const appStore = (await store.load(filename, { autoSave: true })) as TauriStoreLike | null;
-      if (!appStore) return;
-      await appStore.set(name, value);
-      await appStore.save();
+      await storeApi.load(filename);
+      await storeApi.set(filename, name, value);
+      await storeApi.save(filename);
     } catch (err) {
       logger.error(`Save error: ${filename}`, { error: err });
     }
@@ -163,10 +160,12 @@ export const createTauriStorage = (
       localStorage.removeItem(name);
       return;
     }
-    const appStore = (await store.load(filename, { autoSave: true })) as TauriStoreLike | null;
-    if (appStore) {
-      await appStore.delete(name);
-      await appStore.save();
+    try {
+      await storeApi.load(filename);
+      await storeApi.delete(filename, name);
+      await storeApi.save(filename);
+    } catch (err) {
+      logger.error(`Remove error: ${filename}`, { error: err });
     }
   },
 });

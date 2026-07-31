@@ -3,8 +3,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // Mock dependencies
 vi.mock('@/lib/ipc', () => ({
   checkIsTauri: vi.fn(),
-  store: {
+  storeApi: {
     load: vi.fn(),
+    get: vi.fn(),
+    set: vi.fn(),
+    save: vi.fn(),
+    delete: vi.fn(),
   },
 }));
 
@@ -42,26 +46,13 @@ vi.mock('@/lib/migrations', () => ({
 }));
 
 import { createTauriStorage } from './tauri-storage';
-import { checkIsTauri, store } from '@/lib/ipc';
+import { checkIsTauri, storeApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
 import { runMigrations } from '@/lib/migrations';
 
 describe('Tauri Storage', () => {
-  let mockStore: {
-    get: ReturnType<typeof vi.fn>;
-    set: ReturnType<typeof vi.fn>;
-    save: ReturnType<typeof vi.fn>;
-    delete: ReturnType<typeof vi.fn>;
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
-    mockStore = {
-      get: vi.fn(),
-      set: vi.fn(),
-      save: vi.fn(),
-      delete: vi.fn(),
-    };
     vi.mocked(checkIsTauri).mockReturnValue(false);
     vi.mocked(runMigrations).mockResolvedValue({
       success: true,
@@ -100,7 +91,11 @@ describe('Tauri Storage', () => {
     beforeEach(() => {
       (window as any).__TAURI_INTERNALS__ = {};
       vi.mocked(checkIsTauri).mockReturnValue(true);
-      vi.mocked(store.load).mockResolvedValue(mockStore as any);
+      vi.mocked(storeApi.load).mockResolvedValue(true);
+      vi.mocked(storeApi.get).mockResolvedValue(null);
+      vi.mocked(storeApi.set).mockResolvedValue(true);
+      vi.mocked(storeApi.save).mockResolvedValue(true);
+      vi.mocked(storeApi.delete).mockResolvedValue(true);
     });
 
     afterEach(() => {
@@ -108,32 +103,32 @@ describe('Tauri Storage', () => {
     });
 
     describe('getItem', () => {
-      it('should return null when store.load returns null', async () => {
-        vi.mocked(store.load).mockResolvedValue(null);
+      it('should return null when storeApi.get returns null', async () => {
+        vi.mocked(storeApi.get).mockResolvedValue(null);
         const storage = createTauriStorage('test.json', 1);
 
         const result = await storage.getItem('test-key');
         expect(result).toBeNull();
       });
 
-      it('should return null when store.get returns undefined', async () => {
-        vi.mocked(mockStore.get).mockResolvedValue(undefined);
-        const storage = createTauriStorage('test.json', 1);
-
-        const result = await storage.getItem('test-key');
-        expect(result).toBeNull();
-      });
-
-      it('should return value when store.get returns data', async () => {
-        vi.mocked(mockStore.get).mockResolvedValue('{"key": "value"}');
+      it('should return string value when storeApi.get returns data', async () => {
+        vi.mocked(storeApi.get).mockResolvedValue('{"key": "value"}');
         const storage = createTauriStorage('test.json', 1);
 
         const result = await storage.getItem('test-key');
         expect(result).toBe('{"key": "value"}');
       });
 
+      it('should JSON-stringify non-string values', async () => {
+        vi.mocked(storeApi.get).mockResolvedValue({ key: 'value' });
+        const storage = createTauriStorage('test.json', 1);
+
+        const result = await storage.getItem('test-key');
+        expect(result).toBe(JSON.stringify({ key: 'value' }));
+      });
+
       it('should return null on error', async () => {
-        vi.mocked(store.load).mockRejectedValue(new Error('Load failed'));
+        vi.mocked(storeApi.load).mockRejectedValue(new Error('Load failed'));
         const storage = createTauriStorage('test.json', 1);
 
         const result = await storage.getItem('test-key');
@@ -142,7 +137,7 @@ describe('Tauri Storage', () => {
 
       it('should run migrations before getting value', async () => {
         const testData = { data: 'test' };
-        vi.mocked(mockStore.get).mockResolvedValue(JSON.stringify(testData));
+        vi.mocked(storeApi.get).mockResolvedValue(JSON.stringify(testData));
         const migrationFn = vi.fn().mockReturnValue({ data: 'migrated' });
         const storage = createTauriStorage('test.json', 1, { 1: migrationFn });
 
@@ -166,21 +161,12 @@ describe('Tauri Storage', () => {
         const storage = createTauriStorage('test.json', 1);
         await storage.setItem('test-key', 'test-value');
 
-        expect(mockStore.set).toHaveBeenCalledWith('test-key', 'test-value');
-        expect(mockStore.save).toHaveBeenCalled();
-      });
-
-      it('should return early when store.load returns null', async () => {
-        vi.mocked(store.load).mockResolvedValue(null);
-        const storage = createTauriStorage('test.json', 1);
-
-        await storage.setItem('test-key', 'test-value');
-
-        expect(mockStore.set).not.toHaveBeenCalled();
+        expect(storeApi.set).toHaveBeenCalledWith('test.json', 'test-key', 'test-value');
+        expect(storeApi.save).toHaveBeenCalledWith('test.json');
       });
 
       it('should log error on save failure', async () => {
-        vi.mocked(mockStore.save).mockRejectedValue(new Error('Save failed'));
+        vi.mocked(storeApi.save).mockRejectedValue(new Error('Save failed'));
         const storage = createTauriStorage('test.json', 1);
 
         await storage.setItem('test-key', 'test-value');
@@ -196,18 +182,19 @@ describe('Tauri Storage', () => {
         const storage = createTauriStorage('test.json', 1);
         await storage.removeItem('test-key');
 
-        expect(mockStore.delete).toHaveBeenCalledWith('test-key');
-        expect(mockStore.save).toHaveBeenCalled();
+        expect(storeApi.delete).toHaveBeenCalledWith('test.json', 'test-key');
+        expect(storeApi.save).toHaveBeenCalledWith('test.json');
       });
 
-      it('should do nothing when store.load returns null', async () => {
-        vi.mocked(store.load).mockResolvedValue(null);
+      it('should log error on delete failure', async () => {
+        vi.mocked(storeApi.delete).mockRejectedValue(new Error('Delete failed'));
         const storage = createTauriStorage('test.json', 1);
 
         await storage.removeItem('test-key');
 
-        expect(mockStore.delete).not.toHaveBeenCalled();
-        expect(mockStore.save).not.toHaveBeenCalled();
+        expect(logger.error).toHaveBeenCalledWith('Remove error: test.json', {
+          error: expect.any(Error),
+        });
       });
     });
   });

@@ -71,14 +71,12 @@ export const logger = {
 
     if (checkIsTauri()) {
       try {
-        const { store, logApi } = await import('@/lib/ipc');
-        const logStore = await store.load('logs.json', { autoSave: true });
-        if (logStore) {
-          const logs = (await logStore.get<string[]>('entries')) || [];
-          const updatedLogs = [...logs, logString].slice(-1000);
-          await logStore.set('entries', updatedLogs);
-          await logStore.save();
-        }
+        const { storeApi, logApi } = await import('@/lib/ipc');
+        await storeApi.load('logs.json');
+        const logs = (await storeApi.get('logs.json', 'entries')) as string[] | null;
+        const updatedLogs = [...(logs || []), logString].slice(-1000);
+        await storeApi.set('logs.json', 'entries', updatedLogs);
+        await storeApi.save('logs.json');
         await logApi.append(logString);
       } catch (err) {
         if (!config.isProd) {

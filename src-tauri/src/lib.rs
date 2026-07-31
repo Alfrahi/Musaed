@@ -7,6 +7,7 @@ pub mod context_menu;
 pub mod conversation;
 pub mod dialog;
 pub mod error_codes;
+pub mod fs_commands;
 pub mod generated_validation;
 pub mod logging;
 pub mod migrations;
@@ -17,6 +18,7 @@ pub mod payloads;
 pub mod rag;
 pub mod rate_limiter;
 pub mod shared;
+pub mod store_commands;
 pub mod validation;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -149,9 +151,22 @@ pub fn run() {
             conversation::commands::cmd_conversation_export_markdown,
             // Context menu command
             context_menu::cmd_context_menu_show,
-            // Other commands
+            // Dialog commands
             dialog::cmd_dialog_ask,
+            dialog::cmd_dialog_open_file,
+            dialog::cmd_dialog_save_file,
+            // Opener commands
             opener::cmd_opener_open_url,
+            // Store commands
+            store_commands::cmd_store_load,
+            store_commands::cmd_store_get,
+            store_commands::cmd_store_set,
+            store_commands::cmd_store_save,
+            store_commands::cmd_store_delete,
+            // Filesystem commands
+            fs_commands::cmd_fs_read_text_file,
+            fs_commands::cmd_fs_read_file,
+            fs_commands::cmd_fs_write_text_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

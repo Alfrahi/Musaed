@@ -74,6 +74,7 @@ whatlang = "0.16"
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
 
 # Utils for export/opener
+base64 = "0.22"
 lazy_static = "1.4"
 
 # RAG — UUID for project/chunk IDs

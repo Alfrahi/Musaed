@@ -129,6 +129,23 @@ module.exports = {
       severity: 'error',
     },
 
+    // ── 5b. tauri-plugins.ts is deprecated — use command-based APIs ──
+    {
+      name: 'no-tauri-plugins-import',
+      comment:
+        'tauri-plugins.ts is deprecated. Use dialogApi, storeApi, fsApi, or openerApi from @/lib/ipc instead (STANDARDS §5, §16).',
+      from: {
+        path: '^src/',
+        pathNot: [
+          '^src/__mocks__/',
+          '^src/tests/',
+          '^src/.*\\.test\\.',
+        ],
+      },
+      to: { path: '^src/lib/tauri-plugins\\.ts$' },
+      severity: 'error',
+    },
+
     // ── 6. Store must not depend on features ────────────────
     {
       name: 'no-store-to-feature',

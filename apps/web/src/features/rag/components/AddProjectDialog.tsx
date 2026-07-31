@@ -2,7 +2,7 @@
 
 import { useState, useId, useMemo } from 'react';
 import { X, FolderOpen, Loader2, Download } from 'lucide-react';
-import { dialog } from '@/lib/ipc';
+import { dialogApi } from '@/lib/ipc';
 import { useRagProjects as useRagProjectsHook } from '@/features/rag/hooks/useRagProjects';
 import { useTranslation } from '@/lib/i18n';
 import { useSettingsStore, useModelStore } from '@/store';
@@ -52,8 +52,9 @@ async function browseFolder(
   setName: (n: string) => void,
   name: string
 ) {
-  const selected = await dialog.open({ directory: true, multiple: false });
-  if (selected && typeof selected === 'string') {
+  const result = await dialogApi.openFile({ directory: true, multiple: false });
+  if (result && result.length > 0) {
+    const selected = result[0];
     setPath(selected);
     if (!name) {
       const folderName = selected.split('/').pop() || selected.split('\\').pop() || '';
