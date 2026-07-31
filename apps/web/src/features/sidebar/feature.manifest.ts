@@ -27,8 +27,9 @@ const manifest: FeatureManifest = {
   },
   ipcEndpoints: ['cmd_dialog_ask'],
   stateSchemas: {
-    conversationStore: 3,
-    messageStore: 1,
+    // Both `conversationStore` and `messageStore` are owned by the
+    // `conversation` feature. Sidebar reads them to render the conversation
+    // list but does not own their schemas.
   },
   persistenceSchemas: {
     conversations: 'musaed-conversation-storage',
