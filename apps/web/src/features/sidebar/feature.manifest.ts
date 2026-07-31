@@ -25,9 +25,9 @@ const manifest: FeatureManifest = {
     hooks: ['useSidebarActions', 'useSidebarGrouping'],
     utils: ['exportToMarkdown'],
   },
-  ipcEndpoints: ['cmd_dialog_ask', 'cmd_conversation_export_markdown'], // Both commands now implemented
+  ipcEndpoints: [],
   stateSchemas: {
-    conversationStore: 2,
+    conversationStore: 3,
     messageStore: 1,
   },
   persistenceSchemas: {

@@ -226,11 +226,23 @@ function extractExports(filePath) {
  */
 function extractIpcEndpoints(filePath) {
   const content = readFileSync(filePath, "utf-8");
-  const match = content.match(/ipcEndpoints:\s*\[([^\]]*)\]/);
+  // Strip comments before parsing so inline `// TODO` notes between
+  // endpoints don't merge with the next entry and get filtered together.
+  const stripped = content
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n]*/g, '');
+  const match = stripped.match(/ipcEndpoints:\s*\[([^\]]*)\]/);
   if (!match) return [];
-  return match[1].split(",")
-    .map(s => s.trim().replace(/["'\s]/g, ""))
-    .filter(s => s.length > 0 && !s.startsWith("//"));
+  const inner = match[1].trim();
+  if (inner === '') return [];
+  const endpoints = [];
+  for (const part of inner.split(',')) {
+    const cleaned = part.trim();
+    if (!cleaned) continue;
+    const strMatch = cleaned.match(/['"]([^'"]+)['"]/);
+    if (strMatch) endpoints.push(strMatch[1]);
+  }
+  return endpoints;
 }
 
 /**
@@ -244,14 +256,15 @@ function hasFailureModes(filePath) {
 }
 
 /**
- * Parse ipc.ts and build a map of `NamespaceApi.method` → `cmd_xxx`.
+ * Parse ipc.ts and build a map of `NamespaceApi.method` → Set<`cmd_xxx`>.
  *
  * The IPC layer exports typed API namespaces (ragApi, chatApi, ollamaApi, etc.)
- * whose methods delegate to `callInternal('cmd_xxx', ...)`. This function
- * statically maps each namespace method to its underlying command name so the drift check can work at the namespace level (which is what feature code uses)
- * rather than requiring literal `cmd_` string lookups in feature source.
+ * whose methods delegate to `callInternal('cmd_xxx', ...)`. A single method
+ * may invoke multiple commands (e.g. `logApi.clear` calls both
+ * `cmd_logs_request_clear_token` and `cmd_logs_clear`), so the value is a
+ * Set rather than a single string.
  *
- * @returns {Map<string, string>} - Map of `"namespaceApi.method"` → `"cmd_xxx"`.
+ * @returns {Map<string, Set<string>>} - Map of `"namespaceApi.method"` → `Set<cmd_xxx>`.
  */
 function parseIpcNamespaceToCommandMap() {
   const content = readFileSync(IPC_TS, "utf-8");
@@ -275,13 +288,36 @@ function parseIpcNamespaceToCommandMap() {
     }
     const nsBody = content.substring(nsBodyStart, nsBodyEnd);
 
-    // Match each method → callInternal('cmd_xxx', ...)
-    const methodRegex = /(\w+)\s*[:(].*?callInternal\(\s*['"]([^'\"]+)['\"]/gs;
-    let mMatch;
-    while ((mMatch = methodRegex.exec(nsBody)) !== null) {
-      const methodName = mMatch[1];
-      const cmdName = mMatch[2];
-      map.set(`${nsName}.${methodName}`, cmdName);
+    // Walk the namespace body. Track the current method name (set by a
+    // method-signature pattern at start-of-line) and map every callInternal
+    // invocation to it. This correctly handles methods that invoke multiple
+    // commands (e.g. logApi.clear → request_clear_token + clear) and avoids
+    // capturing words from JSDoc comments, option-object keys, or the
+    // `callInternal` token itself when it wraps to start-of-line.
+    const methodSigRegex = /(?:^|\n)\s*([a-zA-Z_$][\w$]*)\s*[:(]/g;
+    const callInternalRegex = /callInternal\(\s*['"]([^'"]+)['"]/g;
+    const RESERVED = new Set(["callInternal", "if", "return", "const", "let", "var", "async", "await", "new", "function", "export"]);
+    const sigPositions = [];
+    let sigMatch;
+    while ((sigMatch = methodSigRegex.exec(nsBody)) !== null) {
+      if (RESERVED.has(sigMatch[1])) continue;
+      sigPositions.push({ name: sigMatch[1], pos: sigMatch.index });
+    }
+    let callMatch;
+    while ((callMatch = callInternalRegex.exec(nsBody)) !== null) {
+      const callPos = callMatch.index;
+      let methodName = null;
+      for (let i = sigPositions.length - 1; i >= 0; i--) {
+        if (sigPositions[i].pos <= callPos) {
+          methodName = sigPositions[i].name;
+          break;
+        }
+      }
+      if (methodName) {
+        const key = `${nsName}.${methodName}`;
+        if (!map.has(key)) map.set(key, new Set());
+        map.get(key).add(callMatch[1]);
+      }
     }
   }
   return map;
@@ -292,7 +328,7 @@ function parseIpcNamespaceToCommandMap() {
  * and return the set of `cmd_xxx` commands actually invoked.
  *
  * @param {string} featureDir - Path to the feature root directory.
- * @param {Map<string, string>} nsToCmd - Map from parseIpcNamespaceToCommandMap().
+ * @param {Map<string, Set<string>>} nsToCmd - Map from parseIpcNamespaceToCommandMap().
  * @returns {Set<string>} - Set of `cmd_xxx` names found in feature source.
  */
 function scanFeatureIpcUsage(featureDir, nsToCmd) {
@@ -315,12 +351,18 @@ function scanFeatureIpcUsage(featureDir, nsToCmd) {
       if (entry.isDirectory()) {
         walkDir(full);
       } else if (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) {
-        const content = readFileSync(full, 'utf-8');
+        const raw = readFileSync(full, 'utf-8');
+        // Strip comments so JSDoc mentions like `traceApi.append` in
+        // `* and the underlying trace record persisted via \`traceApi.append\``
+        // don't register as real calls.
+        const content = raw
+          .replace(/\/\*[\s\S]*?\*\//g, '')   // block comments
+          .replace(/\/\/[^\n]*/g, '');        // line comments
         let match;
         while ((match = combined.exec(content)) !== null) {
           const nsKey = match[0];
-          const cmd = nsToCmd.get(nsKey);
-          if (cmd) used.add(cmd);
+          const cmds = nsToCmd.get(nsKey);
+          if (cmds) for (const cmd of cmds) used.add(cmd);
         }
       }
     }
@@ -365,10 +407,11 @@ function checkIpcEndpointDrift(feature, manifestPath, featureDir, nsToCmd) {
  * Validate all feature manifests against their corresponding stores and exports.
  */
 function validateManifests() {
+  const nsToCmd = parseIpcNamespaceToCommandMap();
   const featureDirs = readdirSync(FEATURES_DIR, { withFileTypes: true })
     .filter(dirent => dirent.isDirectory())
     .map(dirent => dirent.name);
-  
+
   let hasErrors = false;
   
   for (const feature of featureDirs) {

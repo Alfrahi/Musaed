@@ -25,8 +25,14 @@ const manifest: FeatureManifest = {
     'cmd_ollama_chat',
     'cmd_ollama_abort_chat',
     'cmd_ollama_generate_title',
-    'cmd_rag_search',
-    'cmd_logs_append',
+    'cmd_ollama_get_models',
+    'cmd_rag_assemble_context',
+    'cmd_conversation_create',
+    'cmd_conversation_delete',
+    'cmd_conversation_get',
+    'cmd_conversations_clear',
+    'cmd_conversations_list',
+    'cmd_message_append',
   ],
   /**
    * Performance-sensitive IPC endpoints owned by this feature. The actual
@@ -37,7 +43,7 @@ const manifest: FeatureManifest = {
    */
   latencyProfiles: {
     interactive: ['cmd_ollama_chat', 'cmd_ollama_abort_chat'],
-    background: ['cmd_ollama_generate_title', 'cmd_rag_search'],
+    background: ['cmd_ollama_generate_title', 'cmd_rag_assemble_context'],
   },
   stateSchemas: {
     conversationStore: 3,

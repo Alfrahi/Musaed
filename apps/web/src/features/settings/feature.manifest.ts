@@ -20,17 +20,7 @@ const manifest: FeatureManifest = {
     components: ['SettingsModal'],
     utils: [],
   },
-  ipcEndpoints: [
-    'cmd_ollama_get_models',
-    'cmd_ollama_delete_model',
-    'cmd_ollama_pull_model',
-    'cmd_ollama_check_health',
-    'cmd_ollama_verify_service',
-    'cmd_ollama_validate_model',
-    'cmd_logs_append',
-    'cmd_logs_clear',
-    'cmd_trace_append',
-  ],
+  ipcEndpoints: ['cmd_ollama_verify_service', 'cmd_logs_request_clear_token', 'cmd_logs_clear'],
   /**
    * Performance-sensitive IPC endpoints owned by this feature. The actual
    * thresholds (ms) live in `@musaed/contracts` (`IPC_LATENCY_BUDGETS`).
@@ -38,18 +28,12 @@ const manifest: FeatureManifest = {
    * @see STANDARDS.md §15 Performance Rules — IPC latency budgets per feature
    */
   latencyProfiles: {
-    interactive: [
-      'cmd_ollama_check_health',
-      'cmd_ollama_verify_service',
-      'cmd_ollama_get_models',
-      'cmd_ollama_validate_model',
-      'cmd_logs_clear',
-    ],
-    background: ['cmd_ollama_pull_model', 'cmd_ollama_delete_model'],
+    interactive: ['cmd_ollama_verify_service', 'cmd_logs_clear'],
+    background: [],
   },
   stateSchemas: {
     settingsStore: 2,
-    conversationStore: 2,
+    conversationStore: 3,
   },
   persistenceSchemas: {
     settings: 'musaed-settings-storage',
