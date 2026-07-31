@@ -255,12 +255,14 @@ vi.mock('@/store/conversation-store', () => ({
 vi.mock('@/store/settings-store', () => ({
   useSettingsStore: mockStoreHooks.useSettingsStore,
   useLanguage: vi.fn(() => 'en'),
+  useOllamaUrl: vi.fn(() => 'http://localhost:11434'),
   // Direct store access
   globalSettings: mockStores.settingsStore.globalSettings,
 }));
 
 vi.mock('@/store/rag-store', () => ({
   useRagStore: mockStoreHooks.useRagStore,
+  useActiveRagProject: vi.fn(() => null),
   // Direct store access
   getState: () => mockStores.ragStore,
   activeProjectId: mockStores.ragStore.activeProjectId,

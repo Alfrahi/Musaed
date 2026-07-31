@@ -10,5 +10,6 @@ export { useIpcLatencyStats } from './hooks/useIpcLatency';
 export { useIpcViolations } from './hooks/useIpcViolations';
 export { useStorageActions } from './hooks/useStorageActions';
 export { useStorageCleanup } from './hooks/useStorageCleanup';
+export { useSettingsInitialization } from './hooks/useSettingsInitialization';
 export { default as SettingsModal } from './components/SettingsModal';
 export { default as SettingsFeature } from './feature.manifest';
