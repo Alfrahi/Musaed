@@ -1,0 +1,6 @@
+[[permission]]
+identifier = "allow-opener-commands"
+description = "Enables commands for opening URLs in the system browser."
+commands.allow = [
+    "cmd_opener_open_url",
+]

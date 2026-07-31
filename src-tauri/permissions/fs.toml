@@ -1,0 +1,8 @@
+[[permission]]
+identifier = "allow-fs-commands"
+description = "Enables commands for filesystem read/write operations."
+commands.allow = [
+    "cmd_fs_read_text_file",
+    "cmd_fs_read_file",
+    "cmd_fs_write_text_file",
+]
