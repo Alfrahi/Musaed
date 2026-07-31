@@ -37,6 +37,44 @@ const manifest: FeatureManifest = {
   persistenceSchemas: {
     models: 'musaed-model-storage',
   },
+  /**
+   * Failure modes for this feature's IPC endpoints.
+   *
+   * @see STANDARDS.md §13 — Failure Mode Rule
+   */
+  failureModes: {
+    cmd_ollama_get_models: {
+      fallback:
+        'Show cached model list if available, otherwise show empty library with error banner',
+      retry: 'once',
+      messageKey: 'error.failedToFetchModels',
+    },
+    cmd_ollama_delete_model: {
+      fallback: 'Show error toast; model remains in list',
+      retry: 'once',
+      messageKey: 'error.genericError',
+    },
+    cmd_ollama_pull_model: {
+      fallback: 'Show error toast with pull progress reset; model not added to library',
+      retry: 'once',
+      messageKey: 'error.modelPullFailed',
+    },
+    cmd_ollama_abort_pull: {
+      fallback: 'Silently ignore — abort is fire-and-forget',
+      retry: 'none',
+      messageKey: 'error.genericError',
+    },
+    cmd_dialog_ask: {
+      fallback: 'Treat as user cancellation — no action taken',
+      retry: 'none',
+      messageKey: 'error.genericError',
+    },
+    cmd_opener_open_url: {
+      fallback: 'Show error toast with the URL so user can copy it manually',
+      retry: 'none',
+      messageKey: 'error.unsupportedLink',
+    },
+  },
   dependencies: [],
 } as const;
 

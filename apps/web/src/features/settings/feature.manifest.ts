@@ -45,6 +45,33 @@ const manifest: FeatureManifest = {
     settings: 'musaed-settings-storage',
     // logs are handled by Rust backend
   },
+  /**
+   * Failure modes for this feature's IPC endpoints.
+   *
+   * @see STANDARDS.md §13 — Failure Mode Rule
+   */
+  failureModes: {
+    cmd_ollama_verify_service: {
+      fallback: 'Show connection error banner; keep current settings intact',
+      retry: 'once',
+      messageKey: 'error.ollamaError',
+    },
+    cmd_logs_request_clear_token: {
+      fallback: 'Show error toast; logs remain viewable',
+      retry: 'once',
+      messageKey: 'error.genericError',
+    },
+    cmd_logs_clear: {
+      fallback: 'Show error toast; logs remain in viewer',
+      retry: 'once',
+      messageKey: 'error.genericError',
+    },
+    cmd_dialog_ask: {
+      fallback: 'Treat as user cancellation — no action taken',
+      retry: 'none',
+      messageKey: 'error.genericError',
+    },
+  },
   dependencies: ['library'], // Settings accesses library functionality via lib/useModelActions abstraction
 } as const;
 

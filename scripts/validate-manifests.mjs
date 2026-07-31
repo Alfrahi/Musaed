@@ -18,20 +18,14 @@ const IPC_TS = join(PROJECT_ROOT, "apps/web/src/lib/ipc.ts");
  */
 function extractStateSchemas(filePath) {
   const content = readFileSync(filePath, "utf-8");
-  const match = content.match(/stateSchemas:\s*({[\s\S]+?})\s*(,|\n|$)/);
-  if (!match) return {};
-  
-  // Parse the stateSchemas object
+  const obj = extractObjectLiteral(content, "stateSchemas");
+  if (!obj) return {};
+
   const schemas = {};
-  // Extract key-value pairs using a more robust regex
-  const pairMatches = match[1].matchAll(/(\w+)\s*:\s*(\d+)/g);
-  
+  const pairMatches = obj.matchAll(/(\w+)\s*:\s*(\d+)/g);
   for (const pairMatch of pairMatches) {
-    const key = pairMatch[1];
-    const value = parseInt(pairMatch[2], 10);
-    schemas[key] = value;
+    schemas[pairMatch[1]] = parseInt(pairMatch[2], 10);
   }
-  
   return schemas;
 }
 
@@ -40,22 +34,39 @@ function extractStateSchemas(filePath) {
  * @param {string} filePath - Path to the feature manifest file.
  * @returns {Record<string, string>} - persistenceSchemas object.
  */
+/**
+ * Extract a top-level object literal value from source by counting braces.
+ * Handles nested objects (e.g. failureModes) without over-matching.
+ *
+ * @param {string} content - Source file content.
+ * @param {string} key - The object key to find (e.g. "persistenceSchemas").
+ * @returns {string|null} - The raw object literal text, or null.
+ */
+function extractObjectLiteral(content, key) {
+  const startRegex = new RegExp(`${key}:\\s*\\{`);
+  const match = content.match(startRegex);
+  if (!match) return null;
+  let idx = match.index + match[0].length;
+  let depth = 1;
+  while (idx < content.length && depth > 0) {
+    if (content[idx] === '{') depth++;
+    else if (content[idx] === '}') depth--;
+    idx++;
+  }
+  if (depth !== 0) return null;
+  return content.substring(match.index + match[0].length - 1, idx);
+}
+
 function extractPersistenceSchemas(filePath) {
   const content = readFileSync(filePath, "utf-8");
-  const match = content.match(/persistenceSchemas:\s*({[\s\S]+?})\s*(,|\n|$)/);
-  if (!match) return {};
-  
-  // Parse the persistenceSchemas object
+  const obj = extractObjectLiteral(content, "persistenceSchemas");
+  if (!obj) return {};
+
   const schemas = {};
-  // Extract key-value pairs using a more robust regex
-  const pairMatches = match[1].matchAll(/(\w+)\s*:\s*["']([^"']+)["']/g);
-  
+  const pairMatches = obj.matchAll(/(\w+)\s*:\s*["']([^"']+)["']/g);
   for (const pairMatch of pairMatches) {
-    const key = pairMatch[1];
-    const value = pairMatch[2];
-    schemas[key] = value;
+    schemas[pairMatch[1]] = pairMatch[2];
   }
-  
   return schemas;
 }
 
@@ -252,7 +263,7 @@ function extractIpcEndpoints(filePath) {
  */
 function hasFailureModes(filePath) {
   const content = readFileSync(filePath, "utf-8");
-  return /failureModes\s*:\s*\{/.test(content);
+  return extractObjectLiteral(content, "failureModes") !== null;
 }
 
 /**
