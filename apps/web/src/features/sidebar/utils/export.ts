@@ -1,7 +1,7 @@
 'use client';
 
 import { type Conversation, stripThinkingBlocks } from '@musaed/contracts';
-import { dialog, fs, checkIsTauri } from '@/lib/ipc';
+import { dialogApi, fsApi, checkIsTauri } from '@/lib/ipc';
 
 interface ExportContext {
   t: (key: string) => string;
@@ -60,12 +60,12 @@ export const exportToMarkdown = async (conversation: Conversation, context: Expo
     return;
   }
 
-  const filePath = await dialog.save({
+  const filePath = await dialogApi.saveFile({
     filters: [{ name: 'Markdown', extensions: ['md'] }],
     defaultPath: fileName,
   });
 
   if (filePath) {
-    await fs.writeTextFile(filePath, markdown);
+    await fsApi.writeTextFile(filePath, markdown);
   }
 };

@@ -3,8 +3,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // Mock dependencies
 vi.mock('@/lib/ipc', () => ({
   checkIsTauri: vi.fn(),
-  store: {
+  storeApi: {
     load: vi.fn(),
+    get: vi.fn(),
+    set: vi.fn(),
+    save: vi.fn(),
   },
   logApi: {
     append: vi.fn(),
@@ -18,20 +21,17 @@ vi.mock('@/lib/config', () => ({
 }));
 
 import { logger } from './logger';
-import { checkIsTauri, store, logApi } from '@/lib/ipc';
+import { checkIsTauri, storeApi, logApi } from '@/lib/ipc';
 import { config } from '@/lib/config';
 
 describe('Logger', () => {
-  const mockStore = {
-    get: vi.fn(),
-    set: vi.fn(),
-    save: vi.fn(),
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(checkIsTauri).mockReturnValue(false);
-    vi.mocked(store.load).mockResolvedValue(mockStore as any);
+    vi.mocked(storeApi.load).mockResolvedValue(true);
+    vi.mocked(storeApi.get).mockResolvedValue([]);
+    vi.mocked(storeApi.set).mockResolvedValue(true);
+    vi.mocked(storeApi.save).mockResolvedValue(true);
     delete (window as any).__TAURI_INTERNALS__;
 
     // Mock console methods
@@ -48,13 +48,13 @@ describe('Logger', () => {
     it('should skip debug logs in production', async () => {
       vi.mocked(config).isProd = true;
       await logger.log('debug', 'test message');
-      expect(store.load).not.toHaveBeenCalled();
+      expect(storeApi.load).not.toHaveBeenCalled();
       vi.mocked(config).isProd = false;
     });
 
     it('should log info message with context in dev mode', async () => {
       // Info level doesn't log to console per lint rules - only persists
-      expect(store.load).not.toHaveBeenCalled(); // Not Tauri env yet
+      expect(storeApi.load).not.toHaveBeenCalled(); // Not Tauri env yet
     });
 
     it('should log warn message to console in dev mode', async () => {
@@ -70,9 +70,8 @@ describe('Logger', () => {
     });
 
     it('should sanitize and truncate long messages', async () => {
-      // Info level doesn't log to console per lint rules - test truncation in persistence instead
       const longMessage = 'x'.repeat(3000);
-      await logger.log('warn', longMessage); // Use warn level which does log to console
+      await logger.log('warn', longMessage);
 
       expect(console.warn).toHaveBeenCalledWith(
         expect.stringContaining('[TRUNCATED]'),
@@ -83,21 +82,21 @@ describe('Logger', () => {
     it('should persist to Tauri store when in Tauri environment', async () => {
       (window as any).__TAURI_INTERNALS__ = {};
       vi.mocked(checkIsTauri).mockReturnValue(true);
-      vi.mocked(mockStore.get).mockResolvedValue([]);
+      vi.mocked(storeApi.get).mockResolvedValue([]);
 
       await logger.log('info', 'test message');
 
-      expect(store.load).toHaveBeenCalledWith('logs.json', { autoSave: true });
-      expect(mockStore.get).toHaveBeenCalledWith('entries');
-      expect(mockStore.set).toHaveBeenCalledWith('entries', expect.any(Array));
-      expect(mockStore.save).toHaveBeenCalled();
+      expect(storeApi.load).toHaveBeenCalledWith('logs.json');
+      expect(storeApi.get).toHaveBeenCalledWith('logs.json', 'entries');
+      expect(storeApi.set).toHaveBeenCalledWith('logs.json', 'entries', expect.any(Array));
+      expect(storeApi.save).toHaveBeenCalledWith('logs.json');
       expect(logApi.append).toHaveBeenCalled();
     });
 
     it('should handle store persistence errors gracefully', async () => {
       (window as any).__TAURI_INTERNALS__ = {};
       vi.mocked(checkIsTauri).mockReturnValue(true);
-      vi.mocked(store.load).mockRejectedValue(new Error('Store error'));
+      vi.mocked(storeApi.load).mockRejectedValue(new Error('Store error'));
 
       await expect(logger.log('info', 'test message')).resolves.not.toThrow();
     });
@@ -112,7 +111,6 @@ describe('Logger', () => {
 
   describe('convenience methods', () => {
     it('info should call log with info level', async () => {
-      // Info level doesn't log to console per lint rules - just verify it doesn't throw
       expect(() => logger.info('info message')).not.toThrow();
     });
 
@@ -127,7 +125,6 @@ describe('Logger', () => {
     });
 
     it('debug should call log with debug level', async () => {
-      // Debug level doesn't log to console per lint rules - just verify it doesn't throw
       expect(() => logger.debug('debug message')).not.toThrow();
     });
   });

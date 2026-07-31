@@ -5,7 +5,7 @@ import { RefreshCw, AlertTriangle, WifiOff, HelpCircle } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/settings-store';
 import { logger } from '@/lib/logger';
-import { opener } from '@/lib/ipc';
+import { openerApi } from '@/lib/ipc';
 import { sanitizeError } from '@musaed/contracts';
 import { config } from '@/lib/config';
 import { Button } from '@/components/ui/button';
@@ -73,7 +73,7 @@ class ErrorBoundary extends Component<Props, State> {
           actions: [
             {
               label: t('error.downloadOllama'),
-              onClick: () => opener.openUrl('https://ollama.ai'),
+              onClick: () => openerApi.openUrl('https://ollama.ai'),
               primary: true,
             },
             {
@@ -97,7 +97,7 @@ class ErrorBoundary extends Component<Props, State> {
             },
             {
               label: t('error.report'),
-              onClick: () => opener.openUrl('https://github.com/Alfrahi/Musaed/issues'),
+              onClick: () => openerApi.openUrl('https://github.com/Alfrahi/Musaed/issues'),
               primary: false,
             },
           ],

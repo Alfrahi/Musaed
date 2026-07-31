@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from '@/lib/i18n';
 import { useLanguage } from '@/store/settings-store';
-import { checkIsTauri, logApi, store, dialogApi } from '@/lib/ipc';
+import { checkIsTauri, logApi, storeApi, dialogApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
 import toast from 'react-hot-toast';
 
@@ -24,10 +24,12 @@ export function useLogActions() {
     if (!isTauri) return;
     setIsLoading(true);
     try {
-      const logStore = await store.load('logs.json', { autoSave: true });
-      if (logStore) {
-        const result = (await logStore.get<string[]>('entries')) || [];
-        setLogs(result);
+      await storeApi.load('logs.json');
+      const result = await storeApi.get('logs.json', 'entries');
+      if (result && Array.isArray(result)) {
+        setLogs(result as string[]);
+      } else {
+        setLogs([]);
       }
     } catch (err) {
       logger.error('Failed to fetch logs', { error: err });
@@ -47,14 +49,12 @@ export function useLogActions() {
 
     if (confirmed) {
       try {
-        const logStore = await store.load('logs.json', { autoSave: true });
-        if (logStore) {
-          await logStore.set('entries', []);
-          await logStore.save();
-          setLogs([]);
-          await logApi.clear();
-          logger.info('System logs cleared');
-        }
+        await storeApi.load('logs.json');
+        await storeApi.set('logs.json', 'entries', []);
+        await storeApi.save('logs.json');
+        setLogs([]);
+        await logApi.clear();
+        logger.info('System logs cleared');
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         logger.error('Failed to clear logs', { error: message });

@@ -1,6 +1,6 @@
 'use client';
 
-import { checkIsTauri, dialog, fs } from '@/lib/ipc';
+import { checkIsTauri, dialogApi, fsApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
 import { fileNameFromPath } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -71,15 +71,14 @@ export async function handleTauriImageUploadInternal(
 ): Promise<string[]> {
   if (!checkIsTauri()) return [];
 
-  const selected = await dialog.open({
+  const result = await dialogApi.openFile({
     multiple: true,
     filters: [{ name: t('chat.attachImage'), extensions: [...IMAGE_EXTENSIONS] }],
   });
 
-  if (!selected) return [];
+  if (!result) return [];
 
-  const paths = Array.isArray(selected) ? selected : [selected];
-  return processImagePaths(paths, t);
+  return processImagePaths(result, t);
 }
 
 /**
@@ -96,23 +95,17 @@ export async function processImagePaths(
   const newImages: string[] = [];
 
   for (const filePath of paths) {
-    const data = await fs.readFile(filePath);
-    if (!data) {
+    const base64 = await fsApi.readFile(filePath);
+    if (!base64) {
       logger.error('Failed to read image file', { path: filePath });
       continue;
     }
 
-    if (!validateFileSize(data.byteLength, t)) continue;
+    // Validate file size from base64 length (approximate)
+    const estimatedSize = Math.ceil((base64.length * 3) / 4);
+    if (!validateFileSize(estimatedSize, t)) continue;
 
     const mime = mimeFromExtension(filePath);
-    let base64: string;
-    try {
-      base64 = btoa(String.fromCharCode(...data));
-    } catch (error) {
-      logger.error('Failed to convert image to base64', { path: filePath, error });
-      toast.error(t('error.imageConversionFailed'));
-      continue;
-    }
     newImages.push(`data:${mime};base64,${base64}`);
   }
 
@@ -128,15 +121,14 @@ export async function handleTauriFileUploadInternal(
 ): Promise<FileAttachment[]> {
   if (!checkIsTauri()) return [];
 
-  const selected = await dialog.open({
+  const result = await dialogApi.openFile({
     multiple: true,
     filters: [{ name: t('common.files'), extensions: ['*'] }],
   });
 
-  if (!selected) return [];
+  if (!result) return [];
 
-  const paths = Array.isArray(selected) ? selected : [selected];
-  return processFilePaths(paths, t);
+  return processFilePaths(result, t);
 }
 
 /**
@@ -155,7 +147,7 @@ export async function processFilePaths(
   const newFiles: FileAttachment[] = [];
 
   for (const filePath of paths) {
-    const content = await fs.readTextFile(filePath);
+    const content = await fsApi.readTextFile(filePath);
     if (content === null) {
       logger.error('Failed to read file', { path: filePath });
       continue;

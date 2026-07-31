@@ -9,7 +9,7 @@ import {
 import { useModels } from '@/store/model-store';
 import { useGlobalSettings } from '@/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
-import { checkIsTauri, dialogApi, dialog, fs } from '@/lib/ipc';
+import { checkIsTauri, dialogApi, fsApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
 import toast from 'react-hot-toast';
 import { ConversationSchema, type OllamaModel, type Message } from '@musaed/contracts';
@@ -70,13 +70,13 @@ const useExportJson = (
       return;
     }
 
-    const filePath = await dialog.save({
+    const filePath = await dialogApi.saveFile({
       filters: [{ name: 'JSON', extensions: ['json'] }],
       defaultPath: fileName,
     });
 
     if (filePath) {
-      await fs.writeTextFile(filePath, jsonString);
+      await fsApi.writeTextFile(filePath, jsonString);
     }
   }, [conversations, messages]);
 
@@ -120,13 +120,13 @@ const useExportMarkdownBundle = (
       return;
     }
 
-    const filePath = await dialog.save({
+    const filePath = await dialogApi.saveFile({
       filters: [{ name: 'Markdown', extensions: ['md'] }],
       defaultPath: fileName,
     });
 
     if (filePath) {
-      await fs.writeTextFile(filePath, fullMarkdown);
+      await fsApi.writeTextFile(filePath, fullMarkdown);
     }
   }, [conversations, messages, formatDate, t]);
 
@@ -171,12 +171,13 @@ const handleTauriImport = async (
   setMessages: (conversationId: string, messages: Message[]) => void,
   t: (key: string) => string
 ) => {
-  const selected = await dialog.open({
+  const result = await dialogApi.openFile({
     multiple: false,
     filters: [{ name: 'JSON', extensions: ['json'] }],
   });
-  if (!selected || Array.isArray(selected)) return;
-  const content = await fs.readTextFile(selected);
+  if (!result || result.length === 0) return;
+  const selected = result[0];
+  const content = await fsApi.readTextFile(selected);
   if (content === null) return;
   const raw = JSON.parse(content);
   validateAndSetConversations(raw, setConversations, setMessages, t);

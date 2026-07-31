@@ -271,6 +271,36 @@ export interface CommandMap {
   // Opener commands
   cmd_opener_open_url: { args: { url: string }; return: boolean };
 
+  // File dialog commands
+  cmd_dialog_open_file: {
+    args: {
+      filters?: { name: string; extensions: string[] }[];
+      multiple?: boolean;
+      directory?: boolean;
+      defaultPath?: string;
+    };
+    return: string[] | null;
+  };
+  cmd_dialog_save_file: {
+    args: {
+      filters?: { name: string; extensions: string[] }[];
+      defaultPath?: string;
+    };
+    return: string | null;
+  };
+
+  // Store commands
+  cmd_store_load: { args: { file: string }; return: boolean };
+  cmd_store_get: { args: { file: string; key: string }; return: unknown };
+  cmd_store_set: { args: { file: string; key: string; value: unknown }; return: boolean };
+  cmd_store_save: { args: { file: string }; return: boolean };
+  cmd_store_delete: { args: { file: string; key: string }; return: boolean };
+
+  // Filesystem commands
+  cmd_fs_read_text_file: { args: { path: string }; return: string };
+  cmd_fs_read_file: { args: { path: string }; return: string };
+  cmd_fs_write_text_file: { args: { path: string; content: string }; return: boolean };
+
   // RAG commands
   cmd_rag_add_project: {
     args: { name: string; path: string; embeddingModel: string; ignorePatterns: string[] };
@@ -424,6 +454,55 @@ const CommandInputSchemas: {
   // Opener command input schemas
   cmd_opener_open_url: z.object({
     url: z.string().min(1).max(VALIDATION_LIMITS.MAX_MESSAGE_CONTENT_LEN),
+  }),
+
+  // File dialog command input schemas
+  cmd_dialog_open_file: z.object({
+    filters: z
+      .array(
+        z.object({
+          name: z.string().min(1),
+          extensions: z.array(z.string().min(1)),
+        })
+      )
+      .optional(),
+    multiple: z.boolean().optional(),
+    directory: z.boolean().optional(),
+    defaultPath: z.string().optional(),
+  }),
+  cmd_dialog_save_file: z.object({
+    filters: z
+      .array(
+        z.object({
+          name: z.string().min(1),
+          extensions: z.array(z.string().min(1)),
+        })
+      )
+      .optional(),
+    defaultPath: z.string().optional(),
+  }),
+
+  // Store command input schemas
+  cmd_store_load: z.object({ file: z.string().min(1) }),
+  cmd_store_get: z.object({ file: z.string().min(1), key: z.string().min(1) }),
+  cmd_store_set: z.object({
+    file: z.string().min(1),
+    key: z.string().min(1),
+    value: z.unknown(),
+  }),
+  cmd_store_save: z.object({ file: z.string().min(1) }),
+  cmd_store_delete: z.object({ file: z.string().min(1), key: z.string().min(1) }),
+
+  // Filesystem command input schemas
+  cmd_fs_read_text_file: z.object({
+    path: z.string().min(1).max(MAX_FILE_PATH_LEN),
+  }),
+  cmd_fs_read_file: z.object({
+    path: z.string().min(1).max(MAX_FILE_PATH_LEN),
+  }),
+  cmd_fs_write_text_file: z.object({
+    path: z.string().min(1).max(MAX_FILE_PATH_LEN),
+    content: z.string(),
   }),
 
   // RAG command input schemas
@@ -583,6 +662,22 @@ const CommandReturnSchemas: {
 
   // Opener command return schemas
   cmd_opener_open_url: z.boolean(),
+
+  // File dialog command return schemas
+  cmd_dialog_open_file: z.array(z.string()).nullable(),
+  cmd_dialog_save_file: z.string().nullable(),
+
+  // Store command return schemas
+  cmd_store_load: z.boolean(),
+  cmd_store_get: z.unknown().nullable(),
+  cmd_store_set: z.boolean(),
+  cmd_store_save: z.boolean(),
+  cmd_store_delete: z.boolean(),
+
+  // Filesystem command return schemas
+  cmd_fs_read_text_file: z.string(),
+  cmd_fs_read_file: z.string(),
+  cmd_fs_write_text_file: z.boolean(),
 
   // RAG command return schemas
   cmd_rag_add_project: RagProjectSchema,
@@ -923,6 +1018,22 @@ export const dialogApi = {
    */
   ask: (title: string, message: string, kind?: string) =>
     callInternal('cmd_dialog_ask', { title, message, kind }),
+
+  /**
+   * Shows a native file/folder open dialog and returns the selected path(s).
+   * @param opts - { filters?, multiple?, directory?, defaultPath? }
+   * @returns Array of selected paths, or null if cancelled
+   */
+  openFile: (opts: CommandMap['cmd_dialog_open_file']['args']) =>
+    callInternal('cmd_dialog_open_file', opts),
+
+  /**
+   * Shows a native file save dialog and returns the selected path.
+   * @param opts - { filters?, defaultPath? }
+   * @returns The selected save path, or null if cancelled
+   */
+  saveFile: (opts: CommandMap['cmd_dialog_save_file']['args']) =>
+    callInternal('cmd_dialog_save_file', opts),
 };
 
 /**
@@ -949,6 +1060,87 @@ export const openerApi = {
    * @returns true if URL was opened successfully, false otherwise
    */
   openUrl: (url: string) => callInternal('cmd_opener_open_url', { url }),
+};
+
+/**
+ * Store API - persistent key-value storage via Rust commands.
+ *
+ * Replaces the direct tauri-plugin-store wrapper. All store operations
+ * now route through `callInternal`, which provides Zod validation,
+ * latency tracking, and error sanitization.
+ */
+export const storeApi = {
+  /**
+   * Loads a store file.
+   * @param file - Store filename (e.g. "logs.json")
+   * @returns true if the store was loaded successfully
+   */
+  load: (file: string) => callInternal('cmd_store_load', { file }),
+
+  /**
+   * Gets a value from a store by key.
+   * @param file - Store filename
+   * @param key - The key to retrieve
+   * @returns The value if found, null otherwise
+   */
+  get: (file: string, key: string) => callInternal('cmd_store_get', { file, key }),
+
+  /**
+   * Sets a value in a store by key.
+   * @param file - Store filename
+   * @param key - The key to set
+   * @param value - JSON-serializable value to store
+   * @returns true if the value was set
+   */
+  set: (file: string, key: string, value: unknown) =>
+    callInternal('cmd_store_set', { file, key, value }),
+
+  /**
+   * Saves a store to disk.
+   * @param file - Store filename
+   * @returns true if saved successfully
+   */
+  save: (file: string) => callInternal('cmd_store_save', { file }),
+
+  /**
+   * Deletes a key from a store.
+   * @param file - Store filename
+   * @param key - The key to delete
+   * @returns true if the key was deleted
+   */
+  delete: (file: string, key: string) => callInternal('cmd_store_delete', { file, key }),
+};
+
+/**
+ * Filesystem API - file read/write operations via Rust commands.
+ *
+ * Replaces the direct `@tauri-apps/plugin-fs` plugin wrapper. All
+ * filesystem access now goes through `callInternal` for validation,
+ * latency tracking, and error sanitization (STANDARDS §16).
+ */
+export const fsApi = {
+  /**
+   * Reads a text file from the filesystem.
+   * @param path - Absolute path to the file
+   * @returns The file contents as a string, or null on failure
+   */
+  readTextFile: (path: string) => callInternal('cmd_fs_read_text_file', { path }),
+
+  /**
+   * Reads a binary file from the filesystem, returned as base64.
+   * @param path - Absolute path to the file
+   * @returns Base64-encoded file contents, or null on failure
+   */
+  readFile: (path: string) => callInternal('cmd_fs_read_file', { path }),
+
+  /**
+   * Writes text content to a file on the filesystem.
+   * @param path - Absolute path to the file
+   * @param content - Text content to write
+   * @returns true if the write succeeded
+   */
+  writeTextFile: (path: string, content: string) =>
+    callInternal('cmd_fs_write_text_file', { path, content }),
 };
 
 /**
@@ -1164,17 +1356,6 @@ export async function listenDragDrop(
     }
   });
 }
-
-// Tauri plugin wrappers (dialog, opener, store, fs) live in @/lib/tauri-plugins.
-// Re-exported here for backward compatibility with existing consumers.
-export {
-  dialog,
-  opener,
-  store,
-  fs,
-  type ConfirmDialogOptions,
-  type StoreOptions,
-} from '@/lib/tauri-plugins';
 
 /**
  * Conversation & Message APIs - manages conversation persistence operations.

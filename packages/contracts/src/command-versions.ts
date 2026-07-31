@@ -63,12 +63,26 @@ export const COMMAND_VERSIONS = {
 
   // Dialog
   cmd_dialog_ask: true,
+  cmd_dialog_open_file: true,
+  cmd_dialog_save_file: true,
 
   // Export
   cmd_conversation_export_markdown: true,
 
   // Opener
   cmd_opener_open_url: true,
+
+  // Store
+  cmd_store_load: true,
+  cmd_store_get: true,
+  cmd_store_set: true,
+  cmd_store_save: true,
+  cmd_store_delete: true,
+
+  // Filesystem
+  cmd_fs_read_text_file: true,
+  cmd_fs_read_file: true,
+  cmd_fs_write_text_file: true,
 
   // Conversations
   cmd_conversations_list: true,

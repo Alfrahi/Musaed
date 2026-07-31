@@ -6,16 +6,16 @@ import {
 } from './useAttachmentUtils';
 import { fileNameFromPath } from '@/lib/utils';
 import { describe, it, expect, vi } from 'vitest';
-import { dialog, fs } from '@/lib/ipc';
+import { dialogApi, fsApi } from '@/lib/ipc';
 import toast from 'react-hot-toast';
 
 // Mock the Tauri IPC functions
 vi.mock('@/lib/ipc', () => ({
   checkIsTauri: vi.fn(() => true),
-  dialog: {
-    open: vi.fn(),
+  dialogApi: {
+    openFile: vi.fn(),
   },
-  fs: {
+  fsApi: {
     readFile: vi.fn(),
     readTextFile: vi.fn(),
   },
@@ -62,12 +62,12 @@ describe('utility functions', () => {
 
 describe('handleTauriFileUploadInternal', () => {
   it('uploads files and respects size limit', async () => {
-    const mockDialogOpen = vi.fn().mockResolvedValue(['/path/file.txt']);
-    vi.mocked(dialog.open).mockImplementation(mockDialogOpen);
+    const mockOpenFile = vi.fn().mockResolvedValue(['/path/file.txt']);
+    vi.mocked(dialogApi.openFile).mockImplementation(mockOpenFile);
 
     const fileContent = 'hello world';
     const mockReadTextFile = vi.fn().mockResolvedValue(fileContent);
-    vi.mocked(fs.readTextFile).mockImplementation(mockReadTextFile);
+    vi.mocked(fsApi.readTextFile).mockImplementation(mockReadTextFile);
 
     const mockT = vi.fn((k) => k);
     const result = await handleTauriFileUploadInternal(mockT);
@@ -82,11 +82,11 @@ describe('handleTauriFileUploadInternal', () => {
   });
 
   it('skips files larger than limit', async () => {
-    const mockDialogOpen = vi.fn().mockResolvedValue(['/path/large.txt']);
-    vi.mocked(dialog.open).mockImplementation(mockDialogOpen);
+    const mockOpenFile = vi.fn().mockResolvedValue(['/path/large.txt']);
+    vi.mocked(dialogApi.openFile).mockImplementation(mockOpenFile);
     const largeContent = 'a'.repeat(11 * 1024 * 1024); // >10MB
     const mockReadTextFile = vi.fn().mockResolvedValue(largeContent);
-    vi.mocked(fs.readTextFile).mockImplementation(mockReadTextFile);
+    vi.mocked(fsApi.readTextFile).mockImplementation(mockReadTextFile);
     const mockT = vi.fn((k) => k);
     const result = await handleTauriFileUploadInternal(mockT);
     expect(result).toHaveLength(0);
@@ -96,13 +96,13 @@ describe('handleTauriFileUploadInternal', () => {
 
 describe('handleTauriImageUploadInternal', () => {
   it('should handle image uploads correctly', async () => {
-    const mockDialogOpen = vi.fn().mockResolvedValue(['/path/to/test.png']);
-    vi.mocked(dialog.open).mockImplementation(mockDialogOpen);
+    const mockOpenFile = vi.fn().mockResolvedValue(['/path/to/test.png']);
+    vi.mocked(dialogApi.openFile).mockImplementation(mockOpenFile);
 
-    const mockReadFile = vi
-      .fn()
-      .mockResolvedValue(new Uint8Array([71, 73, 70, 56, 57, 97, 1, 0, 1, 0, 128, 0, 0]));
-    vi.mocked(fs.readFile).mockImplementation(mockReadFile);
+    // fsApi.readFile now returns base64 string directly (Rust command)
+    const base64Data = btoa(String.fromCharCode(71, 73, 70, 56, 57, 97, 1, 0, 1, 0, 128, 0, 0));
+    const mockReadFile = vi.fn().mockResolvedValue(base64Data);
+    vi.mocked(fsApi.readFile).mockImplementation(mockReadFile);
 
     const mockT = vi.fn((key) => key);
 
@@ -113,12 +113,13 @@ describe('handleTauriImageUploadInternal', () => {
   });
 
   it('should handle large files gracefully', async () => {
-    const mockDialogOpen = vi.fn().mockResolvedValue(['/path/to/large.png']);
-    vi.mocked(dialog.open).mockImplementation(mockDialogOpen);
+    const mockOpenFile = vi.fn().mockResolvedValue(['/path/to/large.png']);
+    vi.mocked(dialogApi.openFile).mockImplementation(mockOpenFile);
 
-    const largeData = new Uint8Array(11 * 1024 * 1024).fill(0);
-    const mockReadFile = vi.fn().mockResolvedValue(largeData);
-    vi.mocked(fs.readFile).mockImplementation(mockReadFile);
+    // Create a base64 string that represents >10MB of binary data
+    const largeBase64 = 'A'.repeat(Math.ceil((11 * 1024 * 1024 * 4) / 3));
+    const mockReadFile = vi.fn().mockResolvedValue(largeBase64);
+    vi.mocked(fsApi.readFile).mockImplementation(mockReadFile);
 
     const mockT = vi.fn((key) => key);
 
@@ -128,13 +129,13 @@ describe('handleTauriImageUploadInternal', () => {
     expect(toast.error).toHaveBeenCalledWith('error.fileTooLarge');
   });
 
-  it('should handle invalid characters gracefully', async () => {
-    const mockDialogOpen = vi.fn().mockResolvedValue(['/path/to/invalid.png']);
-    vi.mocked(dialog.open).mockImplementation(mockDialogOpen);
+  it('should handle valid base64 data', async () => {
+    const mockOpenFile = vi.fn().mockResolvedValue(['/path/to/test.png']);
+    vi.mocked(dialogApi.openFile).mockImplementation(mockOpenFile);
 
-    const invalidData = new Uint8Array([255, 254, 253, 252]);
-    const mockReadFile = vi.fn().mockResolvedValue(invalidData);
-    vi.mocked(fs.readFile).mockImplementation(mockReadFile);
+    const base64Data = btoa(String.fromCharCode(255, 254, 253, 252));
+    const mockReadFile = vi.fn().mockResolvedValue(base64Data);
+    vi.mocked(fsApi.readFile).mockImplementation(mockReadFile);
 
     const mockT = vi.fn((key) => key);
 
