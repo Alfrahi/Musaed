@@ -159,10 +159,10 @@ describe('ProjectList', () => {
       },
     });
 
-    // `dialog.ask` comes from the global `@/lib/ipc` auto-mock. Reset its
+    // `dialogApi.ask` comes from the global `@/lib/ipc` auto-mock. Reset its
     // return value between tests so each scenario controls confirm/cancel
     // explicitly — no test should inherit a stale mock value.
-    vi.mocked(ipc.dialog.ask).mockReset();
+    vi.mocked(ipc.dialogApi.ask).mockReset();
   });
 
   it('renders the add-project button and the empty-state copy when there are no projects', () => {
@@ -179,22 +179,14 @@ describe('ProjectList', () => {
     hoisted.projectIds = ['proj-1'];
     hoisted.activeProjectId = null;
 
-    const dialogAsk = vi.mocked(ipc.dialog.ask);
+    const dialogAsk = vi.mocked(ipc.dialogApi.ask);
     dialogAsk.mockResolvedValueOnce(true);
 
     render(<ProjectList />);
     fireEvent.click(screen.getByTitle('removeProject'));
 
     await waitFor(() => expect(removeProjectByIdMock).toHaveBeenCalledWith('proj-1'));
-    expect(dialogAsk).toHaveBeenCalledWith(
-      'rag.removeConfirm',
-      expect.objectContaining({
-        title: 'rag.removeProject',
-        kind: 'warning',
-        okLabel: 'common.delete',
-        cancelLabel: 'common.cancel',
-      })
-    );
+    expect(dialogAsk).toHaveBeenCalledWith('rag.removeProject', 'rag.removeConfirm', 'warning');
   });
 
   it('clicking remove → cancel → removeProjectById is not called', async () => {
@@ -202,7 +194,7 @@ describe('ProjectList', () => {
     hoisted.projectIds = ['proj-1'];
     hoisted.activeProjectId = null;
 
-    const dialogAsk = vi.mocked(ipc.dialog.ask);
+    const dialogAsk = vi.mocked(ipc.dialogApi.ask);
     dialogAsk.mockResolvedValueOnce(false);
 
     render(<ProjectList />);
@@ -220,7 +212,7 @@ describe('ProjectList', () => {
     hoisted.projectIds = ['proj-1'];
     hoisted.activeProjectId = 'proj-1';
 
-    vi.mocked(ipc.dialog.ask).mockResolvedValueOnce(true);
+    vi.mocked(ipc.dialogApi.ask).mockResolvedValueOnce(true);
 
     render(<ProjectList />);
     fireEvent.click(screen.getByTitle('removeProject'));

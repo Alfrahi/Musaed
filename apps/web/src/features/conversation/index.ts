@@ -5,6 +5,7 @@
 // `@/store/...`. See STANDARDS.md §3, §22.
 export { useChatActions } from './hooks/useChatActions';
 export { useConversationActions } from './hooks/useConversationActions';
+export { useConversationInitialization } from './hooks/useConversationInitialization';
 // Public stop primitive consumed by the global Escape-to-stop shortcut
 // (useGlobalShortcuts) and InputArea. Barrel-exported so non-feature
 // callers don't deep-import into feature internals (STANDARDS §3).
