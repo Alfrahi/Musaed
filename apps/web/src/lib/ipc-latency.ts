@@ -45,6 +45,15 @@ export const ipcStats: IpcStats = {
 export const IPC_VIOLATION_HISTORY_MAX = 200;
 
 /**
+ * Maximum number of per-call records retained in `ipcStats.calls`.
+ * Prevents unbounded growth in long-running sessions; once exceeded,
+ * the oldest entry is dropped (FIFO). Larger than `IPC_VIOLATION_HISTORY_MAX`
+ * because `calls` retains both ok and violation entries for per-command
+ * analytics.
+ */
+export const IPC_CALLS_HISTORY_MAX = 500;
+
+/**
  * Throttle window (ms) for trace emission per over-budget command.
  * Once a violation is dispatched, subsequent violations of the same
  * command within this window are dropped to avoid trace-store spam.

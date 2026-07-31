@@ -78,6 +78,7 @@ import {
   ipcStats,
   IPC_VIOLATION_HISTORY_MAX,
   IPC_VIOLATION_TRACE_THROTTLE_MS,
+  IPC_CALLS_HISTORY_MAX,
   ipcViolationHistory,
   lastViolationTraceAt,
   notifyIpcViolationSubscribers,
@@ -729,6 +730,9 @@ function recordIpcLatency(command: string, latencyMs: number, budgetMs: number):
 
   const status = budgetMs > 0 && latencyMs > budgetMs ? 'violation' : 'ok';
   ipcStats.calls.push({ command, latencyMs, budgetMs, status });
+  if (ipcStats.calls.length > IPC_CALLS_HISTORY_MAX) {
+    ipcStats.calls.shift();
+  }
 
   if (status === 'violation') {
     ipcStats.violationCount++;

@@ -21,6 +21,7 @@ import {
   subscribeIpcViolations,
   type IpcViolationRecord,
 } from '@/lib/ipc';
+import { IPC_CALLS_HISTORY_MAX } from '@/lib/ipc-latency';
 
 describe('IPC Latency Budgets', () => {
   beforeEach(() => {
@@ -161,6 +162,21 @@ describe('IPC Latency Budgets', () => {
 
   it('detects tauri environment correctly (sanity)', () => {
     expect(checkIsTauri()).toBe(true);
+  });
+
+  it('caps ipcStats.calls at IPC_CALLS_HISTORY_MAX (FIFO eviction)', async () => {
+    vi.mocked(invoke).mockResolvedValue({ success: true, data: null });
+
+    const over = IPC_CALLS_HISTORY_MAX + 5;
+    for (let i = 0; i < over; i += 1) {
+      await ollamaApi.abortPull('llama3:8b');
+    }
+
+    expect(ipcStats.callCount).toBe(over);
+    expect(ipcStats.calls).toHaveLength(IPC_CALLS_HISTORY_MAX);
+    // The oldest entries were evicted; the first remaining record is the
+    // (over - IPC_CALLS_HISTORY_MAX)-th call, so its command still matches.
+    expect(ipcStats.calls[0].command).toBe('cmd_ollama_abort_pull');
   });
 });
 
