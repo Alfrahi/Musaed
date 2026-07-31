@@ -1,0 +1,6 @@
+[[permission]]
+identifier = "allow-context-menu-commands"
+description = "Enables commands for native context menus."
+commands.allow = [
+    "cmd_context_menu_show",
+]

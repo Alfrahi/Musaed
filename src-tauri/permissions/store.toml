@@ -1,0 +1,10 @@
+[[permission]]
+identifier = "allow-store-commands"
+description = "Enables commands for persistent key-value store operations."
+commands.allow = [
+    "cmd_store_load",
+    "cmd_store_get",
+    "cmd_store_set",
+    "cmd_store_save",
+    "cmd_store_delete",
+]

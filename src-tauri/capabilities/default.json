@@ -59,6 +59,11 @@
     "allow-ollama-commands",
     "allow-logging-commands",
     "allow-rag-commands",
-    "allow-conversation-commands"
+    "allow-conversation-commands",
+    "allow-store-commands",
+    "allow-dialog-commands",
+    "allow-fs-commands",
+    "allow-opener-commands",
+    "allow-context-menu-commands"
   ]
 }

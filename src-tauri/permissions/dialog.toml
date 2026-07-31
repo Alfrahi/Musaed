@@ -1,0 +1,8 @@
+[[permission]]
+identifier = "allow-dialog-commands"
+description = "Enables commands for native file dialogs."
+commands.allow = [
+    "cmd_dialog_ask",
+    "cmd_dialog_open_file",
+    "cmd_dialog_save_file",
+]
