@@ -6,6 +6,7 @@ vi.mock('@/store/settings-store', () => ({
   useSettingsStore: vi.fn((selector) =>
     selector({ globalSettings: { language: 'en', theme: 'light' as const } })
   ),
+  useGlobalSettings: () => ({ language: 'en', theme: 'light' as const }),
 }));
 
 vi.mock('@/store/hooks', () => ({
@@ -31,10 +32,6 @@ vi.mock('@/store/ui-store', () => ({
 
 vi.mock('@/store/coordination', () => ({
   registerHydrationCoordination: vi.fn(() => vi.fn()),
-}));
-
-vi.mock('@/features/settings', () => ({
-  useGlobalSettings: () => ({ language: 'en', theme: 'light' }),
 }));
 
 vi.mock('@/lib/i18n', () => ({
