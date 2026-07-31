@@ -25,7 +25,7 @@ import { useTranslation } from '@/lib/i18n';
 import { useContextMenu } from '@/hooks/useContextMenu';
 import { FileChunkViewer } from '@/features/rag';
 import ModalLayout from '@/components/ui/ModalLayout';
-import AttachmentLightbox from '@/components/ui/AttachmentLightbox';
+import AttachmentLightbox from './AttachmentLightbox';
 import { Button } from '@/components/ui/button';
 
 /** Max number of citation chips rendered before an overflow "Show N more…"

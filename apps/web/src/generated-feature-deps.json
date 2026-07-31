@@ -1,7 +1,7 @@
 {
   "conversation": ["library", "rag"],
   "info": [],
-  "layout": ["conversation", "sidebar"],
+  "layout": ["conversation", "sidebar", "settings"],
   "library": [],
   "rag": ["library"],
   "settings": ["library"],

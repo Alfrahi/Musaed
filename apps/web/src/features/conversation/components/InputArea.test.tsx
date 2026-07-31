@@ -24,7 +24,7 @@ vi.mock('@/features/library', () => ({
   ModelSelector: () => <div data-testid="model-selector">ModelSelector</div>,
 }));
 
-vi.mock('@/components/ui/RagContextBadge', () => ({
+vi.mock('@/features/rag', () => ({
   RagContextBadge: () => <div data-testid="rag-context-badge">RagContextBadge</div>,
 }));
 

@@ -6,7 +6,15 @@ import { ModalLayout } from '@/components/ui';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/lib/i18n';
 import { useSettingsStore } from '@/store';
-import { attachmentImageSrc } from '@/features/conversation';
+import { attachmentImageSrc } from '../image-attachment';
+
+/**
+ * Full-screen lightbox for image attachments.
+ *
+ * Owned by the `conversation` feature. Both consumers
+ * (`MessageBubble`, `AttachmentPreview`) live inside `conversation`, so this
+ * is an intra-feature import — no cross-feature boundary is crossed.
+ */
 
 interface AttachmentLightboxProps {
   isOpen: boolean;

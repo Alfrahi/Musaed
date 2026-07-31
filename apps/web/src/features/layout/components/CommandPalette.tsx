@@ -8,6 +8,15 @@ import { useConversationActions } from '@/features/conversation';
 import { useSetLibraryOpen, useSetSettingsOpen } from '@/store/hooks';
 import { ModalLayout } from '@/components/ui';
 
+/**
+ * CommandPalette — app-wide ⌘K palette.
+ *
+ * Lives in the `layout` feature because it is a composition-root component
+ * that orchestrates multiple features (conversation, library, settings).
+ * `layout` is the composition root (STANDARDS.md §3) and is exempt from
+ * cross-feature import rules, so it may freely import from `@/features/*`.
+ */
+
 interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;

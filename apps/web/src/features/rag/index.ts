@@ -10,5 +10,6 @@ export { AddProjectDialog } from './components/AddProjectDialog';
 export { RagExplorer } from './components/RagExplorer';
 export { ProjectSettings } from './components/ProjectSettings';
 export { FileChunkViewer } from './components/FileChunkViewer';
+export { RagContextBadge } from './components/RagContextBadge';
 export { fileNameFromPath, truncateFilePath, getRelativeFilePath } from './utils/project-helpers';
 export { default as RagFeature } from './feature.manifest';

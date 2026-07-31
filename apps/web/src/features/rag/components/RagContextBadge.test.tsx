@@ -8,7 +8,7 @@ import { useRagStore } from '@/store/rag-store';
 import type { RagProject } from '@musaed/contracts';
 
 // Lightly mock RagExplorer so we can confirm it mounts inside the dialog.
-vi.mock('@/features/rag', () => ({
+vi.mock('./RagExplorer', () => ({
   RagExplorer: () => <div data-testid="rag-explorer-stub">RagExplorer</div>,
 }));
 
