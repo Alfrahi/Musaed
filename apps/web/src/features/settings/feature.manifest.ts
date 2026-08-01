@@ -20,12 +20,7 @@ const manifest: FeatureManifest = {
     components: ['SettingsModal'],
     utils: [],
   },
-  ipcEndpoints: [
-    'cmd_ollama_verify_service',
-    'cmd_logs_request_clear_token',
-    'cmd_logs_clear',
-    'cmd_dialog_ask',
-  ],
+  ipcEndpoints: ['cmd_ollama_verify_service', 'cmd_logs_request_clear_token', 'cmd_logs_clear'],
   /**
    * Performance-sensitive IPC endpoints owned by this feature. The actual
    * thresholds (ms) live in `@musaed/contracts` (`IPC_LATENCY_BUDGETS`).
@@ -60,11 +55,6 @@ const manifest: FeatureManifest = {
     cmd_logs_clear: {
       fallback: 'Show error toast; logs remain in viewer',
       retry: 'once',
-      messageKey: 'error.genericError',
-    },
-    cmd_dialog_ask: {
-      fallback: 'Treat as user cancellation — no action taken',
-      retry: 'none',
       messageKey: 'error.genericError',
     },
   },

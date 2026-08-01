@@ -14,20 +14,14 @@ const manifest: FeatureManifest = {
     hooks: [],
     utils: [],
   },
-  ipcEndpoints: ['cmd_opener_open_url'],
+  ipcEndpoints: [],
   stateSchemas: {}, // No feature-specific state
   /**
    * Failure modes for this feature's IPC endpoints.
    *
    * @see STANDARDS.md §13 — Failure Mode Rule
    */
-  failureModes: {
-    cmd_opener_open_url: {
-      fallback: 'Show error toast with the URL so user can copy it manually',
-      retry: 'none',
-      messageKey: 'error.unsupportedLink',
-    },
-  },
+  failureModes: {},
   dependencies: [], // Standalone feature with no dependencies
 } as const;
 

@@ -39,7 +39,6 @@ const manifest: FeatureManifest = {
     'cmd_rag_assemble_context',
     'cmd_rag_get_file_chunks',
     'cmd_rag_set_embedding_model',
-    'cmd_dialog_ask',
   ],
   /**
    * Performance-sensitive IPC endpoints owned by this feature. The actual
@@ -123,11 +122,6 @@ const manifest: FeatureManifest = {
     cmd_rag_set_embedding_model: {
       fallback: 'Keep previous embedding model selection',
       retry: 'once',
-      messageKey: 'error.genericError',
-    },
-    cmd_dialog_ask: {
-      fallback: 'Treat as user cancellation — no action taken',
-      retry: 'none',
       messageKey: 'error.genericError',
     },
   },

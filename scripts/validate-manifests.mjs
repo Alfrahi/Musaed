@@ -12,6 +12,16 @@ const STORE_DIR = join(PROJECT_ROOT, "apps/web/src/store");
 const IPC_TS = join(PROJECT_ROOT, "apps/web/src/lib/ipc.ts");
 
 /**
+ * Commands that are infrastructure / cross-cutting and may be called from
+ * any feature without being declared in a feature manifest. Must stay in
+ * sync with `SHARED_COMMANDS` in `packages/contracts/src/command-versions.ts`.
+ */
+const SHARED_COMMANDS = new Set([
+  "cmd_dialog_ask",
+  "cmd_opener_open_url",
+]);
+
+/**
  * Extract stateSchemas from a feature manifest file.
  * @param {string} filePath - Path to the feature manifest file.
  * @returns {Record<string, number>} - stateSchemas object.
@@ -371,12 +381,14 @@ function checkIpcEndpointDrift(feature, manifestPath, featureDir, nsToCmd) {
   const actual = scanFeatureIpcUsage(featureDir, nsToCmd);
   let drift = false;
   for (const cmd of declared) {
+    if (SHARED_COMMANDS.has(cmd)) continue;
     if (!actual.has(cmd)) {
       console.error(`  ❌ IPC drift: manifest of ${feature} declares '${cmd}' but source never calls it.`);
       drift = true;
     }
   }
   for (const cmd of actual) {
+    if (SHARED_COMMANDS.has(cmd)) continue;
     if (!declared.has(cmd)) {
       console.error(`  ❌ IPC drift: feature ${feature} calls '${cmd}' but manifest does not declare it.`);
       drift = true;

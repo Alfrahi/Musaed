@@ -99,4 +99,14 @@ export const COMMAND_VERSIONS = {
   cmd_context_menu_show: true,
 } as const;
 
+/**
+ * Commands that are infrastructure / cross-cutting and may be called from
+ * any feature without being declared in a feature manifest. The manifest
+ * validator skips these when checking IPC drift.
+ */
+export const SHARED_COMMANDS = {
+  cmd_dialog_ask: true,
+  cmd_opener_open_url: true,
+} as const;
+
 export type CommandName = keyof typeof COMMAND_VERSIONS;
