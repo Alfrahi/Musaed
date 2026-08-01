@@ -1,9 +1,7 @@
 //! Integration tests for Ollama IPC commands using mockito.
 
 use musaed_lib::ollama::streaming::{process_chat_stream, TokenSink};
-use musaed_lib::payloads::{
-    ApiResponse, BackendError, ModelValidation, OllamaHealth, OllamaModel, OllamaToken,
-};
+use musaed_lib::payloads::{ApiResponse, BackendError, OllamaHealth, OllamaModel, OllamaToken};
 use musaed_lib::shared::{clear_request_cache, test_cache_lock};
 use std::sync::Arc;
 use std::time::Duration;
@@ -119,63 +117,6 @@ async fn get_models_server_error() {
 
     mock.assert_async().await;
     assert!(!result.success);
-}
-
-// ==================== cmd_ollama_validate_model ====================
-
-#[tokio::test]
-async fn cmd_ollama_validate_model_success() {
-    let _guard = setup().await;
-    let mut server = mockito::Server::new_async().await;
-    let url = mock_base_url(&server);
-
-    let body = serde_json::json!({
-        "details": {
-            "format": "gguf",
-            "family": "llama",
-            "parameter_size": "8B",
-            "quantization_level": "Q4_0"
-        }
-    });
-
-    let mock = server
-        .mock("POST", "/api/show")
-        .with_status(200)
-        .with_header("content-type", "application/json")
-        .with_body(body.to_string())
-        .create_async()
-        .await;
-
-    let result: ApiResponse<ModelValidation> =
-        musaed_lib::ollama::cmd_ollama_validate_model(url, "llama3".to_string()).await;
-
-    mock.assert_async().await;
-    assert!(result.success);
-    let validation = result.data.unwrap();
-    assert!(validation.is_valid);
-    assert_eq!(validation.model_name, "llama3");
-    assert!(validation.details.is_some());
-}
-
-#[tokio::test]
-async fn cmd_ollama_validate_model_not_found() {
-    let _guard = setup().await;
-    let mut server = mockito::Server::new_async().await;
-    let url = mock_base_url(&server);
-
-    let mock = server
-        .mock("POST", "/api/show")
-        .with_status(404)
-        .create_async()
-        .await;
-
-    let result: ApiResponse<ModelValidation> =
-        musaed_lib::ollama::cmd_ollama_validate_model(url, "nonexistent".to_string()).await;
-
-    mock.assert_async().await;
-    assert!(!result.success);
-    let validation = result.data.unwrap();
-    assert!(!validation.is_valid);
 }
 
 // ==================== cmd_ollama_delete_model ====================

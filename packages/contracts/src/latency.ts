@@ -43,7 +43,6 @@ export const IPC_LATENCY_BUDGETS: Readonly<Record<string, LatencyBudgetMs>> = {
   cmd_ollama_verify_service: 2000,
   cmd_ollama_get_models: 5000,
   /** Model management — moderate weight */
-  cmd_ollama_validate_model: 8000,
   cmd_ollama_delete_model: 5000,
   cmd_ollama_pull_model: 3000,
   cmd_ollama_abort_pull: 1000,
@@ -59,28 +58,18 @@ export const IPC_LATENCY_BUDGETS: Readonly<Record<string, LatencyBudgetMs>> = {
   cmd_trace_start: 500,
   cmd_trace_complete: 500,
   cmd_trace_get_context: 500,
-  /** UI dialogs and export — user-blocking, fast required */
+  /** UI dialogs — user-blocking, fast required */
   cmd_dialog_ask: 1000,
-  cmd_conversation_export_markdown: 3000,
   cmd_opener_open_url: 1000,
   /** RAG management — lightweight metadata ops */
   cmd_rag_list_projects: 2000,
-  cmd_rag_get_project: 1000,
-  cmd_rag_get_index_status: 1000,
-  cmd_rag_get_project_stats: 2000,
-  cmd_rag_validate_embedding_model: 8000,
-  /** RAG mutations — moderate weight */
-  cmd_rag_add_project: 3000,
-  cmd_rag_remove_project: 2000,
-  cmd_rag_update_project: 2000,
-  cmd_rag_set_embedding_model: 3000,
-  /** RAG heavy ops — async on backend, still track call latency */
   cmd_rag_index_project: 5000,
   cmd_rag_abort_index: 1000,
   cmd_rag_reindex_project: 5000,
   cmd_rag_retry_index_project: 5000,
   cmd_rag_search: 15000,
   cmd_rag_get_file_chunks: 5000,
+  cmd_rag_set_embedding_model: 3000,
   cmd_rag_assemble_context: 20000,
   /** Conversation management — lightweight persistence */
   cmd_conversations_list: 3000,
@@ -123,7 +112,6 @@ export type LatencyBudgetCategory =
   | 'logging'
   | 'tracing'
   | 'dialog'
-  | 'export'
   | 'opener'
   | 'rag-light'
   | 'rag-mutation'
@@ -144,7 +132,6 @@ export function getIpcLatencyBudgetCategory(command: string): LatencyBudgetCateg
   if (command.startsWith('cmd_logs_')) return 'logging';
   if (command.startsWith('cmd_trace_')) return 'tracing';
   if (command === 'cmd_dialog_ask') return 'dialog';
-  if (command === 'cmd_conversation_export_markdown') return 'export';
   if (command === 'cmd_opener_open_url') return 'opener';
   if (command === 'cmd_context_menu_show') return 'context-menu';
   if (command.startsWith('cmd_rag_list_') || command.startsWith('cmd_rag_get_')) {

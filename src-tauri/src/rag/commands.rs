@@ -2,10 +2,7 @@ use crate::payloads::ApiResponse;
 use crate::rag::services::projects;
 use crate::rag::services::*;
 use crate::rag::store::RagStore;
-use crate::rag::types::{
-    AssembledContext, ChunkRecord, IndexStatus, ProjectStats, RagModelValidation, RagProject,
-    SearchResult,
-};
+use crate::rag::types::{AssembledContext, ChunkRecord, RagProject, SearchResult};
 use std::sync::Arc;
 use tauri::State;
 use tauri::{AppHandle, Runtime};
@@ -68,18 +65,6 @@ pub async fn cmd_rag_list_projects(
         store: state.inner().clone(),
     };
     Ok(projects::list_projects(req).await)
-}
-
-#[tauri::command]
-pub async fn cmd_rag_get_project(
-    project_id: String,
-    state: State<'_, Arc<RwLock<RagStore>>>,
-) -> Result<ApiResponse<RagProject>, String> {
-    let req = projects::GetProjectRequest {
-        project_id,
-        store: state.inner().clone(),
-    };
-    Ok(projects::get_project(req).await)
 }
 
 // ====================== INDEXING COMMANDS ======================
@@ -148,12 +133,6 @@ pub async fn cmd_rag_retry_index_project<R: Runtime>(
     Ok(start_indexing(req).await)
 }
 
-#[tauri::command]
-pub async fn cmd_rag_get_index_status(project_id: String) -> ApiResponse<IndexStatus> {
-    let req = GetIndexStatusRequest { project_id };
-    get_index_status(req).await
-}
-
 // ====================== SEARCH COMMANDS ======================
 
 #[tauri::command]
@@ -191,15 +170,6 @@ pub async fn cmd_rag_get_file_chunks(
     Ok(get_file_chunks(req).await)
 }
 
-#[tauri::command]
-pub async fn cmd_rag_get_project_stats(
-    project_id: String,
-    state: State<'_, Arc<RwLock<RagStore>>>,
-) -> Result<ApiResponse<ProjectStats>, String> {
-    let req = GetProjectStatsRequest { project_id, state };
-    Ok(get_project_stats(req).await)
-}
-
 // ====================== EMBEDDING MODEL COMMANDS ======================
 
 #[tauri::command]
@@ -214,19 +184,6 @@ pub async fn cmd_rag_set_embedding_model(
         state,
     };
     Ok(set_embedding_model(req).await)
-}
-
-#[tauri::command]
-pub async fn cmd_rag_validate_embedding_model(
-    base_url: Option<String>,
-    model_name: String,
-    _app_handle: AppHandle,
-) -> ApiResponse<RagModelValidation> {
-    let req = ValidateEmbeddingModelRequest {
-        base_url,
-        model_name,
-    };
-    validate_embedding_model(req).await
 }
 
 // ====================== CONTEXT ASSEMBLY COMMANDS ======================

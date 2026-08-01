@@ -30,7 +30,6 @@ export const COMMAND_VERSIONS = {
   cmd_ollama_check_health: true,
   cmd_ollama_verify_service: true,
   cmd_ollama_generate_title: true,
-  cmd_ollama_validate_model: true,
 
   // Logging
   cmd_logs_append: true,
@@ -48,26 +47,19 @@ export const COMMAND_VERSIONS = {
   cmd_rag_remove_project: true,
   cmd_rag_update_project: true,
   cmd_rag_list_projects: true,
-  cmd_rag_get_project: true,
   cmd_rag_index_project: true,
   cmd_rag_abort_index: true,
   cmd_rag_reindex_project: true,
   cmd_rag_retry_index_project: true,
-  cmd_rag_get_index_status: true,
   cmd_rag_search: true,
   cmd_rag_get_file_chunks: true,
-  cmd_rag_get_project_stats: true,
   cmd_rag_set_embedding_model: true,
-  cmd_rag_validate_embedding_model: true,
   cmd_rag_assemble_context: true,
 
   // Dialog
   cmd_dialog_ask: true,
   cmd_dialog_open_file: true,
   cmd_dialog_save_file: true,
-
-  // Export
-  cmd_conversation_export_markdown: true,
 
   // Opener
   cmd_opener_open_url: true,

@@ -13,13 +13,10 @@ use std::sync::Arc;
 use crate::error_codes;
 use crate::payloads::{ApiResponse, BackendError};
 use crate::rag::context_assembler;
-use crate::rag::embedder::OllamaEmbedder;
 use crate::rag::indexing::{self, IndexOptions};
 use crate::rag::search::RagSearchEngine;
 use crate::rag::store::RagStore;
-use crate::rag::types::{
-    AssembledContext, ChunkRecord, IndexStatus, ProjectStats, RagModelValidation, SearchResult,
-};
+use crate::rag::types::{AssembledContext, ChunkRecord, SearchResult};
 use crate::rag::validation::{
     rag_validation_error, validate_assemble_context, validate_project_id, validate_search,
 };
@@ -106,13 +103,9 @@ pub struct IndexRequest<'a, R: Runtime> {
 
 // Project CRUD request structs and functions live in `projects` sub-module.
 pub use projects::{
-    add_project, get_project, list_projects, remove_project, update_project, AddProjectRequest,
-    GetProjectRequest, ListProjectsRequest, RemoveProjectRequest, UpdateProjectRequest,
+    add_project, list_projects, remove_project, update_project, AddProjectRequest,
+    ListProjectsRequest, RemoveProjectRequest, UpdateProjectRequest,
 };
-
-pub struct GetIndexStatusRequest {
-    pub project_id: String,
-}
 
 pub struct AbortIndexRequest {
     pub project_id: String,
@@ -133,20 +126,10 @@ pub struct GetFileChunksRequest<'a> {
     pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
 }
 
-pub struct GetProjectStatsRequest<'a> {
-    pub project_id: String,
-    pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
-}
-
 pub struct SetEmbeddingModelRequest<'a> {
     pub project_id: String,
     pub model_name: String,
     pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
-}
-
-pub struct ValidateEmbeddingModelRequest {
-    pub base_url: Option<String>,
-    pub model_name: String,
 }
 
 pub struct AssembleContextRequest<'a> {
@@ -160,22 +143,6 @@ pub struct AssembleContextRequest<'a> {
 }
 
 // ---------- Implementations ----------
-
-pub async fn get_index_status(req: GetIndexStatusRequest) -> ApiResponse<IndexStatus> {
-    if let Err(e) = validate_project_id(&req.project_id) {
-        return rag_validation_error(e);
-    }
-    let is_indexing = crate::shared::RAG_INDEX_ABORT_HANDLES.contains_key(&req.project_id);
-    ApiResponse {
-        success: true,
-        data: Some(IndexStatus {
-            project_id: req.project_id,
-            is_indexing,
-            progress: None,
-        }),
-        error: None,
-    }
-}
 
 pub async fn abort_index(req: AbortIndexRequest) -> ApiResponse<bool> {
     if let Err(e) = validate_project_id(&req.project_id) {
@@ -482,26 +449,6 @@ pub async fn get_file_chunks<'a>(req: GetFileChunksRequest<'a>) -> ApiResponse<V
     }
 }
 
-pub async fn get_project_stats<'a>(req: GetProjectStatsRequest<'a>) -> ApiResponse<ProjectStats> {
-    if let Err(e) = validate_project_id(&req.project_id) {
-        return rag_validation_error(e);
-    }
-    let store = req.state.inner();
-    let s = store.read().await;
-    match s.get_project_stats(&req.project_id).await {
-        Ok(stats) => ApiResponse {
-            success: true,
-            data: Some(stats),
-            error: None,
-        },
-        Err(e) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new(error_codes::RAG_STATS_ERROR, e)),
-        },
-    }
-}
-
 pub async fn set_embedding_model<'a>(req: SetEmbeddingModelRequest<'a>) -> ApiResponse<bool> {
     if let Err(e) = validate_project_id(&req.project_id) {
         return rag_validation_error(e);
@@ -525,34 +472,6 @@ pub async fn set_embedding_model<'a>(req: SetEmbeddingModelRequest<'a>) -> ApiRe
         success: true,
         data: Some(true),
         error: None,
-    }
-}
-
-pub async fn validate_embedding_model(
-    req: ValidateEmbeddingModelRequest,
-) -> ApiResponse<RagModelValidation> {
-    if !crate::validation::is_valid_model_name(&req.model_name) {
-        return rag_validation_error(format!("Invalid model name: {:?}", req.model_name));
-    }
-    let ollama_url = match req.base_url {
-        Some(url) => match crate::ollama_url::parse_ollama_base_url(&url) {
-            Ok(u) => u.to_string(),
-            Err(e) => return rag_validation_error(e),
-        },
-        None => "http://localhost:11434".to_string(),
-    };
-    let embedder = OllamaEmbedder::new(&ollama_url, &req.model_name);
-    match embedder.validate().await {
-        Ok(val) => ApiResponse {
-            success: true,
-            data: Some(val),
-            error: None,
-        },
-        Err(e) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new(error_codes::RAG_VALIDATION_ERROR, e)),
-        },
     }
 }
 

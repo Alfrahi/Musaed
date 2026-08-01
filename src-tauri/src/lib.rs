@@ -103,7 +103,6 @@ pub fn run() {
             ollama::commands::cmd_ollama_abort_chat,
             ollama::commands::cmd_ollama_check_health,
             ollama::models::cmd_ollama_get_models,
-            ollama::models::cmd_ollama_validate_model,
             ollama::models::cmd_ollama_pull_model,
             ollama::models::cmd_ollama_abort_pull,
             ollama::models::cmd_ollama_delete_model,
@@ -128,17 +127,13 @@ pub fn run() {
             rag::commands::cmd_rag_remove_project,
             rag::commands::cmd_rag_update_project,
             rag::commands::cmd_rag_list_projects,
-            rag::commands::cmd_rag_get_project,
             rag::commands::cmd_rag_abort_index,
             rag::commands::cmd_rag_index_project,
             rag::commands::cmd_rag_reindex_project,
             rag::commands::cmd_rag_retry_index_project,
-            rag::commands::cmd_rag_get_index_status,
             rag::commands::cmd_rag_search,
             rag::commands::cmd_rag_get_file_chunks,
-            rag::commands::cmd_rag_get_project_stats,
             rag::commands::cmd_rag_set_embedding_model,
-            rag::commands::cmd_rag_validate_embedding_model,
             rag::commands::cmd_rag_assemble_context,
             // Conversation commands
             conversation::commands::cmd_conversations_list,
@@ -148,7 +143,6 @@ pub fn run() {
             conversation::commands::cmd_conversation_delete,
             conversation::commands::cmd_conversations_clear,
             conversation::commands::cmd_conversation_update,
-            conversation::commands::cmd_conversation_export_markdown,
             // Context menu command
             context_menu::cmd_context_menu_show,
             // Dialog commands
