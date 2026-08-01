@@ -25,7 +25,7 @@ const manifest: FeatureManifest = {
     hooks: ['useSidebarActions', 'useSidebarGrouping'],
     utils: ['exportToMarkdown'],
   },
-  ipcEndpoints: ['cmd_dialog_ask'],
+  ipcEndpoints: [],
   stateSchemas: {
     // Both `conversationStore` and `messageStore` are owned by the
     // `conversation` feature. Sidebar reads them to render the conversation
@@ -36,13 +36,7 @@ const manifest: FeatureManifest = {
    *
    * @see STANDARDS.md §13 — Failure Mode Rule
    */
-  failureModes: {
-    cmd_dialog_ask: {
-      fallback: 'Treat as user cancellation — no action taken',
-      retry: 'none',
-      messageKey: 'error.genericError',
-    },
-  },
+  failureModes: {},
   // Sidebar is the conversation-list composition layer. It imports from
   // conversation (display + actions), rag (project browser), and settings
   // (i18n + theme) — declared here so dep-cruiser honors them as the

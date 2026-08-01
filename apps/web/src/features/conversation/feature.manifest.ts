@@ -31,7 +31,6 @@ const manifest: FeatureManifest = {
     'cmd_conversations_clear',
     'cmd_conversations_list',
     'cmd_message_append',
-    'cmd_opener_open_url',
   ],
   /**
    * Performance-sensitive IPC endpoints owned by this feature. The actual
@@ -99,11 +98,6 @@ const manifest: FeatureManifest = {
       fallback: 'Message is already displayed in UI; retry save in background',
       retry: 'exponential',
       messageKey: 'error.messageSaveFailed',
-    },
-    cmd_opener_open_url: {
-      fallback: 'Show error toast with the URL so user can copy it manually',
-      retry: 'none',
-      messageKey: 'error.unsupportedLink',
     },
   },
   // `library` is a declared dependency because InputArea.tsx composes the

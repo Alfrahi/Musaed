@@ -18,8 +18,6 @@ const manifest: FeatureManifest = {
     'cmd_ollama_delete_model',
     'cmd_ollama_pull_model',
     'cmd_ollama_abort_pull',
-    'cmd_dialog_ask',
-    'cmd_opener_open_url',
   ],
   /**
    * Performance-sensitive IPC endpoints owned by this feature. The actual
@@ -60,16 +58,6 @@ const manifest: FeatureManifest = {
       fallback: 'Silently ignore — abort is fire-and-forget',
       retry: 'none',
       messageKey: 'error.genericError',
-    },
-    cmd_dialog_ask: {
-      fallback: 'Treat as user cancellation — no action taken',
-      retry: 'none',
-      messageKey: 'error.genericError',
-    },
-    cmd_opener_open_url: {
-      fallback: 'Show error toast with the URL so user can copy it manually',
-      retry: 'none',
-      messageKey: 'error.unsupportedLink',
     },
   },
   dependencies: [],
