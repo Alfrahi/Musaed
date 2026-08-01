@@ -1,4 +1,4 @@
-// Shared mocks for useChatActions tests
+// Shared mocks for conversation hook tests
 import { vi } from 'vitest';
 
 // Mock translation hook

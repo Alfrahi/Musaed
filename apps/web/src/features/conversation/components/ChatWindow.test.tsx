@@ -44,8 +44,8 @@ vi.mock('./MarkdownRenderer', () => ({
 
 // Shared mock for sendMessage to allow assertion
 const mockSendMessage = vi.fn();
-vi.mock('../hooks/useChatActions', () => ({
-  useChatActions: () => ({
+vi.mock('../hooks/useChatSend', () => ({
+  useChatSend: () => ({
     sendMessage: mockSendMessage,
   }),
 }));
@@ -249,7 +249,7 @@ describe('ChatWindow', () => {
         },
       });
 
-      const { sendMessage } = (await import('../hooks/useChatActions')).useChatActions();
+      const { sendMessage } = (await import('../hooks/useChatSend')).useChatSend();
       render(<ChatWindow />);
 
       // Error description should be displayed

@@ -1,7 +1,7 @@
 // Tests for useChatSend — the send pipeline (validation → RAG → messages → chatApi → persist).
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from './useChatActions/shared/setup';
-import { mockAllDependencies, mockIpc, mockStores, mockUtils } from './useChatActions/shared/mocks';
+import { renderHook, act } from './shared/setup';
+import { mockAllDependencies, mockIpc, mockStores, mockUtils } from './shared/mocks';
 
 // Mock the sibling hooks so useChatSend's compose boundary is tested in isolation.
 const chatRagMock = vi.hoisted(() => ({ assembleChatRag: vi.fn() }));

@@ -1,7 +1,7 @@
 // Tests for useChatRag — RAG citation mapping for the send pipeline.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from './useChatActions/shared/setup';
-import { mockAllDependencies } from './useChatActions/shared/mocks';
+import { renderHook, act } from './shared/setup';
+import { mockAllDependencies } from './shared/mocks';
 
 // Mock the rag feature hook so we can drive assembleContext without its store deps.
 const assembleContextMock = vi.hoisted(() => vi.fn());

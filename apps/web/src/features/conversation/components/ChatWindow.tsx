@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import MessageBubble from './MessageBubble';
 import ChatWindowSkeleton from './ChatWindowSkeleton';
 import EmptyState, { type OnboardingState } from './EmptyState';
-import { useChatActions } from '../hooks/useChatActions';
+import { useChatSend } from '../hooks/useChatSend';
 import { useRegenerateMessage } from '../hooks/useRegenerateMessage';
 import { useTranslation, type TranslationKey } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -204,7 +204,7 @@ const ChatWindow = ({
   const isOllamaConnected = useUIStore((s) => s.isOllamaConnected);
   const models = useModelStore((s) => s.models);
   const language = useSettingsStore((s) => s.globalSettings.language);
-  const { sendMessage } = useChatActions();
+  const { sendMessage } = useChatSend();
   const { t, formatNumber } = useTranslation(language);
   const messageLabels = useMessageLabels(t);
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useConversationActions } from './useConversationActions';
-import { mockAllDependencies } from './useChatActions/shared/mocks';
+import { mockAllDependencies } from './shared/mocks';
 
 beforeEach(() => {
   mockAllDependencies();

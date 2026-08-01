@@ -1,7 +1,7 @@
 // Tests for useChatStream — stream-failure error handling + abort.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from './useChatActions/shared/setup';
-import { mockAllDependencies, mockStores, mockUtils } from './useChatActions/shared/mocks';
+import { renderHook, act } from './shared/setup';
+import { mockAllDependencies, mockStores, mockUtils } from './shared/mocks';
 
 // Mock useConversationActions so abortMessage's stopStreaming delegation
 // can be observed in isolation. The shared mocks don't mock this sibling.

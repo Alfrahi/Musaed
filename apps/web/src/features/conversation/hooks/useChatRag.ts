@@ -23,7 +23,7 @@ export type ChatRagResult = {
  * beyond the already-declared `rag` dependency's public hook.
  *
  * Failures are swallowed — RAG is best-effort enrichment; a failed lookup MUST
- * NOT block the chat send (see useChatActions ragIntegration test).
+ * NOT block the chat send (see useChatSend ragIntegration test).
  */
 export function useChatRag(): {
   assembleChatRag: (query: string) => Promise<ChatRagResult>;

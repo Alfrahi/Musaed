@@ -5,7 +5,7 @@ import { useConversationStore } from '@/store/conversation-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { useModelStore } from '@/store/model-store';
 import { useStreamingStore } from '@/store/streaming-store';
-import { useChatActions } from './useChatActions';
+import { useChatSend } from './useChatSend';
 import { useAttachmentManager } from './useAttachmentManager';
 import { useTranslation } from '@/lib/i18n';
 
@@ -15,7 +15,7 @@ export const useChatInput = () => {
 
   const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
-  const { sendMessage } = useChatActions();
+  const { sendMessage } = useChatSend();
   const {
     images,
     files,

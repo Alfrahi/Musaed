@@ -5,7 +5,7 @@ import * as actual from '@/store/ui-store';
 // Preserve original hooks that tests may rely on
 export const useUIStore = actual.useUIStore;
 
-// Mock the error setter used by useChatActions
+// Mock the error setter used by chat send/stream hooks
 export const useSetUIError = vi.fn();
 
 // Re-export other hooks to avoid missing exports

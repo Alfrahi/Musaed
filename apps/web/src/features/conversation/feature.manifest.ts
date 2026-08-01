@@ -10,7 +10,7 @@ const manifest: FeatureManifest = {
   version: '1.0.0',
   publicApi: {
     hooks: [
-      'useChatActions',
+      'useChatSend',
       'useConversationActions',
       'useConversationMessages',
       'useAttachmentManager',
