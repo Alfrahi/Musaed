@@ -25,7 +25,6 @@ const manifest: FeatureManifest = {
     'cmd_ollama_chat',
     'cmd_ollama_abort_chat',
     'cmd_ollama_generate_title',
-    'cmd_ollama_get_models',
     'cmd_conversation_create',
     'cmd_conversation_delete',
     'cmd_conversation_get',
@@ -70,11 +69,6 @@ const manifest: FeatureManifest = {
       fallback: 'Use default title — title generation is non-critical',
       retry: 'none',
       messageKey: 'error.genericError',
-    },
-    cmd_ollama_get_models: {
-      fallback: 'Show cached model list if available, otherwise show empty library',
-      retry: 'once',
-      messageKey: 'error.failedToFetchModels',
     },
     cmd_conversation_create: {
       fallback: 'Show error toast and keep the create dialog open',

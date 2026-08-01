@@ -39,10 +39,6 @@ const manifest: FeatureManifest = {
     'cmd_rag_assemble_context',
     'cmd_rag_get_file_chunks',
     'cmd_rag_set_embedding_model',
-    // Cross-feature IPC: ProjectSettings needs embedding model list.
-    // TODO: route through library's public API to eliminate dual-ownership
-    // (CodebaseAudits/Architecture.md Finding 2a/2b)
-    'cmd_ollama_get_models',
     'cmd_dialog_ask',
   ],
   /**
@@ -128,11 +124,6 @@ const manifest: FeatureManifest = {
       fallback: 'Keep previous embedding model selection',
       retry: 'once',
       messageKey: 'error.genericError',
-    },
-    cmd_ollama_get_models: {
-      fallback: 'Show cached model list if available, otherwise show empty list',
-      retry: 'once',
-      messageKey: 'error.failedToFetchModels',
     },
     cmd_dialog_ask: {
       fallback: 'Treat as user cancellation — no action taken',
