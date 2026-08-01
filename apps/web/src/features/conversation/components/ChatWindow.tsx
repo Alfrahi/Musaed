@@ -10,7 +10,6 @@ import { useMessageStore } from '@/store/message-store';
 import type { StreamingState } from '@/store/streaming-store';
 import { useSettingsStore } from '@/store';
 import { useModelStore } from '@/store/model-store';
-import { useChatInputStore } from '@/store/chat-input-store';
 import { ErrorFallback } from '@/components/ui';
 import { Button } from '@/components/ui/button';
 import MessageBubble from './MessageBubble';
@@ -18,6 +17,7 @@ import ChatWindowSkeleton from './ChatWindowSkeleton';
 import EmptyState, { type OnboardingState } from './EmptyState';
 import { useChatSend } from '../hooks/useChatSend';
 import { useRegenerateMessage } from '../hooks/useRegenerateMessage';
+import { fireEditPrompt } from '../utils/edit-prompt-signal';
 import { useTranslation, type TranslationKey } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Message } from '@musaed/contracts';
@@ -65,10 +65,9 @@ const ScrollButton = ({ onClick, label }: { onClick: () => void; label: string }
 function useMessageBubbleActions(
   currentConversationId: string | null,
   messages: Message[],
-  sendMessage: (input: string, images?: string[]) => void
+  sendMessage: (input: string, images?: string[]) => void,
+  onEditPrompt: (prompt: string) => void
 ) {
-  const setEditPrompt = useChatInputStore((s) => s.setEditPrompt);
-
   const handleRetry = useCallback(() => {
     if (!currentConversationId) return;
     const lastUser = messages.findLast((m) => m.role === 'user');
@@ -91,18 +90,18 @@ function useMessageBubbleActions(
       if (assistantIdx === -1) return;
       const lastUser = messages.slice(0, assistantIdx).findLast((m) => m.role === 'user');
       if (!lastUser) return;
-      setEditPrompt(lastUser.content);
+      onEditPrompt(lastUser.content);
     },
-    [messages, setEditPrompt]
+    [messages, onEditPrompt]
   );
 
   const handleEdit = useCallback(
     (userMsgId: string) => {
       const msg = messages.find((m) => m.id === userMsgId);
       if (!msg || msg.role !== 'user') return;
-      setEditPrompt(msg.content);
+      onEditPrompt(msg.content);
     },
-    [messages, setEditPrompt]
+    [messages, onEditPrompt]
   );
 
   return { handleRetry, handleContinue, handleEditPrompt, handleEdit };
@@ -225,7 +224,8 @@ const ChatWindow = ({
   const { handleRetry, handleContinue, handleEditPrompt, handleEdit } = useMessageBubbleActions(
     currentConversationId,
     messages,
-    sendMessage
+    sendMessage,
+    fireEditPrompt
   );
 
   const onboarding = getOnboardingState(

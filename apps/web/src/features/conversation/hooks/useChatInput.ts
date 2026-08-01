@@ -8,6 +8,7 @@ import { useStreamingStore } from '@/store/streaming-store';
 import { useChatSend } from './useChatSend';
 import { useAttachmentManager } from './useAttachmentManager';
 import { useTranslation } from '@/lib/i18n';
+import { subscribeEditPrompt } from '../utils/edit-prompt-signal';
 
 export const useChatInput = () => {
   const [input, setInput] = useState('');
@@ -65,6 +66,15 @@ export const useChatInput = () => {
     },
     [onSend]
   );
+
+  // Subscribe to "Edit prompt" / "Edit" signals from MessageBubble hover
+  // actions (Prompt 14). One-shot: populates the textarea then focuses it.
+  useEffect(() => {
+    return subscribeEditPrompt((prompt) => {
+      setInput(prompt);
+      textareaRef.current?.focus();
+    });
+  }, []);
 
   const currentConversationId = useConversationStore.getState().currentConversationId;
   const isStreaming = currentConversationId
