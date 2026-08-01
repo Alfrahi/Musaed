@@ -17,7 +17,6 @@ const manifest: FeatureManifest = {
   },
   ipcEndpoints: [], // Composition root — IPC is delegated to mounted features
   stateSchemas: {}, // No feature-specific state (uses global stores)
-  persistenceSchemas: {}, // No persistent storage
   /**
    * Failure modes: layout has no IPC endpoints of its own — all IPC is
    * delegated to mounted features. No failureModes needed.

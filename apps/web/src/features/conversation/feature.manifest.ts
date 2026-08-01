@@ -50,10 +50,6 @@ const manifest: FeatureManifest = {
     messageStore: 0, // in-memory cache only, no persistence version
     streamingStore: 2,
   },
-  persistenceSchemas: {
-    conversation: 'musaed-conversation-storage',
-    // message store is handled by Rust backend - in-memory cache only
-  },
   /**
    * Failure modes for this feature's IPC endpoints.
    *

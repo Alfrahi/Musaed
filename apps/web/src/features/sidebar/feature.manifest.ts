@@ -31,10 +31,6 @@ const manifest: FeatureManifest = {
     // `conversation` feature. Sidebar reads them to render the conversation
     // list but does not own their schemas.
   },
-  persistenceSchemas: {
-    conversations: 'musaed-conversation-storage',
-    // messages store is handled by Rust backend - in-memory cache only
-  },
   /**
    * Failure modes for this feature's IPC endpoints.
    *

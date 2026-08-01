@@ -2,46 +2,13 @@
 
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
-// import { persist, createJSONStorage } from 'zustand/middleware'; // persistence moved to Rust
 import { type Message } from '@musaed/contracts';
-// import { createTauriStorage } from '@/lib/tauri-storage'; // persistence moved to Rust
-// import { useUIStore } from '@/store/ui-store'; // no longer needed
 import { traceStoreMutation, traceAppendToken, resetTokenCounter } from '@/lib/store-tracing';
-// import { logger } from '@/lib/logger'; // no longer needed
 
 /** Internal buffer for efficient stream accumulation. */
 interface StreamingBuffer {
   chunks: string[];
 }
-
-// Default state for streaming store.
-// Note: flushedStreams is an Array<string> (not Set) so it round-trips
-// through JSON persistence cleanly — JSON has no Set representation.
-const DEFAULT_STREAMING_STATE = {
-  liveContent: {} as Record<string, StreamingBuffer>,
-  pendingMetrics: {} as Record<string, Partial<Message>>,
-  activeStreams: {} as Record<string, string>,
-  flushedStreams: [] as string[],
-};
-
-// Migrations for streaming store.
-// v1 → v2: defensive coercion of the legacy persisted `flushedStreams` Set,
-// which JSON.stringify rendered as `{}` (no Set representation). Coerced to
-// `string[]` so rehydrate never hands a non-array to downstream `.includes`.
-const _migrateToFlushArray = (data: unknown): Partial<StreamingState> => {
-  const persisted =
-    typeof data === 'object' && data !== null ? (data as Partial<StreamingState>) : {};
-  return {
-    ...DEFAULT_STREAMING_STATE,
-    ...persisted,
-    flushedStreams: Array.isArray(persisted.flushedStreams) ? persisted.flushedStreams : [],
-  };
-};
-
-// const STREAMING_MIGRATIONS: Record<number, (data: unknown) => unknown> = {
-//   1: migrateToFlushArray,
-//   2: migrateToFlushArray,
-// };
 
 /**
  * Body of `flushToConversation`, lifted out of the store-creator arrow so

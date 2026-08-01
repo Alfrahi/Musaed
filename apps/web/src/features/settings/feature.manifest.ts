@@ -41,10 +41,6 @@ const manifest: FeatureManifest = {
     // `conversationStore` is owned by the `conversation` feature — settings
     // reads it via `useStorageActions` but does not own its schema.
   },
-  persistenceSchemas: {
-    settings: 'musaed-settings-storage',
-    // logs are handled by Rust backend
-  },
   /**
    * Failure modes for this feature's IPC endpoints.
    *

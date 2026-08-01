@@ -16,7 +16,6 @@ const manifest: FeatureManifest = {
   },
   ipcEndpoints: ['cmd_opener_open_url'],
   stateSchemas: {}, // No feature-specific state
-  persistenceSchemas: {}, // No persistent storage
   /**
    * Failure modes for this feature's IPC endpoints.
    *
