@@ -1,8 +1,7 @@
-//! Model listing, validation, pulling, deletion, and service verification.
+//! Model listing, pulling, deletion, and service verification.
 //!
 //! Contains the following Tauri commands:
 //! - [`cmd_ollama_get_models`] — list installed models
-//! - [`cmd_ollama_validate_model`] — check if a model exists on the server
 //! - [`cmd_ollama_pull_model`] — stream-download a model from the registry
 //! - [`cmd_ollama_abort_pull`] — cancel an in-progress pull
 //! - [`cmd_ollama_delete_model`] — remove a model from the server
@@ -11,7 +10,7 @@
 //! All commands are thin adapters that delegate business logic to
 //! [`super::model_service::ModelService`].
 
-use crate::payloads::{ApiResponse, ModelValidation, OllamaModel};
+use crate::payloads::{ApiResponse, OllamaModel};
 use tauri::{AppHandle, Runtime};
 
 use super::model_service::{ModelService, PullModelRequest};
@@ -32,36 +31,6 @@ pub async fn cmd_ollama_get_models(base_url: String) -> ApiResponse<Vec<OllamaMo
             data: None,
             error: Some(e),
         },
-    }
-}
-
-// ==================== MODEL VALIDATION ====================
-
-#[tauri::command]
-pub async fn cmd_ollama_validate_model(
-    base_url: String,
-    model_name: String,
-) -> ApiResponse<ModelValidation> {
-    let service = ModelService;
-    match service.validate_model(&base_url, &model_name).await {
-        Ok(validation) => ApiResponse {
-            success: true,
-            data: Some(validation),
-            error: None,
-        },
-        Err(e) => {
-            // Preserve original behaviour: on error, return a ModelValidation
-            // with is_valid: false alongside the error.
-            ApiResponse {
-                success: false,
-                data: Some(ModelValidation {
-                    is_valid: false,
-                    model_name,
-                    details: None,
-                }),
-                error: Some(e),
-            }
-        }
     }
 }
 

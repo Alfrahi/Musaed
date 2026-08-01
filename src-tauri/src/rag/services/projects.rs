@@ -33,11 +33,6 @@ pub struct ListProjectsRequest {
     pub store: Arc<RwLock<RagStore>>,
 }
 
-pub struct GetProjectRequest {
-    pub project_id: String,
-    pub store: Arc<RwLock<RagStore>>,
-}
-
 pub async fn add_project(req: AddProjectRequest) -> ApiResponse<RagProject> {
     if let Err(e) = validate_add_project(
         &req.name,
@@ -149,33 +144,6 @@ pub async fn list_projects(req: ListProjectsRequest) -> ApiResponse<Vec<RagProje
             success: false,
             data: None,
             error: Some(BackendError::new(error_codes::RAG_LIST_ERROR, e)),
-        },
-    }
-}
-
-pub async fn get_project(req: GetProjectRequest) -> ApiResponse<RagProject> {
-    if let Err(e) = validate_project_id(&req.project_id) {
-        return rag_validation_error(e);
-    }
-    let s = req.store.read().await;
-    match s.get_project(&req.project_id).await {
-        Ok(Some(project)) => ApiResponse {
-            success: true,
-            data: Some(project),
-            error: None,
-        },
-        Ok(None) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new(
-                error_codes::RAG_NOT_FOUND,
-                "Project not found",
-            )),
-        },
-        Err(e) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(BackendError::new(error_codes::RAG_FETCH_ERROR, e)),
         },
     }
 }

@@ -42,7 +42,6 @@ export const ollamaApi = {
   pullModel: vi.fn().mockResolvedValue(undefined),
   checkHealth: vi.fn().mockResolvedValue(null),
   verifyService: vi.fn().mockResolvedValue('ok'),
-  validateModel: vi.fn().mockResolvedValue(null),
   downloadModel: vi.fn().mockResolvedValue(true),
   abortPull: vi.fn().mockResolvedValue(undefined),
 };
@@ -57,15 +56,11 @@ export const ragApi = {
   removeProject: vi.fn().mockResolvedValue(true),
   updateProject: vi.fn().mockResolvedValue(null),
   listProjects: vi.fn().mockResolvedValue([]),
-  getProject: vi.fn().mockResolvedValue(null),
   indexProject: vi.fn().mockResolvedValue(true),
   abortIndex: vi.fn().mockResolvedValue(true),
   reindexProject: vi.fn().mockResolvedValue(true),
-  getIndexStatus: vi.fn().mockResolvedValue(null),
   getFileChunks: vi.fn().mockResolvedValue([]),
-  getProjectStats: vi.fn().mockResolvedValue(null),
   setEmbeddingModel: vi.fn().mockResolvedValue(true),
-  validateEmbeddingModel: vi.fn().mockResolvedValue(null),
   getProjects: vi.fn().mockResolvedValue([]),
   createProject: vi.fn().mockResolvedValue(true),
   deleteProject: vi.fn().mockResolvedValue(true),
@@ -141,11 +136,6 @@ export function subscribeIpcViolations(listener: () => void): () => void {
 // Mock dialogApi
 export const dialogApi = {
   ask: vi.fn().mockResolvedValue(true),
-};
-
-// Mock exportApi
-export const exportApi = {
-  exportMarkdown: vi.fn().mockResolvedValue(true),
 };
 
 // Mock openerApi

@@ -36,7 +36,7 @@ describe('Contracts: IPC Latency Budgets', () => {
 
   it('heavy RAG ops have looser budgets than status checks', () => {
     expect(IPC_LATENCY_BUDGETS.cmd_rag_search).toBeGreaterThan(
-      IPC_LATENCY_BUDGETS.cmd_rag_get_project
+      IPC_LATENCY_BUDGETS.cmd_rag_list_projects
     );
     expect(IPC_LATENCY_BUDGETS.cmd_rag_assemble_context).toBeGreaterThanOrEqual(
       IPC_LATENCY_BUDGETS.cmd_rag_search

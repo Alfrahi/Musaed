@@ -7,8 +7,6 @@ import {
   type OllamaHealth,
   OllamaModelSchema,
   OllamaHealthSchema,
-  type ModelValidation,
-  ModelValidationSchema,
   ModelNameSchema,
   RequestIdSchema,
   LanguageSchema,
@@ -19,10 +17,7 @@ import {
   VALIDATION_LIMITS,
   RagProjectSchema,
   SearchResultSchema,
-  ProjectStatsSchema,
   ChunkRecordSchema,
-  IndexStatusSchema,
-  RagModelValidationSchema,
   RAG_VALIDATION_LIMITS,
   MAX_FILE_PATH_LEN,
   sanitizeError,
@@ -59,15 +54,7 @@ import {
   type ContextMenuResponse,
   type ContextMenuLabels,
 } from '@musaed/contracts';
-import type {
-  RagProject,
-  SearchResult,
-  ProjectStats,
-  ChunkRecord,
-  IndexStatus,
-  RagModelValidation,
-  AssembledContext,
-} from '@musaed/contracts';
+import type { RagProject, SearchResult, ChunkRecord, AssembledContext } from '@musaed/contracts';
 import toast from 'react-hot-toast';
 import { translate, getActiveLanguage } from '@/lib/i18n';
 import { config } from '@/lib/config';
@@ -234,10 +221,6 @@ export interface CommandMap {
     };
     return: string;
   };
-  cmd_ollama_validate_model: {
-    args: { baseUrl: string; modelName: string };
-    return: ModelValidation;
-  };
   cmd_logs_append: { args: { entry: string }; return: void };
   cmd_logs_request_clear_token: { args: Record<string, never>; return: string };
   cmd_logs_clear: { args: { token: string }; return: void };
@@ -261,12 +244,6 @@ export interface CommandMap {
 
   // Dialog commands
   cmd_dialog_ask: { args: { title: string; message: string; kind?: string }; return: boolean };
-
-  // Export commands
-  cmd_conversation_export_markdown: {
-    args: { conversationId: string; path: string };
-    return: boolean;
-  };
 
   // Opener commands
   cmd_opener_open_url: { args: { url: string }; return: boolean };
@@ -312,7 +289,6 @@ export interface CommandMap {
     return: RagProject;
   };
   cmd_rag_list_projects: { args: Record<string, never>; return: RagProject[] };
-  cmd_rag_get_project: { args: { projectId: string }; return: RagProject };
   cmd_rag_index_project: {
     args: { projectId: string; force?: boolean; baseUrl?: string };
     return: boolean;
@@ -320,18 +296,12 @@ export interface CommandMap {
   cmd_rag_abort_index: { args: { projectId: string }; return: boolean };
   cmd_rag_reindex_project: { args: { projectId: string; baseUrl?: string }; return: boolean };
   cmd_rag_retry_index_project: { args: { projectId: string; baseUrl?: string }; return: boolean };
-  cmd_rag_get_index_status: { args: { projectId: string }; return: IndexStatus };
   cmd_rag_search: {
     args: { projectId: string; query: string; topK?: number; threshold?: number; baseUrl?: string };
     return: SearchResult[];
   };
   cmd_rag_get_file_chunks: { args: { projectId: string; filePath: string }; return: ChunkRecord[] };
-  cmd_rag_get_project_stats: { args: { projectId: string }; return: ProjectStats };
   cmd_rag_set_embedding_model: { args: { projectId: string; modelName: string }; return: boolean };
-  cmd_rag_validate_embedding_model: {
-    args: { baseUrl?: string; modelName: string };
-    return: RagModelValidation;
-  };
   cmd_rag_assemble_context: {
     args: {
       projectId: string;
@@ -418,7 +388,6 @@ const CommandInputSchemas: {
       .max(VALIDATION_LIMITS.MAX_TITLE_INPUT_LEN, 'assistantMessage exceeds size limit'),
     language: LanguageSchema,
   }),
-  cmd_ollama_validate_model: z.object({ baseUrl: z.string(), modelName: ModelNameSchema }),
   cmd_logs_append: z.object({ entry: LogEntrySchema }),
   cmd_logs_request_clear_token: undefined,
   cmd_logs_clear: z.object({ token: LogClearTokenSchema }),
@@ -443,12 +412,6 @@ const CommandInputSchemas: {
     title: z.string().min(1).max(VALIDATION_LIMITS.MAX_TITLE_INPUT_LEN),
     message: z.string().min(1).max(VALIDATION_LIMITS.MAX_MESSAGE_CONTENT_LEN),
     kind: z.string().optional(),
-  }),
-
-  // Export command input schemas
-  cmd_conversation_export_markdown: z.object({
-    conversationId: z.string().min(1),
-    path: z.string().min(1).max(RAG_VALIDATION_LIMITS.MAX_FILE_PATH_LEN),
   }),
 
   // Opener command input schemas
@@ -524,7 +487,6 @@ const CommandInputSchemas: {
       .optional(),
   }),
   cmd_rag_list_projects: undefined,
-  cmd_rag_get_project: z.object({ projectId: z.string().min(1) }),
   cmd_rag_index_project: z.object({
     projectId: z.string().min(1),
     force: z.boolean().optional(),
@@ -539,7 +501,6 @@ const CommandInputSchemas: {
     projectId: z.string().min(1),
     baseUrl: z.string().optional(),
   }),
-  cmd_rag_get_index_status: z.object({ projectId: z.string().min(1) }),
   cmd_rag_search: z.object({
     projectId: z.string().min(1),
     query: z.string().min(1).max(RAG_VALIDATION_LIMITS.MAX_SEARCH_QUERY_LEN),
@@ -560,13 +521,8 @@ const CommandInputSchemas: {
     projectId: z.string().min(1),
     filePath: z.string().min(1).max(MAX_FILE_PATH_LEN),
   }),
-  cmd_rag_get_project_stats: z.object({ projectId: z.string().min(1) }),
   cmd_rag_set_embedding_model: z.object({
     projectId: z.string().min(1),
-    modelName: ModelNameSchema,
-  }),
-  cmd_rag_validate_embedding_model: z.object({
-    baseUrl: z.string().optional(),
     modelName: ModelNameSchema,
   }),
   cmd_rag_assemble_context: z.object({
@@ -643,7 +599,6 @@ const CommandReturnSchemas: {
   cmd_ollama_check_health: OllamaHealthSchema,
   cmd_ollama_verify_service: z.string(),
   cmd_ollama_generate_title: z.string(),
-  cmd_ollama_validate_model: ModelValidationSchema,
   cmd_logs_append: voidSchema,
   cmd_logs_request_clear_token: z.string(),
   cmd_logs_clear: voidSchema,
@@ -656,9 +611,6 @@ const CommandReturnSchemas: {
 
   // Dialog command return schemas
   cmd_dialog_ask: z.boolean(),
-
-  // Export command return schemas
-  cmd_conversation_export_markdown: z.boolean(),
 
   // Opener command return schemas
   cmd_opener_open_url: z.boolean(),
@@ -684,17 +636,13 @@ const CommandReturnSchemas: {
   cmd_rag_remove_project: z.boolean(),
   cmd_rag_update_project: RagProjectSchema,
   cmd_rag_list_projects: z.array(RagProjectSchema),
-  cmd_rag_get_project: RagProjectSchema,
   cmd_rag_index_project: z.boolean(),
   cmd_rag_abort_index: z.boolean(),
   cmd_rag_reindex_project: z.boolean(),
   cmd_rag_retry_index_project: z.boolean(),
-  cmd_rag_get_index_status: IndexStatusSchema,
   cmd_rag_search: z.array(SearchResultSchema),
   cmd_rag_get_file_chunks: z.array(ChunkRecordSchema),
-  cmd_rag_get_project_stats: ProjectStatsSchema,
   cmd_rag_set_embedding_model: z.boolean(),
-  cmd_rag_validate_embedding_model: RagModelValidationSchema,
   cmd_rag_assemble_context: AssembledContextSchema,
   cmd_conversations_list: z.array(ConversationSchema),
   cmd_conversation_get: ConversationSchema,
@@ -857,7 +805,6 @@ function recordIpcLatency(command: string, latencyMs: number, budgetMs: number):
  * - pullModel: downloads a model (async, void return)
  * - checkHealth: checks if Ollama is running (quiet, no toast)
  * - verifyService: performs a simple ping to verify Ollama responds
- * - validateModel: checks if a model name is valid and available
  */
 export const ollamaApi = {
   /**
@@ -900,14 +847,6 @@ export const ollamaApi = {
    * @returns A status string (typically "ok") or empty on failure
    */
   verifyService: (baseUrl: string) => callInternal('cmd_ollama_verify_service', { baseUrl }),
-  /**
-   * Validates that a model exists and is ready for use.
-   * @param baseUrl - The Ollama server URL
-   * @param modelName - The model name to validate
-   * @returns Validation result with status and optional error message
-   */
-  validateModel: (baseUrl: string, modelName: string) =>
-    callInternal('cmd_ollama_validate_model', { baseUrl, modelName }),
 };
 
 /**
@@ -1037,20 +976,6 @@ export const dialogApi = {
 };
 
 /**
- * Export API - handles data export functionality.
- */
-export const exportApi = {
-  /**
-   * Exports a conversation to Markdown format.
-   * @param conversationId - The conversation ID to export
-   * @param path - The file path to save to
-   * @returns true if export succeeded, false otherwise
-   */
-  markdown: (conversationId: string, path: string) =>
-    callInternal('cmd_conversation_export_markdown', { conversationId, path }),
-};
-
-/**
  * Opener API - handles external URL opening.
  */
 export const openerApi = {
@@ -1173,12 +1098,6 @@ export const ragApi = {
    */
   listProjects: () => callInternal('cmd_rag_list_projects', {}),
   /**
-   * Fetches a single project by ID.
-   * @param projectId - The project identifier
-   * @returns The RagProject object or null if not found
-   */
-  getProject: (projectId: string) => callInternal('cmd_rag_get_project', { projectId }),
-  /**
    * Triggers indexing of all files in a project.
    * @param projectId - The project identifier
    * @param force - If true, reindexes already indexed files
@@ -1210,12 +1129,6 @@ export const ragApi = {
   retryIndexProject: (projectId: string, baseUrl?: string) =>
     callInternal('cmd_rag_retry_index_project', { projectId, baseUrl }),
   /**
-   * Gets the current indexing status for a project.
-   * @param projectId - The project identifier
-   * @returns IndexStatus object with progress and state
-   */
-  getIndexStatus: (projectId: string) => callInternal('cmd_rag_get_index_status', { projectId }),
-  /**
    * Performs a semantic search over indexed content.
    * @param args - { projectId, query, topK?, threshold?, baseUrl? }
    * @returns Array of SearchResult with matched chunks and scores
@@ -1230,12 +1143,6 @@ export const ragApi = {
   getFileChunks: (projectId: string, filePath: string) =>
     callInternal('cmd_rag_get_file_chunks', { projectId, filePath }),
   /**
-   * Gets aggregate statistics for a project (file count, chunk count, size, etc.).
-   * @param projectId - The project identifier
-   * @returns ProjectStats object or null on failure
-   */
-  getProjectStats: (projectId: string) => callInternal('cmd_rag_get_project_stats', { projectId }),
-  /**
    * Changes the embedding model used by a project.
    * @param projectId - The project identifier
    * @param modelName - Name of the embedding model to switch to
@@ -1243,14 +1150,6 @@ export const ragApi = {
    */
   setEmbeddingModel: (projectId: string, modelName: string) =>
     callInternal('cmd_rag_set_embedding_model', { projectId, modelName }),
-  /**
-   * Validates that an embedding model is available and acceptable.
-   * @param baseUrl - Optional Ollama base URL (uses default if omitted)
-   * @param modelName - The embedding model name to validate
-   * @returns RagModelValidation with status and optional message
-   */
-  validateEmbeddingModel: (baseUrl: string | undefined, modelName: string) =>
-    callInternal('cmd_rag_validate_embedding_model', { baseUrl, modelName }),
   /**
    * Performs semantic search and assembles a RAG context prompt in a single IPC call.
    * Replaces the previous two-step process of search + client-side context assembly.
