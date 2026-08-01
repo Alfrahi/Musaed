@@ -2,12 +2,12 @@
 
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
-import { persist, createJSONStorage } from 'zustand/middleware';
+// import { persist, createJSONStorage } from 'zustand/middleware'; // persistence moved to Rust
 import { type Message } from '@musaed/contracts';
-import { createTauriStorage } from '@/lib/tauri-storage';
-import { useUIStore } from '@/store/ui-store';
+// import { createTauriStorage } from '@/lib/tauri-storage'; // persistence moved to Rust
+// import { useUIStore } from '@/store/ui-store'; // no longer needed
 import { traceStoreMutation, traceAppendToken, resetTokenCounter } from '@/lib/store-tracing';
-import { logger } from '@/lib/logger';
+// import { logger } from '@/lib/logger'; // no longer needed
 
 /** Internal buffer for efficient stream accumulation. */
 interface StreamingBuffer {
@@ -28,7 +28,7 @@ const DEFAULT_STREAMING_STATE = {
 // v1 → v2: defensive coercion of the legacy persisted `flushedStreams` Set,
 // which JSON.stringify rendered as `{}` (no Set representation). Coerced to
 // `string[]` so rehydrate never hands a non-array to downstream `.includes`.
-const migrateToFlushArray = (data: unknown): Partial<StreamingState> => {
+const _migrateToFlushArray = (data: unknown): Partial<StreamingState> => {
   const persisted =
     typeof data === 'object' && data !== null ? (data as Partial<StreamingState>) : {};
   return {
@@ -38,10 +38,10 @@ const migrateToFlushArray = (data: unknown): Partial<StreamingState> => {
   };
 };
 
-const STREAMING_MIGRATIONS: Record<number, (data: unknown) => unknown> = {
-  1: migrateToFlushArray,
-  2: migrateToFlushArray,
-};
+// const STREAMING_MIGRATIONS: Record<number, (data: unknown) => unknown> = {
+//   1: migrateToFlushArray,
+//   2: migrateToFlushArray,
+// };
 
 /**
  * Body of `flushToConversation`, lifted out of the store-creator arrow so
@@ -126,134 +126,95 @@ export interface StreamingState {
 }
 
 const _useStreamingStore = createWithEqualityFn<StreamingState>()(
-  persist(
-    (set, get) => ({
-      liveContent: {},
-      pendingMetrics: {},
-      activeStreams: {},
-      flushedStreams: [] as string[],
+  (set, get) => ({
+    liveContent: {},
+    pendingMetrics: {},
+    activeStreams: {},
+    flushedStreams: [] as string[],
 
-      appendToken: (conversationId, token) => {
-        // Hot path — observe 1-in-N via the specialized counter helper
-        // so trace volume stays bounded regardless of stream rate.
-        // Read the pre-mutation chunk count for context; the helper
-        // maintains its own per-conversation counter for the 1/N gate.
-        const currentChunks = get().liveContent[conversationId]?.chunks.length ?? 0;
-        traceAppendToken(conversationId, currentChunks);
-        set((state) => {
-          // Only append tokens for conversations that are actively streaming
-          // This prevents zombie buffer creation after clearStream is called
-          if (!(conversationId in state.activeStreams)) {
-            return state;
-          }
-
-          const buffer = state.liveContent[conversationId] ?? { chunks: [] };
-          return {
-            liveContent: {
-              ...state.liveContent,
-              [conversationId]: {
-                chunks: [...buffer.chunks, token],
-              },
-            },
-          };
-        });
-      },
-
-      setPendingMetrics: (conversationId, metrics) => {
-        set((state) => ({
-          pendingMetrics: {
-            ...state.pendingMetrics,
-            [conversationId]: { ...state.pendingMetrics[conversationId], ...metrics },
-          },
-        }));
-      },
-
-      flushToConversation: (conversationId) => runFlushToConversation(conversationId, get, set),
-
-      markFlushed: (conversationId) => {
-        set((state) => {
-          if (state.flushedStreams.includes(conversationId)) {
-            return state;
-          }
-          return {
-            flushedStreams: [...state.flushedStreams, conversationId],
-          };
-        });
-      },
-
-      startStream: (conversationId, requestId) => {
-        set((state) => ({
-          activeStreams: { ...state.activeStreams, [conversationId]: String(requestId) },
-        }));
-      },
-
-      stopStream: (conversationId) => {
-        set((state) => {
-          const { [conversationId]: _stream, ...remainingStreams } = state.activeStreams;
-          return { activeStreams: remainingStreams };
-        });
-      },
-
-      clearStream: (conversationId) => {
-        resetTokenCounter(conversationId);
-        set((state) => {
-          const { [conversationId]: _content, ...remainingContent } = state.liveContent;
-          const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
-          const { [conversationId]: _stream, ...remainingStreams } = state.activeStreams;
-          const remainingFlushed = state.flushedStreams.filter((id) => id !== conversationId);
-          return {
-            liveContent: remainingContent,
-            pendingMetrics: remainingMetrics,
-            activeStreams: remainingStreams,
-            flushedStreams: remainingFlushed,
-          };
-        });
-      },
-
-      clearAll: () => {
-        // Reset every known per-stream counter so a fresh stream after
-        // a global clear emits its first trace at the 1/N boundary.
-        for (const id of Object.keys(get().liveContent)) {
-          resetTokenCounter(id);
+    appendToken: (conversationId, token) => {
+      const currentChunks = get().liveContent[conversationId]?.chunks.length ?? 0;
+      traceAppendToken(conversationId, currentChunks);
+      set((state) => {
+        if (!(conversationId in state.activeStreams)) {
+          return state;
         }
-        set({
-          liveContent: {},
-          pendingMetrics: {},
-          activeStreams: {},
-          flushedStreams: [] as string[],
-        });
-      },
-    }),
-    {
-      name: 'musaed-streaming-storage',
-      storage: createJSONStorage(() =>
-        createTauriStorage('streaming-state.json', 2, STREAMING_MIGRATIONS)
-      ),
-      version: 2,
-      migrate: (_persistedState, _version) => {
-        // Migrations are handled by createTauriStorage (canonical path).
-        // This is a safety-net default-state merge only.
-        const persisted =
-          typeof _persistedState === 'object' && _persistedState !== null
-            ? (_persistedState as Partial<StreamingState>)
-            : {};
+
+        const buffer = state.liveContent[conversationId] ?? { chunks: [] };
         return {
-          ...DEFAULT_STREAMING_STATE,
-          ...persisted,
-          flushedStreams: Array.isArray(persisted.flushedStreams) ? persisted.flushedStreams : [],
+          liveContent: {
+            ...state.liveContent,
+            [conversationId]: {
+              chunks: [...buffer.chunks, token],
+            },
+          },
         };
-      },
-      skipHydration: true,
-      onRehydrateStorage: () => {
-        return (_state, error) => {
-          if (error) {
-            logger.error('Streaming store rehydration failed:', { error: String(error) });
-          }
-          useUIStore.getState().onStoreRehydrated();
+      });
+    },
+
+    setPendingMetrics: (conversationId, metrics) => {
+      set((state) => ({
+        pendingMetrics: {
+          ...state.pendingMetrics,
+          [conversationId]: { ...state.pendingMetrics[conversationId], ...metrics },
+        },
+      }));
+    },
+
+    flushToConversation: (conversationId) => runFlushToConversation(conversationId, get, set),
+
+    markFlushed: (conversationId) => {
+      set((state) => {
+        if (state.flushedStreams.includes(conversationId)) {
+          return state;
+        }
+        return {
+          flushedStreams: [...state.flushedStreams, conversationId],
         };
-      },
-    }
-  ),
+      });
+    },
+
+    startStream: (conversationId, requestId) => {
+      set((state) => ({
+        activeStreams: { ...state.activeStreams, [conversationId]: String(requestId) },
+      }));
+    },
+
+    stopStream: (conversationId) => {
+      set((state) => {
+        const { [conversationId]: _stream, ...remainingStreams } = state.activeStreams;
+        return { activeStreams: remainingStreams };
+      });
+    },
+
+    clearStream: (conversationId) => {
+      resetTokenCounter(conversationId);
+      set((state) => {
+        const { [conversationId]: _content, ...remainingContent } = state.liveContent;
+        const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
+        const { [conversationId]: _stream, ...remainingStreams } = state.activeStreams;
+        const remainingFlushed = state.flushedStreams.filter((id) => id !== conversationId);
+        return {
+          liveContent: remainingContent,
+          pendingMetrics: remainingMetrics,
+          activeStreams: remainingStreams,
+          flushedStreams: remainingFlushed,
+        };
+      });
+    },
+
+    clearAll: () => {
+      for (const id of Object.keys(get().liveContent)) {
+        resetTokenCounter(id);
+      }
+      set({
+        liveContent: {},
+        pendingMetrics: {},
+        activeStreams: {},
+        flushedStreams: [] as string[],
+      });
+    },
+  }),
   shallow
 );
 
