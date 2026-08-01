@@ -5,10 +5,11 @@ import { useRagProjects } from '@/features/rag/hooks/useRagProjects';
 import { Loader2, Save, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useActiveRagProject } from '@/store/rag-store';
-import { useLanguage, useOllamaUrl } from '@/store';
-import { ollamaApi, ragApi } from '@/lib/ipc';
+import { useLanguage } from '@/store';
+import { ragApi } from '@/lib/ipc';
 import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
+import { useEmbeddingModels } from '@/features/library';
 
 interface ProjectSettingsProps {
   onClose: () => void;
@@ -57,25 +58,6 @@ const EmbeddingModelSelect = ({ value, onChange, models, t }: EmbeddingModelSele
     </p>
   </div>
 );
-
-const useEmbeddingModels = () => {
-  const [embeddingModels, setEmbeddingModels] = useState<{ name: string }[]>([]);
-  const ollamaUrl = useOllamaUrl();
-
-  useEffect(() => {
-    const fetchModels = async () => {
-      try {
-        const data = await ollamaApi.getModels(ollamaUrl);
-        if (data) setEmbeddingModels(data);
-      } catch {
-        // IPC layer handles error sanitization
-      }
-    };
-    fetchModels();
-  }, [ollamaUrl]);
-
-  return embeddingModels;
-};
 
 const ProjectSettingsActions = ({
   onClose,

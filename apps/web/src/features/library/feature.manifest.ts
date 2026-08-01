@@ -10,7 +10,7 @@ const manifest: FeatureManifest = {
   version: '1.0.0',
   publicApi: {
     components: ['ModelLibrary', 'ModelCard', 'ModelSelector'],
-    hooks: ['useModelPulling', 'useModelActions', 'useModelCapabilities'],
+    hooks: ['useModelPulling', 'useModelActions', 'useModelCapabilities', 'useEmbeddingModels'],
     utils: [],
   },
   ipcEndpoints: [
