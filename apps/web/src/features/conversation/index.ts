@@ -3,7 +3,7 @@
 // Global Zustand stores (conversation-store, message-store, streaming-store)
 // live in `@/store/`, not in this feature. Consumers import directly from
 // `@/store/...`. See STANDARDS.md §3, §22.
-export { useChatActions } from './hooks/useChatActions';
+export { useChatSend } from './hooks/useChatSend';
 export { useConversationActions } from './hooks/useConversationActions';
 export { useConversationInitialization } from './hooks/useConversationInitialization';
 // Public stop primitive consumed by the global Escape-to-stop shortcut

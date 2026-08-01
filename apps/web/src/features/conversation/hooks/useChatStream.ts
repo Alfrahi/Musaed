@@ -11,7 +11,7 @@ import { logger } from '@/lib/logger';
 
 /**
  * Streaming lifecycle + stream-failure error handling for the chat send
- * pipeline. Extracted from the former `useChatActions` God hook (audit F4).
+ * pipeline. Extracted from the former God hook (audit F4).
  *
  * `handleStreamError` flushes buffered tokens, marks the assistant message
  * with the error, clears the stream (without setting `stopped: true` — this

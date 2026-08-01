@@ -118,13 +118,12 @@ function buildChatPayload(
 }
 
 /**
- * Send pipeline for the chat feature. Extracted from the former `useChatActions`
- * God hook (audit F4). Owns: validation → message creation → RAG context →
+ * Send pipeline for the chat feature. Extracted from the former God hook
+ * (audit F4). Owns: validation → message creation → RAG context →
  * persist → chatApi.chat → persist assistant message → error handling.
  *
  * Composes `useChatRag` (RAG context assembly) and `useChatStream` (stream
- * error handling). The public `useChatActions` facade delegates `sendMessage`
- * here and `abortMessage` to `useChatStream`.
+ * error handling).
  */
 export function useChatSend(): {
   sendMessage: (input: string, images?: string[], files?: FileAttachment[]) => Promise<void>;

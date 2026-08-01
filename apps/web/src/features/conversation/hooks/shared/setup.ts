@@ -1,4 +1,4 @@
-// Shared test setup for useChatActions tests
+// Shared test setup for conversation hook tests
 import { beforeEach, vi } from 'vitest';
 import { mockAllDependencies } from './mocks';
 import { renderHook, act } from '@testing-library/react';

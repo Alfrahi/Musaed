@@ -13,7 +13,6 @@ const manifest: FeatureManifest = {
       'useRagProjects',
       'useRagIndexing',
       'useRagSearch',
-      'useRagContext',
       'useRagAssembleContext',
       'useRagFileBrowser',
     ],

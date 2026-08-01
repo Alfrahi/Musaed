@@ -3,7 +3,6 @@
 export { useRagProjects } from './hooks/useRagProjects';
 export { useRagIndexing } from './hooks/useRagIndexing';
 export { useRagSearch } from './hooks/useRagSearch';
-export { useRagContext } from './hooks/useRagContext';
 export { useRagAssembleContext } from './hooks/useRagAssembleContext';
 export { useRagFileBrowser } from './hooks/useRagFileBrowser';
 export { ProjectList } from './components/ProjectList';
