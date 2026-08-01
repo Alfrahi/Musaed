@@ -5,8 +5,7 @@ This script validates the consistency between feature manifests (`feature.manife
 ## What it validates
 
 1. **stateSchemas consistency**: Ensures the version declared in the manifest matches the actual store version (`version:` literal or `*_VERSION` constant).
-2. **persistenceSchemas consistency**: Ensures the store name declared in the manifest matches the actual store `name:` literal.
-3. **publicApi consistency**: Ensures hooks, components, and utils declared in the manifest are actually exported in `index.ts`. Supports both named and `default as` re-export patterns from `./components/*`, `./hooks/*`, `./utils/*`, and `@/store/*`.
+2. **publicApi consistency**: Ensures hooks, components, and utils declared in the manifest are actually exported in `index.ts`. Supports both named and `default as` re-export patterns from `./components/*`, `./hooks/*`, `./utils/*`, and `@/store/*`.
 
 ## Audit findings addressed
 
@@ -20,14 +19,12 @@ This script validates the consistency between feature manifests (`feature.manife
 
 - **Problem**: Manifests declared `persistenceSchemas` with versioned names that didn't match actual store names.
 - **Example (now fixed)**: `conversation/feature.manifest.ts` declared `'musaed-conversation-storage-v2'` but the store uses `'musaed-conversation-storage'`.
-- **Solution**: The validator reads the `name:` literal from each matching store file and fails on mismatch. The name references in the manifests have been corrected.
+- **Resolution**: `persistenceSchemas` was removed from all manifests and the validator after Phase 3 #10 removed `persist` middleware — the field is no longer relevant since stores no longer self-declare a `name:` literal.
 
 ### Special cases handled
 
 - **messageStore**: Skipped for version checks because message state lives in the Rust backend (in-memory cache only).
-- **message / messages** persistence keys: Skipped for name checks for the same reason.
-- **conversation / conversations** persistence keys: Both map to `conversation-store.ts`.
-- **models** persistence key: Maps to `model-store.ts`.
+- **conversation / conversations** persistence keys: Both mapped to `conversation-store.ts` (now removed).
 
 ## How to use
 
@@ -55,13 +52,11 @@ Validating feature: conversation
   ✅ Version match for conversationStore: 1
   ⚠️  messageStore is handled by Rust backend, skipping version check
   ✅ Version match for streamingStore: 2
-  ✅ Name match for conversation: musaed-conversation-storage
   ✅ Hook 'useChatActions' is exported
   ✅ Util 'initializeConversations' is exported
 
 Validating feature: library
   ✅ Version match for modelStore: 1
-  ✅ Name match for models: musaed-model-storage
   ✅ Component 'ModelLibrary' is exported
   ✅ Component 'ModelCard' is exported
   ✅ Component 'ModelSelector' is exported
@@ -73,7 +68,6 @@ Validating feature: library
 
 ```
 ❌ Version mismatch for conversationStore: manifest declares 3, store has 1
-❌ Name mismatch for rag: manifest declares 'musaed-rag-storage-v1', store has 'rag-state'
 ❌ Component 'ProjectList' declared in manifest but not exported in index.ts
 ❌ Store file not found: conversation-store.ts
 ```

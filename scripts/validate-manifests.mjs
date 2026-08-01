@@ -30,16 +30,11 @@ function extractStateSchemas(filePath) {
 }
 
 /**
- * Extract persistenceSchemas from a feature manifest file.
- * @param {string} filePath - Path to the feature manifest file.
- * @returns {Record<string, string>} - persistenceSchemas object.
- */
-/**
  * Extract a top-level object literal value from source by counting braces.
  * Handles nested objects (e.g. failureModes) without over-matching.
  *
  * @param {string} content - Source file content.
- * @param {string} key - The object key to find (e.g. "persistenceSchemas").
+ * @param {string} key - The object key to find (e.g. "stateSchemas").
  * @returns {string|null} - The raw object literal text, or null.
  */
 function extractObjectLiteral(content, key) {
@@ -55,19 +50,6 @@ function extractObjectLiteral(content, key) {
   }
   if (depth !== 0) return null;
   return content.substring(match.index + match[0].length - 1, idx);
-}
-
-function extractPersistenceSchemas(filePath) {
-  const content = readFileSync(filePath, "utf-8");
-  const obj = extractObjectLiteral(content, "persistenceSchemas");
-  if (!obj) return {};
-
-  const schemas = {};
-  const pairMatches = obj.matchAll(/(\w+)\s*:\s*["']([^"']+)["']/g);
-  for (const pairMatch of pairMatches) {
-    schemas[pairMatch[1]] = pairMatch[2];
-  }
-  return schemas;
 }
 
 /**
@@ -129,17 +111,6 @@ function extractStoreVersion(filePath) {
   }
   
   return null;
-}
-
-/**
- * Extract the store name from a store file.
- * @param {string} filePath - Path to the store file.
- * @returns {string} - The store name.
- */
-function extractStoreName(filePath) {
-  const content = readFileSync(filePath, "utf-8");
-  const nameMatch = content.match(/name:\s*["']([^"']+)["']/);
-  return nameMatch ? nameMatch[1] : null;
 }
 
 /**
@@ -435,7 +406,6 @@ function validateManifests() {
     
     // Extract manifest data
     const stateSchemas = extractStateSchemas(manifestPath);
-    const persistenceSchemas = extractPersistenceSchemas(manifestPath);
     const { hooks: manifestHooks, components: manifestComponents, utils: manifestUtils } = extractPublicApi(manifestPath);
     
     // Validate stateSchemas
@@ -475,50 +445,7 @@ function validateManifests() {
         continue;
       }
     }
-    
-    // Validate persistenceSchemas
-    for (const [schemaKey, expectedName] of Object.entries(persistenceSchemas)) {
-      let storeFileName;
-      if (schemaKey === "conversation" || schemaKey === "conversations") {
-        storeFileName = "conversation-store.ts";
-      } else if (schemaKey === "settings") {
-        storeFileName = "settings-store.ts";
-      } else if (schemaKey === "message" || schemaKey === "messages") {
-        // Skip message store as it's handled by Rust backend
-        console.log(`  ⚠️  Persistence for ${schemaKey} is handled by Rust backend (in-memory cache only)`);
-        continue;
-      } else if (schemaKey === "rag") {
-        storeFileName = "rag-store.ts";
-      } else if (schemaKey === "models") {
-        storeFileName = "model-store.ts";
-      } else {
-        storeFileName = `${schemaKey.replace(/([A-Z])/g, "-$1").toLowerCase()}-store.ts`;
-      }
-      
-      const storePath = join(STORE_DIR, storeFileName);
-      
-      try {
-        const content = readFileSync(storePath, "utf-8");
-        const actualName = extractStoreName(storePath);
-        if (actualName === null) {
-          console.error(`  ❌ Could not extract name from store: ${storeFileName}`);
-          hasErrors = true;
-          continue;
-        }
 
-        if (actualName !== expectedName) {
-          console.error(`  ❌ Name mismatch for ${schemaKey}: manifest declares '${expectedName}', store has '${actualName}'`);
-          hasErrors = true;
-        } else {
-          console.log(`  ✅ Name match for ${schemaKey}: ${expectedName}`);
-        }
-      } catch (err) {
-        console.error(`  ❌ Store file not found for persistence schema: ${storeFileName}`);
-        hasErrors = true;
-        continue;
-      }
-    }
-    
     // Validate publicApi (hooks and components)
     if (readFileSync(indexPath, "utf-8")) {
       const { hooks: exportedHooks, components: exportedComponents } = extractExports(indexPath);

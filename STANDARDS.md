@@ -151,7 +151,6 @@ Contains:
 - public API surface (`publicApi.hooks`, `publicApi.components`)
 - IPC endpoints used (`ipcEndpoints`)
 - state schema version (`stateSchemas`)
-- persistence schema version (`persistenceSchemas`)
 - dependency list (`dependencies`)
 - failure modes (`failureModes`) — optional, but CI warns when absent
 

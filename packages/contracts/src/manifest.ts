@@ -5,7 +5,6 @@
  *   - public API surface
  *   - IPC endpoints used
  *   - state schema version
- *   - persistence schema version
  *   - dependency list
  *
  * This module provides the canonical `FeatureManifest` interface so every
@@ -70,12 +69,6 @@ export interface FeatureManifest {
    * Keys are store names, values are integer schema versions.
    */
   stateSchemas: Record<string, number>;
-
-  /**
-   * Persistence schema identifiers for Tauri plugin-store keys.
-   * Keys are logical names, values are the store key strings.
-   */
-  persistenceSchemas: Record<string, string>;
 
   /**
    * Feature directory names this feature depends on.

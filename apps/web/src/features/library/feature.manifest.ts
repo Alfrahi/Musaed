@@ -34,9 +34,6 @@ const manifest: FeatureManifest = {
   stateSchemas: {
     modelStore: 1,
   },
-  persistenceSchemas: {
-    models: 'musaed-model-storage',
-  },
   /**
    * Failure modes for this feature's IPC endpoints.
    *

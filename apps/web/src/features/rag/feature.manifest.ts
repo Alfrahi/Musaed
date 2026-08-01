@@ -63,9 +63,6 @@ const manifest: FeatureManifest = {
   stateSchemas: {
     ragStore: 3,
   },
-  persistenceSchemas: {
-    rag: 'rag-state',
-  },
   /**
    * Failure modes for this feature's IPC endpoints.
    *
