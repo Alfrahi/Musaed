@@ -4,7 +4,7 @@ import { useUIStore } from '@/store/ui-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { useRagStore } from '@/store/rag-store';
 import { useModelStore } from '@/store/model-store';
-import { useConversationStore } from '@/store/conversation-store';
+// import { useConversationStore } from '@/store/conversation-store'; // persistence moved to Rust
 import { useStreamingStore } from '@/store/streaming-store';
 import { useMessageStore } from '@/store/message-store';
 import { traceStoreMutation } from '@/lib/store-tracing';
@@ -123,8 +123,6 @@ const PERSISTED_STORES: ReadonlyArray<PersistedStore> = [
   useSettingsStore,
   useRagStore,
   useModelStore,
-  useConversationStore,
-  useStreamingStore,
 ];
 
 const STORES_TO_HYDRATE = PERSISTED_STORES.length;

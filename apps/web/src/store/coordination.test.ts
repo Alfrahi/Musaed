@@ -1,9 +1,9 @@
+// Updated coordination tests after removing persistence from conversation and streaming stores
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useUIStore } from '@/store/ui-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { useRagStore } from '@/store/rag-store';
 import { useModelStore } from '@/store/model-store';
-import { useConversationStore } from '@/store/conversation-store';
 import { useStreamingStore } from '@/store/streaming-store';
 import { useMessageStore } from '@/store/message-store';
 import { registerHydrationCoordination, coordinateStopStream } from './coordination';
@@ -24,54 +24,42 @@ beforeEach(() => {
 });
 
 describe('registerHydrationCoordination', () => {
-  it('initializes the pending rehydrations counter to 5 (one per persisted store)', () => {
+  it('initializes the pending rehydrations counter to 3 (one per persisted store)', () => {
     registerHydrationCoordination();
-    expect(useUIStore.getState()._pendingRehydrations).toBe(5);
+    expect(useUIStore.getState()._pendingRehydrations).toBe(3);
   });
 
-  it('triggers rehydrate on every persisted store (settings, rag, model, conversation, streaming)', () => {
+  it('triggers rehydrate on every persisted store (settings, rag, model)', () => {
     const settingsSpy = vi.spyOn(useSettingsStore.persist, 'rehydrate');
     const ragSpy = vi.spyOn(useRagStore.persist, 'rehydrate');
     const modelSpy = vi.spyOn(useModelStore.persist, 'rehydrate');
-    const conversationSpy = vi.spyOn(useConversationStore.persist, 'rehydrate');
-    const streamingSpy = vi.spyOn(
-      (useStreamingStore as unknown as { persist: { rehydrate: () => unknown } }).persist,
-      'rehydrate'
-    );
 
     registerHydrationCoordination();
 
     expect(settingsSpy).toHaveBeenCalledTimes(1);
     expect(ragSpy).toHaveBeenCalledTimes(1);
     expect(modelSpy).toHaveBeenCalledTimes(1);
-    expect(conversationSpy).toHaveBeenCalledTimes(1);
-    expect(streamingSpy).toHaveBeenCalledTimes(1);
   });
 
   it('is a no-op when isHydrated is already true', () => {
     useUIStore.getState().setHydrated(true);
 
     const settingsSpy = vi.spyOn(useSettingsStore.persist, 'rehydrate');
-    const conversationSpy = vi.spyOn(useConversationStore.persist, 'rehydrate');
-    const streamingSpy = vi.spyOn(
-      (useStreamingStore as unknown as { persist: { rehydrate: () => unknown } }).persist,
-      'rehydrate'
-    );
+    const modelSpy = vi.spyOn(useModelStore.persist, 'rehydrate');
 
     registerHydrationCoordination();
 
     expect(settingsSpy).not.toHaveBeenCalled();
-    expect(conversationSpy).not.toHaveBeenCalled();
-    expect(streamingSpy).not.toHaveBeenCalled();
+    expect(modelSpy).not.toHaveBeenCalled();
     expect(useUIStore.getState()._pendingRehydrations).toBe(0);
   });
 
-  it('counter ticks down on every onStoreRehydrated callback (5 calls → isHydrated=true)', () => {
+  it('counter ticks down on every onStoreRehydrated callback (3 calls → isHydrated=true)', () => {
     registerHydrationCoordination();
 
-    for (let i = 0; i < 4; i += 1) {
+    for (let i = 0; i < 2; i += 1) {
       useUIStore.getState().onStoreRehydrated();
-      expect(useUIStore.getState()._pendingRehydrations).toBe(4 - i);
+      expect(useUIStore.getState()._pendingRehydrations).toBe(2 - i);
       expect(useUIStore.getState().isHydrated).toBe(false);
     }
 
@@ -86,7 +74,7 @@ describe('registerHydrationCoordination', () => {
       cleanup();
       cleanup();
     }).not.toThrow();
-    expect(useUIStore.getState()._pendingRehydrations).toBe(5);
+    expect(useUIStore.getState()._pendingRehydrations).toBe(3);
   });
 });
 

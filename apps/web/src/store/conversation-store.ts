@@ -2,12 +2,12 @@
 
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
-import { persist, createJSONStorage } from 'zustand/middleware';
+// import { persist, createJSONStorage } from 'zustand/middleware'; // persistence moved to Rust
 import { type Conversation } from '@musaed/contracts';
-import { createTauriStorage } from '@/lib/tauri-storage';
-import { useUIStore } from '@/store/ui-store';
+// import { createTauriStorage } from '@/lib/tauri-storage'; // persistence moved to Rust
+// import { useUIStore } from '@/store/ui-store'; // no longer needed
 import { traceStoreMutation } from '@/lib/store-tracing';
-import { logger } from '@/lib/logger';
+// import { logger } from '@/lib/logger'; // no longer needed
 
 // Default state for conversation store
 const DEFAULT_CONVERSATION_STATE = {
@@ -83,94 +83,68 @@ export const selectFilteredConversations = (state: ConversationState) => {
 };
 
 export const useConversationStore = createWithEqualityFn<ConversationState>()(
-  persist(
-    (set) => ({
-      conversations: {},
-      conversationIds: [],
-      currentConversationId: null,
-      searchQuery: '',
+  (set) => ({
+    conversations: {},
+    conversationIds: [],
+    currentConversationId: null,
+    searchQuery: '',
 
-      setConversations: (convs) =>
-        set({
-          conversations: Object.fromEntries(convs.map((c) => [c.id, c])),
-          conversationIds: convs.map((c) => c.id),
-        }),
-      setCurrentConversationId: (id) => set({ currentConversationId: id }),
-      setSearchQuery: (query) => set({ searchQuery: query }),
-      addConversation: (conv) =>
-        set((state) => {
-          traceStoreMutation({
-            feature: 'conversation',
-            action: 'addConversation',
-            level: 'INFO',
-            message: `addConversation ${conv.id}`,
-            context: { conversationId: conv.id, title: conv.title ?? null },
-            throttleMs: 0,
-          });
-          return {
-            conversations: { ...state.conversations, [conv.id]: conv },
-            conversationIds: [conv.id, ...state.conversationIds],
-          };
-        }),
-      updateConversation: (id, updates) =>
-        set((state) => {
-          const conv = state.conversations[id];
-          if (!conv) return state;
-          return {
-            conversations: {
-              ...state.conversations,
-              [id]: { ...conv, ...updates, updatedAt: Date.now() },
-            },
-          };
-        }),
-      removeConversation: (id) =>
-        set((state) => {
-          const { [id]: _, ...remaining } = state.conversations;
-          traceStoreMutation({
-            feature: 'conversation',
-            action: 'removeConversation',
-            level: 'INFO',
-            message: `removeConversation ${id}`,
-            context: {
-              conversationId: id,
-              wasCurrent: state.currentConversationId === id,
-            },
-            throttleMs: 0,
-          });
-          return {
-            conversations: remaining,
-            conversationIds: state.conversationIds.filter((cid) => cid !== id),
-            currentConversationId:
-              state.currentConversationId === id ? null : state.currentConversationId,
-          };
-        }),
-      batchUpdate: (updater) => set(updater),
-    }),
-    {
-      name: 'musaed-conversation-storage',
-      storage: createJSONStorage(() =>
-        createTauriStorage('conversation-state.json', 3, CONVERSATION_MIGRATIONS)
-      ),
-      version: 3,
-      migrate: (_persistedState, _version) => {
-        // Migrations are handled by createTauriStorage (canonical path).
-        // This is a safety-net default-state merge only.
+    setConversations: (convs) =>
+      set({
+        conversations: Object.fromEntries(convs.map((c) => [c.id, c])),
+        conversationIds: convs.map((c) => c.id),
+      }),
+    setCurrentConversationId: (id) => set({ currentConversationId: id }),
+    setSearchQuery: (query) => set({ searchQuery: query }),
+    addConversation: (conv) =>
+      set((state) => {
+        traceStoreMutation({
+          feature: 'conversation',
+          action: 'addConversation',
+          level: 'INFO',
+          message: `addConversation ${conv.id}`,
+          context: { conversationId: conv.id, title: conv.title ?? null },
+          throttleMs: 0,
+        });
         return {
-          ...DEFAULT_CONVERSATION_STATE,
-          ...(_persistedState as Partial<ConversationState>),
+          conversations: { ...state.conversations, [conv.id]: conv },
+          conversationIds: [conv.id, ...state.conversationIds],
         };
-      },
-      skipHydration: true,
-      onRehydrateStorage: () => {
-        return (_state, error) => {
-          if (error) {
-            logger.error('Conversation store rehydration failed:', { error: String(error) });
-          }
-          useUIStore.getState().onStoreRehydrated();
+      }),
+    updateConversation: (id, updates) =>
+      set((state) => {
+        const conv = state.conversations[id];
+        if (!conv) return state;
+        return {
+          conversations: {
+            ...state.conversations,
+            [id]: { ...conv, ...updates, updatedAt: Date.now() },
+          },
         };
-      },
-    }
-  ),
+      }),
+    removeConversation: (id) =>
+      set((state) => {
+        const { [id]: _, ...remaining } = state.conversations;
+        traceStoreMutation({
+          feature: 'conversation',
+          action: 'removeConversation',
+          level: 'INFO',
+          message: `removeConversation ${id}`,
+          context: {
+            conversationId: id,
+            wasCurrent: state.currentConversationId === id,
+          },
+          throttleMs: 0,
+        });
+        return {
+          conversations: remaining,
+          conversationIds: state.conversationIds.filter((cid) => cid !== id),
+          currentConversationId:
+            state.currentConversationId === id ? null : state.currentConversationId,
+        };
+      }),
+    batchUpdate: (updater) => set(updater),
+  }),
   shallow
 );
 
