@@ -31,7 +31,7 @@ export const mockUseGlobalSettings = vi.fn(() => ({
 // Conversation actions mock
 export const mockConversationActions = {
   initiateStreaming: vi.fn().mockResolvedValue(undefined),
-  stopStreaming: vi.fn(),
+  stopStreamForConversation: vi.fn(),
   createNewConversation: vi.fn(),
   deleteConversation: vi.fn(),
   updateConversationTitle: vi.fn(),

@@ -17,24 +17,28 @@ const mockActions = {
   updateConversationTitle: vi.fn(),
   clearAllConversations: vi.fn(),
   initiateStreaming: vi.fn(),
-  stopStreaming: vi.fn(),
+  stopStreamForConversation: vi.fn(),
 };
 
-// abortStreaming is a barrel re-export from @/features/conversation. Mock it as
+// stopStreamForConversation is imported from @/store/coordination. Mock it as
 // a spy so the Escape-to-stop contract can be asserted on call count, not on
 // the streaming store's internal side effects (which would couple the test to
 // flushAndStop / coordinateStopStream internals). Wrapped in a container for
 // the same hoisting reason as mockActions.
-const abortMock = { abortStreaming: vi.fn() };
+const coordinationMock = { stopStreamForConversation: vi.fn() };
 
 vi.mock('@/features/conversation', async () => {
   const actual = await vi.importActual('@/features/conversation');
   return {
     ...(actual as object),
     useConversationActions: () => mockActions,
-    abortStreaming: (...args: unknown[]) => abortMock.abortStreaming(...args),
   };
 });
+
+vi.mock('@/store/coordination', () => ({
+  stopStreamForConversation: (...args: unknown[]) =>
+    coordinationMock.stopStreamForConversation(...args),
+}));
 
 // Test harness: a tiny component that mounts the hook. The hook subscribes to
 // a window keydown listener; rendering it inside a component lets us exercise
@@ -52,7 +56,7 @@ describe('useGlobalShortcuts', () => {
   beforeEach(() => {
     clearMocks();
     mockActions.createNewConversation.mockClear();
-    abortMock.abortStreaming.mockClear();
+    coordinationMock.stopStreamForConversation.mockClear();
 
     // Default: no modal open, an active conversation, not streaming.
     useUIStore.setState({
@@ -85,7 +89,7 @@ describe('useGlobalShortcuts', () => {
   });
 
   describe('Escape-to-stop contract (audit F6)', () => {
-    it('(a) Escape while streaming and no modal open → abortStreaming called once', () => {
+    it('(a) Escape while streaming and no modal open → stopStreamForConversation called once', () => {
       useStreamingStore.setState({
         activeStreams: { 'conv-active': 'req-1' },
       });
@@ -93,11 +97,11 @@ describe('useGlobalShortcuts', () => {
       render(<Harness />);
       dispatchEscape();
 
-      expect(abortMock.abortStreaming).toHaveBeenCalledTimes(1);
-      expect(abortMock.abortStreaming).toHaveBeenCalledWith('conv-active');
+      expect(coordinationMock.stopStreamForConversation).toHaveBeenCalledTimes(1);
+      expect(coordinationMock.stopStreamForConversation).toHaveBeenCalledWith('conv-active');
     });
 
-    it('(b) Escape while streaming and modal open → modal closes, abortStreaming not called', () => {
+    it('(b) Escape while streaming and modal open → modal closes, stopStreamForConversation not called', () => {
       useUIStore.setState({ isSettingsOpen: true });
       useStreamingStore.setState({
         activeStreams: { 'conv-active': 'req-1' },
@@ -106,24 +110,24 @@ describe('useGlobalShortcuts', () => {
       render(<Harness />);
       dispatchEscape();
 
-      expect(abortMock.abortStreaming).not.toHaveBeenCalled();
+      expect(coordinationMock.stopStreamForConversation).not.toHaveBeenCalled();
       // Modals were closed (idempotent setters; verify the end-state of the ui store)
       expect(useUIStore.getState().isSettingsOpen).toBe(false);
       expect(useUIStore.getState().isLibraryOpen).toBe(false);
       expect(useUIStore.getState().isInfoOpen).toBe(false);
     });
 
-    it('(c) Escape while not streaming → no-op (abortStreaming not called, modals untouched)', () => {
+    it('(c) Escape while not streaming → no-op (stopStreamForConversation not called, modals untouched)', () => {
       // No active stream, no modal — Escape should be a complete no-op.
       render(<Harness />);
       dispatchEscape();
 
-      expect(abortMock.abortStreaming).not.toHaveBeenCalled();
+      expect(coordinationMock.stopStreamForConversation).not.toHaveBeenCalled();
     });
   });
 
   describe('Escape routing edge cases', () => {
-    it(' Escape with no active conversation → abortStreaming not called even if activeStreams has stale entries', () => {
+    it(' Escape with no active conversation → stopStreamForConversation not called even if activeStreams has stale entries', () => {
       useConversationStore.setState({ currentConversationId: null });
       // Stale entry in activeStreams that does NOT match any current conversation
       useStreamingStore.setState({
@@ -133,7 +137,7 @@ describe('useGlobalShortcuts', () => {
       render(<Harness />);
       dispatchEscape();
 
-      expect(abortMock.abortStreaming).not.toHaveBeenCalled();
+      expect(coordinationMock.stopStreamForConversation).not.toHaveBeenCalled();
     });
 
     it(' Escape with Info modal open → closes Info and does not stop streaming', () => {
@@ -145,7 +149,7 @@ describe('useGlobalShortcuts', () => {
       render(<Harness />);
       dispatchEscape();
 
-      expect(abortMock.abortStreaming).not.toHaveBeenCalled();
+      expect(coordinationMock.stopStreamForConversation).not.toHaveBeenCalled();
       expect(useUIStore.getState().isInfoOpen).toBe(false);
       expect(useUIStore.getState().isSettingsOpen).toBe(false);
       expect(useUIStore.getState().isLibraryOpen).toBe(false);

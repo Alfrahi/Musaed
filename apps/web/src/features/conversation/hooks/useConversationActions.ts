@@ -11,24 +11,11 @@ import { useMessageStore } from '@/store/message-store';
 import { useStreamingStore } from '@/store/streaming-store';
 import { useModelStore } from '@/store/model-store';
 import { useSettingsStore, useLanguage } from '@/store/settings-store';
-import { chatApi, conversationApi } from '@/lib/ipc';
-import { coordinateStartStream, coordinateStopStream, flushAndStop } from '@/store/coordination';
+import { conversationApi } from '@/lib/ipc';
+import { coordinateStartStream, stopStreamForConversation } from '@/store/coordination';
 import { useTranslation } from '@/lib/i18n';
 import type { ConversationMetadata, ConversationState } from '@/store/conversation-store';
 import { logger } from '@/lib/logger';
-
-/**
- * Abort active streaming for a conversation.
- * Flushes any buffered tokens to the message store before aborting
- * so no content is silently discarded.
- */
-export function abortStreaming(conversationId: string): void {
-  const streamingState = useStreamingStore.getState();
-  const requestId = streamingState.activeStreams[conversationId];
-  if (requestId) chatApi.abort(requestId);
-  flushAndStop(conversationId);
-  coordinateStopStream(conversationId);
-}
 
 /** Create a new conversation with current model and settings. */
 const createConversation = async (
@@ -79,7 +66,7 @@ export const useConversationActions = () => {
 
   const deleteConversation = useCallback(
     (id: string) => {
-      abortStreaming(id);
+      stopStreamForConversation(id);
       const state = useConversationStore.getState();
       const { [id]: _removed, ...remainingConversations } = state.conversations;
       const remainingIds = state.conversationIds.filter((cid) => cid !== id);
@@ -119,7 +106,7 @@ export const useConversationActions = () => {
   );
 
   const clearAllConversations = useCallback(() => {
-    Object.keys(useStreamingStore.getState().activeStreams).forEach(abortStreaming);
+    Object.keys(useStreamingStore.getState().activeStreams).forEach(stopStreamForConversation);
 
     // Persist clearing via Rust backend
     (async () => {
@@ -144,17 +131,12 @@ export const useConversationActions = () => {
     coordinateStartStream(conversationId, requestId);
   }, []);
 
-  const stopStreaming = useCallback((conversationId: string) => {
-    flushAndStop(conversationId);
-    coordinateStopStream(conversationId);
-  }, []);
-
   return {
     createNewConversation,
     deleteConversation,
     updateConversationTitle,
     clearAllConversations,
     initiateStreaming,
-    stopStreaming,
+    stopStreamForConversation,
   };
 };

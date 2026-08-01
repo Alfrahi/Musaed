@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useConversationActions, abortStreaming } from '@/features/conversation';
+import { useConversationActions } from '@/features/conversation';
+import { stopStreamForConversation } from '@/store/coordination';
 import {
   useSetSettingsOpen,
   useSetLibraryOpen,
@@ -80,7 +81,7 @@ export function useGlobalShortcuts() {
         const conversationId = useConversationStore.getState().currentConversationId;
         if (!conversationId) return;
         if (conversationId in useStreamingStore.getState().activeStreams) {
-          abortStreaming(conversationId);
+          stopStreamForConversation(conversationId);
         }
       }
     };

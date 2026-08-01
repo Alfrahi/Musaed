@@ -8,8 +8,7 @@ import { useStreamingStore } from '@/store/streaming-store';
 import { useModelStore } from '@/store/model-store';
 import { listen, ollamaApi } from '@/lib/ipc';
 import { translate } from '@/lib/i18n';
-import { flushAndStop } from '@/store/coordination';
-import { coordinateStopStream } from '@/store/coordination';
+import { stopStreamForConversation } from '@/store/coordination';
 import { useMessageStore } from '@/store/message-store';
 import { triggerAutoTitle } from './useAutoTitle';
 import { persistMessage } from '@/features/conversation/utils/message-persistence';
@@ -56,8 +55,7 @@ const handleToken = (payload: OllamaToken) => {
 
   // On stream completion, flush remaining content immediately and stop
   if (payload.done) {
-    flushAndStop(convId);
-    coordinateStopStream(convId);
+    stopStreamForConversation(convId);
 
     // Persist the completed assistant message to Rust backend with retry logic
     const msgs = useMessageStore.getState().messages[convId] ?? [];
@@ -95,8 +93,7 @@ const handleError = (payload: BackendError) => {
       ([_, id]) => id === sanitized.requestId
     )?.[0];
     if (convId) {
-      flushAndStop(convId);
-      coordinateStopStream(convId);
+      stopStreamForConversation(convId);
       toast.error(translate('error.backendError', lang, { message: sanitized.message }));
       return;
     }
@@ -106,8 +103,7 @@ const handleError = (payload: BackendError) => {
 
   // Flush all active streams on unattributed errors
   Object.keys(streamingStore.activeStreams).forEach((id) => {
-    flushAndStop(id);
-    coordinateStopStream(id);
+    stopStreamForConversation(id);
   });
 };
 

@@ -3,7 +3,7 @@
 import { useCallback, useEffect } from 'react';
 import { Send, Square, ImageIcon, Paperclip } from 'lucide-react';
 import { useChatInput } from '@/features/conversation/hooks/useChatInput';
-import { abortStreaming } from '@/features/conversation/hooks/useConversationActions';
+import { stopStreamForConversation } from '@/store/coordination';
 import { useDropZone } from '@/features/conversation/hooks/useDropZone';
 import AttachmentPreview from './AttachmentPreview';
 import { ModelSelector } from '@/features/library';
@@ -160,7 +160,7 @@ export const InputArea = () => {
   useEditPromptWatcher(setInput, textareaRef);
 
   const handleAbort = useCallback(() => {
-    if (currentConversationId) abortStreaming(currentConversationId);
+    if (currentConversationId) stopStreamForConversation(currentConversationId);
   }, [currentConversationId]);
 
   const { isDragOver } = useDropZone({

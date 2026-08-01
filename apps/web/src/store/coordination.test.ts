@@ -6,7 +6,11 @@ import { useRagStore } from '@/store/rag-store';
 import { useModelStore } from '@/store/model-store';
 import { useStreamingStore } from '@/store/streaming-store';
 import { useMessageStore } from '@/store/message-store';
-import { registerHydrationCoordination, coordinateStopStream } from './coordination';
+import {
+  registerHydrationCoordination,
+  coordinateStopStream,
+  stopStreamForConversation,
+} from './coordination';
 
 beforeEach(() => {
   (window as any).__TAURI_INTERNALS__ = {};
@@ -116,6 +120,56 @@ describe('coordinateStopStream', () => {
     });
 
     coordinateStopStream('conv-1');
+
+    expect(useUIStore.getState().isStreaming).toBe(true);
+  });
+});
+
+describe('stopStreamForConversation', () => {
+  beforeEach(() => {
+    useStreamingStore.setState({
+      liveContent: { 'conv-1': { chunks: ['hello'] } },
+      pendingMetrics: {},
+      activeStreams: { 'conv-1': 'req-1' },
+      flushedStreams: [],
+    });
+    useMessageStore.setState({
+      messages: {
+        'conv-1': [
+          { id: 'msg-1', role: 'user', content: 'hi', timestamp: 1 },
+          { id: 'msg-2', role: 'assistant', content: 'partial', timestamp: 2, done: false },
+        ],
+      },
+    });
+    useUIStore.setState({ isStreaming: true });
+  });
+
+  it('flushes buffered content, marks stopped, and clears the stream', () => {
+    stopStreamForConversation('conv-1');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    const lastMsg = messages[messages.length - 1];
+    // flushAndStop appends buffered content to the existing message
+    expect(lastMsg.content).toBe('partialhello');
+    expect(lastMsg.done).toBe(true);
+    expect(lastMsg.stopped).toBe(true);
+    expect(useUIStore.getState().isStreaming).toBe(false);
+  });
+
+  it('is idempotent — calling twice does not double-flush', () => {
+    stopStreamForConversation('conv-1');
+    stopStreamForConversation('conv-1');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    expect(messages.length).toBe(2); // no duplicate message appended
+  });
+
+  it('does not clear the global streaming flag when other streams are active', () => {
+    useStreamingStore.setState({
+      activeStreams: { 'conv-1': 'req-1', 'conv-2': 'req-2' },
+    });
+
+    stopStreamForConversation('conv-1');
 
     expect(useUIStore.getState().isStreaming).toBe(true);
   });

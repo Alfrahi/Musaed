@@ -3,10 +3,9 @@
 import { useCallback } from 'react';
 import { type Message } from '@musaed/contracts';
 import toast from 'react-hot-toast';
-import { flushAndStop } from '@/store/coordination';
+import { flushAndStop, stopStreamForConversation } from '@/store/coordination';
 import { useStreamingStore } from '@/store/streaming-store';
 import { useUIStore, useSetUIError } from '@/store/ui-store';
-import { useConversationActions } from './useConversationActions';
 import { logger } from '@/lib/logger';
 
 /**
@@ -17,8 +16,9 @@ import { logger } from '@/lib/logger';
  * with the error, clears the stream (without setting `stopped: true` — this
  * is a failure, not a user-initiated stop, Prompt 14), and notifies the user.
  *
- * `abortMessage` delegates to `useConversationActions.stopStreaming`, which
- * is the single owner of the abort/flush/clear sequence.
+ * `abortMessage` calls `stopStreamForConversation` directly — the single
+ * entry point that sends cmd_ollama_abort_chat, flushes buffered tokens,
+ * and cleans up streaming state.
  */
 export function useChatStream(): {
   handleStreamError: (
@@ -31,7 +31,6 @@ export function useChatStream(): {
   abortMessage: (conversationId: string | null) => void;
 } {
   const setErrorMessage = useSetUIError();
-  const { stopStreaming } = useConversationActions();
 
   const handleStreamError = useCallback(
     (
@@ -69,14 +68,11 @@ export function useChatStream(): {
     [setErrorMessage]
   );
 
-  const abortMessage = useCallback(
-    (conversationId: string | null) => {
-      if (conversationId) {
-        stopStreaming(conversationId);
-      }
-    },
-    [stopStreaming]
-  );
+  const abortMessage = useCallback((conversationId: string | null) => {
+    if (conversationId) {
+      stopStreamForConversation(conversationId);
+    }
+  }, []);
 
   return { handleStreamError, abortMessage };
 }
