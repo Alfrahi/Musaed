@@ -60,9 +60,14 @@ export const IPC_LATENCY_BUDGETS: Readonly<Record<string, LatencyBudgetMs>> = {
   cmd_trace_get_context: 500,
   /** UI dialogs — user-blocking, fast required */
   cmd_dialog_ask: 1000,
+  cmd_dialog_open_file: 1000,
+  cmd_dialog_save_file: 1000,
   cmd_opener_open_url: 1000,
   /** RAG management — lightweight metadata ops */
   cmd_rag_list_projects: 2000,
+  cmd_rag_add_project: 2000,
+  cmd_rag_remove_project: 2000,
+  cmd_rag_update_project: 2000,
   cmd_rag_index_project: 5000,
   cmd_rag_abort_index: 1000,
   cmd_rag_reindex_project: 5000,
@@ -79,6 +84,16 @@ export const IPC_LATENCY_BUDGETS: Readonly<Record<string, LatencyBudgetMs>> = {
   cmd_conversations_clear: 2000,
   cmd_conversation_update: 2000,
   cmd_message_append: 1000,
+  /** Store persistence — lightweight key-value reads/writes */
+  cmd_store_load: 1000,
+  cmd_store_get: 500,
+  cmd_store_set: 500,
+  cmd_store_save: 1000,
+  cmd_store_delete: 500,
+  /** Filesystem — moderate-weight file I/O */
+  cmd_fs_read_text_file: 2000,
+  cmd_fs_read_file: 2000,
+  cmd_fs_write_text_file: 2000,
   /** Backend SQLite migrations — heavyweight, run on user request */
   cmd_run_migrations: 10000,
   cmd_rollback_migrations: 10000,
@@ -118,7 +133,9 @@ export type LatencyBudgetCategory =
   | 'rag-heavy'
   | 'conversation'
   | 'migration'
-  | 'context-menu';
+  | 'context-menu'
+  | 'store'
+  | 'fs';
 
 export function getIpcLatencyBudgetCategory(command: string): LatencyBudgetCategory | undefined {
   if (command.startsWith('cmd_ollama_check_') || command === 'cmd_ollama_verify_service') {
@@ -132,8 +149,11 @@ export function getIpcLatencyBudgetCategory(command: string): LatencyBudgetCateg
   if (command.startsWith('cmd_logs_')) return 'logging';
   if (command.startsWith('cmd_trace_')) return 'tracing';
   if (command === 'cmd_dialog_ask') return 'dialog';
+  if (command.startsWith('cmd_dialog_')) return 'dialog';
   if (command === 'cmd_opener_open_url') return 'opener';
   if (command === 'cmd_context_menu_show') return 'context-menu';
+  if (command.startsWith('cmd_store_')) return 'store';
+  if (command.startsWith('cmd_fs_')) return 'fs';
   if (command.startsWith('cmd_rag_list_') || command.startsWith('cmd_rag_get_')) {
     return 'rag-light';
   }
