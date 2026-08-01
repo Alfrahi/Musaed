@@ -188,7 +188,7 @@ export const mockUtils = {
       mockStores.uiStore.setStreaming(true);
       mockStores.streamingStore.startStream(conversationId, requestId);
     }),
-    coordinateStopStream: vi.fn(),
+    stopStreamForConversation: vi.fn(),
     flushAndStop: vi.fn(),
   },
   persistUserMessage: vi.fn().mockResolvedValue(true),

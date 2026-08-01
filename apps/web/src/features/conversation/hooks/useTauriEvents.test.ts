@@ -76,7 +76,7 @@ vi.mock('@/store/batch-manager', () => ({
 }));
 
 vi.mock('@/store/coordination', () => ({
-  coordinateStopStream: vi.fn(),
+  stopStreamForConversation: vi.fn(),
 }));
 
 vi.mock('@/store/message-store', () => ({

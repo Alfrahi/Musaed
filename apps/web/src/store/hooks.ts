@@ -26,7 +26,7 @@ export {
 // These are store-agnostic streaming lifecycle functions
 export {
   coordinateStartStream,
-  coordinateStopStream,
+  stopStreamForConversation,
   flushAndStop,
   stopBatching,
 } from '@/store/coordination';

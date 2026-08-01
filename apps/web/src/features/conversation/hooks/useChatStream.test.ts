@@ -3,13 +3,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from './shared/setup';
 import { mockAllDependencies, mockStores, mockUtils } from './shared/mocks';
 
-// Mock useConversationActions so abortMessage's stopStreaming delegation
-// can be observed in isolation. The shared mocks don't mock this sibling.
-const conversationActionsMock = vi.hoisted(() => ({ stopStreaming: vi.fn() }));
-vi.mock('./useConversationActions', () => ({
-  useConversationActions: () => conversationActionsMock,
-}));
-
 import { useChatStream } from './useChatStream';
 
 beforeEach(() => {
@@ -66,15 +59,15 @@ describe('useChatStream', () => {
     expect(updateLastMessage).not.toHaveBeenCalled();
   });
 
-  it('abortMessage delegates to stopStreaming for the given conversation', () => {
+  it('abortMessage delegates to stopStreamForConversation for the given conversation', () => {
     const { result } = renderHook(() => useChatStream());
 
     act(() => {
       result.current.abortMessage('conv1');
     });
 
-    // abortMessage delegates to useConversationActions.stopStreaming
-    expect(conversationActionsMock.stopStreaming).toHaveBeenCalledWith('conv1');
+    // abortMessage calls stopStreamForConversation directly
+    expect(mockUtils.coordination.stopStreamForConversation).toHaveBeenCalledWith('conv1');
   });
 
   it('abortMessage is a no-op when conversationId is null', () => {
@@ -84,6 +77,6 @@ describe('useChatStream', () => {
       result.current.abortMessage(null);
     });
 
-    expect(conversationActionsMock.stopStreaming).not.toHaveBeenCalled();
+    expect(mockUtils.coordination.stopStreamForConversation).not.toHaveBeenCalled();
   });
 });

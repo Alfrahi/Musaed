@@ -8,6 +8,7 @@ import { useModelStore } from '@/store/model-store';
 import { useStreamingStore } from '@/store/streaming-store';
 import { useMessageStore } from '@/store/message-store';
 import { traceStoreMutation } from '@/lib/store-tracing';
+import { chatApi } from '@/lib/ipc';
 // `ConversationMetadata` is defined in conversation-store.ts and re-exported from
 // the store barrel; coordination.ts historically also exported it. We re-export
 // (not redefine) to keep a single canonical declaration and avoid TS2308
@@ -103,6 +104,23 @@ export function coordinateStopStream(conversationId: string): void {
     },
     throttleMs: 0,
   });
+}
+
+/**
+ * Single entry point for stopping a conversation's stream — sends the backend
+ * abort IPC, flushes buffered tokens to the message store, and cleans up
+ * streaming state. This replaces the three previously scattered stop paths
+ * (abortStreaming, stopStreaming, coordinateStopStream) that diverged on
+ * whether they sent cmd_ollama_abort_chat.
+ *
+ * Idempotent: safe to call multiple times for the same conversation.
+ */
+export function stopStreamForConversation(conversationId: string): void {
+  const streamingState = useStreamingStore.getState();
+  const requestId = streamingState.activeStreams[conversationId];
+  if (requestId) chatApi.abort(requestId);
+  flushAndStop(conversationId);
+  coordinateStopStream(conversationId);
 }
 
 /**
