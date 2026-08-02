@@ -1,4 +1,4 @@
-import { render, waitFor, act } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -17,39 +17,20 @@ vi.mock('@/lib/ipc', () => ({
     handlerBoxes[event] = handler;
     return Promise.resolve(mockUnlisten);
   }),
-  ollamaApi: {
-    getModels: vi.fn().mockResolvedValue([]),
-  },
 }));
 
-const { mockToastSuccess, mockToastError } = vi.hoisted(() => ({
-  mockToastSuccess: vi.fn(),
+const { mockToastError } = vi.hoisted(() => ({
   mockToastError: vi.fn(),
 }));
 
 vi.mock('react-hot-toast', () => ({
   default: {
-    success: (...args: unknown[]) => mockToastSuccess(...args),
     error: (...args: unknown[]) => mockToastError(...args),
   },
 }));
 
 vi.mock('@/lib/i18n', () => ({
   translate: vi.fn((key: string) => key),
-}));
-
-const { mockUpdatePullStatus, mockSetModels } = vi.hoisted(() => ({
-  mockUpdatePullStatus: vi.fn(),
-  mockSetModels: vi.fn(),
-}));
-
-vi.mock('@/store/model-store', () => ({
-  useModelStore: {
-    getState: () => ({
-      updatePullStatus: mockUpdatePullStatus,
-      setModels: mockSetModels,
-    }),
-  },
 }));
 
 vi.mock('@/store/settings-store', () => ({
@@ -129,47 +110,11 @@ describe('useTauriEvents', () => {
   it('registers event listeners on mount', async () => {
     renderHook(() => useTauriEvents());
 
-    // The hook registers 4 listeners asynchronously; wait for the
-    // pull-progress handler to be captured (the last one registered).
+    // The hook registers 2 listeners asynchronously; wait for the
+    // ollama-error handler to be captured (the last one registered).
     await waitFor(() => {
-      expect(handlerBoxes['pull-progress']).not.toBeNull();
+      expect(handlerBoxes['ollama-error']).not.toBeNull();
     });
     expect(handlerBoxes['ollama-token']).not.toBeNull();
-    expect(handlerBoxes['ollama-error']).not.toBeNull();
-    expect(handlerBoxes['pull-error']).not.toBeNull();
-  });
-
-  it('fires toast.success on pull-progress success event', async () => {
-    renderHook(() => useTauriEvents());
-
-    await waitFor(() => {
-      expect(handlerBoxes['pull-progress']).not.toBeNull();
-    });
-
-    await act(async () => {
-      await handlerBoxes['pull-progress']!({
-        name: 'test-model',
-        status: 'success',
-        total: 100,
-        completed: 100,
-      });
-    });
-
-    expect(mockToastSuccess).toHaveBeenCalledWith('library.pullSuccess');
-    expect(mockSetModels).toHaveBeenCalled();
-  });
-
-  it('fires toast.error on pull-error event', async () => {
-    renderHook(() => useTauriEvents());
-
-    await waitFor(() => {
-      expect(handlerBoxes['pull-error']).not.toBeNull();
-    });
-
-    act(() => {
-      handlerBoxes['pull-error']!({ name: 'test-model', error: 'Pull failed' });
-    });
-
-    expect(mockToastError).toHaveBeenCalled();
   });
 });

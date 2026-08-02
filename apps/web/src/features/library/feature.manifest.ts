@@ -10,7 +10,14 @@ const manifest: FeatureManifest = {
   version: '1.0.0',
   publicApi: {
     components: ['ModelLibrary', 'ModelCard', 'ModelSelector'],
-    hooks: ['useModelPulling', 'useModelActions', 'useModelCapabilities', 'useEmbeddingModels'],
+    hooks: [
+      'useModelPulling',
+      'useModelActions',
+      'useModelCapabilities',
+      'useEmbeddingModels',
+      'useLibraryInitialization',
+      'useLibraryTauriEvents',
+    ],
     utils: [],
   },
   ipcEndpoints: [

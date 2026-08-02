@@ -6,4 +6,5 @@ export { useModelActions } from './hooks/useModelActions';
 export { useLibraryInitialization } from './hooks/useLibraryInitialization';
 export { useModelCapabilities } from './hooks/useModelCapabilities';
 export { useEmbeddingModels } from './hooks/useEmbeddingModels';
+export { useLibraryTauriEvents } from './hooks/useLibraryTauriEvents';
 export type { default as LibraryFeature } from './feature.manifest';
