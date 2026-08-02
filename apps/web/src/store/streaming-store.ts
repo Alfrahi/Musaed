@@ -24,33 +24,38 @@ function runFlushToConversation(
 ): { content: string; metrics: Partial<Message> } | null {
   const { liveContent, pendingMetrics, flushedStreams } = get();
 
-  // Prevent duplicate flushes (idempotency guard)
-  if (flushedStreams.includes(conversationId)) {
+  // Prevent duplicate flushes (idempotency guard) — check-and-mark
+  // atomically inside the set callback to close the TOCTOU window.
+  if (flushedStreams.has(conversationId)) {
     return null;
   }
 
   const buffer = liveContent[conversationId];
   // If no buffer, but may have pending metrics, return null as before
   if (!buffer) {
-    // No content and no buffer -> return null
     if (!pendingMetrics[conversationId]) return null;
-    // No buffer but metrics exist -> treat as empty content
     const metrics = pendingMetrics[conversationId] ?? {};
-    // Clear metrics since flushed
     set((state) => {
       const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
-      return { pendingMetrics: remainingMetrics };
+      return {
+        pendingMetrics: remainingMetrics,
+        flushedStreams: new Set([...state.flushedStreams, conversationId]),
+      };
     });
     return { content: '', metrics };
   }
   const content = buffer.chunks.join('');
   const metrics = pendingMetrics[conversationId] ?? {};
 
-  // Clear flushed content and metrics
+  // Clear flushed content and metrics, and mark as flushed atomically
   set((state) => {
     const { [conversationId]: _flushed, ...remaining } = state.liveContent;
     const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
-    return { liveContent: remaining, pendingMetrics: remainingMetrics };
+    return {
+      liveContent: remaining,
+      pendingMetrics: remainingMetrics,
+      flushedStreams: new Set([...state.flushedStreams, conversationId]),
+    };
   });
 
   resetTokenCounter(conversationId);
@@ -78,7 +83,7 @@ export interface StreamingState {
   /** Track which conversations are actively streaming. */
   activeStreams: Record<string, string>;
   /** Track which conversations have been flushed to prevent duplicate flushes. */
-  flushedStreams: string[];
+  flushedStreams: Set<string>;
 
   appendToken: (conversationId: string, token: string) => void;
   setPendingMetrics: (conversationId: string, metrics: Partial<Message>) => void;
@@ -97,7 +102,7 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
     liveContent: {},
     pendingMetrics: {},
     activeStreams: {},
-    flushedStreams: [] as string[],
+    flushedStreams: new Set<string>(),
 
     appendToken: (conversationId, token) => {
       const currentChunks = get().liveContent[conversationId]?.chunks.length ?? 0;
@@ -132,11 +137,11 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
 
     markFlushed: (conversationId) => {
       set((state) => {
-        if (state.flushedStreams.includes(conversationId)) {
+        if (state.flushedStreams.has(conversationId)) {
           return state;
         }
         return {
-          flushedStreams: [...state.flushedStreams, conversationId],
+          flushedStreams: new Set([...state.flushedStreams, conversationId]),
         };
       });
     },
@@ -160,7 +165,8 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
         const { [conversationId]: _content, ...remainingContent } = state.liveContent;
         const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;
         const { [conversationId]: _stream, ...remainingStreams } = state.activeStreams;
-        const remainingFlushed = state.flushedStreams.filter((id) => id !== conversationId);
+        const remainingFlushed = new Set(state.flushedStreams);
+        remainingFlushed.delete(conversationId);
         return {
           liveContent: remainingContent,
           pendingMetrics: remainingMetrics,
@@ -178,7 +184,7 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
         liveContent: {},
         pendingMetrics: {},
         activeStreams: {},
-        flushedStreams: [] as string[],
+        flushedStreams: new Set<string>(),
       });
     },
   }),

@@ -88,7 +88,7 @@ describe('coordinateStopStream', () => {
       liveContent: {},
       pendingMetrics: {},
       activeStreams: { 'conv-1': 'req-1' },
-      flushedStreams: [],
+      flushedStreams: new Set<string>(),
     });
     useMessageStore.setState({
       messages: {
@@ -131,7 +131,7 @@ describe('stopStreamForConversation', () => {
       liveContent: { 'conv-1': { chunks: ['hello'] } },
       pendingMetrics: {},
       activeStreams: { 'conv-1': 'req-1' },
-      flushedStreams: [],
+      flushedStreams: new Set<string>(),
     });
     useMessageStore.setState({
       messages: {

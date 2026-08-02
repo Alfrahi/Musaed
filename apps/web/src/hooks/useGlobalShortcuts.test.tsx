@@ -80,7 +80,7 @@ describe('useGlobalShortcuts', () => {
       liveContent: {},
       pendingMetrics: {},
       activeStreams: {},
-      flushedStreams: [],
+      flushedStreams: new Set<string>(),
     });
   });
 
