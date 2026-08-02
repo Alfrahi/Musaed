@@ -26,6 +26,7 @@ import { checkIsTauri } from '@/lib/ipc';
 import { Button } from '@/components/ui/button';
 
 import { useTauriEvents, useConversationMessages } from '@/features/conversation';
+import { useLibraryTauriEvents } from '@/features/library';
 import { useAppInitialization } from '@/hooks';
 import { useOllamaConnection } from '@/hooks/useOllamaConnection';
 import TaskStatus from '@/components/ui/TaskStatus';
@@ -153,6 +154,7 @@ const HomeClient = () => {
   const { t, isRtl } = useTranslation(globalSettings.language);
 
   useTauriEvents();
+  useLibraryTauriEvents();
   useGlobalShortcuts();
   useConversationMessages();
 

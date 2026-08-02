@@ -5,8 +5,7 @@ import { type z } from 'zod';
 
 import { useSettingsStore } from '@/store/settings-store';
 import { useStreamingStore } from '@/store/streaming-store';
-import { useModelStore } from '@/store/model-store';
-import { listen, ollamaApi } from '@/lib/ipc';
+import { listen } from '@/lib/ipc';
 import { translate } from '@/lib/i18n';
 import { stopStreamForConversation } from '@/store/coordination';
 import { useMessageStore } from '@/store/message-store';
@@ -15,14 +14,10 @@ import { persistMessage } from '@/features/conversation/utils/message-persistenc
 import {
   sanitizeError,
   BackendErrorSchema,
-  PullProgressSchema,
-  PullErrorSchema,
   OllamaTokenSchema,
   type Message,
   type OllamaToken,
   type BackendError,
-  type PullProgress,
-  type PullError,
 } from '@musaed/contracts';
 import toast from 'react-hot-toast';
 import { logger } from '@/lib/logger';
@@ -107,44 +102,6 @@ const handleError = (payload: BackendError) => {
   });
 };
 
-/** Create pull-progress event handler. */
-const createPullProgressHandler =
-  (isMountedRef: () => boolean) => async (payload: PullProgress) => {
-    const modelKey = payload.name || 'current';
-    const progress =
-      payload.total && payload.completed != null
-        ? Math.round((payload.completed / payload.total) * 100)
-        : undefined;
-    useModelStore.getState().updatePullStatus(modelKey, {
-      status: payload.status,
-      progress,
-      completed: payload.completed ?? undefined,
-      total: payload.total ?? undefined,
-    });
-    if (payload.status === 'success') {
-      const data = await ollamaApi.getModels(useSettingsStore.getState().globalSettings.ollamaUrl);
-      if (data) useModelStore.getState().setModels(data);
-      const lang = useSettingsStore.getState().globalSettings.language;
-      toast.success(translate('library.pullSuccess', lang));
-      setTimeout(
-        () => isMountedRef() && useModelStore.getState().updatePullStatus(modelKey, null),
-        3000
-      );
-    }
-  };
-
-/** Create pull-error event handler. */
-const createPullErrorHandler = (isMountedRef: () => boolean) => (payload: PullError) => {
-  const modelKey = payload.name || 'current';
-  useModelStore.getState().updatePullStatus(modelKey, { status: 'error' });
-  const lang = useSettingsStore.getState().globalSettings.language;
-  toast.error(payload.error || translate('error.modelPullFailed', lang));
-  setTimeout(
-    () => isMountedRef() && useModelStore.getState().updatePullStatus(modelKey, null),
-    8000
-  );
-};
-
 /**
  * Hook to listen for native Tauri events from the Rust backend.
  */
@@ -152,7 +109,6 @@ export function useTauriEvents() {
   useEffect(() => {
     const unlisteners: (() => void)[] = [];
     let isMounted = true;
-    const isMountedRef = () => isMounted;
 
     const register = async <T>(
       event: string,
@@ -167,12 +123,6 @@ export function useTauriEvents() {
       try {
         await register('ollama-token', OllamaTokenSchema, handleToken);
         await register('ollama-error', BackendErrorSchema, handleError);
-        await register(
-          'pull-progress',
-          PullProgressSchema,
-          createPullProgressHandler(isMountedRef)
-        );
-        await register('pull-error', PullErrorSchema, createPullErrorHandler(isMountedRef));
       } catch (err) {
         logger.error('IPC initialization failure', { error: err });
       }
