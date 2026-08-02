@@ -4,6 +4,8 @@ import { useCallback } from 'react';
 import { Send, Square, ImageIcon, Paperclip } from 'lucide-react';
 import { useChatInput } from '@/features/conversation/hooks/useChatInput';
 import { stopStreamForConversation } from '@/store/coordination';
+import { chatApi } from '@/lib/ipc';
+import { useStreamingStore } from '@/store/streaming-store';
 import { useDropZone } from '@/features/conversation/hooks/useDropZone';
 import AttachmentPreview from './AttachmentPreview';
 import { ModelSelector } from '@/features/library';
@@ -138,7 +140,11 @@ export const InputArea = () => {
   } = useChatInput();
 
   const handleAbort = useCallback(() => {
-    if (currentConversationId) stopStreamForConversation(currentConversationId);
+    if (currentConversationId) {
+      const requestId = useStreamingStore.getState().activeStreams[currentConversationId];
+      if (requestId) chatApi.abort(requestId);
+      stopStreamForConversation(currentConversationId);
+    }
   }, [currentConversationId]);
 
   const { isDragOver } = useDropZone({

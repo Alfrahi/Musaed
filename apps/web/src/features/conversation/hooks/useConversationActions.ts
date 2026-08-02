@@ -11,7 +11,7 @@ import { useMessageStore } from '@/store/message-store';
 import { useStreamingStore } from '@/store/streaming-store';
 import { useModelStore } from '@/store/model-store';
 import { useSettingsStore, useLanguage } from '@/store/settings-store';
-import { conversationApi } from '@/lib/ipc';
+import { conversationApi, chatApi } from '@/lib/ipc';
 import { coordinateStartStream, stopStreamForConversation } from '@/store/coordination';
 import { useTranslation } from '@/lib/i18n';
 import type { ConversationMetadata, ConversationState } from '@/store/conversation-store';
@@ -66,6 +66,8 @@ export const useConversationActions = () => {
 
   const deleteConversation = useCallback(
     (id: string) => {
+      const requestId = useStreamingStore.getState().activeStreams[id];
+      if (requestId) chatApi.abort(requestId);
       stopStreamForConversation(id);
       const state = useConversationStore.getState();
       const { [id]: _removed, ...remainingConversations } = state.conversations;
@@ -106,7 +108,11 @@ export const useConversationActions = () => {
   );
 
   const clearAllConversations = useCallback(() => {
-    Object.keys(useStreamingStore.getState().activeStreams).forEach(stopStreamForConversation);
+    const activeStreams = useStreamingStore.getState().activeStreams;
+    Object.entries(activeStreams).forEach(([convId, requestId]) => {
+      chatApi.abort(requestId);
+      stopStreamForConversation(convId);
+    });
 
     // Persist clearing via Rust backend
     (async () => {

@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { flushAndStop, stopStreamForConversation } from '@/store/coordination';
 import { useStreamingStore } from '@/store/streaming-store';
 import { useUIStore, useSetUIError } from '@/store/ui-store';
+import { chatApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
 
 /**
@@ -70,6 +71,8 @@ export function useChatStream(): {
 
   const abortMessage = useCallback((conversationId: string | null) => {
     if (conversationId) {
+      const requestId = useStreamingStore.getState().activeStreams[conversationId];
+      if (requestId) chatApi.abort(requestId);
       stopStreamForConversation(conversationId);
     }
   }, []);

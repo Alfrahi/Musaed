@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useConversationActions } from '@/features/conversation';
 import { stopStreamForConversation } from '@/store/coordination';
+import { chatApi } from '@/lib/ipc';
 import {
   useSetSettingsOpen,
   useSetLibraryOpen,
@@ -80,7 +81,9 @@ export function useGlobalShortcuts() {
         // from the stores to avoid stale closure captures.
         const conversationId = useConversationStore.getState().currentConversationId;
         if (!conversationId) return;
-        if (conversationId in useStreamingStore.getState().activeStreams) {
+        const activeStreams = useStreamingStore.getState().activeStreams;
+        if (conversationId in activeStreams) {
+          chatApi.abort(activeStreams[conversationId]);
           stopStreamForConversation(conversationId);
         }
       }

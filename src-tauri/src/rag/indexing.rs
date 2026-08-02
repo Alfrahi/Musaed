@@ -100,6 +100,10 @@ pub struct IndexOptions<'a> {
 /// This is the main entry point called from the Tauri command.
 /// It walks the project directory, diffs against tracked files, chunks new/modified
 /// files, generates embeddings via Ollama, and stores everything in SQLite.
+///
+/// On failure (including cancellation), the project status is set to `Error` so the
+/// UI can offer a retry. Without this, a cancelled or failed index would leave the
+/// project stuck in `Indexing` status permanently.
 pub async fn index_project(
     store: Arc<RwLock<RagStore>>,
     opts: IndexOptions<'_>,
@@ -125,6 +129,29 @@ pub async fn index_project(
             .await?;
     }
 
+    // Clone the fields needed for error recovery before moving ctx into the pipeline.
+    let store_clone = Arc::clone(&ctx.store);
+    let project_id_clone = ctx.project_id.to_string();
+
+    // Run the pipeline; on any error (including cancellation), mark the project
+    // as Error so the UI can surface a retry affordance instead of leaving the
+    // project stuck in Indexing forever.
+    let result = run_pipeline(ctx).await;
+    if let Err(ref e) = result {
+        tracing::warn!(
+            project_id = %project_id_clone,
+            error = e,
+            "Indexing pipeline failed — marking project as Error"
+        );
+        if let Ok(s) = store_clone.try_write() {
+            let _ = s.set_status(&project_id_clone, &ProjectStatus::Error).await;
+        }
+    }
+
+    result
+}
+
+async fn run_pipeline(ctx: PhaseContext<'_>) -> Result<(), String> {
     let discovered = phase_discover(&ctx)?;
     let diff = phase_diff(&ctx, &discovered).await?;
     phase_delete_stale(&ctx, &diff.files_to_delete).await?;

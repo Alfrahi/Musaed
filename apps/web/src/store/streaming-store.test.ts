@@ -30,7 +30,7 @@ describe('useStreamingStore', () => {
       expect(state.liveContent).toEqual({});
       expect(state.pendingMetrics).toEqual({});
       expect(state.activeStreams).toEqual({});
-      expect(state.flushedStreams).toEqual([]);
+      expect(state.flushedStreams).toEqual(new Set());
     });
   });
 
@@ -208,11 +208,11 @@ describe('useStreamingStore', () => {
   });
 
   describe('markFlushed', () => {
-    it('should add conversation to flushedStreams array', () => {
+    it('should add conversation to flushedStreams set', () => {
       useStreamingStore.getState().markFlushed('conv1');
 
       const state = useStreamingStore.getState();
-      expect(state.flushedStreams.includes('conv1')).toBe(true);
+      expect(state.flushedStreams.has('conv1')).toBe(true);
     });
 
     it('should not remove other flushed conversations', () => {
@@ -220,8 +220,8 @@ describe('useStreamingStore', () => {
       useStreamingStore.getState().markFlushed('conv2');
 
       const state = useStreamingStore.getState();
-      expect(state.flushedStreams.includes('conv1')).toBe(true);
-      expect(state.flushedStreams.includes('conv2')).toBe(true);
+      expect(state.flushedStreams.has('conv1')).toBe(true);
+      expect(state.flushedStreams.has('conv2')).toBe(true);
     });
 
     it('should be idempotent - marking same conversation twice does not error', () => {
@@ -245,7 +245,7 @@ describe('useStreamingStore', () => {
       expect(state.liveContent.conv1).toBeUndefined();
       expect(state.pendingMetrics.conv1).toBeUndefined();
       expect(state.activeStreams.conv1).toBeUndefined();
-      expect(state.flushedStreams.includes('conv1')).toBe(false);
+      expect(state.flushedStreams.has('conv1')).toBe(false);
     });
 
     it('should not affect other conversations', () => {
@@ -362,52 +362,32 @@ describe('useStreamingStore', () => {
     });
   });
 
-  describe('Set serialisation (migration)', () => {
-    it('should expose flushedStreams as string[] at runtime', () => {
+  describe('flushedStreams Set behaviour', () => {
+    it('should expose flushedStreams as Set<string> at runtime', () => {
       useStreamingStore.getState().markFlushed('conv1');
       const state = useStreamingStore.getState();
 
-      expect(Array.isArray(state.flushedStreams)).toBe(true);
-      expect(state.flushedStreams.includes('conv1')).toBe(true);
+      expect(state.flushedStreams instanceof Set).toBe(true);
+      expect(state.flushedStreams.has('conv1')).toBe(true);
     });
 
-    it('should round-trip flushedStreams through JSON cleanly', () => {
+    it('should support Set operations (add, has, delete)', () => {
       useStreamingStore.getState().markFlushed('conv1');
       useStreamingStore.getState().markFlushed('conv2');
 
-      const before = useStreamingStore.getState().flushedStreams;
-
-      const serialised = JSON.stringify({ flushedStreams: before });
-      const parsed = JSON.parse(serialised) as { flushedStreams: unknown };
-
-      expect(Array.isArray(parsed.flushedStreams)).toBe(true);
-      // A real Set serialises to {} (no .includes) — array form is required.
-      expect((parsed.flushedStreams as string[]).includes('conv1')).toBe(true);
-      expect((parsed.flushedStreams as string[]).includes('conv2')).toBe(true);
+      const state = useStreamingStore.getState();
+      expect(state.flushedStreams.has('conv1')).toBe(true);
+      expect(state.flushedStreams.has('conv2')).toBe(true);
+      expect(state.flushedStreams.has('conv3')).toBe(false);
+      expect(state.flushedStreams.size).toBe(2);
     });
 
-    it('should coerce a legacy persisted Set (serialised as {}) back to []', () => {
-      // Simulates the legacy broken payload: flushedStreams was a Set, which
-      // JSON serialised to an empty object. A naïve rehydrate would throw on
-      // .has(); the migration must coerce this to a safe array.
-      const legacy = {
-        state: {
-          liveContent: {},
-          pendingMetrics: {},
-          activeStreams: {},
-          flushedStreams: {} as unknown as string[],
-        },
-        version: 2,
-      };
+    it('should clear flushedStreams on clearAll', () => {
+      useStreamingStore.getState().markFlushed('conv1');
+      useStreamingStore.getState().clearAll();
 
-      const persisted =
-        typeof legacy.state === 'object' && legacy.state !== null
-          ? (legacy.state as { flushedStreams: unknown })
-          : { flushedStreams: [] as unknown };
-      const normalised = Array.isArray(persisted.flushedStreams) ? persisted.flushedStreams : [];
-
-      expect(normalised).toEqual([]);
-      expect(() => normalised.includes).not.toThrow();
+      const state = useStreamingStore.getState();
+      expect(state.flushedStreams.size).toBe(0);
     });
   });
 
