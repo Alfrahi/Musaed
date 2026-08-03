@@ -20,6 +20,7 @@ pub mod rag;
 pub mod rate_limiter;
 pub mod shared;
 pub mod store_commands;
+pub mod tray;
 pub mod validation;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -48,6 +49,13 @@ pub fn run() {
                 log::warn!("Main window not found when attempting to focus");
             }
         }));
+
+    // Intercept window close: if background tasks (chat stream, model pull,
+    // RAG indexing) are active, hide to tray instead of exiting. The tray
+    // icon + menu is also initialized inside setup() (UX-UI-AUDIT S-1).
+    builder = builder.on_window_event(|window, event| {
+        tray::on_window_event(window, event);
+    });
 
     builder = builder.setup(|app| -> Result<(), Box<dyn std::error::Error>> {
         // Initialize file logger and get the channel sender for tracing
@@ -94,6 +102,11 @@ pub fn run() {
         app.manage(Arc::new(RwLock::new(rag_store)));
 
         log::info!("RAG store initialized at {:?}", db_path);
+
+        // Initialize system tray (UX-UI-AUDIT Phase 2 Prompt 6, S-1).
+        // Tray icon + menu + close interception for background task protection.
+        tray::setup_tray(app.handle())
+            .map_err(|e| format!("Failed to initialize system tray: {}", e))?;
 
         Ok(())
     });
@@ -148,6 +161,8 @@ pub fn run() {
             conversation::commands::cmd_conversation_update,
             // Context menu command
             context_menu::cmd_context_menu_show,
+            // System tray command
+            tray::cmd_tray_get_background_status,
             // Dialog commands
             dialog::cmd_dialog_ask,
             dialog::cmd_dialog_open_file,

@@ -65,6 +65,7 @@
     "allow-fs-commands",
     "allow-opener-commands",
     "allow-context-menu-commands",
-    "allow-app-info-commands"
+    "allow-app-info-commands",
+    "allow-tray-commands"
   ]
 }

@@ -102,6 +102,12 @@ export const COMMAND_VERSIONS = {
   // Declared shared (see SHARED_COMMANDS) so any feature can call it without
   // declaring a cross-feature dependency; it carries no domain state.
   cmd_get_app_version: true,
+
+  // System tray — query active background tasks (chat streams, model pulls,
+  // RAG indexing) so the frontend and tray close handler can decide between
+  // minimize-to-tray and normal exit. Cross-cutting infrastructure, declared
+  // shared so any feature can consume it.
+  cmd_tray_get_background_status: true,
 } as const;
 
 /**
@@ -113,6 +119,7 @@ export const SHARED_COMMANDS = {
   cmd_dialog_ask: true,
   cmd_opener_open_url: true,
   cmd_get_app_version: true,
+  cmd_tray_get_background_status: true,
 } as const;
 
 export type CommandName = keyof typeof COMMAND_VERSIONS;
