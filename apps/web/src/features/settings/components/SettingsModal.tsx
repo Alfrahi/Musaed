@@ -12,6 +12,7 @@ import DiagnosticsSettings from './DiagnosticsSettings';
 import InputSettings from './InputSettings';
 import StorageSettings from './StorageSettings';
 import MarkdownSettings from './MarkdownSettings';
+import SettingsCard from './SettingsCard';
 import { useTranslation } from '@/lib/i18n';
 import { dialogApi } from '@/lib/ipc';
 import { ModalLayout, ScrollShadow, Input } from '@/components/ui';
@@ -26,29 +27,43 @@ interface SettingsModalProps {
 type SettingsTab = 'general' | 'appearance' | 'ai' | 'storage' | 'advanced';
 
 const renderGeneralTab = () => (
-  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-8">
-    <LanguageSettings />
-    <InputSettings />
+  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-6">
+    <SettingsCard>
+      <LanguageSettings />
+    </SettingsCard>
+    <SettingsCard>
+      <InputSettings />
+    </SettingsCard>
   </div>
 );
 
 const renderAppearanceTab = () => (
-  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-8">
-    <ThemeSettings />
-    <MarkdownSettings />
+  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-6">
+    <SettingsCard>
+      <ThemeSettings />
+    </SettingsCard>
+    <SettingsCard>
+      <MarkdownSettings />
+    </SettingsCard>
   </div>
 );
 
 const renderAITab = () => (
-  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-8">
-    <OllamaSettings />
-    <ModelParamsSettings />
+  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-6">
+    <SettingsCard>
+      <OllamaSettings />
+    </SettingsCard>
+    <SettingsCard>
+      <ModelParamsSettings />
+    </SettingsCard>
   </div>
 );
 
 const renderStorageTab = () => (
-  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-8">
-    <StorageSettings />
+  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-6">
+    <SettingsCard>
+      <StorageSettings />
+    </SettingsCard>
   </div>
 );
 
@@ -58,8 +73,10 @@ interface RenderAdvancedTabProps {
 }
 
 const RenderAdvancedTab = ({ t, handleReset }: RenderAdvancedTabProps) => (
-  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-8">
-    <DiagnosticsSettings />
+  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-6">
+    <SettingsCard>
+      <DiagnosticsSettings />
+    </SettingsCard>
     <div className="pb-4">
       <Button
         variant="danger"
