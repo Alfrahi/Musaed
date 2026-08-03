@@ -39,6 +39,9 @@ const manifest: FeatureManifest = {
     'cmd_rag_assemble_context',
     'cmd_rag_get_file_chunks',
     'cmd_rag_set_embedding_model',
+    // `components/AddProjectDialog.tsx` opens a native directory picker via
+    // the IPC-layer `dialogApi` namespace. Feature-scoped, not shared.
+    'cmd_dialog_open_file',
   ],
   /**
    * Performance-sensitive IPC endpoints owned by this feature. The actual
@@ -122,6 +125,11 @@ const manifest: FeatureManifest = {
     cmd_rag_set_embedding_model: {
       fallback: 'Keep previous embedding model selection',
       retry: 'once',
+      messageKey: 'error.genericError',
+    },
+    cmd_dialog_open_file: {
+      fallback: 'Keep the add-project dialog open with the previous path',
+      retry: 'none',
       messageKey: 'error.genericError',
     },
   },

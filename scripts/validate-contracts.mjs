@@ -492,7 +492,14 @@ function normalizeRustParamType(raw) {
     t === 'u8' || t === 'u16' || t === 'u32' || t === 'u64' ||
     t === 'i8' || t === 'i16' || t === 'i32' || t === 'i64' ||
     t === 'usize' || t === 'isize' ||
-    t === 'f32' || t === 'f64';
+    t === 'f32' || t === 'f64' ||
+    // `serde_json::Value` is imported as the bare `Value` identifier in
+    // `store_commands.rs` — it's the canonical "any JSON" type on the Rust
+    // side and one of the few Rust types that is *intentionally* open-ended,
+    // mirroring TS `unknown`. Marking it atomic lets `equivalentType` consult
+    // `RUST_ATOMIC_TO_TS['Value']` to reach the `unknown` wildcard on the TS
+    // side (used by `cmd_store_set`'s `value` field).
+    t === 'Value';
 
   return { base: t, optional, array, atomic: isAtomic };
 }
@@ -514,6 +521,42 @@ function normalizeTsParamType(raw) {
 
   // Strip outer parentheses, if any.
   while (t.startsWith('(') && t.endsWith(')')) t = t.slice(1, -1).trim();
+
+  // Peel top-level `| null` and `| undefined` union arms so that
+  // `string[] | null` / `string | null` normalise the same way Rust's
+  // `Option<Vec<String>>` / `Option<String>` does — the `null`/`undefined`
+  // arm becomes the `optional: true` flag and the remaining base type is
+  // compared directly. We deliberately only split at top-level `|` (depth 0
+  // in `<>` angle brackets), so a union *inside* a generic parameter such as
+  // `Array<string | null>` is left intact for the recursive element
+  // comparison below.
+  function stripTopLevelNullUnion(s) {
+    let depth = 0;
+    let cutAt = -1;
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i];
+      if (ch === '<') depth++;
+      else if (ch === '>') depth = Math.max(0, depth - 1);
+      else if (ch === '|' && depth === 0) {
+        const rhs = s.slice(i + 1).trim();
+        if (rhs === 'null' || rhs === 'undefined') {
+          cutAt = i;
+          break;
+        }
+      }
+    }
+    if (cutAt === -1) return null;
+    return s.slice(0, cutAt).trim();
+  }
+  for (let i = 0; i < 6; i++) {
+    const before = t;
+    const stripped = stripTopLevelNullUnion(t);
+    if (stripped !== null) {
+      optional = true;
+      t = stripped;
+    }
+    if (t === before) break;
+  }
 
   for (let i = 0; i < 6; i++) {
     const before = t;
@@ -590,6 +633,11 @@ const RUST_ATOMIC_TO_TS = {
   usize: 'number', isize: 'number',
   f32: 'number', f64: 'number',
   void: 'void',
+  // `serde_json::Value` is the canonical "any JSON-compatible payload" type
+  // on the Rust side and corresponds to `unknown` on the TS side — both mean
+  // "the contract author hasn't pinned the value type". Used by
+  // `cmd_store_set`'s `value` field.
+  Value: 'unknown',
 };
 
 function equivalentType(rust, ts, tsOptional) {

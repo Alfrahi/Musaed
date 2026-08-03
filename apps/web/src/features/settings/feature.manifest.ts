@@ -20,7 +20,22 @@ const manifest: FeatureManifest = {
     components: ['SettingsModal'],
     utils: [],
   },
-  ipcEndpoints: ['cmd_ollama_verify_service', 'cmd_logs_request_clear_token', 'cmd_logs_clear'],
+  ipcEndpoints: [
+    'cmd_ollama_verify_service',
+    'cmd_logs_request_clear_token',
+    'cmd_logs_clear',
+    // Storage-backed log/state export & import — `hooks/useStorageActions.ts`
+    // and `hooks/useLogActions.ts` drive the tauri store + filesystem + native
+    // file dialogs through the IPC-layer `storeApi`/`dialogApi`/`fsApi`.
+    'cmd_store_load',
+    'cmd_store_get',
+    'cmd_store_set',
+    'cmd_store_save',
+    'cmd_dialog_save_file',
+    'cmd_fs_write_text_file',
+    'cmd_dialog_open_file',
+    'cmd_fs_read_text_file',
+  ],
   /**
    * Performance-sensitive IPC endpoints owned by this feature. The actual
    * thresholds (ms) live in `@musaed/contracts` (`IPC_LATENCY_BUDGETS`).
@@ -54,6 +69,46 @@ const manifest: FeatureManifest = {
     },
     cmd_logs_clear: {
       fallback: 'Show error toast; logs remain in viewer',
+      retry: 'once',
+      messageKey: 'error.genericError',
+    },
+    cmd_store_load: {
+      fallback: 'Show error toast; keep current in-memory state',
+      retry: 'once',
+      messageKey: 'error.genericError',
+    },
+    cmd_store_get: {
+      fallback: 'Treat as missing key — return undefined and continue',
+      retry: 'none',
+      messageKey: 'error.genericError',
+    },
+    cmd_store_set: {
+      fallback: 'Show error toast; in-memory state already updated optimistically',
+      retry: 'once',
+      messageKey: 'error.genericError',
+    },
+    cmd_store_save: {
+      fallback: 'Show error toast; retry save on next user action',
+      retry: 'once',
+      messageKey: 'error.genericError',
+    },
+    cmd_dialog_save_file: {
+      fallback: 'Silently ignore — export cancelled by user',
+      retry: 'none',
+      messageKey: 'error.genericError',
+    },
+    cmd_fs_write_text_file: {
+      fallback: 'Show error toast; exported file not written',
+      retry: 'once',
+      messageKey: 'error.genericError',
+    },
+    cmd_dialog_open_file: {
+      fallback: 'Silently ignore — import cancelled by user',
+      retry: 'none',
+      messageKey: 'error.genericError',
+    },
+    cmd_fs_read_text_file: {
+      fallback: 'Show error toast; selected file not imported',
       retry: 'once',
       messageKey: 'error.genericError',
     },
