@@ -27,8 +27,8 @@ const ToggleRow = ({
   const Icon = toggle.icon;
 
   return (
-    <div className="flex items-start gap-4 rounded-xl border border-zinc-100 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
-      <div className="rounded-lg bg-white p-2 shadow-sm dark:bg-zinc-700">
+    <div className="flex items-start gap-4 rounded-md border border-zinc-100 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
+      <div className="rounded-md bg-white p-2 shadow-sm dark:bg-zinc-700">
         <Icon size={16} className="text-zinc-500" />
       </div>
       <div className="min-w-0 flex-1">

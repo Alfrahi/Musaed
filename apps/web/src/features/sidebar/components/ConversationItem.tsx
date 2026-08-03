@@ -40,7 +40,7 @@ const RenameInput = ({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       onBlur={onBlur}
-      className="border-primary w-full rounded-none border bg-white px-1 py-0.5 text-[13px] outline-none dark:bg-zinc-900"
+      className="border-primary w-full rounded-md border bg-white px-1 py-0.5 text-[13px] outline-none dark:bg-zinc-900"
     />
   </form>
 );

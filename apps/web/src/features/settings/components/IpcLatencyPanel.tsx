@@ -95,7 +95,7 @@ const IpcLatencyPanel = () => {
   const knownBudgetCount = Object.keys(IPC_LATENCY_BUDGETS).length;
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-zinc-100 p-4 dark:border-zinc-800">
+    <div className="flex flex-col gap-3 rounded-md border border-zinc-100 p-4 dark:border-zinc-800">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Gauge size={14} className="text-zinc-400" />

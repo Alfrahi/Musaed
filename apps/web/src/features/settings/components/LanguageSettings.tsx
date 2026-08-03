@@ -20,13 +20,13 @@ const LanguageSettings = () => {
         <Languages size={14} className="text-zinc-400" />
         <label>{t('settings.language')}</label>
       </div>
-      <div className="flex w-full rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
+      <div className="flex w-full rounded-md bg-zinc-100 p-1 dark:bg-zinc-800">
         {availableLanguages.map((lang) => (
           // eslint-disable-next-line musaed-buttons/prefer-button-primitive -- segmented control toggle, not an action button
           <button
             key={lang}
             onClick={() => updateGlobalSettings({ language: lang })}
-            className={`flex-1 rounded-lg py-2 text-xs font-bold tracking-widest uppercase transition-all ${globalSettings.language === lang ? 'bg-white text-blue-600 shadow-sm dark:bg-zinc-700' : 'text-zinc-500'}`}
+            className={`flex-1 rounded-md py-2 text-xs font-bold tracking-widest uppercase transition-all ${globalSettings.language === lang ? 'bg-white text-blue-600 shadow-sm dark:bg-zinc-700' : 'text-zinc-500'}`}
           >
             {t(`common.${lang}` as const)}
           </button>

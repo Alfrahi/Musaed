@@ -52,7 +52,7 @@ const InputAreaDynamic = dynamic(() => import('@/features/conversation/component
   ssr: false,
   loading: () => (
     <div className="border-sidebar-border bg-background animate-pulse border-t p-4">
-      <div className="h-12 rounded-none bg-zinc-100 dark:bg-zinc-800" />
+      <div className="h-12 rounded-md bg-zinc-100 dark:bg-zinc-800" />
     </div>
   ),
 });
@@ -115,7 +115,7 @@ export const AppHeader = ({
         variant="ghost"
         size="icon"
         onClick={onLibraryOpen}
-        className="hover:border-sidebar-border h-10 w-10 rounded-none border border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        className="hover:border-sidebar-border h-10 w-10 rounded-md border border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
         title={t('common.library')}
         aria-label={t('common.library')}
       >
@@ -125,7 +125,7 @@ export const AppHeader = ({
         variant="ghost"
         size="icon"
         onClick={onSettingsOpen}
-        className="hover:border-sidebar-border h-10 w-10 rounded-none border border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        className="hover:border-sidebar-border h-10 w-10 rounded-md border border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
         title={t('settings.title')}
         aria-label={t('settings.title')}
       >

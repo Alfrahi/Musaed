@@ -63,7 +63,7 @@ const CodeBlock = ({ language, value }: CodeBlockProps) => {
   return (
     <div
       onContextMenu={handleContextMenu}
-      className="group relative my-4 block overflow-hidden rounded-none border border-zinc-200 bg-zinc-950 dark:border-zinc-800"
+      className="group relative my-4 block overflow-hidden rounded-md border border-zinc-200 bg-zinc-950 dark:border-zinc-800"
       role="region"
       aria-label={t('a11y.codeBlock', { language: displayLanguage })}
     >

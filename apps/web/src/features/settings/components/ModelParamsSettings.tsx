@@ -34,7 +34,7 @@ const SliderControl = ({
       step={step}
       value={value}
       onChange={(e) => onChange(parseFloat(e.target.value))}
-      className="h-1 w-full cursor-pointer appearance-none rounded-lg bg-zinc-200 accent-blue-600 dark:bg-zinc-800"
+      className="h-1 w-full cursor-pointer appearance-none rounded-md bg-zinc-200 accent-blue-600 dark:bg-zinc-800"
     />
   </div>
 );
@@ -57,7 +57,7 @@ const NumberInput = ({
       type="number"
       value={value}
       onChange={(e) => onChange(parseInt(e.target.value) || fallback)}
-      className="caption-xs w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 font-mono transition-colors outline-none focus:border-blue-500 dark:border-zinc-700 dark:bg-zinc-800"
+      className="caption-xs w-full rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1.5 font-mono transition-colors outline-none focus:border-blue-500 dark:border-zinc-700 dark:bg-zinc-800"
     />
   </div>
 );
@@ -84,7 +84,7 @@ const ModelParamsSettings = () => {
           step="0.1"
           value={globalSettings.temperature}
           onChange={(e) => updateGlobalSettings({ temperature: parseFloat(e.target.value) })}
-          className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-zinc-200 accent-blue-600 dark:bg-zinc-800"
+          className="h-1.5 w-full cursor-pointer appearance-none rounded-md bg-zinc-200 accent-blue-600 dark:bg-zinc-800"
         />
       </div>
 
