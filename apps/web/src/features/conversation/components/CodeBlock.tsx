@@ -77,7 +77,7 @@ const CodeBlock = ({ language, value }: CodeBlockProps) => {
           variant="ghost"
           size="sm"
           onClick={onCopy}
-          className="caption-xs gap-1.5 rounded px-2 py-1 font-bold tracking-widest text-zinc-400 uppercase hover:text-white focus-visible:ring-1 focus-visible:ring-blue-500"
+          className="caption-xs cursor-pointer gap-1.5 rounded px-2 py-1 font-bold tracking-widest text-zinc-400 uppercase hover:text-white focus-visible:ring-1 focus-visible:ring-blue-500"
           aria-label={t('a11y.copyCode')}
         >
           {copied ? (
