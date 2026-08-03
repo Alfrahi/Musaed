@@ -175,7 +175,7 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
       onKeyDown={handleKeyDown}
       onContextMenu={handleContextMenu}
       className={cn(
-        'group relative flex cursor-pointer items-center gap-2.5 border-s-2 px-3 py-2 text-[13px] transition-all',
+        'group relative flex cursor-pointer items-center gap-2.5 border-s-2 px-3 py-2 text-[13px] transition-colors duration-150',
         // focus-visible ring pairs the global :focus-visible outline from globals.css
         // with this virtualized row so keyboard focus is visible (audit F3).
         'focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none',

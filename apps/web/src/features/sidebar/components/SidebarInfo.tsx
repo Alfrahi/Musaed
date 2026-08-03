@@ -13,7 +13,7 @@ const SidebarInfo = () => {
   const version = '0.1.0';
 
   return (
-    <div className="border-bs border-sidebar-border shrink-0 bg-zinc-50/50 dark:bg-zinc-900/20">
+    <div className="border-bs border-sidebar-border shrink-0 bg-zinc-50/50 transition-colors duration-150 dark:bg-zinc-900/20">
       <Button
         variant="ghost"
         onClick={() => setInfoOpen(true)}
