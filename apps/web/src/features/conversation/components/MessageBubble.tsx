@@ -42,15 +42,19 @@ interface MessageBubbleProps {
     tokens: string;
   };
   formatNumber: (num: number, options?: Intl.NumberFormatOptions) => string;
-  /** Called when the user selects "Regenerate" from the context menu. */
-  onRegenerate?: () => void;
+  /** Called when the user selects "Regenerate" from the context menu.
+   *  Receives the assistant message id so the caller can keep a stable
+   *  callback reference (audit UX-004 — React.memo defeat). */
+  onRegenerate?: (msgId: string) => void;
   /** Called when the user clicks "Continue" on a stopped message. */
-  onContinue?: () => void;
+  onContinue?: (msgId: string) => void;
   /** Called when the user clicks "Edit prompt" — pulls the preceding user
-   *  message back into the input for editing. */
-  onEditPrompt?: () => void;
-  /** Called when the user clicks "Edit" on their own message. */
-  onEdit?: () => void;
+   *  message back into the input for editing. Receives the assistant
+   *  message id for stable callback identity (audit UX-004). */
+  onEditPrompt?: (msgId: string) => void;
+  /** Called when the user clicks "Edit" on their own message. Receives the
+   *  user message id for stable callback identity (audit UX-004). */
+  onEdit?: (msgId: string) => void;
 }
 
 interface SourceReference {
@@ -206,16 +210,18 @@ const SourceViewerModal = ({ source, titleId, onClose, t }: SourceViewerModalPro
 interface HoverActionsProps {
   isUser: boolean;
   isStopped: boolean;
-  onRegenerate?: () => void;
-  onContinue?: () => void;
-  onEditPrompt?: () => void;
-  onEdit?: () => void;
+  msgId: string;
+  onRegenerate?: (msgId: string) => void;
+  onContinue?: (msgId: string) => void;
+  onEditPrompt?: (msgId: string) => void;
+  onEdit?: (msgId: string) => void;
   t: (key: string) => string;
 }
 
 const HoverActions = ({
   isUser,
   isStopped,
+  msgId,
   onRegenerate,
   onContinue,
   onEditPrompt,
@@ -232,7 +238,7 @@ const HoverActions = ({
         <Button
           variant="ghost"
           size="icon"
-          onClick={onRegenerate}
+          onClick={() => onRegenerate(msgId)}
           aria-label={t('chat.regenerate')}
           title={t('chat.regenerate')}
         >
@@ -243,7 +249,7 @@ const HoverActions = ({
         <Button
           variant="ghost"
           size="icon"
-          onClick={onContinue}
+          onClick={() => onContinue(msgId)}
           aria-label={t('chat.continue')}
           title={t('chat.continue')}
         >
@@ -254,7 +260,7 @@ const HoverActions = ({
         <Button
           variant="ghost"
           size="icon"
-          onClick={onEditPrompt}
+          onClick={() => onEditPrompt(msgId)}
           aria-label={t('chat.editPrompt')}
           title={t('chat.editPrompt')}
         >
@@ -265,7 +271,7 @@ const HoverActions = ({
         <Button
           variant="ghost"
           size="icon"
-          onClick={onEdit}
+          onClick={() => onEdit(msgId)}
           aria-label={t('chat.editPrompt')}
           title={t('chat.editPrompt')}
         >
@@ -282,11 +288,12 @@ const HoverActions = ({
  */
 interface StoppedStatusLineProps {
   isStopped: boolean;
-  onContinue?: () => void;
+  msgId: string;
+  onContinue?: (msgId: string) => void;
   t: (key: string) => string;
 }
 
-const StoppedStatusLine = ({ isStopped, onContinue, t }: StoppedStatusLineProps) => {
+const StoppedStatusLine = ({ isStopped, msgId, onContinue, t }: StoppedStatusLineProps) => {
   if (!isStopped) return null;
   return (
     <div className="text-caption flex items-center gap-2 text-zinc-500">
@@ -295,7 +302,7 @@ const StoppedStatusLine = ({ isStopped, onContinue, t }: StoppedStatusLineProps)
       {onContinue && (
         <button
           type="button"
-          onClick={onContinue}
+          onClick={() => onContinue(msgId)}
           className="text-primary cursor-pointer font-medium hover:underline"
         >
           {t('chat.continue')}
@@ -311,10 +318,14 @@ const StoppedStatusLine = ({ isStopped, onContinue, t }: StoppedStatusLineProps)
  */
 function useMessageContextMenu(
   handleCopy: () => void,
-  onRegenerate: (() => void) | undefined,
+  msgId: string,
+  onRegenerate: ((msgId: string) => void) | undefined,
   t: (key: string) => string
 ) {
-  const { showContextMenu } = useContextMenu({ onCopy: handleCopy, onRegenerate });
+  const { showContextMenu } = useContextMenu({
+    onCopy: handleCopy,
+    onRegenerate: onRegenerate ? () => onRegenerate(msgId) : undefined,
+  });
   return useCallback(
     async (e: React.MouseEvent<HTMLDivElement>) => {
       e.preventDefault();
@@ -330,20 +341,22 @@ function useMessageContextMenu(
 interface MessageHeaderProps {
   isUser: boolean;
   isStopped: boolean;
+  msgId: string;
   labels: { user: string; assistant: string; copy: string };
   message: Message;
   copied: boolean;
   handleCopy: () => void;
-  onRegenerate?: () => void;
-  onContinue?: () => void;
-  onEditPrompt?: () => void;
-  onEdit?: () => void;
+  onRegenerate?: (msgId: string) => void;
+  onContinue?: (msgId: string) => void;
+  onEditPrompt?: (msgId: string) => void;
+  onEdit?: (msgId: string) => void;
   t: (key: string) => string;
 }
 
 const MessageHeader = ({
   isUser,
   isStopped,
+  msgId,
   labels,
   message,
   copied,
@@ -363,6 +376,7 @@ const MessageHeader = ({
       <HoverActions
         isUser={isUser}
         isStopped={isStopped}
+        msgId={msgId}
         onRegenerate={onRegenerate}
         onContinue={onContinue}
         onEditPrompt={onEditPrompt}
@@ -436,7 +450,7 @@ const MessageBubble = ({
   const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
   const titleId = 'rag-source-title';
-  const handleContextMenu = useMessageContextMenu(handleCopy, onRegenerate, t);
+  const handleContextMenu = useMessageContextMenu(handleCopy, message.id, onRegenerate, t);
   const isStopped = message.stopped === true && message.role === 'assistant';
 
   return (
@@ -456,6 +470,7 @@ const MessageBubble = ({
           <MessageHeader
             isUser={isUser}
             isStopped={isStopped}
+            msgId={message.id}
             labels={labels}
             message={message}
             copied={copied}
@@ -492,7 +507,12 @@ const MessageBubble = ({
             tokensLabel={labels.tokens}
           />
 
-          <StoppedStatusLine isStopped={isStopped} onContinue={onContinue} t={t} />
+          <StoppedStatusLine
+            isStopped={isStopped}
+            msgId={message.id}
+            onContinue={onContinue}
+            t={t}
+          />
         </div>
       </div>
 

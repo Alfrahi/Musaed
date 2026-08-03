@@ -203,7 +203,7 @@ describe('MessageBubble - stopped status line (Prompt 14)', () => {
     expect(screen.getByText('chat.continue')).toBeInTheDocument();
   });
 
-  it('calls onContinue when the Continue button is clicked', () => {
+  it('calls onContinue with the message id when the Continue button is clicked', () => {
     const onContinue = vi.fn();
     render(
       <MessageBubble
@@ -215,7 +215,7 @@ describe('MessageBubble - stopped status line (Prompt 14)', () => {
     );
 
     fireEvent.click(screen.getByText('chat.continue'));
-    expect(onContinue).toHaveBeenCalledTimes(1);
+    expect(onContinue).toHaveBeenCalledWith('msg-stopped');
   });
 
   it('does not render stopped line when stopped is not true', () => {
@@ -267,7 +267,7 @@ describe('MessageBubble - hover actions (Prompt 14)', () => {
     const btn = screen.getByRole('button', { name: 'chat.regenerate' });
     expect(btn).toBeInTheDocument();
     fireEvent.click(btn);
-    expect(onRegenerate).toHaveBeenCalledTimes(1);
+    expect(onRegenerate).toHaveBeenCalledWith('msg-1');
   });
 
   it('renders Edit prompt button on assistant when onEditPrompt is provided', () => {
@@ -290,7 +290,7 @@ describe('MessageBubble - hover actions (Prompt 14)', () => {
     const btn = screen.getByRole('button', { name: 'chat.editPrompt' });
     expect(btn).toBeInTheDocument();
     fireEvent.click(btn);
-    expect(onEditPrompt).toHaveBeenCalledTimes(1);
+    expect(onEditPrompt).toHaveBeenCalledWith('msg-1');
   });
 
   it('renders Edit button on user messages when onEdit is provided', () => {
@@ -313,7 +313,7 @@ describe('MessageBubble - hover actions (Prompt 14)', () => {
     const btn = screen.getByRole('button', { name: 'chat.editPrompt' });
     expect(btn).toBeInTheDocument();
     fireEvent.click(btn);
-    expect(onEdit).toHaveBeenCalledTimes(1);
+    expect(onEdit).toHaveBeenCalledWith('msg-1');
   });
 
   it('does not render hover actions when no callbacks are provided', () => {
