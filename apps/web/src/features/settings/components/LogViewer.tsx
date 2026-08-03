@@ -127,7 +127,7 @@ const LogViewerHeader = ({
         variant="ghost"
         size="icon"
         onClick={fetchLogs}
-        className="rounded-xl text-zinc-500 hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
+        className="focus-ring rounded-xl text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
         title={t('logs.refreshLogs')}
       >
         <RefreshCw
@@ -149,7 +149,7 @@ const LogViewerHeader = ({
         variant="ghost"
         size="icon"
         onClick={onClose}
-        className="rounded-xl text-zinc-500 hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
+        className="focus-ring rounded-xl text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
         aria-label={t('a11y.closeModal')}
       >
         <X size={20} aria-hidden="true" />
@@ -169,7 +169,7 @@ const LogViewerFooter = ({ t, onClose }: LogViewerFooterProps) => (
     <Button
       variant="secondary"
       onClick={onClose}
-      className="text-body shadow-native rounded-xl py-2 ps-6 pe-6 font-bold tracking-normal focus-visible:ring-2 focus-visible:ring-blue-500"
+      className="text-body focus-ring shadow-native rounded-xl py-2 ps-6 pe-6 font-bold tracking-normal"
     >
       {t('common.done')}
     </Button>

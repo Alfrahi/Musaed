@@ -23,7 +23,7 @@ const inputBaseClasses = [
   'bg-white dark:bg-zinc-900',
   'transition-all duration-150',
   'outline-none',
-  'focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1',
+  'focus-ring',
   'placeholder:text-zinc-400 dark:placeholder:text-zinc-500',
 ].join(' ');
 

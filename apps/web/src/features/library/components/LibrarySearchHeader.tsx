@@ -97,7 +97,7 @@ const TabBar = ({
         key={tab}
         onClick={() => setActiveTab(tab)}
         className={cn(
-          'text-caption cursor-pointer rounded-md px-4 py-1.5 font-bold tracking-widest uppercase transition-all',
+          'text-caption focus-ring cursor-pointer rounded-md px-4 py-1.5 font-bold tracking-widest uppercase transition-all',
           activeTab === tab
             ? 'shadow-native bg-white text-blue-600 dark:bg-zinc-700'
             : 'text-zinc-500 hover:text-zinc-700'
@@ -138,7 +138,7 @@ const CustomPullForm = ({
           placeholder={placeholder}
           value={customModel}
           onChange={(e) => setCustomModel(e.target.value)}
-          className="text-caption w-full rounded-lg border border-zinc-200 bg-white py-2 ps-9 pe-3 font-mono transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
+          className="text-caption focus-ring w-full rounded-lg border border-zinc-200 bg-white py-2 ps-9 pe-3 font-mono transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
         />
       </div>
       <Button
@@ -172,7 +172,7 @@ const SearchBar = ({
       placeholder={placeholder}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="text-body w-full rounded-lg border border-zinc-200 bg-white py-2.5 ps-10 pe-4 transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
+      className="text-body focus-ring w-full rounded-lg border border-zinc-200 bg-white py-2.5 ps-10 pe-4 transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
     />
   </div>
 );
