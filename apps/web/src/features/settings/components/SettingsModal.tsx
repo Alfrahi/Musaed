@@ -14,7 +14,7 @@ import StorageSettings from './StorageSettings';
 import MarkdownSettings from './MarkdownSettings';
 import { useTranslation } from '@/lib/i18n';
 import { dialogApi } from '@/lib/ipc';
-import { ModalLayout, ScrollShadow } from '@/components/ui';
+import { ModalLayout, ScrollShadow, Input } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -137,7 +137,7 @@ const RenderModalHeader = ({
         className="pointer-events-none absolute inset-y-0 start-3 my-auto text-zinc-400"
         aria-hidden="true"
       />
-      <input
+      <Input
         ref={searchInputRef}
         type="search"
         value={searchQuery}
@@ -145,7 +145,7 @@ const RenderModalHeader = ({
         onKeyDown={onSearchKeyDown}
         placeholder={t('settings.searchPlaceholder')}
         aria-label={t('settings.searchPlaceholder')}
-        className="text-body duration-normal w-full rounded-md border border-zinc-200 bg-white py-2 ps-9 pe-3 text-zinc-900 transition-all outline-none placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+        className="text-body duration-normal w-full ps-9 text-zinc-900 dark:text-zinc-100"
       />
     </div>
   </div>

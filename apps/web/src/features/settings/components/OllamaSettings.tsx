@@ -9,6 +9,7 @@ import { useSettingsActions } from '@/features/settings/hooks/useSettingsActions
 import { useModelActions } from '@/features/library';
 import { useTranslation } from '@/lib/i18n';
 import { isValidOllamaUrl, sanitizeOllamaUrl, ollamaApi } from '@/lib/ipc';
+import { Input, Textarea } from '@/components/ui/input';
 
 /** Module-level AbortController so rapid URL changes cancel pending verifications. */
 let pendingVerification: AbortController | null = null;
@@ -86,12 +87,12 @@ const OllamaSettings = () => {
           <Globe size={14} className="text-zinc-400" />
           <label>{t('settings.ollamaUrl')}</label>
         </div>
-        <input
+        <Input
           type="text"
           value={globalSettings.ollamaUrl}
           onChange={(e) => updateGlobalSettings({ ollamaUrl: e.target.value })}
           onBlur={onBlur}
-          className="text-caption w-full rounded-md border border-zinc-200 bg-zinc-50 py-2 ps-3 pe-3 transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
+          className="text-caption w-full bg-zinc-50 ps-3 dark:bg-zinc-800"
         />
       </div>
 
@@ -100,10 +101,10 @@ const OllamaSettings = () => {
           <Terminal size={14} className="text-zinc-400" />
           <label>{t('settings.systemPrompt')}</label>
         </div>
-        <textarea
+        <Textarea
           value={globalSettings.systemPrompt}
           onChange={(e) => updateGlobalSettings({ systemPrompt: e.target.value })}
-          className="text-caption min-h-[100px] w-full resize-none rounded-md border border-zinc-200 bg-zinc-50 p-3 transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
+          className="text-caption min-h-[100px] w-full resize-none bg-zinc-50 dark:bg-zinc-800"
         />
       </div>
     </div>
