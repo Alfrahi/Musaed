@@ -12,7 +12,7 @@ import LibrarySearchHeader from './LibrarySearchHeader';
 import { useModelPulling } from '@/features/library/hooks/useModelPulling';
 import { useModelActions } from '@/features/library/hooks/useModelActions';
 import { dialogApi } from '@/lib/ipc';
-import { ErrorFallback } from '@/components/ui';
+import { ErrorFallback, ScrollShadow } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { ModalLayout } from '@/components/ui';
 import { Button } from '@/components/ui/button';
@@ -45,6 +45,7 @@ const FeaturedGrid = ({
   handleAbortPull,
   translateOllamaStatus,
   language,
+  onAtBottomChange,
 }: {
   models: { name: string }[];
   filteredFeatured: ((typeof FEATURED_MODELS_LIST)[number] & { description: string })[];
@@ -53,12 +54,14 @@ const FeaturedGrid = ({
   handleAbortPull: (name: string) => void;
   translateOllamaStatus: (s: string) => string;
   language: Language;
+  onAtBottomChange?: (atBottom: boolean) => void;
 }) => (
   <VirtuosoGrid
     style={{ height: '100%' }}
     data={filteredFeatured}
     totalCount={filteredFeatured.length}
     listClassName="grid grid-cols-1 md:grid-cols-2 gap-4 p-6"
+    atBottomStateChange={onAtBottomChange}
     itemContent={(_idx, model) => (
       <ModelCard
         key={model.name}
@@ -89,6 +92,7 @@ const InstalledList = ({
   language,
   emptyCta,
   onBrowseLibrary,
+  onAtBottomChange,
 }: {
   filteredInstalled: {
     name: string;
@@ -103,6 +107,7 @@ const InstalledList = ({
   language: Language;
   emptyCta: string;
   onBrowseLibrary: () => void;
+  onAtBottomChange?: (atBottom: boolean) => void;
 }) => {
   if (filteredInstalled.length === 0) {
     return (
@@ -123,6 +128,7 @@ const InstalledList = ({
     <Virtuoso
       style={{ height: '100%' }}
       data={filteredInstalled}
+      atBottomStateChange={onAtBottomChange}
       itemContent={(idx, model) => (
         <div
           className={cn(
@@ -219,33 +225,40 @@ const LibraryContent = ({
   fetchCta: () => void;
   browseCta: string;
   onBrowseLibrary: () => void;
-}) => (
-  <div className="flex-1 overflow-hidden bg-white dark:bg-zinc-950/20">
-    {fetchError && !isOllamaConnected ? (
-      <div className="flex h-full items-center justify-center">
-        <ErrorFallback type="ollama" description={fetchError} onRetry={fetchCta} />
-      </div>
-    ) : activeTab === 'featured' ? (
-      <FeaturedGrid
-        models={models}
-        filteredFeatured={filteredFeatured}
-        pullStatus={pullStatus}
-        handlePull={handlePull}
-        handleAbortPull={handleAbortPull}
-        translateOllamaStatus={translateOllamaStatus}
-        language={language}
-      />
-    ) : (
-      <InstalledList
-        filteredInstalled={filteredInstalled}
-        handleDelete={handleDelete}
-        language={language}
-        emptyCta={browseCta}
-        onBrowseLibrary={onBrowseLibrary}
-      />
-    )}
-  </div>
-);
+}) => {
+  const [showShadow, setShowShadow] = useState(false);
+
+  return (
+    <div className="relative flex-1 overflow-hidden bg-white dark:bg-zinc-950/20">
+      {fetchError && !isOllamaConnected ? (
+        <div className="flex h-full items-center justify-center">
+          <ErrorFallback type="ollama" description={fetchError} onRetry={fetchCta} />
+        </div>
+      ) : activeTab === 'featured' ? (
+        <FeaturedGrid
+          models={models}
+          filteredFeatured={filteredFeatured}
+          pullStatus={pullStatus}
+          handlePull={handlePull}
+          handleAbortPull={handleAbortPull}
+          translateOllamaStatus={translateOllamaStatus}
+          language={language}
+          onAtBottomChange={(atBottom) => setShowShadow(!atBottom)}
+        />
+      ) : (
+        <InstalledList
+          filteredInstalled={filteredInstalled}
+          handleDelete={handleDelete}
+          language={language}
+          emptyCta={browseCta}
+          onBrowseLibrary={onBrowseLibrary}
+          onAtBottomChange={(atBottom) => setShowShadow(!atBottom)}
+        />
+      )}
+      <ScrollShadow visible={showShadow} />
+    </div>
+  );
+};
 
 const ModelLibrary = ({ isOpen, onClose }: ModelLibraryProps) => {
   const models = useModelStore((s) => s.models);

@@ -10,7 +10,7 @@ import { useMessageStore } from '@/store/message-store';
 import type { StreamingState } from '@/store/streaming-store';
 import { useSettingsStore } from '@/store';
 import { useModelStore } from '@/store/model-store';
-import { ErrorFallback } from '@/components/ui';
+import { ErrorFallback, ScrollShadow } from '@/components/ui';
 import { Button } from '@/components/ui/button';
 import MessageBubble from './MessageBubble';
 import ChatWindowSkeleton from './ChatWindowSkeleton';
@@ -262,6 +262,7 @@ const ChatWindow = ({
         )}
         followOutput="smooth"
       />
+      <ScrollShadow visible={showScrollButton && messages.length > 0} />
       {showScrollButton && messages.length > 0 && (
         <ScrollButton onClick={scrollToBottom} label={t('common.done')} />
       )}

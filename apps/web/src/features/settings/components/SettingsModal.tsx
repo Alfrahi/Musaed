@@ -14,7 +14,7 @@ import StorageSettings from './StorageSettings';
 import MarkdownSettings from './MarkdownSettings';
 import { useTranslation } from '@/lib/i18n';
 import { dialogApi } from '@/lib/ipc';
-import { ModalLayout } from '@/components/ui';
+import { ModalLayout, ScrollShadow } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -285,9 +285,12 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
           setActiveTab={setActiveTab}
         />
 
-        <main className="flex-1 overflow-y-auto bg-white p-8 dark:bg-zinc-950/20">
+        <ScrollShadow
+          className="flex-1 overflow-y-auto bg-white dark:bg-zinc-950/20"
+          contentClassName="p-8"
+        >
           <RenderContent activeTab={activeTab} t={t} handleReset={handleReset} />
-        </main>
+        </ScrollShadow>
       </div>
 
       <RenderModalFooter t={t} onClose={onClose} />

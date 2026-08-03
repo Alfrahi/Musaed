@@ -16,6 +16,7 @@ import {
 } from '@/store/conversation-store';
 import { useConversationActions } from '@/features/conversation';
 import { Button } from '@/components/ui/button';
+import { ScrollShadow } from '@/components/ui';
 import SearchInput from './SearchInput';
 import ConversationItem from './ConversationItem';
 import SidebarHeader from './SidebarHeader';
@@ -194,39 +195,45 @@ const ChatsTabContent = ({
   handleListboxKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
   handleClearAll: () => void;
   t: (key: string) => string;
-}) => (
-  <>
-    <SearchInput />
-    <nav aria-label={t('a11y.conversationList')} className="flex-1 overflow-hidden">
-      <div
-        role="listbox"
-        aria-label={t('a11y.conversationList')}
-        tabIndex={-1}
-        onKeyDown={handleListboxKeyDown}
-        className="h-full"
-      >
-        <Virtuoso
-          style={{ height: '100%' }}
-          data={virtualItems}
-          itemContent={(_index, item) => (
-            <SidebarItemContent
-              item={item}
-              searchQuery={searchQuery}
-              filteredConversations={filteredConversations}
-              handleClearAll={handleClearAll}
-              t={t}
-            />
-          )}
-          endReached={() => {
-            if (virtualItems.length < filteredConversations.length) loadMore();
-          }}
-          overscan={200}
-          increaseViewportBy={200}
-        />
-      </div>
-    </nav>
-  </>
-);
+}) => {
+  const [showShadow, setShowShadow] = useState(false);
+
+  return (
+    <>
+      <SearchInput />
+      <nav aria-label={t('a11y.conversationList')} className="relative flex-1 overflow-hidden">
+        <div
+          role="listbox"
+          aria-label={t('a11y.conversationList')}
+          tabIndex={-1}
+          onKeyDown={handleListboxKeyDown}
+          className="h-full"
+        >
+          <Virtuoso
+            style={{ height: '100%' }}
+            data={virtualItems}
+            atBottomStateChange={(atBottom) => setShowShadow(!atBottom)}
+            itemContent={(_index, item) => (
+              <SidebarItemContent
+                item={item}
+                searchQuery={searchQuery}
+                filteredConversations={filteredConversations}
+                handleClearAll={handleClearAll}
+                t={t}
+              />
+            )}
+            endReached={() => {
+              if (virtualItems.length < filteredConversations.length) loadMore();
+            }}
+            overscan={200}
+            increaseViewportBy={200}
+          />
+        </div>
+        <ScrollShadow visible={showShadow} />
+      </nav>
+    </>
+  );
+};
 
 const Sidebar = () => {
   const activeTab = useSidebarTab();
