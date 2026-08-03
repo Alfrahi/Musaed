@@ -80,7 +80,7 @@ const CitationChip = ({ source, onOpen, t }: CitationChipProps) => {
       onClick={() => onOpen(source)}
       aria-label={ariaLabel}
       title={ariaLabel}
-      className="bg-secondary/50 hover:bg-secondary text-foreground inline-flex items-start gap-2 rounded-md p-2 text-start transition-colors"
+      className="bg-secondary/50 hover:bg-secondary text-foreground inline-flex cursor-pointer items-start gap-2 rounded-md p-2 text-start transition-colors"
     >
       <FileText className="text-muted-foreground mt-0.5 h-3 w-3 shrink-0" />
       <span className="min-w-0">
@@ -133,7 +133,7 @@ const RagSourceReferences = ({
           <button
             type="button"
             onClick={() => setShowAll(true)}
-            className="text-muted-foreground hover:text-foreground ms-2 text-xs font-medium underline-offset-2 hover:underline"
+            className="text-muted-foreground hover:text-foreground ms-2 cursor-pointer text-xs font-medium underline-offset-2 hover:underline"
           >
             {t('a11y.showNMoreSources', { count: hiddenCount })}
           </button>
@@ -142,7 +142,7 @@ const RagSourceReferences = ({
           <button
             type="button"
             onClick={() => setShowAll(false)}
-            className="text-muted-foreground hover:text-foreground ms-2 text-xs font-medium underline-offset-2 hover:underline"
+            className="text-muted-foreground hover:text-foreground ms-2 cursor-pointer text-xs font-medium underline-offset-2 hover:underline"
           >
             {t('a11y.showFewerSources')}
           </button>
@@ -155,7 +155,7 @@ const RagSourceReferences = ({
     <div className="mt-4 border-t pt-4">
       <button
         type="button"
-        className="text-muted-foreground hover:text-foreground flex items-center gap-2 text-xs font-medium"
+        className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-2 text-xs font-medium"
         onClick={onToggleExpand}
         aria-expanded={isExpanded}
       >

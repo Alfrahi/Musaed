@@ -17,7 +17,7 @@ const SidebarInfo = () => {
       <Button
         variant="ghost"
         onClick={() => setInfoOpen(true)}
-        className="group flex w-full items-center justify-between p-4 text-start hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
+        className="group flex w-full cursor-pointer items-center justify-between p-4 text-start hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
         aria-label={t('info.openInfo')}
       >
         <div className="flex min-w-0 items-center gap-3">

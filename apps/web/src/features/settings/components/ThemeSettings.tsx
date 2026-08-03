@@ -32,7 +32,7 @@ const ThemeSettings = () => {
             key={id}
             onClick={() => updateGlobalSettings({ theme: id })}
             className={cn(
-              'flex flex-1 items-center justify-center gap-2 rounded-md py-2 text-xs font-bold tracking-widest uppercase transition-all',
+              'flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md py-2 text-xs font-bold tracking-widest uppercase transition-all',
               globalSettings.theme === id
                 ? 'bg-white text-blue-600 shadow-sm dark:bg-zinc-700'
                 : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'

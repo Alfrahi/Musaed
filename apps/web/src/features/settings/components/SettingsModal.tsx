@@ -164,7 +164,7 @@ const RenderTabNavigation = ({ tabs, activeTab, setActiveTab }: RenderTabNavigat
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              'caption-md flex w-full items-center gap-3 rounded-md border-s-2 px-3 py-2.5 font-bold tracking-widest uppercase transition-all duration-200',
+              'caption-md flex w-full cursor-pointer items-center gap-3 rounded-md border-s-2 px-3 py-2.5 font-bold tracking-widest uppercase transition-all duration-200',
               isActive
                 ? 'border-blue-500 bg-white text-blue-600 shadow-sm dark:bg-zinc-800 dark:text-blue-400'
                 : 'border-transparent text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100'

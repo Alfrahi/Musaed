@@ -57,7 +57,7 @@ const AttachmentPreview = ({
               variant="ghost"
               size="icon"
               onClick={() => onRemoveImage(idx)}
-              className="inset-bs-0.5 inset-ie-0.5 absolute h-auto min-h-6 w-auto min-w-6 rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
+              className="inset-bs-0.5 inset-ie-0.5 absolute h-auto min-h-6 w-auto min-w-6 cursor-pointer rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
             >
               <X size={12} />
             </Button>
@@ -82,7 +82,7 @@ const AttachmentPreview = ({
               variant="ghost"
               size="icon"
               onClick={() => onRemoveFile(idx)}
-              className="inset-bs-1 inset-ie-1 absolute h-auto min-h-6 w-auto min-w-6 p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+              className="inset-bs-1 inset-ie-1 absolute h-auto min-h-6 w-auto min-w-6 cursor-pointer p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
             >
               <X size={12} />
             </Button>
