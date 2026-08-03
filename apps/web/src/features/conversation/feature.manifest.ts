@@ -31,6 +31,12 @@ const manifest: FeatureManifest = {
     'cmd_conversations_clear',
     'cmd_conversations_list',
     'cmd_message_append',
+    // Attachment handling — `hooks/useAttachmentUtils.ts` opens native file
+    // dialogs and reads file contents (images as base64, text as UTF-8) via
+    // the IPC-layer `dialogApi`/`fsApi` namespaces. Feature-scoped, not shared.
+    'cmd_dialog_open_file',
+    'cmd_fs_read_file',
+    'cmd_fs_read_text_file',
   ],
   /**
    * Performance-sensitive IPC endpoints owned by this feature. The actual
@@ -46,7 +52,12 @@ const manifest: FeatureManifest = {
   stateSchemas: {
     conversationStore: 3,
     messageStore: 0, // in-memory cache only, no persistence version
-    streamingStore: 2,
+    // `streamingStore` is intentionally absent — it became fully in-memory
+    // after Phase 3 #10 (persist middleware removed). STANDARDS §9 scopes
+    // `stateSchemas` at cross-session persisted state, so versioning an
+    // unpersisted buffer would be misleading. The validator skips entries
+    // not declared here; a `streamingStore.ts` with no `VERSION` constant
+    // and no `version:` field would otherwise fail extraction.
   },
   /**
    * Failure modes for this feature's IPC endpoints.
@@ -98,6 +109,21 @@ const manifest: FeatureManifest = {
       fallback: 'Message is already displayed in UI; retry save in background',
       retry: 'exponential',
       messageKey: 'error.messageSaveFailed',
+    },
+    cmd_dialog_open_file: {
+      fallback: 'Silently ignore — attachment picker is user-initiated',
+      retry: 'none',
+      messageKey: 'error.genericError',
+    },
+    cmd_fs_read_file: {
+      fallback: 'Show error toast and skip the attachment',
+      retry: 'once',
+      messageKey: 'error.genericError',
+    },
+    cmd_fs_read_text_file: {
+      fallback: 'Show error toast and skip the attachment',
+      retry: 'once',
+      messageKey: 'error.genericError',
     },
   },
   // `library` is a declared dependency because InputArea.tsx composes the

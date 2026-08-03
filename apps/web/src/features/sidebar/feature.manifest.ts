@@ -25,7 +25,12 @@ const manifest: FeatureManifest = {
     hooks: ['useSidebarActions', 'useSidebarGrouping'],
     utils: ['exportToMarkdown'],
   },
-  ipcEndpoints: [],
+  ipcEndpoints: [
+    // `utils/export.ts` writes a markdown export via the IPC-layer
+    // `dialogApi`/`fsApi` namespaces. Feature-scoped, not shared.
+    'cmd_dialog_save_file',
+    'cmd_fs_write_text_file',
+  ],
   stateSchemas: {
     // Both `conversationStore` and `messageStore` are owned by the
     // `conversation` feature. Sidebar reads them to render the conversation
@@ -36,7 +41,18 @@ const manifest: FeatureManifest = {
    *
    * @see STANDARDS.md §13 — Failure Mode Rule
    */
-  failureModes: {},
+  failureModes: {
+    cmd_dialog_save_file: {
+      fallback: 'Silently ignore — export cancelled by user',
+      retry: 'none',
+      messageKey: 'error.genericError',
+    },
+    cmd_fs_write_text_file: {
+      fallback: 'Show error toast; export file not written',
+      retry: 'once',
+      messageKey: 'error.genericError',
+    },
+  },
   // Sidebar is the conversation-list composition layer. It imports from
   // conversation (display + actions), rag (project browser), and settings
   // (i18n + theme) — declared here so dep-cruiser honors them as the

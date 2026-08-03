@@ -48,8 +48,12 @@ const CONVERSATION_MIGRATIONS: Record<number, (data: unknown) => unknown> = {
 
 // Exported so unit tests can round-trip legacy shapes without spinning up the
 // whole Zustand store. Internal — not part of the public store API surface.
+export const CONVERSATION_STORE_VERSION = 3;
 export const __test_CONVERSATION_MIGRATIONS = CONVERSATION_MIGRATIONS;
-export const __test_CONVERSATION_STORE_VERSION = 3;
+// Back-compat alias for tests that import the old `__test_`-prefixed name.
+// `CONVERSATION_STORE_VERSION` is the canonical identifier consumed by
+// scripts/validate-manifests.mjs (`extractStoreVersion`).
+export const __test_CONVERSATION_STORE_VERSION = CONVERSATION_STORE_VERSION;
 
 export type ConversationMetadata = Omit<Conversation, 'messages'>;
 

@@ -57,7 +57,13 @@ import {
   BackgroundTasksResponseSchema,
   type BackgroundTasksResponse,
 } from '@musaed/contracts';
-import type { RagProject, SearchResult, ChunkRecord, AssembledContext } from '@musaed/contracts';
+import type {
+  RagProject,
+  SearchResult,
+  ChunkRecord,
+  AssembledContext,
+  FileFilter,
+} from '@musaed/contracts';
 import toast from 'react-hot-toast';
 import { translate, getActiveLanguage } from '@/lib/i18n';
 import { config } from '@/lib/config';
@@ -254,7 +260,7 @@ export interface CommandMap {
   // File dialog commands
   cmd_dialog_open_file: {
     args: {
-      filters?: { name: string; extensions: string[] }[];
+      filters?: FileFilter[];
       multiple?: boolean;
       directory?: boolean;
       defaultPath?: string;
@@ -263,7 +269,7 @@ export interface CommandMap {
   };
   cmd_dialog_save_file: {
     args: {
-      filters?: { name: string; extensions: string[] }[];
+      filters?: FileFilter[];
       defaultPath?: string;
     };
     return: string | null;
