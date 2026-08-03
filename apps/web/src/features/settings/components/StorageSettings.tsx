@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 /** Storage size display card. */
 const SizeCard = ({ label, value }: { label: string; value: string }) => (
   <div className="rounded-md border border-zinc-100 bg-zinc-50 p-3 dark:border-zinc-700/50 dark:bg-zinc-800/50">
-    <p className="caption-md mbe-1 font-bold tracking-widest text-zinc-400 uppercase">{label}</p>
+    <p className="caption-md mbe-1 font-medium text-zinc-400">{label}</p>
     <p className="font-mono text-sm font-black">{value}</p>
   </div>
 );
@@ -104,7 +104,7 @@ const StorageSettings = () => {
       </div>
 
       <div className="flex flex-col gap-3">
-        <div className="caption-md flex items-center gap-2 font-bold tracking-wider text-zinc-500 uppercase">
+        <div className="caption-md flex items-center gap-2 font-medium text-zinc-500">
           <Trash2 size={12} />
           <label>{t('settings.storage.autoDelete')}</label>
         </div>

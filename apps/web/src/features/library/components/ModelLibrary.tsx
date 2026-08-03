@@ -177,7 +177,7 @@ const LibraryFooter = ({
     <Button
       variant="secondary"
       onClick={onClose}
-      className="h-10 rounded-lg ps-6 pe-6 text-xs font-bold tracking-widest uppercase shadow-sm"
+      className="h-10 rounded-lg ps-6 pe-6 text-xs font-bold tracking-normal uppercase shadow-sm"
     >
       {closeLabel}
     </Button>

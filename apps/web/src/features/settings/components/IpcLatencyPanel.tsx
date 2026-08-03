@@ -124,11 +124,9 @@ const IpcLatencyPanel = () => {
         </Button>
       </div>
 
-      <p className="caption-md font-bold tracking-widest text-zinc-400 uppercase">
-        {t('settings.ipcLatency.description')}
-      </p>
+      <p className="caption-md font-medium text-zinc-400">{t('settings.ipcLatency.description')}</p>
 
-      <div className="caption-md flex items-center justify-between font-bold tracking-widest text-zinc-500 uppercase">
+      <div className="caption-md flex items-center justify-between font-medium text-zinc-500">
         <span data-testid="ipc-latency-total">
           {t('settings.ipcLatency.totalCalls', { count: stats.callCount })}
         </span>
