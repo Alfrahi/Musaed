@@ -58,7 +58,7 @@ const AbortButton = ({ onClick, label }: { onClick: () => void; label: string })
 
 /** Send message button. */
 const SendButton = ({ disabled, ariaLabel }: { disabled: boolean; ariaLabel: string }) => (
-  <Button type="submit" size="sm" variant="primary" disabled={disabled} aria-label={ariaLabel}>
+  <Button type="submit" size="icon" variant="primary" disabled={disabled} aria-label={ariaLabel}>
     <Send size={10} className="mirror-rtl" />
   </Button>
 );

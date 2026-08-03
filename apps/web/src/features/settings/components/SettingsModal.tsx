@@ -61,12 +61,14 @@ const RenderAdvancedTab = ({ t, handleReset }: RenderAdvancedTabProps) => (
   <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-8">
     <DiagnosticsSettings />
     <div className="pb-4">
-      <button
+      <Button
+        variant="danger"
+        size="md"
         onClick={handleReset}
-        className="caption-xs flex w-full items-center justify-center gap-2 rounded-md border border-zinc-200 py-3 font-bold tracking-widest text-red-500 uppercase transition-all outline-none hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-blue-500 active:scale-95 dark:border-zinc-800 dark:hover:bg-red-900/10"
+        className="flex w-full cursor-pointer items-center justify-center gap-2"
       >
         <RotateCcw size={14} aria-hidden="true" /> {t('settings.resetPreferences')}
-      </button>
+      </Button>
     </div>
   </div>
 );
@@ -119,13 +121,15 @@ const RenderModalHeader = ({
         <Settings2 size={18} className="text-blue-500" aria-hidden="true" />
         <span id={titleId}>{t('settings.title')}</span>
       </div>
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={onClose}
-        className="duration-normal rounded-md p-2 text-zinc-500 transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        className="cursor-pointer text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
         aria-label={t('a11y.closeModal')}
       >
         <X size={20} />
-      </button>
+      </Button>
     </div>
     <div className="relative w-full">
       <Search
