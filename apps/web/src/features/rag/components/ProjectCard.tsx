@@ -142,8 +142,10 @@ const ProjectHeader = ({
         </p>
       </div>
       {isActive && (
-        <button
-          className="text-muted-foreground hover:text-foreground shrink-0"
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
           onClick={(e) => {
             e.stopPropagation();
             onSelect();
@@ -152,7 +154,7 @@ const ProjectHeader = ({
           title={t('a11y.deselectProject')}
         >
           <Check className="h-3 w-3" />
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -214,34 +216,34 @@ const ReadyActions = ({
         e.stopPropagation();
         onReindex();
       }}
-      className="text-muted-foreground hover:text-foreground text-caption flex items-center gap-0.5"
+      className="text-muted-foreground hover:text-foreground text-caption flex cursor-pointer items-center gap-0.5"
       title={t('rag.reindexProject')}
     >
       <RefreshCw className="h-3 w-3" /> {t('rag.reindexProject')}
     </button>
     <Button
       variant="ghost"
-      size="sm"
+      size="icon"
       onClick={(e) => {
         e.stopPropagation();
         onBrowseFiles();
       }}
       aria-label={t('a11y.browseFiles', { name: project.name })}
       title={t('a11y.browseFiles', { name: project.name })}
-      className="text-muted-foreground hover:text-foreground text-caption px-1.5 py-0.5"
+      className="text-muted-foreground hover:text-foreground cursor-pointer"
     >
       <FolderTree className="h-3 w-3" />
     </Button>
     <Button
       variant="ghost"
-      size="sm"
+      size="icon"
       onClick={(e) => {
         e.stopPropagation();
         onOpenSettings();
       }}
       aria-label={t('a11y.projectSettings', { name: project.name })}
       title={t('a11y.projectSettings', { name: project.name })}
-      className="text-muted-foreground hover:text-foreground text-caption px-1.5 py-0.5"
+      className="text-muted-foreground hover:text-foreground cursor-pointer"
     >
       <Settings2 className="h-3 w-3" />
     </Button>
@@ -287,7 +289,7 @@ const ProjectActions = ({
             e.stopPropagation();
             onIndex();
           }}
-          className="text-muted-foreground hover:text-foreground text-caption flex items-center gap-0.5"
+          className="text-muted-foreground hover:text-foreground text-caption flex cursor-pointer items-center gap-0.5"
           title={t('rag.indexProject')}
         >
           <RefreshCw className="h-3 w-3" /> {t('rag.indexProject')}
@@ -308,7 +310,7 @@ const ProjectActions = ({
             e.stopPropagation();
             onRetry?.();
           }}
-          className="text-muted-foreground hover:text-foreground text-caption flex items-center gap-0.5"
+          className="text-muted-foreground hover:text-foreground text-caption flex cursor-pointer items-center gap-0.5"
           title={t('rag.retryIndexing')}
         >
           <RefreshCw className="h-3 w-3" /> {t('rag.retry')}
@@ -320,23 +322,25 @@ const ProjectActions = ({
             e.stopPropagation();
             onAbort();
           }}
-          className="text-caption flex items-center gap-0.5 text-red-400 hover:text-red-300"
+          className="text-caption flex cursor-pointer items-center gap-0.5 text-red-400 hover:text-red-300"
           title={t('rag.cancelIndexing')}
         >
           <X className="h-3 w-3" /> {t('common.cancel')}
         </button>
       )}
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={(e) => {
           e.stopPropagation();
           onRemove();
         }}
-        className="text-muted-foreground text-caption ms-auto flex items-center gap-0.5 hover:text-red-400"
+        className="text-muted-foreground ms-auto cursor-pointer hover:text-red-400"
         title={t('rag.removeProject')}
         aria-label={t('a11y.removeProject')}
       >
         <Trash2 className="h-3 w-3" />
-      </button>
+      </Button>
     </div>
   );
 };

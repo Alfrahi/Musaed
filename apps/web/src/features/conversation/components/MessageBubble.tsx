@@ -296,7 +296,7 @@ const StoppedStatusLine = ({ isStopped, onContinue, t }: StoppedStatusLineProps)
         <button
           type="button"
           onClick={onContinue}
-          className="text-primary font-medium hover:underline"
+          className="text-primary cursor-pointer font-medium hover:underline"
         >
           {t('chat.continue')}
         </button>
@@ -369,13 +369,15 @@ const MessageHeader = ({
         onEdit={onEdit}
         t={t}
       />
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={handleCopy}
-        className="hover:text-foreground p-1 text-zinc-400 transition-colors"
+        className="hover:text-foreground cursor-pointer p-1 text-zinc-400"
         aria-label={labels.copy}
       >
         {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-      </button>
+      </Button>
     </div>
   </div>
 );

@@ -97,7 +97,7 @@ const TabBar = ({
         key={tab}
         onClick={() => setActiveTab(tab)}
         className={cn(
-          'text-caption rounded-md px-4 py-1.5 font-bold tracking-widest uppercase transition-all',
+          'text-caption cursor-pointer rounded-md px-4 py-1.5 font-bold tracking-widest uppercase transition-all',
           activeTab === tab
             ? 'shadow-native bg-white text-blue-600 dark:bg-zinc-700'
             : 'text-zinc-500 hover:text-zinc-700'
@@ -220,7 +220,7 @@ const LibrarySearchHeader = ({
             {}
             <button
               onClick={() => openerApi.openUrl('https://ollama.com/library')}
-              className="flex items-center gap-1 transition-colors hover:text-blue-500"
+              className="flex cursor-pointer items-center gap-1 transition-colors hover:text-blue-500"
             >
               {t('library.ollamaLibrary')} <ExternalLink size={12} className="mirror-rtl" />
             </button>
