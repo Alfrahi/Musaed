@@ -158,7 +158,7 @@ const TabButtons = ({
       className={`caption-xs flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 font-bold tracking-wider uppercase transition-all duration-150 ${
         activeTab === 'chats'
           ? 'bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
-          : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900'
+          : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/50'
       }`}
     >
       <MessageSquare size={12} />
@@ -169,7 +169,7 @@ const TabButtons = ({
       className={`caption-xs flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 font-bold tracking-wider uppercase transition-all duration-150 ${
         activeTab === 'projects'
           ? 'bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
-          : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900'
+          : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/50'
       }`}
     >
       <Briefcase size={12} />

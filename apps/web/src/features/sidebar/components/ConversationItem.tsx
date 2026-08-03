@@ -175,13 +175,13 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
       onKeyDown={handleKeyDown}
       onContextMenu={handleContextMenu}
       className={cn(
-        'group relative flex cursor-pointer items-center gap-2.5 border-s-2 px-3 py-2 text-[13px] transition-colors duration-150',
+        'group relative flex cursor-pointer items-center gap-2.5 border-s-2 border-transparent px-3 py-2 text-[13px] transition-all duration-150',
         // focus-visible ring pairs the global :focus-visible outline from globals.css
         // with this virtualized row so keyboard focus is visible (audit F3).
         'focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none',
         isActive
           ? 'border-primary text-foreground bg-zinc-200/50 font-semibold dark:bg-zinc-800/50'
-          : 'border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800/30'
+          : 'text-zinc-500 hover:border-zinc-300 hover:bg-zinc-100/70 dark:hover:bg-zinc-800/50'
       )}
     >
       <MessageSquare
