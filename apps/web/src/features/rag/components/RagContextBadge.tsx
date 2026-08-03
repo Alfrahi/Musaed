@@ -37,7 +37,7 @@ export const RagContextBadge = () => {
         variant="ghost"
         size="sm"
         onClick={() => setSidebarTab('projects')}
-        className="text-muted-foreground hover:text-foreground h-auto gap-1 rounded-md px-2 py-0.5 text-xs"
+        className="text-muted-foreground hover:text-foreground text-caption h-auto gap-1 rounded-md px-2 py-0.5"
         aria-label={t('rag.addProject')}
       >
         <Plus className="h-3 w-3" />
@@ -49,7 +49,7 @@ export const RagContextBadge = () => {
   const titleId = 'rag-explorer-title';
   return (
     <>
-      <div className="bg-accent/50 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs">
+      <div className="bg-accent/50 text-caption inline-flex items-center gap-1 rounded-md px-2 py-0.5">
         <FolderOpen className="text-muted-foreground h-3 w-3" />
         <Button
           variant="ghost"
@@ -82,7 +82,7 @@ export const RagContextBadge = () => {
         >
           <div className="flex h-full flex-col">
             <div className="border-sidebar-border flex items-center justify-between border-b px-4 py-3">
-              <h2 id={titleId} className="text-base font-medium">
+              <h2 id={titleId} className="text-heading font-medium">
                 {activeProject.name}
               </h2>
               <Button

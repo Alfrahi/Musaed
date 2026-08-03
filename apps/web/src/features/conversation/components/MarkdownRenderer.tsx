@@ -185,7 +185,7 @@ const useMarkdownComponents = (
 
         return (
           <code
-            className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-sm text-blue-600 dark:bg-zinc-800 dark:text-blue-400"
+            className="text-body rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-blue-600 dark:bg-zinc-800 dark:text-blue-400"
             {...props}
           >
             {children}

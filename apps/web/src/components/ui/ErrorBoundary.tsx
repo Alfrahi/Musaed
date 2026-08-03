@@ -123,12 +123,12 @@ class ErrorBoundary extends Component<Props, State> {
               <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {errorUI.title}
               </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{errorUI.description}</p>
+              <p className="text-body text-gray-600 dark:text-gray-400">{errorUI.description}</p>
             </div>
 
             {this.state.errorType === 'general' && this.state.error && config.isDev && (
               <details className="text-start">
-                <summary className="caption-md cursor-pointer font-bold tracking-widest text-gray-500 uppercase transition-colors duration-150 hover:text-gray-700">
+                <summary className="caption-md duration-fast cursor-pointer font-bold tracking-widest text-gray-500 uppercase transition-colors hover:text-gray-700">
                   <HelpCircle size={12} className="me-1 inline" />
                   {t('error.details')}
                 </summary>

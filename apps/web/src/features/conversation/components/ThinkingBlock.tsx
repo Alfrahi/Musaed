@@ -35,7 +35,7 @@ const ThinkingBlock = ({
 
   return (
     <div
-      className="mbs-4 mbe-4 overflow-hidden rounded-md border border-zinc-200 bg-zinc-50/50 shadow-sm transition-all dark:border-zinc-800 dark:bg-zinc-900/20"
+      className="mbs-4 mbe-4 shadow-native overflow-hidden rounded-md border border-zinc-200 bg-zinc-50/50 transition-all dark:border-zinc-800 dark:bg-zinc-900/20"
       role="region"
       aria-label={t('a11y.thinkingSection')}
       aria-busy={isStreaming}
@@ -67,7 +67,7 @@ const ThinkingBlock = ({
 
       {!isCollapsed && (
         <div
-          className="pbe-4 pbs-3 border-t border-zinc-100 ps-4 pe-4 font-serif text-xs leading-relaxed whitespace-pre-wrap text-zinc-500 italic dark:border-zinc-800/50 dark:text-zinc-400"
+          className="pbe-4 pbs-3 text-caption border-t border-zinc-100 ps-4 pe-4 font-serif leading-relaxed whitespace-pre-wrap text-zinc-500 italic dark:border-zinc-800/50 dark:text-zinc-400"
           dir="auto"
           role="status"
           aria-live={isStreaming ? 'polite' : 'off'}

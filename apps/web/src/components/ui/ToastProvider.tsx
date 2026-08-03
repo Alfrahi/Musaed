@@ -8,7 +8,7 @@ const ToastProvider = () => {
       position="top-center"
       toastOptions={{
         className:
-          'dark:bg-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-medium shadow-xl',
+          'dark:bg-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-800 rounded-xl text-body font-medium shadow-pro',
         duration: 4000,
       }}
     />

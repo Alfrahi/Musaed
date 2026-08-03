@@ -28,12 +28,12 @@ interface EmbeddingModelSelectProps {
 
 const EmbeddingModelSelect = ({ value, onChange, models, t }: EmbeddingModelSelectProps) => (
   <div className="space-y-1">
-    <label className="text-sm font-medium">{t('rag.embeddingModel')}</label>
+    <label className="text-body font-medium">{t('rag.embeddingModel')}</label>
     {models.length > 0 ? (
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+        className="border-input bg-background text-body w-full rounded-md border px-3 py-2"
       >
         {models.map((m) => (
           <option key={m.name} value={m.name}>
@@ -50,10 +50,10 @@ const EmbeddingModelSelect = ({ value, onChange, models, t }: EmbeddingModelSele
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="nomic-embed-text-v2-moe"
-        className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+        className="border-input bg-background text-body w-full rounded-md border px-3 py-2"
       />
     )}
-    <p className="text-muted-foreground text-xs">
+    <p className="text-muted-foreground text-caption">
       {t('rag.embeddingModelNote', { model: 'nomic-embed-text-v2-moe' })}
     </p>
   </div>
@@ -71,10 +71,10 @@ const ProjectSettingsActions = ({
   t: (key: string) => string;
 }) => (
   <div className="flex justify-end gap-2 border-t pt-2">
-    <Button variant="outline" className="text-sm" onClick={onClose}>
+    <Button variant="outline" className="text-body" onClick={onClose}>
       {t('common.cancel')}
     </Button>
-    <Button variant="primary" className="gap-2 text-sm" onClick={onSave} disabled={isSaving}>
+    <Button variant="primary" className="text-body gap-2" onClick={onSave} disabled={isSaving}>
       {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
       {t('common.save')}
     </Button>
@@ -141,12 +141,12 @@ const ProjectSettingsForm = ({ onClose }: { onClose: () => void }) => {
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-auto">
       <div className="space-y-1">
-        <label className="text-sm font-medium">{t('rag.projectName')}</label>
+        <label className="text-body font-medium">{t('rag.projectName')}</label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+          className="border-input bg-background text-body w-full rounded-md border px-3 py-2"
         />
       </div>
       <EmbeddingModelSelect
@@ -156,15 +156,15 @@ const ProjectSettingsForm = ({ onClose }: { onClose: () => void }) => {
         t={t}
       />
       <div className="space-y-1">
-        <label className="text-sm font-medium">{t('rag.ignorePatterns')}</label>
+        <label className="text-body font-medium">{t('rag.ignorePatterns')}</label>
         <textarea
           value={ignorePatterns}
           onChange={(e) => setIgnorePatterns(e.target.value)}
           rows={5}
           placeholder="node_modules\ndist\n.git"
-          className="border-input bg-background w-full rounded-md border px-3 py-2 font-mono text-sm"
+          className="border-input bg-background text-body w-full rounded-md border px-3 py-2 font-mono"
         />
-        <p className="text-muted-foreground text-xs">{t('rag.ignorePatternsDescription')}</p>
+        <p className="text-muted-foreground text-caption">{t('rag.ignorePatternsDescription')}</p>
       </div>
       <ProjectSettingsActions onClose={onClose} onSave={handleSave} isSaving={isSaving} t={t} />
     </div>
@@ -179,7 +179,7 @@ const ProjectSettings = ({ onClose, titleId: titleIdProp }: ProjectSettingsProps
   const titleId = titleIdProp ?? generatedTitleId;
 
   if (!activeProject) {
-    return <div className="text-muted-foreground p-4 text-sm">{t('rag.noActiveProject')}</div>;
+    return <div className="text-muted-foreground text-body p-4">{t('rag.noActiveProject')}</div>;
   }
 
   return (

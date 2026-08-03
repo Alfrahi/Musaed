@@ -49,7 +49,7 @@ const InstalledModelCard = ({
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold">{name}</h3>
+            <h3 className="text-body font-bold">{name}</h3>
             {details?.parameterSize && (
               <span
                 className={cn(

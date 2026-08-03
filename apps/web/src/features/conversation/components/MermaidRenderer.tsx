@@ -43,7 +43,7 @@ const MermaidLoading = ({ className, label }: { className: string; label: string
   <div
     className={`flex items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 p-8 dark:border-zinc-800 dark:bg-zinc-900 ${className}`}
   >
-    <div className="flex items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400">
+    <div className="text-body flex items-center gap-3 text-zinc-500 dark:text-zinc-400">
       <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
       {label}
     </div>
@@ -67,7 +67,7 @@ const MermaidError = ({
   requirementNote: string;
 }) => (
   <div
-    className={`rounded-xl border border-red-200 bg-red-50 p-6 text-sm dark:border-red-900 dark:bg-red-950/50 ${className}`}
+    className={`text-body rounded-xl border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-950/50 ${className}`}
   >
     <div className="mb-3 flex items-start justify-between">
       <div className="font-semibold text-red-700 dark:text-red-400">{errorTitle}</div>
@@ -75,16 +75,16 @@ const MermaidError = ({
         variant="outline"
         size="sm"
         onClick={onCopySource}
-        className="rounded-md border-red-200 bg-white px-3 py-1 text-xs hover:bg-zinc-100 dark:border-red-800 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+        className="text-caption rounded-md border-red-200 bg-white px-3 py-1 hover:bg-zinc-100 dark:border-red-800 dark:bg-zinc-800 dark:hover:bg-zinc-700"
       >
         📋 {copyLabel}
       </Button>
     </div>
-    <pre className="overflow-auto rounded-lg border border-red-100 bg-white p-4 font-mono text-xs whitespace-pre-wrap text-red-600 dark:border-red-900 dark:bg-zinc-950 dark:text-red-500">
+    <pre className="text-caption overflow-auto rounded-lg border border-red-100 bg-white p-4 font-mono whitespace-pre-wrap text-red-600 dark:border-red-900 dark:bg-zinc-950 dark:text-red-500">
       {error}
     </pre>
     <p
-      className="mt-3 text-xs text-red-500/80"
+      className="text-caption mt-3 text-red-500/80"
       // Sanitize requirement note (i18n string) before injection
       dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(requirementNote) }}
     />
@@ -105,7 +105,7 @@ const MermaidDiagram = ({
 }) => (
   <div
     ref={containerRef}
-    className={`mermaid-container my-6 flex justify-center overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 ${className}`}
+    className={`mermaid-container shadow-native my-6 flex justify-center overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950 ${className}`}
     // Sanitize SVG output before injection
     dangerouslySetInnerHTML={{
       __html: DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } }),

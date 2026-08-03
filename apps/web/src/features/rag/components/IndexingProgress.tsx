@@ -36,7 +36,7 @@ export const IndexingProgress = ({ progress, onAbort, onRetry }: IndexingProgres
   return (
     <div className="mt-1 space-y-1">
       <div className="flex items-center justify-between">
-        <span className="text-muted-foreground text-xs">
+        <span className="text-muted-foreground text-caption">
           {retryLabel}
           {progress.total > 0 && !isRetrying && ` (${progress.current}/${progress.total})`}
         </span>
@@ -49,7 +49,7 @@ export const IndexingProgress = ({ progress, onAbort, onRetry }: IndexingProgres
                 e.stopPropagation();
                 onRetry?.();
               }}
-              className="text-xs text-blue-400 hover:bg-blue-400/10 hover:text-blue-300"
+              className="text-caption text-blue-400 hover:bg-blue-400/10 hover:text-blue-300"
             >
               {t('rag.retry')}
             </Button>
@@ -62,7 +62,7 @@ export const IndexingProgress = ({ progress, onAbort, onRetry }: IndexingProgres
                 e.stopPropagation();
                 onAbort();
               }}
-              className="text-xs text-red-400 hover:bg-red-400/10 hover:text-red-300"
+              className="text-caption text-red-400 hover:bg-red-400/10 hover:text-red-300"
             >
               {t('rag.cancel')}
             </Button>
@@ -73,7 +73,7 @@ export const IndexingProgress = ({ progress, onAbort, onRetry }: IndexingProgres
       <div className="bg-secondary h-1.5 w-full overflow-hidden rounded-full">
         <div
           className={cn(
-            'h-full rounded-full transition-all duration-300',
+            'duration-slow h-full rounded-full transition-all',
             isFailed ? 'bg-red-500' : isCompleted ? 'bg-green-500' : 'bg-primary'
           )}
           style={{ width: `${percentage}%` }}
@@ -81,17 +81,17 @@ export const IndexingProgress = ({ progress, onAbort, onRetry }: IndexingProgres
       </div>
 
       {progress.message && (
-        <p className="text-muted-foreground truncate text-xs">{progress.message}</p>
+        <p className="text-muted-foreground text-caption truncate">{progress.message}</p>
       )}
 
       {isFailed && activeProject?.lastError && retryAttempt >= maxRetries && (
-        <p className="truncate text-xs text-red-400">
+        <p className="text-caption truncate text-red-400">
           {t('rag.retryMessages.maxRetriesReached', { error: activeProject.lastError })}
         </p>
       )}
 
       {isFailed && activeProject?.lastError && retryAttempt < maxRetries && (
-        <p className="truncate text-xs text-red-400">
+        <p className="text-caption truncate text-red-400">
           {t('rag.retryMessages.lastError', { error: activeProject.lastError })}
         </p>
       )}

@@ -68,7 +68,7 @@ export const SearchResults = () => {
 
   return (
     <div className="space-y-2" data-testid="search-results-container">
-      <p className="text-muted-foreground text-xs font-medium">
+      <p className="text-muted-foreground text-caption font-medium">
         {t('rag.searchResultCount', { count: results.length })}
       </p>
       <div className="max-h-80 space-y-1.5 overflow-y-auto" role="list">
@@ -83,7 +83,7 @@ export const SearchResults = () => {
 const SearchResultCard = ({ result, rank }: { result: SearchResult; rank: number }) => {
   return (
     <div className="border-border space-y-1 rounded-md border p-2" role="article">
-      <div className="flex items-center gap-2 text-xs">
+      <div className="text-caption flex items-center gap-2">
         <span className="text-muted-foreground">#{rank}</span>
         {chunkTypeIcon({ type: result.chunkType })}
         <span className="truncate font-medium">{result.filePath}</span>
@@ -97,7 +97,7 @@ const SearchResultCard = ({ result, rank }: { result: SearchResult; rank: number
         )}
         <span className="text-muted-foreground ms-auto">{(result.score * 100).toFixed(1)}%</span>
       </div>
-      <pre className="text-muted-foreground bg-secondary/30 max-h-24 overflow-x-auto overflow-y-auto rounded p-1.5 text-xs">
+      <pre className="text-muted-foreground bg-secondary/30 text-caption max-h-24 overflow-x-auto overflow-y-auto rounded p-1.5">
         {result.content.length > 300 ? result.content.slice(0, 300) + '...' : result.content}
       </pre>
     </div>

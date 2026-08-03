@@ -136,8 +136,10 @@ const ProjectHeader = ({
     <div className="flex items-center gap-2">
       <FolderOpen className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{project.name}</p>
-        <p className="text-muted-foreground truncate text-xs">{truncateFilePath(project.path)}</p>
+        <p className="text-body truncate font-medium">{project.name}</p>
+        <p className="text-muted-foreground text-caption truncate">
+          {truncateFilePath(project.path)}
+        </p>
       </div>
       {isActive && (
         <button
@@ -167,7 +169,7 @@ const ProjectStats = ({
   const { formatFileSize } = useTranslation(language);
 
   return (
-    <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
+    <div className="text-muted-foreground text-caption mt-1 flex items-center gap-2">
       {project.chunkCount > 0 && (
         <>
           <span className="flex items-center gap-0.5">
@@ -212,7 +214,7 @@ const ReadyActions = ({
         e.stopPropagation();
         onReindex();
       }}
-      className="text-muted-foreground hover:text-foreground flex items-center gap-0.5 text-xs"
+      className="text-muted-foreground hover:text-foreground text-caption flex items-center gap-0.5"
       title={t('rag.reindexProject')}
     >
       <RefreshCw className="h-3 w-3" /> {t('rag.reindexProject')}
@@ -226,7 +228,7 @@ const ReadyActions = ({
       }}
       aria-label={t('a11y.browseFiles', { name: project.name })}
       title={t('a11y.browseFiles', { name: project.name })}
-      className="text-muted-foreground hover:text-foreground px-1.5 py-0.5 text-xs"
+      className="text-muted-foreground hover:text-foreground text-caption px-1.5 py-0.5"
     >
       <FolderTree className="h-3 w-3" />
     </Button>
@@ -239,7 +241,7 @@ const ReadyActions = ({
       }}
       aria-label={t('a11y.projectSettings', { name: project.name })}
       title={t('a11y.projectSettings', { name: project.name })}
-      className="text-muted-foreground hover:text-foreground px-1.5 py-0.5 text-xs"
+      className="text-muted-foreground hover:text-foreground text-caption px-1.5 py-0.5"
     >
       <Settings2 className="h-3 w-3" />
     </Button>
@@ -285,7 +287,7 @@ const ProjectActions = ({
             e.stopPropagation();
             onIndex();
           }}
-          className="text-muted-foreground hover:text-foreground flex items-center gap-0.5 text-xs"
+          className="text-muted-foreground hover:text-foreground text-caption flex items-center gap-0.5"
           title={t('rag.indexProject')}
         >
           <RefreshCw className="h-3 w-3" /> {t('rag.indexProject')}
@@ -306,7 +308,7 @@ const ProjectActions = ({
             e.stopPropagation();
             onRetry?.();
           }}
-          className="text-muted-foreground hover:text-foreground flex items-center gap-0.5 text-xs"
+          className="text-muted-foreground hover:text-foreground text-caption flex items-center gap-0.5"
           title={t('rag.retryIndexing')}
         >
           <RefreshCw className="h-3 w-3" /> {t('rag.retry')}
@@ -318,7 +320,7 @@ const ProjectActions = ({
             e.stopPropagation();
             onAbort();
           }}
-          className="flex items-center gap-0.5 text-xs text-red-400 hover:text-red-300"
+          className="text-caption flex items-center gap-0.5 text-red-400 hover:text-red-300"
           title={t('rag.cancelIndexing')}
         >
           <X className="h-3 w-3" /> {t('common.cancel')}
@@ -329,7 +331,7 @@ const ProjectActions = ({
           e.stopPropagation();
           onRemove();
         }}
-        className="text-muted-foreground ms-auto flex items-center gap-0.5 text-xs hover:text-red-400"
+        className="text-muted-foreground text-caption ms-auto flex items-center gap-0.5 hover:text-red-400"
         title={t('rag.removeProject')}
         aria-label={t('a11y.removeProject')}
       >
@@ -350,7 +352,7 @@ const ExplorerModal = ({ project, onClose, titleId, t }: ExplorerModalProps) => 
   <ModalLayout isOpen onClose={onClose} titleId={titleId} maxWidth="max-w-4xl" className="h-[80vh]">
     <div className="flex h-full flex-col">
       <div className="border-sidebar-border flex items-center justify-between border-b px-4 py-3">
-        <h2 id={titleId} className="text-base font-medium">
+        <h2 id={titleId} className="text-heading font-medium">
           {project.name}
         </h2>
         <Button variant="ghost" size="icon" onClick={onClose} aria-label={t('a11y.closeModal')}>

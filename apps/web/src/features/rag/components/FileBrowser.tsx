@@ -108,7 +108,7 @@ const FileBrowser = ({ onFileSelect }: FileBrowserProps) => {
 
   if (errorMessage) {
     return (
-      <div className="text-destructive p-4 text-sm">
+      <div className="text-destructive text-body p-4">
         <p>{errorMessage}</p>
         <Button variant="outline" size="sm" className="mt-2 gap-2" onClick={handleRefresh}>
           <RefreshCw className="h-4 w-4" />
@@ -121,7 +121,7 @@ const FileBrowser = ({ onFileSelect }: FileBrowserProps) => {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b p-2">
-        <h3 className="text-sm font-medium">{t('rag.indexedFiles')}</h3>
+        <h3 className="text-body font-medium">{t('rag.indexedFiles')}</h3>
         <Button
           variant="ghost"
           size="icon"
@@ -133,11 +133,11 @@ const FileBrowser = ({ onFileSelect }: FileBrowserProps) => {
       </div>
       <div className="flex-1 overflow-auto p-2">
         {fileTree.length > 0 ? (
-          <div className="flex flex-col text-sm">
+          <div className="text-body flex flex-col">
             <TreeNodes nodes={fileTree} onFileSelect={onFileSelect} />
           </div>
         ) : (
-          <p className="text-muted-foreground p-2 text-sm">{t('rag.noFilesIndexed')}</p>
+          <p className="text-muted-foreground text-body p-2">{t('rag.noFilesIndexed')}</p>
         )}
       </div>
     </div>

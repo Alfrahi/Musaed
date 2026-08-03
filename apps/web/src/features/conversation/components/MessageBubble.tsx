@@ -91,7 +91,7 @@ const CitationChip = ({ source, onOpen, t }: CitationChipProps) => {
           </span>
         </span>
         {source.language && (
-          <span className="text-muted-foreground block text-xs">{source.language}</span>
+          <span className="text-muted-foreground text-caption block">{source.language}</span>
         )}
       </span>
     </button>
@@ -125,7 +125,7 @@ const RagSourceReferences = ({
     if (!isExpanded) return null;
     const list = showAll ? sources : visibleSources;
     return (
-      <div className="mt-2 space-y-2 text-xs">
+      <div className="text-caption mt-2 space-y-2">
         {list.map((source, index) => (
           <CitationChip key={index} source={source} onOpen={onOpenSource} t={t} />
         ))}
@@ -133,7 +133,7 @@ const RagSourceReferences = ({
           <button
             type="button"
             onClick={() => setShowAll(true)}
-            className="text-muted-foreground hover:text-foreground ms-2 cursor-pointer text-xs font-medium underline-offset-2 hover:underline"
+            className="text-muted-foreground hover:text-foreground text-caption ms-2 cursor-pointer font-medium underline-offset-2 hover:underline"
           >
             {t('a11y.showNMoreSources', { count: hiddenCount })}
           </button>
@@ -142,7 +142,7 @@ const RagSourceReferences = ({
           <button
             type="button"
             onClick={() => setShowAll(false)}
-            className="text-muted-foreground hover:text-foreground ms-2 cursor-pointer text-xs font-medium underline-offset-2 hover:underline"
+            className="text-muted-foreground hover:text-foreground text-caption ms-2 cursor-pointer font-medium underline-offset-2 hover:underline"
           >
             {t('a11y.showFewerSources')}
           </button>
@@ -155,7 +155,7 @@ const RagSourceReferences = ({
     <div className="mt-4 border-t pt-4">
       <button
         type="button"
-        className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-2 text-xs font-medium"
+        className="text-muted-foreground hover:text-foreground text-caption flex cursor-pointer items-center gap-2 font-medium"
         onClick={onToggleExpand}
         aria-expanded={isExpanded}
       >
@@ -185,7 +185,7 @@ const SourceViewerModal = ({ source, titleId, onClose, t }: SourceViewerModalPro
   <ModalLayout isOpen onClose={onClose} titleId={titleId} maxWidth="max-w-3xl" className="h-[80vh]">
     <div className="flex h-full flex-col">
       <div className="border-sidebar-border flex items-center justify-between border-b px-4 py-3">
-        <h2 id={titleId} className="truncate text-sm font-medium">
+        <h2 id={titleId} className="text-body truncate font-medium">
           {source.filePath}:{source.startLine}–{source.endLine}
         </h2>
         <Button variant="ghost" size="icon" onClick={onClose} aria-label={t('a11y.closeModal')}>
@@ -289,7 +289,7 @@ interface StoppedStatusLineProps {
 const StoppedStatusLine = ({ isStopped, onContinue, t }: StoppedStatusLineProps) => {
   if (!isStopped) return null;
   return (
-    <div className="flex items-center gap-2 text-xs text-zinc-500">
+    <div className="text-caption flex items-center gap-2 text-zinc-500">
       <span>{t('chat.stoppedByUser')}</span>
       <span>•</span>
       {onContinue && (
@@ -406,7 +406,7 @@ const MessageImages = ({
           width={384}
           height={256}
           unoptimized
-          className="border-sidebar-border max-w-sm border shadow-sm"
+          className="border-sidebar-border shadow-native max-w-sm border"
         />
       </Button>
     ))}
@@ -467,7 +467,7 @@ const MessageBubble = ({
             <MessageImages images={message.images} onImageClick={setLightboxImage} />
           )}
 
-          <div className="text-foreground selection:bg-primary/20 text-[14px] leading-relaxed antialiased">
+          <div className="text-foreground selection:bg-primary/20 text-body leading-relaxed antialiased">
             <MessageContent message={message} isUser={isUser} />
           </div>
 

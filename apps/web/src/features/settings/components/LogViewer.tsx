@@ -169,7 +169,7 @@ const LogViewerFooter = ({ t, onClose }: LogViewerFooterProps) => (
     <Button
       variant="secondary"
       onClick={onClose}
-      className="rounded-xl py-2 ps-6 pe-6 text-sm font-bold tracking-normal shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500"
+      className="text-body shadow-native rounded-xl py-2 ps-6 pe-6 font-bold tracking-normal focus-visible:ring-2 focus-visible:ring-blue-500"
     >
       {t('common.done')}
     </Button>
@@ -195,7 +195,7 @@ const LogViewerContent = ({ logs, t, formatDate }: LogViewerContentProps) => (
     ) : (
       <div className="flex h-full flex-col items-center justify-center space-y-4 text-zinc-400 dark:text-zinc-600">
         <Terminal size={48} className="opacity-10" aria-hidden="true" />
-        <p className="text-sm font-medium italic">{t('logs.noLogs')}</p>
+        <p className="text-body font-medium italic">{t('logs.noLogs')}</p>
       </div>
     )}
   </div>

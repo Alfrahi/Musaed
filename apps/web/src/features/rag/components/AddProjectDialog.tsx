@@ -136,7 +136,7 @@ export const AddProjectDialog = ({ onClose, onAdded }: AddProjectDialogProps) =>
           </Button>
         </div>
 
-        <p className="text-muted-foreground text-sm">{t('rag.addProjectDescription')}</p>
+        <p className="text-muted-foreground text-body">{t('rag.addProjectDescription')}</p>
 
         <AddProjectFormFields
           form={form}
@@ -174,25 +174,25 @@ const AddProjectFormFields = ({
 }) => (
   <>
     <div className="space-y-1">
-      <label className="text-sm font-medium">{t('rag.projectName')}</label>
+      <label className="text-body font-medium">{t('rag.projectName')}</label>
       <input
         type="text"
         value={form.name}
         onChange={(e) => form.setName(e.target.value)}
         placeholder={t('rag.projectName')}
-        className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+        className="border-input bg-background text-body w-full rounded-md border px-3 py-2"
       />
     </div>
 
     <div className="space-y-1">
-      <label className="text-sm font-medium">{t('rag.projectFolder')}</label>
+      <label className="text-body font-medium">{t('rag.projectFolder')}</label>
       <div className="flex gap-2">
         <input
           type="text"
           value={form.path}
           onChange={(e) => form.setPath(e.target.value)}
           placeholder="/path/to/project"
-          className="border-input bg-background flex-1 rounded-md border px-3 py-2 text-sm"
+          className="border-input bg-background text-body flex-1 rounded-md border px-3 py-2"
         />
         <Button
           variant="outline"
@@ -216,28 +216,28 @@ const AddProjectFormFields = ({
     />
 
     <div className="space-y-1">
-      <label className="text-sm font-medium">{t('rag.ignorePatterns')}</label>
+      <label className="text-body font-medium">{t('rag.ignorePatterns')}</label>
       <textarea
         value={form.ignorePatterns}
         onChange={(e) => form.setIgnorePatterns(e.target.value)}
         rows={3}
         placeholder="node_modules&#10;dist&#10;.git"
-        className="border-input bg-background w-full rounded-md border px-3 py-2 font-mono text-sm"
+        className="border-input bg-background text-body w-full rounded-md border px-3 py-2 font-mono"
       />
-      <p className="text-muted-foreground text-xs">{t('rag.ignorePatternsDescription')}</p>
+      <p className="text-muted-foreground text-caption">{t('rag.ignorePatternsDescription')}</p>
     </div>
 
-    {form.errorMessage && <p className="text-sm text-red-500">{form.errorMessage}</p>}
+    {form.errorMessage && <p className="text-body text-red-500">{form.errorMessage}</p>}
 
     <div className="flex justify-end gap-2 pt-2">
-      <Button variant="outline" onClick={onClose} className="text-sm">
+      <Button variant="outline" onClick={onClose} className="text-body">
         {t('common.cancel')}
       </Button>
       <Button
         variant="primary"
         onClick={handleAdd}
         disabled={form.isAdding}
-        className="gap-2 text-sm"
+        className="text-body gap-2"
       >
         {form.isAdding && <Loader2 className="h-4 w-4 animate-spin" />}
         {t('rag.addProjectAction')}
@@ -270,12 +270,12 @@ const EmbeddingModelSelect = ({
 
   return (
     <div className="space-y-1">
-      <label className="text-sm font-medium">{t('rag.embeddingModel')}</label>
+      <label className="text-body font-medium">{t('rag.embeddingModel')}</label>
       {models.length > 0 ? (
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+          className="border-input bg-background text-body w-full rounded-md border px-3 py-2"
         >
           {models.map((m) => (
             <option key={m.name} value={m.name}>
@@ -292,13 +292,13 @@ const EmbeddingModelSelect = ({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="nomic-embed-text-v2-moe"
-          className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+          className="border-input bg-background text-body w-full rounded-md border px-3 py-2"
         />
       )}
 
       {!isInstalled && value.trim() && (
         <div className="flex items-center gap-2 pt-1">
-          <p className="text-xs text-amber-600 dark:text-amber-400">
+          <p className="text-caption text-amber-600 dark:text-amber-400">
             {t('rag.modelMissing', { model: value })}
           </p>
           <Button
@@ -307,7 +307,7 @@ const EmbeddingModelSelect = ({
             size="sm"
             onClick={() => onPullModel(value)}
             disabled={isPulling}
-            className="gap-1 rounded-md bg-amber-100 text-xs font-medium text-amber-700 hover:bg-amber-200 disabled:opacity-50 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50"
+            className="text-caption gap-1 rounded-md bg-amber-100 font-medium text-amber-700 hover:bg-amber-200 disabled:opacity-50 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50"
           >
             {isPulling ? (
               <>
@@ -324,7 +324,7 @@ const EmbeddingModelSelect = ({
         </div>
       )}
 
-      <p className="text-muted-foreground text-xs">
+      <p className="text-muted-foreground text-caption">
         {t('rag.embeddingModelNote', { model: 'nomic-embed-text-v2-moe' })}
       </p>
     </div>

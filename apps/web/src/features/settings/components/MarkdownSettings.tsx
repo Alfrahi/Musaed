@@ -28,11 +28,11 @@ const ToggleRow = ({
 
   return (
     <div className="flex items-start gap-4 rounded-md border border-zinc-100 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
-      <div className="rounded-md bg-white p-2 shadow-sm dark:bg-zinc-700">
+      <div className="shadow-native rounded-md bg-white p-2 dark:bg-zinc-700">
         <Icon size={16} className="text-zinc-500" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-bold dark:text-zinc-200">{t(toggle.label)}</p>
+        <p className="text-caption font-bold dark:text-zinc-200">{t(toggle.label)}</p>
         <p className="caption-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
           {t(toggle.description)}
         </p>
@@ -40,14 +40,14 @@ const ToggleRow = ({
       {/* eslint-disable-next-line musaed-buttons/prefer-button-primitive -- role="switch" toggle, not an action button */}
       <button
         onClick={onToggle}
-        className={`focus-visible:ring-offset-background h-6 w-10 shrink-0 rounded-full p-1 transition-colors duration-200 ease-in-out focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none ${
+        className={`focus-visible:ring-offset-background duration-normal h-6 w-10 shrink-0 rounded-full p-1 transition-colors ease-in-out focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none ${
           isEnabled ? 'bg-blue-600' : 'bg-zinc-300 dark:bg-zinc-600'
         }`}
         role="switch"
         aria-checked={isEnabled}
       >
         <div
-          className={`h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${
+          className={`shadow-native duration-normal h-4 w-4 transform rounded-full bg-white transition-transform ease-in-out ${
             isEnabled ? 'ltr:translate-x-4 rtl:-translate-x-4' : 'translate-x-0'
           }`}
         />
@@ -79,7 +79,7 @@ const MarkdownSettings = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2 text-sm font-medium">
+      <div className="text-body flex items-center gap-2 font-medium">
         <FileText size={14} className="text-zinc-400" />
         <label>{t('settings.markdown.title')}</label>
       </div>

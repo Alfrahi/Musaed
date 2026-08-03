@@ -42,14 +42,16 @@ const HeaderBar = ({
 }) => (
   <div className="pbs-6 pbe-6 flex items-center justify-between border-b border-zinc-100 ps-6 pe-6 dark:border-zinc-800">
     <div className="flex items-center gap-4">
-      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 text-white shadow-lg shadow-blue-500/20">
+      <div className="shadow-pro flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 text-white shadow-blue-500/20">
         <HardDrive size={20} />
       </div>
       <div>
         <h2 id={titleId} className="text-xl font-bold tracking-tight">
           {title}
         </h2>
-        <p className="text-xs font-medium tracking-widest text-zinc-500 uppercase">{subtitle}</p>
+        <p className="text-caption font-medium tracking-widest text-zinc-500 uppercase">
+          {subtitle}
+        </p>
       </div>
     </div>
     <div className="flex items-center gap-2">
@@ -95,9 +97,9 @@ const TabBar = ({
         key={tab}
         onClick={() => setActiveTab(tab)}
         className={cn(
-          'rounded-md px-4 py-1.5 text-xs font-bold tracking-widest uppercase transition-all',
+          'text-caption rounded-md px-4 py-1.5 font-bold tracking-widest uppercase transition-all',
           activeTab === tab
-            ? 'bg-white text-blue-600 shadow-sm dark:bg-zinc-700'
+            ? 'shadow-native bg-white text-blue-600 dark:bg-zinc-700'
             : 'text-zinc-500 hover:text-zinc-700'
         )}
       >
@@ -136,7 +138,7 @@ const CustomPullForm = ({
           placeholder={placeholder}
           value={customModel}
           onChange={(e) => setCustomModel(e.target.value)}
-          className="w-full rounded-lg border border-zinc-200 bg-white py-2 ps-9 pe-3 font-mono text-xs transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
+          className="text-caption w-full rounded-lg border border-zinc-200 bg-white py-2 ps-9 pe-3 font-mono transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
         />
       </div>
       <Button
@@ -170,7 +172,7 @@ const SearchBar = ({
       placeholder={placeholder}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-lg border border-zinc-200 bg-white py-2.5 ps-10 pe-4 text-sm transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
+      className="text-body w-full rounded-lg border border-zinc-200 bg-white py-2.5 ps-10 pe-4 transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
     />
   </div>
 );

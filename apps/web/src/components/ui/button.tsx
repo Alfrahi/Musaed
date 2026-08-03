@@ -16,9 +16,10 @@ import { cn } from '@/lib/utils';
  * `size: 'icon'` is reserved for square icon-only buttons (e.g. modal close,
  * refresh) — it collapses the padding and centres an icon.
  *
- * Font sizes lean on Tailwind's stock `text-xs` (12px) / `text-sm` (14px)
- * utilities rather than the `caption-xs` / `caption-md` utilities from
- * `globals.css`, because the caption utilities are opinionated about `color`
+ * Font sizes lean on the semantic `text-caption` (12px) / `text-body` (14px)
+ * utilities (mapped from FONT_SIZE in `lib/design-tokens.ts`) rather than the
+ * `caption-xs` / `caption-md` utilities from `globals.css`, because the caption
+ * utilities are opinionated about `color`
  * (zinc-600 / 700 + dark-mode overrides) — they would clobber the variant's
  * own `text-*` color (`text-white` on `primary`, `text-zinc-900` on the dark
  * `secondary` override, …) under CSS source-order precedence. The variant's
@@ -32,7 +33,7 @@ export const buttonVariants = cva(
   // base — applies to every variant
   [
     'inline-flex items-center justify-center gap-2 rounded-md font-bold',
-    'uppercase tracking-widest transition-all duration-150',
+    'uppercase tracking-widest transition-all duration-fast',
     'active:scale-95',
     'outline-none',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
@@ -42,12 +43,12 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         // Solid primary action — used for Send, modal footer confirm.
-        primary: 'bg-blue-600 text-white shadow-sm hover:opacity-90 dark:bg-blue-500',
+        primary: 'bg-blue-600 text-white shadow-native hover:opacity-90 dark:bg-blue-500',
         // High-contrast "utility" solid — used on the Abort button and the
         // modal Done footer. Preserves the existing dark-on-light / light-on-dark
         // contrast pair these surfaces already had.
         secondary:
-          'bg-zinc-900 text-white shadow-sm hover:opacity-90 dark:bg-zinc-100 dark:text-zinc-900',
+          'bg-zinc-900 text-white shadow-native hover:opacity-90 dark:bg-zinc-100 dark:text-zinc-900',
         // Transparent — used for tab navigation, modal close, refresh, attach.
         ghost:
           'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100',
@@ -56,12 +57,12 @@ export const buttonVariants = cva(
           'border border-zinc-200 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800',
         // Destructive — used for project delete, reset preferences, abort.
         danger:
-          'bg-red-500 text-white shadow-sm hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500',
+          'bg-red-500 text-white shadow-native hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500',
       },
       size: {
-        sm: 'h-8 px-3 text-xs',
-        md: 'h-10 px-4 text-xs',
-        lg: 'h-12 px-6 text-sm',
+        sm: 'h-8 px-3 text-caption',
+        md: 'h-10 px-4 text-caption',
+        lg: 'h-12 px-6 text-body',
         icon: 'h-8 w-8 p-0',
       },
     },

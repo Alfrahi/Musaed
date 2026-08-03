@@ -31,7 +31,7 @@ interface ScrollShadowProps {
 }
 
 const SHADOW_CLASS =
-  'pointer-events-none absolute inset-x-0 bottom-0 h-6 z-10 bg-gradient-to-b from-transparent to-black/[0.05] dark:to-white/[0.03] transition-opacity duration-150';
+  'pointer-events-none absolute inset-x-0 bottom-0 h-6 z-10 bg-gradient-to-b from-transparent to-black/[0.05] dark:to-white/[0.03] transition-opacity duration-fast';
 
 /**
  * Auto-detect mode: wraps children in a relative container, observes a

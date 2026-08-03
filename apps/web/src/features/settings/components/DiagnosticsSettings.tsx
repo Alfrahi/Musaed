@@ -16,7 +16,7 @@ const DiagnosticsSettings = () => {
     <>
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm font-medium">
+          <div className="text-body flex items-center gap-2 font-medium">
             <Activity size={14} className="text-zinc-400" />
             <label>{t('settings.systemDiagnostics')}</label>
           </div>

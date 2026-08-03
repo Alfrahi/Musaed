@@ -50,7 +50,7 @@ const CommandOption = ({
       aria-selected={isActive}
       onClick={onSelect}
       onMouseEnter={onHover}
-      className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+      className={`text-body flex w-full items-center gap-3 px-4 py-2.5 transition-colors ${
         isActive
           ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
           : 'text-zinc-600 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800/50'
@@ -85,7 +85,7 @@ const PaletteSearch = ({
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={onKeyDown}
       placeholder={placeholder}
-      className="w-full border-none bg-transparent text-sm outline-none placeholder:text-zinc-400"
+      className="text-body w-full border-none bg-transparent outline-none placeholder:text-zinc-400"
       aria-label={placeholder}
     />
     <span className="caption-xs rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-zinc-400 dark:bg-zinc-800">
@@ -150,7 +150,7 @@ const CommandList = ({
 }) => (
   <div role="listbox" className="max-h-64 overflow-y-auto py-2">
     {filtered.length === 0 ? (
-      <p className="px-4 py-6 text-center text-xs text-zinc-400">{emptyLabel}</p>
+      <p className="text-caption px-4 py-6 text-center text-zinc-400">{emptyLabel}</p>
     ) : (
       filtered.map((cmd, i) => (
         <CommandOption

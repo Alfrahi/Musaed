@@ -36,14 +36,14 @@ const ShortcutCheatsheet = ({ isOpen, onClose }: ShortcutCheatsheetProps) => {
     <ModalLayout isOpen={isOpen} onClose={onClose} titleId={titleId} maxWidth="max-w-sm">
       <div className="flex flex-col">
         <div className="border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
-          <h2 id={titleId} className="text-sm font-semibold">
+          <h2 id={titleId} className="text-body font-semibold">
             {t('a11y.shortcutCheatsheet')}
           </h2>
         </div>
         <div className="max-h-80 overflow-y-auto py-2">
           {shortcuts.map((s) => (
             <div key={s.keys.join('+')} className="flex items-center justify-between px-4 py-2.5">
-              <span className="text-sm text-zinc-600 dark:text-zinc-400">{s.description}</span>
+              <span className="text-body text-zinc-600 dark:text-zinc-400">{s.description}</span>
               <span className="caption-xs flex items-center gap-1 font-mono text-zinc-400">
                 {s.keys.map((k, i) => (
                   <span key={k}>
