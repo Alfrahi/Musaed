@@ -24,7 +24,7 @@ const SliderControl = ({
 }) => (
   <div className="flex flex-col gap-2">
     <div className="flex items-center justify-between">
-      <label className="text-xs font-medium text-zinc-500">{label}</label>
+      <label className="text-caption font-medium text-zinc-500">{label}</label>
       <span className="caption-xs font-mono text-zinc-400">{displayValue}</span>
     </div>
     <input
@@ -52,7 +52,7 @@ const NumberInput = ({
   onChange: (val: number) => void;
 }) => (
   <div className="flex flex-col gap-2">
-    <label className="block text-xs font-medium text-zinc-500">{label}</label>
+    <label className="text-caption block font-medium text-zinc-500">{label}</label>
     <input
       type="number"
       value={value}
@@ -72,8 +72,8 @@ const ModelParamsSettings = () => {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-medium">{t('settings.temperature')}</label>
-          <span className="font-mono text-xs text-zinc-500">
+          <label className="text-body font-medium">{t('settings.temperature')}</label>
+          <span className="text-caption font-mono text-zinc-500">
             {formatNumber(globalSettings.temperature, { minimumFractionDigits: 1 })}
           </span>
         </div>

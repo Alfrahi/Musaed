@@ -58,7 +58,7 @@ export const ProjectList = ({ hideHeaderAction = false }: { hideHeaderAction?: b
     <div className="flex h-full flex-col">
       {!hideHeaderAction && (
         <div className="flex shrink-0 items-center justify-between px-2 py-1">
-          <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+          <span className="text-muted-foreground text-caption font-medium tracking-wider uppercase">
             {t('rag.title')}
           </span>
           <Button
@@ -74,7 +74,7 @@ export const ProjectList = ({ hideHeaderAction = false }: { hideHeaderAction?: b
       )}
 
       {projectIds.length === 0 ? (
-        <p className="text-muted-foreground px-2 text-xs italic">{t('rag.noProjects')}</p>
+        <p className="text-muted-foreground text-caption px-2 italic">{t('rag.noProjects')}</p>
       ) : (
         <div className="min-h-0 flex-1">
           <Virtuoso

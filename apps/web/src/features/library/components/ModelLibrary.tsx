@@ -112,11 +112,11 @@ const InstalledList = ({
   if (filteredInstalled.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 px-6">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">{emptyCta}</p>
+        <p className="text-body text-zinc-500 dark:text-zinc-400">{emptyCta}</p>
         <Button
           variant="secondary"
           onClick={onBrowseLibrary}
-          className="rounded-lg text-xs font-bold tracking-widest uppercase"
+          className="text-caption rounded-lg font-bold tracking-widest uppercase"
         >
           {emptyCta}
         </Button>
@@ -156,7 +156,7 @@ const InstalledList = ({
 const ConnectionWarning = ({ message }: { message: string }) => (
   <div className="mbs-4 ms-6 me-6 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
     <AlertCircle size={18} className="shrink-0 text-amber-600 dark:text-amber-400" />
-    <p className="text-xs font-medium text-amber-800 dark:text-amber-200">{message}</p>
+    <p className="text-caption font-medium text-amber-800 dark:text-amber-200">{message}</p>
   </div>
 );
 
@@ -177,7 +177,7 @@ const LibraryFooter = ({
     <Button
       variant="secondary"
       onClick={onClose}
-      className="h-10 rounded-lg ps-6 pe-6 text-xs font-bold tracking-normal uppercase shadow-sm"
+      className="text-caption shadow-native h-10 rounded-lg ps-6 pe-6 font-bold tracking-normal uppercase"
     >
       {closeLabel}
     </Button>

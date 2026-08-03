@@ -83,7 +83,7 @@ const InstalledModelCard = ({
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold">{name}</h3>
+            <h3 className="text-body font-bold">{name}</h3>
             {details?.parameterSize && (
               <span
                 className={cn(
@@ -226,7 +226,7 @@ const PullControl = ({
       onClick={() => onPull?.(name)}
       disabled={isDownloaded}
       className={cn(
-        'caption-xs w-full gap-2 font-bold tracking-widest uppercase shadow-sm',
+        'caption-xs shadow-native w-full gap-2 font-bold tracking-widest uppercase',
         isDownloaded && 'cursor-default text-zinc-400'
       )}
     >
@@ -335,7 +335,7 @@ const PullProgressBar = ({
       {pullStatus.progress !== undefined && (
         <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
           <div
-            className="h-full bg-blue-500 transition-all duration-300"
+            className="duration-slow h-full bg-blue-500 transition-all"
             style={{ width: `${pullStatus.progress}%` }}
           />
         </div>
@@ -378,10 +378,10 @@ const FeaturedModelCard = ({
   return (
     <div
       className={cn(
-        'group flex h-full flex-col justify-between rounded-lg border p-5 transition-all duration-300',
+        'group duration-slow flex h-full flex-col justify-between rounded-lg border p-5 transition-all',
         isDownloaded
           ? 'border-blue-100 bg-blue-50/30 dark:border-blue-900/30 dark:bg-blue-900/10'
-          : 'border-zinc-200 bg-white shadow-sm hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/50 dark:hover:border-zinc-700'
+          : 'shadow-native border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/50 dark:hover:border-zinc-700'
       )}
     >
       <FeaturedModelHeader
@@ -432,7 +432,7 @@ const FeaturedModelHeader = ({
           <CapabilityBadges {...capabilities} t={t} />
         </div>
         {description && (
-          <p className="mbs-1 line-clamp-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+          <p className="mbs-1 text-caption line-clamp-2 leading-relaxed text-zinc-500 dark:text-zinc-400">
             {description}
           </p>
         )}

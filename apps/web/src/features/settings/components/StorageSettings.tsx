@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 const SizeCard = ({ label, value }: { label: string; value: string }) => (
   <div className="rounded-md border border-zinc-100 bg-zinc-50 p-3 dark:border-zinc-700/50 dark:bg-zinc-800/50">
     <p className="caption-md mbe-1 font-medium text-zinc-400">{label}</p>
-    <p className="font-mono text-sm font-black">{value}</p>
+    <p className="text-body font-mono font-black">{value}</p>
   </div>
 );
 
@@ -34,7 +34,7 @@ const ExportActions = ({
       <Button
         variant="ghost"
         onClick={onExportJson}
-        className="flex-1 gap-2 rounded-md bg-zinc-100 py-2 text-xs font-bold tracking-widest uppercase hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+        className="text-caption flex-1 gap-2 rounded-md bg-zinc-100 py-2 font-bold tracking-widest uppercase hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
       >
         <Download size={14} />
         {labels.exportJson}
@@ -43,7 +43,7 @@ const ExportActions = ({
         variant="ghost"
         disabled
         onClick={onImportJson}
-        className="flex-1 cursor-not-allowed gap-2 rounded-md bg-zinc-100 py-2 text-xs font-bold tracking-widest uppercase opacity-40 grayscale dark:bg-zinc-800"
+        className="text-caption flex-1 cursor-not-allowed gap-2 rounded-md bg-zinc-100 py-2 font-bold tracking-widest uppercase opacity-40 grayscale dark:bg-zinc-800"
         title={comingSoon}
       >
         <Upload size={14} />
@@ -53,7 +53,7 @@ const ExportActions = ({
     <Button
       variant="outline"
       onClick={onExportMarkdown}
-      className="gap-2 rounded-md py-2 text-xs font-bold tracking-widest text-zinc-600 uppercase hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800"
+      className="text-caption gap-2 rounded-md py-2 font-bold tracking-widest text-zinc-600 uppercase hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800"
     >
       <FileText size={14} />
       {labels.exportMarkdown}
@@ -83,7 +83,7 @@ const StorageSettings = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2 text-sm font-medium">
+      <div className="text-body flex items-center gap-2 font-medium">
         <HardDrive size={14} className="text-zinc-400" />
         <label>{t('settings.storage.title')}</label>
       </div>
@@ -111,7 +111,7 @@ const StorageSettings = () => {
         <select
           value={globalSettings.chatRetentionDays}
           onChange={(e) => updateGlobalSettings({ chatRetentionDays: parseInt(e.target.value) })}
-          className="w-full cursor-pointer appearance-none rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs transition-all outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-200 dark:bg-zinc-800"
+          className="text-caption w-full cursor-pointer appearance-none rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 transition-all outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-200 dark:bg-zinc-800"
         >
           {retentionOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>

@@ -19,7 +19,7 @@ interface StatusContentProps {
 const StatusContent = ({ isChecking, connectionState, reconnect, t }: StatusContentProps) => (
   <>
     {isChecking && (
-      <div className="flex items-center gap-2 text-xs text-yellow-600 dark:text-yellow-400">
+      <div className="text-caption flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
         <Loader2 size={14} className="animate-spin" />
         <span className="hidden sm:inline">{t('chat.connecting')}</span>
       </div>
@@ -27,7 +27,7 @@ const StatusContent = ({ isChecking, connectionState, reconnect, t }: StatusCont
 
     {connectionState === ConnectionState.DISCONNECTED && (
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
+        <div className="text-caption flex items-center gap-2 text-red-600 dark:text-red-400">
           <WifiOff size={14} />
           <span className="hidden sm:inline">{t('chat.offline')}</span>
         </div>
@@ -43,7 +43,7 @@ const StatusContent = ({ isChecking, connectionState, reconnect, t }: StatusCont
 
     {connectionState === ConnectionState.ERROR && (
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-2 text-xs text-orange-600 dark:text-orange-400">
+        <div className="text-caption flex items-center gap-2 text-orange-600 dark:text-orange-400">
           <AlertCircle size={14} />
           <span className="hidden sm:inline">{t('error.connectionError')}</span>
         </div>
@@ -69,7 +69,7 @@ const OllamaConnectionStatus = () => {
 
   if (isHealthy && !isChecking) {
     return (
-      <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400">
+      <div className="text-caption flex items-center gap-2 text-green-600 dark:text-green-400">
         <CheckCircle2 size={14} />
         <span className="hidden sm:inline">{t('chat.localNode')}</span>
         {health && <span className="caption-xs">({health.responseTimeMs}ms)</span>}

@@ -28,8 +28,8 @@ const InfoSection = ({
       <Icon size={20} />
     </div>
     <div className="space-y-1">
-      <h3 className="text-xs font-bold tracking-wider uppercase">{title}</h3>
-      <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">{description}</p>
+      <h3 className="text-caption font-bold tracking-wider uppercase">{title}</h3>
+      <p className="text-caption leading-relaxed text-zinc-500 dark:text-zinc-400">{description}</p>
     </div>
   </div>
 );
@@ -90,7 +90,7 @@ const InfoModal = ({ isOpen, onClose }: InfoModalProps) => {
       />
 
       <div className="space-y-6 overflow-y-auto p-6">
-        <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+        <p className="text-body leading-relaxed text-zinc-600 dark:text-zinc-400">
           {t('info.description')}
         </p>
 
@@ -103,7 +103,7 @@ const InfoModal = ({ isOpen, onClose }: InfoModalProps) => {
         <Button
           variant="secondary"
           onClick={() => openerApi.openUrl('https://github.com/alfrahi/musaed')}
-          className="w-full gap-2 rounded-xl text-xs font-bold tracking-widest uppercase shadow-sm"
+          className="text-caption shadow-native w-full gap-2 rounded-xl font-bold tracking-widest uppercase"
         >
           <Github size={14} />
           {t('info.github')}

@@ -97,7 +97,7 @@ const IpcLatencyPanel = () => {
   return (
     <div className="flex flex-col gap-3 rounded-md border border-zinc-100 p-4 dark:border-zinc-800">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm font-medium">
+        <div className="text-body flex items-center gap-2 font-medium">
           <Gauge size={14} className="text-zinc-400" />
           <label>{t('settings.ipcLatency.title')}</label>
           {stats.violationCount > 0 && (

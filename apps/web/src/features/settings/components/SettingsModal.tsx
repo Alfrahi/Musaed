@@ -26,28 +26,28 @@ interface SettingsModalProps {
 type SettingsTab = 'general' | 'appearance' | 'ai' | 'storage' | 'advanced';
 
 const renderGeneralTab = () => (
-  <div className="animate-in fade-in slide-in-from-bottom-2 space-y-8 duration-200">
+  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-8">
     <LanguageSettings />
     <InputSettings />
   </div>
 );
 
 const renderAppearanceTab = () => (
-  <div className="animate-in fade-in slide-in-from-bottom-2 space-y-8 duration-200">
+  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-8">
     <ThemeSettings />
     <MarkdownSettings />
   </div>
 );
 
 const renderAITab = () => (
-  <div className="animate-in fade-in slide-in-from-bottom-2 space-y-8 duration-200">
+  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-8">
     <OllamaSettings />
     <ModelParamsSettings />
   </div>
 );
 
 const renderStorageTab = () => (
-  <div className="animate-in fade-in slide-in-from-bottom-2 space-y-8 duration-200">
+  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-8">
     <StorageSettings />
   </div>
 );
@@ -58,7 +58,7 @@ interface RenderAdvancedTabProps {
 }
 
 const RenderAdvancedTab = ({ t, handleReset }: RenderAdvancedTabProps) => (
-  <div className="animate-in fade-in slide-in-from-bottom-2 space-y-8 duration-200">
+  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-8">
     <DiagnosticsSettings />
     <div className="pb-4">
       <button
@@ -121,7 +121,7 @@ const RenderModalHeader = ({
       </div>
       <button
         onClick={onClose}
-        className="rounded-md p-2 text-zinc-500 transition-all duration-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        className="duration-normal rounded-md p-2 text-zinc-500 transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800"
         aria-label={t('a11y.closeModal')}
       >
         <X size={20} />
@@ -141,7 +141,7 @@ const RenderModalHeader = ({
         onKeyDown={onSearchKeyDown}
         placeholder={t('settings.searchPlaceholder')}
         aria-label={t('settings.searchPlaceholder')}
-        className="w-full rounded-md border border-zinc-200 bg-white py-2 ps-9 pe-3 text-sm text-zinc-900 transition-all duration-200 outline-none placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+        className="text-body duration-normal w-full rounded-md border border-zinc-200 bg-white py-2 ps-9 pe-3 text-zinc-900 transition-all outline-none placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500"
       />
     </div>
   </div>
@@ -164,9 +164,9 @@ const RenderTabNavigation = ({ tabs, activeTab, setActiveTab }: RenderTabNavigat
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              'caption-md flex w-full cursor-pointer items-center gap-3 rounded-md border-s-2 px-3 py-2.5 font-bold tracking-widest uppercase transition-all duration-200',
+              'caption-md duration-normal flex w-full cursor-pointer items-center gap-3 rounded-md border-s-2 px-3 py-2.5 font-bold tracking-widest uppercase transition-all',
               isActive
-                ? 'border-blue-500 bg-white text-blue-600 shadow-sm dark:bg-zinc-800 dark:text-blue-400'
+                ? 'shadow-native border-blue-500 bg-white text-blue-600 dark:bg-zinc-800 dark:text-blue-400'
                 : 'border-transparent text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100'
             )}
           >

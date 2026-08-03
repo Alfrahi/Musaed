@@ -40,7 +40,7 @@ const RenameInput = ({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       onBlur={onBlur}
-      className="border-primary w-full rounded-md border bg-white px-1 py-0.5 text-[13px] outline-none dark:bg-zinc-900"
+      className="border-primary text-label w-full rounded-md border bg-white px-1 py-0.5 outline-none dark:bg-zinc-900"
     />
   </form>
 );
@@ -175,7 +175,7 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
       onKeyDown={handleKeyDown}
       onContextMenu={handleContextMenu}
       className={cn(
-        'group relative flex cursor-pointer items-center gap-2.5 border-s-2 border-transparent px-3 py-2 text-[13px] transition-all duration-150',
+        'group text-label duration-fast relative flex cursor-pointer items-center gap-2.5 border-s-2 border-transparent px-3 py-2 transition-all',
         // focus-visible ring pairs the global :focus-visible outline from globals.css
         // with this virtualized row so keyboard focus is visible (audit F3).
         'focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none',

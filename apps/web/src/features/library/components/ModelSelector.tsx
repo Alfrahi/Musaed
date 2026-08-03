@@ -44,19 +44,19 @@ const SelectorTrigger = ({
     onClick={onClick}
     onKeyDown={onKeyDown}
     className={cn(
-      'hover:border-sidebar-border focus-visible:ring-offset-background flex cursor-pointer items-center gap-2 rounded-md border border-transparent py-2 ps-3 pe-3 text-[13px] font-bold text-zinc-500 transition-all duration-200 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100',
+      'hover:border-sidebar-border focus-visible:ring-offset-background text-label duration-normal flex cursor-pointer items-center gap-2 rounded-md border border-transparent py-2 ps-3 pe-3 font-bold text-zinc-500 transition-all hover:bg-zinc-100 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100',
       isOpen &&
         'border-sidebar-border bg-zinc-100 text-zinc-900 dark:bg-zinc-800/50 dark:text-zinc-100'
     )}
   >
     <Settings2
       size={16}
-      className={cn('transition-transform duration-300', isOpen && 'rotate-90')}
+      className={cn('duration-slow transition-transform', isOpen && 'rotate-90')}
     />
     <span className="max-w-[150px] truncate">{selectedModel || placeholder}</span>
     <ChevronDown
       size={14}
-      className={cn('transition-transform duration-200', isOpen && 'rotate-180')}
+      className={cn('duration-normal transition-transform', isOpen && 'rotate-180')}
     />
   </button>
 );
@@ -117,7 +117,7 @@ const ModelOption = ({
     onMouseEnter={() => onOptionHover(index)}
     data-active={isActive ? '' : undefined}
     className={cn(
-      'flex w-full cursor-pointer items-center justify-between py-3 ps-4 pe-4 text-start text-sm font-medium transition-colors duration-200 focus-visible:outline-none',
+      'text-body duration-normal flex w-full cursor-pointer items-center justify-between py-3 ps-4 pe-4 text-start font-medium transition-colors focus-visible:outline-none',
       isActive ? 'bg-zinc-50 dark:bg-zinc-800/50' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50',
       isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-600 dark:text-zinc-400'
     )}
@@ -130,7 +130,7 @@ const ModelOption = ({
 /** Empty state when no models are available. */
 const EmptyModels = ({ message }: { message: string }) => (
   <div className="py-6 ps-4 pe-4 text-center">
-    <p className="text-xs font-bold text-zinc-400 uppercase italic">{message}</p>
+    <p className="text-caption font-bold text-zinc-400 uppercase italic">{message}</p>
   </div>
 );
 
@@ -171,7 +171,7 @@ const ModelDropdown = ({
   return (
     <div
       id={listboxId}
-      className="inset-be-full mbe-2 border-sidebar-border shadow-pro animate-in fade-in slide-in-from-bottom-2 absolute start-0 z-50 min-w-[240px] border bg-white py-1 transition-all duration-200 dark:bg-zinc-900"
+      className="inset-be-full mbe-2 border-sidebar-border shadow-pro animate-in fade-in slide-in-from-bottom-2 duration-normal absolute start-0 z-50 min-w-[240px] border bg-white py-1 transition-all dark:bg-zinc-900"
       role="listbox"
       aria-labelledby={triggerId}
     >
@@ -184,7 +184,7 @@ const ModelDropdown = ({
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={searchPlaceholder}
-          className="w-full border-none bg-transparent text-xs outline-none placeholder:text-zinc-400"
+          className="text-caption w-full border-none bg-transparent outline-none placeholder:text-zinc-400"
           aria-label={searchPlaceholder}
         />
       </div>

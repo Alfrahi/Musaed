@@ -21,7 +21,7 @@ const ThemeSettings = () => {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 text-sm font-medium">
+      <div className="text-body flex items-center gap-2 font-medium">
         <Monitor size={14} className="text-zinc-400" />
         <label>{t('settings.appearance')}</label>
       </div>
@@ -32,9 +32,9 @@ const ThemeSettings = () => {
             key={id}
             onClick={() => updateGlobalSettings({ theme: id })}
             className={cn(
-              'flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md py-2 text-xs font-bold tracking-widest uppercase transition-all',
+              'text-caption flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md py-2 font-bold tracking-widest uppercase transition-all',
               globalSettings.theme === id
-                ? 'bg-white text-blue-600 shadow-sm dark:bg-zinc-700'
+                ? 'shadow-native bg-white text-blue-600 dark:bg-zinc-700'
                 : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
             )}
           >

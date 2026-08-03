@@ -24,7 +24,7 @@ const TaskStatus = () => {
 
   if (shouldReduceMotion) {
     return (
-      <div className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-100 py-1.5 ps-3 pe-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/80">
+      <div className="shadow-native flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-100 py-1.5 ps-3 pe-4 dark:border-zinc-700 dark:bg-zinc-800/80">
         <div className="relative flex items-center justify-center">
           <Loader2 size={14} className="animate-spin text-blue-500" aria-hidden="true" />
           {status?.progress !== undefined && (
@@ -58,7 +58,7 @@ const TaskStatus = () => {
         initial={{ opacity: 0, y: -10, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 10, scale: 0.95 }}
-        className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-100 py-1.5 ps-3 pe-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/80"
+        className="shadow-native flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-100 py-1.5 ps-3 pe-4 dark:border-zinc-700 dark:bg-zinc-800/80"
       >
         <div className="relative flex items-center justify-center">
           <Loader2 size={14} className="animate-spin text-blue-500" aria-hidden="true" />

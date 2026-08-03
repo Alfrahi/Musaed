@@ -82,7 +82,7 @@ const OllamaSettings = () => {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-2 text-sm font-medium">
+        <div className="text-body flex items-center gap-2 font-medium">
           <Globe size={14} className="text-zinc-400" />
           <label>{t('settings.ollamaUrl')}</label>
         </div>
@@ -91,19 +91,19 @@ const OllamaSettings = () => {
           value={globalSettings.ollamaUrl}
           onChange={(e) => updateGlobalSettings({ ollamaUrl: e.target.value })}
           onBlur={onBlur}
-          className="w-full rounded-md border border-zinc-200 bg-zinc-50 py-2 ps-3 pe-3 text-xs transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
+          className="text-caption w-full rounded-md border border-zinc-200 bg-zinc-50 py-2 ps-3 pe-3 transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
         />
       </div>
 
       <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-2 text-sm font-medium">
+        <div className="text-body flex items-center gap-2 font-medium">
           <Terminal size={14} className="text-zinc-400" />
           <label>{t('settings.systemPrompt')}</label>
         </div>
         <textarea
           value={globalSettings.systemPrompt}
           onChange={(e) => updateGlobalSettings({ systemPrompt: e.target.value })}
-          className="min-h-[100px] w-full resize-none rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
+          className="text-caption min-h-[100px] w-full resize-none rounded-md border border-zinc-200 bg-zinc-50 p-3 transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
         />
       </div>
     </div>

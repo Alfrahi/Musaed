@@ -24,7 +24,7 @@ const ChunkMetadata = ({ metadata }: { metadata: Record<string, unknown> }) => {
   if (entries.length === 0) return null;
 
   return (
-    <div className="text-muted-foreground mt-2 border-t pt-2 text-xs">
+    <div className="text-muted-foreground text-caption mt-2 border-t pt-2">
       <p className="font-medium">Metadata:</p>
       {metadata.enclosingEntity != null && (
         <p>
@@ -54,15 +54,15 @@ const ChunkCard = ({
 }) => (
   <div ref={chunkRef} className="rounded-md border p-3">
     <div className="mb-2 flex items-center justify-between">
-      <span className="text-muted-foreground font-mono text-xs">
+      <span className="text-muted-foreground text-caption font-mono">
         Lines {chunk.startLine}–{chunk.endLine}
         {chunk.metadata?.enclosingEntity != null && (
           <span className="ms-2 font-medium">({String(chunk.metadata.enclosingEntity)})</span>
         )}
       </span>
-      <span className="bg-secondary rounded-full px-2 py-0.5 text-xs">{chunk.chunkType}</span>
+      <span className="bg-secondary text-caption rounded-full px-2 py-0.5">{chunk.chunkType}</span>
     </div>
-    <pre className="font-sans text-sm whitespace-pre-wrap">{chunk.content}</pre>
+    <pre className="text-body font-sans whitespace-pre-wrap">{chunk.content}</pre>
     {chunk.metadata && <ChunkMetadata metadata={chunk.metadata} />}
   </div>
 );
@@ -118,7 +118,7 @@ const FileChunkViewer = ({ filePath, targetStartLine }: FileChunkViewerProps) =>
 
   if (errorMessage) {
     return (
-      <div className="text-destructive flex items-center gap-2 p-4 text-sm">
+      <div className="text-destructive text-body flex items-center gap-2 p-4">
         <AlertCircle className="h-4 w-4" />
         <p>{errorMessage}</p>
       </div>
@@ -128,7 +128,7 @@ const FileChunkViewer = ({ filePath, targetStartLine }: FileChunkViewerProps) =>
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b p-2">
-        <h3 className="truncate text-sm font-medium">
+        <h3 className="text-body truncate font-medium">
           {t('rag.chunksForFile')} {filePath}
         </h3>
       </div>
@@ -155,7 +155,7 @@ const FileChunkViewer = ({ filePath, targetStartLine }: FileChunkViewerProps) =>
             })}
           </div>
         ) : (
-          <p className="text-muted-foreground p-2 text-sm">{t('rag.noChunksForFile')}</p>
+          <p className="text-muted-foreground text-body p-2">{t('rag.noChunksForFile')}</p>
         )}
       </div>
     </div>

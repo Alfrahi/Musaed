@@ -35,7 +35,7 @@ const AttachmentPreview = ({
         {images.map((img, idx) => (
           <div
             key={`img-${idx}`}
-            className="relative h-16 w-16 overflow-hidden rounded-md border border-zinc-300 shadow-sm dark:border-zinc-700"
+            className="shadow-native relative h-16 w-16 overflow-hidden rounded-md border border-zinc-300 dark:border-zinc-700"
           >
             <Button
               variant="ghost"
@@ -67,7 +67,7 @@ const AttachmentPreview = ({
         {files.map((file, idx) => (
           <div
             key={`file-${idx}`}
-            className="relative flex max-w-[200px] min-w-[120px] items-center gap-2 rounded-md border border-zinc-300 bg-white p-2 pe-8 shadow-sm dark:border-zinc-700 dark:bg-zinc-800"
+            className="shadow-native relative flex max-w-[200px] min-w-[120px] items-center gap-2 rounded-md border border-zinc-300 bg-white p-2 pe-8 dark:border-zinc-700 dark:bg-zinc-800"
           >
             <div className="shrink-0 rounded-md bg-blue-50 p-1.5 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400">
               <FileText size={16} />

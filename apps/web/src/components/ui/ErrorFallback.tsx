@@ -93,14 +93,17 @@ export const ErrorFallback = ({
         <h3
           className={cn(
             'font-semibold text-zinc-900 dark:text-zinc-100',
-            compact ? 'text-sm' : 'text-base'
+            compact ? 'text-body' : 'text-heading'
           )}
         >
           {title || defaultTitle}
         </h3>
         {displayDescription && (
           <p
-            className={cn('mt-1 text-zinc-600 dark:text-zinc-400', compact ? 'text-xs' : 'text-sm')}
+            className={cn(
+              'mt-1 text-zinc-600 dark:text-zinc-400',
+              compact ? 'text-caption' : 'text-body'
+            )}
           >
             {displayDescription}
           </p>
@@ -132,7 +135,7 @@ export const InlineError = ({
   return (
     <div
       className={cn(
-        'flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300',
+        'text-body flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300',
         className
       )}
     >

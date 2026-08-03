@@ -16,7 +16,7 @@ const LanguageSettings = () => {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 text-sm font-medium">
+      <div className="text-body flex items-center gap-2 font-medium">
         <Languages size={14} className="text-zinc-400" />
         <label>{t('settings.language')}</label>
       </div>
@@ -26,7 +26,7 @@ const LanguageSettings = () => {
           <button
             key={lang}
             onClick={() => updateGlobalSettings({ language: lang })}
-            className={`flex-1 rounded-md py-2 text-xs font-bold tracking-widest uppercase transition-all ${globalSettings.language === lang ? 'bg-white text-blue-600 shadow-sm dark:bg-zinc-700' : 'text-zinc-500'}`}
+            className={`text-caption flex-1 rounded-md py-2 font-bold tracking-widest uppercase transition-all ${globalSettings.language === lang ? 'shadow-native bg-white text-blue-600 dark:bg-zinc-700' : 'text-zinc-500'}`}
           >
             {t(`common.${lang}` as const)}
           </button>

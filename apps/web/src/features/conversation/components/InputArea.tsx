@@ -177,7 +177,7 @@ export const InputArea = () => {
         <RagContextBadge />
 
         <div
-          className={`border-sidebar-border rounded-md border bg-white p-1 ring-1 shadow-sm ring-zinc-200 transition-all duration-200 focus-within:shadow-md focus-within:ring-blue-500/30 dark:bg-zinc-900 dark:ring-zinc-800 ${isDragOver ? 'ring-offset-background ring-2 ring-blue-500 ring-offset-2' : ''}`}
+          className={`border-sidebar-border shadow-native duration-normal focus-within:shadow-native rounded-md border bg-white p-1 ring-1 ring-zinc-200 transition-all focus-within:ring-blue-500/30 dark:bg-zinc-900 dark:ring-zinc-800 ${isDragOver ? 'ring-offset-background ring-2 ring-blue-500 ring-offset-2' : ''}`}
         >
           {isDragOver && (
             <div className="caption-md pointer-events-none px-3 pt-2 text-center text-blue-600 dark:text-blue-400">
@@ -198,7 +198,7 @@ export const InputArea = () => {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={t('chat.askAnything')}
-              className="max-h-48 min-h-[60px] w-full resize-none border-none bg-transparent p-3 font-sans text-[14px] shadow-none outline-none placeholder:text-zinc-400 focus-visible:ring-0 focus-visible:outline-none"
+              className="text-body max-h-48 min-h-[60px] w-full resize-none border-none bg-transparent p-3 font-sans shadow-none outline-none placeholder:text-zinc-400 focus-visible:ring-0 focus-visible:outline-none"
               rows={1}
             />
             <div className="pbe-2 flex items-center justify-between ps-2 pe-2">
