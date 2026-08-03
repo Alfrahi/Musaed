@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
 import { Plus } from 'lucide-react';
 import { useSettingsStore } from '@/store';
 import { useTranslation } from '@/lib/i18n';
+import { isMac } from '@/lib/platform';
 import { Button } from '@/components/ui/button';
 
 interface SidebarHeaderProps {
@@ -14,10 +14,6 @@ interface SidebarHeaderProps {
 const SidebarHeader = ({ activeTab, onCreateNew }: SidebarHeaderProps) => {
   const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
-  const isMac = useMemo(
-    () => typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform),
-    []
-  );
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -30,7 +26,7 @@ const SidebarHeader = ({ activeTab, onCreateNew }: SidebarHeaderProps) => {
           <Plus size={14} />
           {activeTab === 'chats' ? t('sidebar.newChat') : t('sidebar.newProject')}
           <span className="caption-xs font-normal tracking-normal text-zinc-400">
-            {isMac ? '⌘N' : 'Ctrl+N'}
+            {isMac() ? '⌘N' : 'Ctrl+N'}
           </span>
         </Button>
       </div>

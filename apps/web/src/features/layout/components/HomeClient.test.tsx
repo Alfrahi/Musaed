@@ -48,6 +48,11 @@ vi.mock('@/lib/ipc', () => ({
   checkIsTauri: () => false,
 }));
 
+vi.mock('@/lib/platform', () => ({
+  isMac: () => false,
+  isWindows: () => false,
+}));
+
 vi.mock('@/hooks/useGlobalShortcuts', () => ({
   useGlobalShortcuts: vi.fn(),
 }));
@@ -94,6 +99,7 @@ describe('AppHeader', () => {
   const baseProps = {
     isTauri: false,
     isMac: false,
+    isWindows: false,
     isRtl: false,
     onLibraryOpen: vi.fn(),
     onSettingsOpen: vi.fn(),
@@ -132,6 +138,39 @@ describe('AppHeader', () => {
   it('renders the app logo with the appName as alt text', () => {
     render(<AppHeader {...baseProps} appName="Musaed" />);
     expect(screen.getByAltText('Musaed')).toBeInTheDocument();
+  });
+
+  it('applies Windows caption-button clearance padding (pe-28) in LTR on Tauri+Windows', () => {
+    render(<AppHeader {...baseProps} isTauri isWindows isRtl={false} />);
+    const header = screen.getByRole('banner', { hidden: true }) ?? document.querySelector('header');
+    expect(header?.className).toContain('pe-28');
+    expect(header?.className).not.toContain('ps-20');
+  });
+
+  it('applies Windows caption-button clearance padding (ps-28) in RTL on Tauri+Windows', () => {
+    render(<AppHeader {...baseProps} isTauri isWindows isRtl />);
+    const header = document.querySelector('header');
+    expect(header?.className).toContain('ps-28');
+  });
+
+  it('applies macOS traffic-light padding (ps-20) in LTR on Tauri+mac', () => {
+    render(<AppHeader {...baseProps} isTauri isMac isRtl={false} />);
+    const header = document.querySelector('header');
+    expect(header?.className).toContain('ps-20');
+    expect(header?.className).not.toContain('pe-28');
+  });
+
+  it('applies macOS traffic-light padding (pe-20) in RTL on Tauri+mac', () => {
+    render(<AppHeader {...baseProps} isTauri isMac isRtl />);
+    const header = document.querySelector('header');
+    expect(header?.className).toContain('pe-20');
+  });
+
+  it('does not apply platform padding when not in Tauri', () => {
+    render(<AppHeader {...baseProps} isTauri={false} isWindows />);
+    const header = document.querySelector('header');
+    expect(header?.className).not.toContain('pe-28');
+    expect(header?.className).not.toContain('ps-28');
   });
 });
 

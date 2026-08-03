@@ -3,6 +3,7 @@
 import { useId } from 'react';
 import { useTranslation } from '@/lib/i18n';
 import { useSettingsStore } from '@/store';
+import { isMac } from '@/lib/platform';
 import { ModalLayout } from '@/components/ui';
 
 interface ShortcutCheatsheetProps {
@@ -20,8 +21,7 @@ const ShortcutCheatsheet = ({ isOpen, onClose }: ShortcutCheatsheetProps) => {
   const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
 
-  const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform);
-  const mod = isMac ? '⌘' : 'Ctrl';
+  const mod = isMac() ? '⌘' : 'Ctrl';
 
   const shortcuts: ShortcutEntry[] = [
     { keys: [mod, 'N'], description: t('chat.newChat') },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import {
@@ -22,6 +22,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/i18n';
 import { useGlobalShortcuts } from '@/hooks/useGlobalShortcuts';
 import { cn } from '@/lib/utils';
+import { isMac as detectIsMac, isWindows as detectIsWindows } from '@/lib/platform';
 import { checkIsTauri } from '@/lib/ipc';
 import { Button } from '@/components/ui/button';
 
@@ -73,6 +74,7 @@ const ShortcutCheatsheet = dynamic(() => import('@/components/ui/ShortcutCheatsh
 export const AppHeader = ({
   isTauri,
   isMac,
+  isWindows,
   isRtl,
   onLibraryOpen,
   onSettingsOpen,
@@ -81,6 +83,7 @@ export const AppHeader = ({
 }: {
   isTauri: boolean;
   isMac: boolean;
+  isWindows: boolean;
   isRtl: boolean;
   onLibraryOpen: () => void;
   onSettingsOpen: () => void;
@@ -91,7 +94,8 @@ export const AppHeader = ({
     data-tauri-drag-region={isTauri ? 'true' : undefined}
     className={cn(
       'border-sidebar-border bg-background/50 z-20 flex h-12 shrink-0 items-center justify-between border-b px-3 backdrop-blur-md select-none',
-      isTauri && isMac && (isRtl ? 'pe-20' : 'ps-20')
+      isTauri && isMac && (isRtl ? 'pe-20' : 'ps-20'),
+      isTauri && isWindows && (isRtl ? 'ps-28' : 'pe-28')
     )}
   >
     <div className="pointer-events-none flex items-center gap-3">
@@ -168,10 +172,8 @@ const HomeClient = () => {
     if (isHydrated) initializeApp();
   }, [isHydrated, initializeApp]);
 
-  const isMac = useMemo(
-    () => typeof window !== 'undefined' && navigator.userAgent.toUpperCase().includes('MAC'),
-    []
-  );
+  const isMac = detectIsMac();
+  const isWindows = detectIsWindows();
   const isTauri = checkIsTauri();
 
   if (!mounted) return null;
@@ -183,6 +185,7 @@ const HomeClient = () => {
         <AppHeader
           isTauri={isTauri}
           isMac={isMac}
+          isWindows={isWindows}
           isRtl={isRtl}
           onLibraryOpen={() => setLibraryOpen(true)}
           onSettingsOpen={() => setSettingsOpen(true)}
