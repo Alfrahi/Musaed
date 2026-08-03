@@ -152,7 +152,7 @@ const TabButtons = ({
   setActiveTab: (tab: 'chats' | 'projects') => void;
   t: (key: string) => string;
 }) => (
-  <div className="mb-4 flex gap-1 px-4">
+  <div className="mb-3 flex gap-1 px-3">
     <button
       onClick={() => setActiveTab('chats')}
       className={`caption-xs focus-ring duration-fast flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md py-1.5 font-bold tracking-wider uppercase transition-all ${

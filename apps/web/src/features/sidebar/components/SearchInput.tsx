@@ -38,7 +38,7 @@ const SearchInput = () => {
   }, [inputValue, setSearchQuery]);
 
   return (
-    <div className="group mbe-4 relative ps-4 pe-4" role="search">
+    <div className="group mbe-4 relative ps-3 pe-3" role="search">
       <Search
         size={14}
         className="duration-fast absolute start-7 top-1/2 -translate-y-1/2 text-zinc-400 transition-colors group-focus-within:text-blue-500"
@@ -49,7 +49,7 @@ const SearchInput = () => {
         placeholder={t('sidebar.searchChats')}
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
-        className="text-caption duration-fast w-full border-none bg-zinc-200/50 px-3 ps-9 transition-colors focus-visible:ring-1 focus-visible:ring-blue-500/50 dark:bg-zinc-800/50"
+        className="text-caption duration-fast w-full border-none bg-zinc-200/50 px-3 py-2.5 ps-9 transition-colors focus-visible:ring-1 focus-visible:ring-blue-500/50 dark:bg-zinc-800/50"
         aria-label={t('sidebar.searchChats')}
       />
     </div>
