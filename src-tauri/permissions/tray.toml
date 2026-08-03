@@ -1,0 +1,6 @@
+[[permission]]
+identifier = "allow-tray-commands"
+description = "Enables commands for the system tray (query background task status)."
+commands.allow = [
+    "cmd_tray_get_background_status",
+]

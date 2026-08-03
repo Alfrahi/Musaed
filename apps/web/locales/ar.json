@@ -392,6 +392,24 @@
       "copy": "نسخ"
     }
   },
+  "tray": {
+    "menu": {
+      "showWindow": "إظهار النافذة",
+      "quit": "إنهاء"
+    },
+    "tooltip": {
+      "idle": "مُساعد",
+      "active": "مُساعد — {{tasks}} نشط"
+    },
+    "taskKind": {
+      "chat": "{{count}} بث محادثة",
+      "modelPull": "{{count}} تنزيل نموذج",
+      "ragIndex": "{{count}} مهمة فهرسة RAG"
+    },
+    "notification": {
+      "minimizedToTray": "تم تصغير مُساعد إلى شريط النظام — المهام الخلفية لا تزال قيد التشغيل."
+    }
+  },
   "info": {
     "openInfo": "فتح معلومات التطبيق",
     "description": "مُساعد هو واجهة سطح مكتب مركزة على الخصوصية لـ Ollama، مصممة للتفاعلات المحلية أولاً.",

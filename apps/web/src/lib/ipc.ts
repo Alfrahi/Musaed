@@ -53,6 +53,9 @@ import {
   type ContextMenuRequest,
   type ContextMenuResponse,
   type ContextMenuLabels,
+  // System tray contracts
+  BackgroundTasksResponseSchema,
+  type BackgroundTasksResponse,
 } from '@musaed/contracts';
 import type { RagProject, SearchResult, ChunkRecord, AssembledContext } from '@musaed/contracts';
 import toast from 'react-hot-toast';
@@ -357,6 +360,15 @@ export interface CommandMap {
   // argument shape is empty. Declared as a SHARED_COMMAND so any feature
   // can fetch the version without declaring an IPC endpoint in its manifest.
   cmd_get_app_version: { args: Record<string, never>; return: string };
+
+  // System tray — query active background tasks (chat streams, model pulls,
+  // RAG indexing) so the frontend and tray close handler can decide between
+  // minimize-to-tray and normal exit. Declared as a SHARED_COMMAND so any
+  // feature can consume it without a manifest dependency.
+  cmd_tray_get_background_status: {
+    args: Record<string, never>;
+    return: BackgroundTasksResponse;
+  };
 }
 
 const voidSchema = z.preprocess((val) => (val === null ? undefined : val), z.void());
@@ -592,6 +604,9 @@ const CommandInputSchemas: {
   // App metadata — no user-facing args; the Rust command reads only the
   // Tauri-injected AppHandle. Return is validated as a non-empty string.
   cmd_get_app_version: undefined,
+
+  // System tray — no user-facing args; reads the three abort-handle maps.
+  cmd_tray_get_background_status: undefined,
 };
 
 /**
@@ -674,6 +689,9 @@ const CommandReturnSchemas: {
 
   // App metadata return schema — non-empty version string from tauri.conf.json.
   cmd_get_app_version: z.string().min(1),
+
+  // System tray return schema — active background task list + hasActiveTasks flag.
+  cmd_tray_get_background_status: BackgroundTasksResponseSchema,
 };
 
 // ============================================================================
@@ -1380,4 +1398,26 @@ export const appApi = {
    * fallback rather than a hardcoded literal.
    */
   getVersion: () => callInternal('cmd_get_app_version', {}),
+};
+
+/**
+ * System Tray API — query background-task status.
+ *
+ * Returns the active background operations (chat streams, model pulls, RAG
+ * indexing) so the frontend can show status indicators or decide whether
+ * it's safe to close the window. Declared as a SHARED_COMMAND so any feature
+ * can consume it without a manifest dependency.
+ *
+ * @see STANDARDS.md §5  IPC System
+ * @see STANDARDS.md §13 Failure Mode Rule
+ */
+export const trayApi = {
+  /**
+   * Returns the current background-task status.
+   *
+   * @returns An object with `tasks` (array of active task kinds + counts)
+   * and `hasActiveTasks` (convenience boolean). Returns `null` when running
+   * outside Tauri or if the call fails.
+   */
+  getBackgroundStatus: () => callInternal('cmd_tray_get_background_status', {}),
 };

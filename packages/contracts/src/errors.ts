@@ -70,6 +70,9 @@ export enum BackendErrorCode {
   // ── Context menu ──────────────────────────────────────
   ContextMenuError = 'CONTEXT_MENU_ERROR',
 
+  // ── System tray ───────────────────────────────────────
+  TrayError = 'TRAY_ERROR',
+
   // ── URL Opener ────────────────────────────────────────
   UrlBlocked = 'URL_BLOCKED',
   OpenUrlError = 'OPEN_URL_ERROR',

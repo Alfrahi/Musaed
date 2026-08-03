@@ -392,6 +392,24 @@
       "copy": "Copy"
     }
   },
+  "tray": {
+    "menu": {
+      "showWindow": "Show Window",
+      "quit": "Quit"
+    },
+    "tooltip": {
+      "idle": "Musaed",
+      "active": "Musaed — {{tasks}} active"
+    },
+    "taskKind": {
+      "chat": "{{count}} chat stream(s)",
+      "modelPull": "{{count}} model pull(s)",
+      "ragIndex": "{{count}} RAG index task(s)"
+    },
+    "notification": {
+      "minimizedToTray": "Musaed minimized to tray — background tasks still running."
+    }
+  },
   "info": {
     "openInfo": "Open application information",
     "description": "Musaed is a privacy-centric desktop interface for Ollama, designed for local-first AI interactions.",
