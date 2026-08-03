@@ -125,11 +125,11 @@ describe('SettingsModal', () => {
   it('scrolls when content overflows the panel', () => {
     render(<SettingsModal isOpen onClose={vi.fn()} />);
     const dialog = screen.getByRole('dialog', { hidden: true });
-    // The inner content area (the <main> inside the flex row) must be
+    // The inner content area (the scrollable ScrollShadow container) must be
     // scrollable so tall settings tabs don't clip.
-    const main = dialog.querySelector('main');
-    expect(main).toBeTruthy();
-    expect(main!.className).toContain('overflow-y-auto');
+    const scrollable = dialog.querySelector('[class*="overflow-y-auto"]');
+    expect(scrollable).toBeTruthy();
+    expect(scrollable!.className).toContain('overflow-y-auto');
   });
 
   it('renders the search input with placeholder', () => {
