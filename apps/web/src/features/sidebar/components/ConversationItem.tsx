@@ -9,6 +9,7 @@ import { useSidebarActions } from '@/features/sidebar/hooks/useSidebarActions';
 import { useTranslation } from '@/lib/i18n';
 import { useContextMenu } from '@/hooks/useContextMenu';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import type { ConversationMetadata } from '@/store/conversation-store';
 
 interface ConversationItemProps {
@@ -35,12 +36,12 @@ const RenameInput = ({
       onBlur();
     }}
   >
-    <input
+    <Input
       autoFocus
       value={value}
       onChange={(e) => onChange(e.target.value)}
       onBlur={onBlur}
-      className="border-primary text-label w-full rounded-md border bg-white px-1 py-0.5 outline-none dark:bg-zinc-900"
+      className="text-label border-primary w-full px-1 py-0.5"
     />
   </form>
 );

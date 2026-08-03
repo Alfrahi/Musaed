@@ -5,6 +5,7 @@ import { Search } from 'lucide-react';
 import { useSearchQuery, useSetSearchQuery } from '@/store/conversation-store';
 import { useLanguage } from '@/store';
 import { useTranslation } from '@/lib/i18n';
+import { Input } from '@/components/ui/input';
 
 const SearchInput = () => {
   const searchQuery = useSearchQuery();
@@ -43,12 +44,12 @@ const SearchInput = () => {
         className="duration-fast absolute start-7 top-1/2 -translate-y-1/2 text-zinc-400 transition-colors group-focus-within:text-blue-500"
         aria-hidden="true"
       />
-      <input
+      <Input
         type="text"
         placeholder={t('sidebar.searchChats')}
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
-        className="text-caption duration-fast w-full rounded-md border-none bg-zinc-200/50 py-2 ps-9 pe-3 transition-colors outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-blue-500/50 dark:bg-zinc-800/50 dark:placeholder:text-zinc-500"
+        className="text-caption duration-fast w-full border-none bg-zinc-200/50 px-3 ps-9 transition-colors focus-visible:ring-1 focus-visible:ring-blue-500/50 dark:bg-zinc-800/50"
         aria-label={t('sidebar.searchChats')}
       />
     </div>

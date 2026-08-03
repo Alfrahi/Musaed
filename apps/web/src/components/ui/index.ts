@@ -8,3 +8,4 @@ export { default as ModalLayout } from './ModalLayout';
 export { default as Skeleton } from './Skeleton';
 export { default as OllamaConnectionStatus } from './OllamaConnectionStatus';
 export { default as ScrollShadow } from './ScrollShadow';
+export { Input, Textarea } from './input';

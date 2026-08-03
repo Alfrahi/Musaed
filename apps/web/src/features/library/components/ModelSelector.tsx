@@ -9,6 +9,7 @@ import { useTranslation } from '@/lib/i18n';
 import { useModelActions } from '@/features/library/hooks/useModelActions';
 import { useModelSelectorKeyboard } from '@/features/library/hooks/useModelSelectorKeyboard';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 /** Dropdown trigger button with selected model name. */
 const SelectorTrigger = ({
@@ -179,12 +180,12 @@ const ModelDropdown = ({
         <span className="caption-md font-black text-zinc-400 uppercase">{headerLabel}</span>
       </div>
       <div className="border-be border-sidebar-border px-3 pb-2">
-        <input
+        <Input
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={searchPlaceholder}
-          className="text-caption w-full border-none bg-transparent outline-none placeholder:text-zinc-400"
+          className="text-caption w-full border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
           aria-label={searchPlaceholder}
         />
       </div>
