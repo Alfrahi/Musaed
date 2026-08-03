@@ -32,7 +32,7 @@ export const buttonVariants = cva(
   // base — applies to every variant
   [
     'inline-flex items-center justify-center gap-2 rounded-md font-bold',
-    'uppercase tracking-widest transition-all',
+    'uppercase tracking-widest transition-all duration-150',
     'active:scale-95',
     'outline-none',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
