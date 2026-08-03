@@ -119,9 +119,7 @@ const LogViewerHeader = ({
         <h2 id={titleId} className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">
           {t('logs.title')}
         </h2>
-        <p className="caption-md font-bold tracking-widest text-zinc-500 uppercase">
-          {t('logs.debuggingHub')}
-        </p>
+        <p className="caption-md font-medium text-zinc-500">{t('logs.debuggingHub')}</p>
       </div>
     </div>
     <div className="flex items-center gap-2">
@@ -167,13 +165,11 @@ interface LogViewerFooterProps {
 
 const LogViewerFooter = ({ t, onClose }: LogViewerFooterProps) => (
   <div className="flex shrink-0 items-center justify-between border-t border-zinc-100 bg-zinc-50/50 py-4 ps-6 pe-6 dark:border-zinc-800 dark:bg-zinc-900/80">
-    <span className="caption-md font-bold tracking-widest text-zinc-400 uppercase">
-      {t('logs.logStorageInfo')}
-    </span>
+    <span className="caption-md font-medium text-zinc-400">{t('logs.logStorageInfo')}</span>
     <Button
       variant="secondary"
       onClick={onClose}
-      className="rounded-xl py-2 ps-6 pe-6 text-sm font-bold shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500"
+      className="rounded-xl py-2 ps-6 pe-6 text-sm font-bold tracking-normal shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500"
     >
       {t('common.done')}
     </Button>

@@ -20,7 +20,7 @@ const SidebarHeader = ({ activeTab, onCreateNew }: SidebarHeaderProps) => {
         <Button
           variant="secondary"
           onClick={onCreateNew}
-          className="h-10 flex-1 gap-2 rounded-lg ps-4 pe-4 text-xs font-bold tracking-widest uppercase shadow-sm"
+          className="h-10 flex-1 gap-2 rounded-lg ps-4 pe-4 text-xs font-bold tracking-normal uppercase shadow-sm"
         >
           <Plus size={16} />
           {activeTab === 'chats' ? t('sidebar.newChat') : t('sidebar.newProject')}

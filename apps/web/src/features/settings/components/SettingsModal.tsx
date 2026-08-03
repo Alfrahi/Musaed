@@ -186,7 +186,7 @@ interface RenderModalFooterProps {
 
 const RenderModalFooter = ({ t, onClose }: RenderModalFooterProps) => (
   <div className="flex shrink-0 justify-end border-t border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
-    <Button variant="secondary" size="md" onClick={onClose}>
+    <Button variant="secondary" size="md" onClick={onClose} className="tracking-normal">
       {t('common.done')}
     </Button>
   </div>
