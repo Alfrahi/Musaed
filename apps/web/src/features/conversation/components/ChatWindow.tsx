@@ -43,17 +43,30 @@ const useMessageLabels = (
     [t]
   );
 
-/** Floating scroll-to-bottom button. */
-const ScrollButton = ({ onClick, label }: { onClick: () => void; label: string }) => (
+/** Floating scroll-to-bottom button with optional unread count badge. */
+const ScrollButton = ({
+  onClick,
+  label,
+  unreadCount = 0,
+}: {
+  onClick: () => void;
+  label: string;
+  unreadCount?: number;
+}) => (
   <div className="inset-be-6 pointer-events-none absolute start-1/2 z-20 flex -translate-x-1/2 justify-center">
     <Button
       variant="outline"
       size="icon"
       onClick={onClick}
-      className="pointer-events-auto rounded-md border-zinc-200 bg-white text-zinc-500 shadow-lg hover:text-blue-500 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+      className="pointer-events-auto relative rounded-md border-zinc-200 bg-white text-zinc-500 shadow-lg hover:text-blue-500 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
       aria-label={label}
     >
       <ArrowDown size={20} />
+      {unreadCount > 0 && (
+        <span className="caption-xs absolute -end-2 -top-2 flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 leading-none font-bold text-white">
+          {unreadCount > 99 ? '99+' : unreadCount}
+        </span>
+      )}
     </Button>
   </div>
 );
@@ -140,6 +153,9 @@ function useVirtualizedMessages(
 ) {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const isAtBottomRef = useRef(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const prevMsgCountRef = useRef(0);
 
   const isStreaming = currentConversationId ? !!activeStreams[currentConversationId] : false;
   const liveContent = useStreamingStore(
@@ -167,6 +183,21 @@ function useVirtualizedMessages(
     }
   }, [lastMsgCount, liveContent]);
 
+  // Track new messages that arrive while the user is scrolled up.
+  useEffect(() => {
+    const delta = lastMsgCount - prevMsgCountRef.current;
+    if (delta > 0 && !isAtBottomRef.current) {
+      setUnreadCount((c) => c + delta);
+    }
+    prevMsgCountRef.current = lastMsgCount;
+  }, [lastMsgCount]);
+
+  // Reset unread count when conversation changes.
+  useEffect(() => {
+    setUnreadCount(0);
+    prevMsgCountRef.current = 0;
+  }, [currentConversationId]);
+
   const scrollToBottom = useCallback(() => {
     if (virtuosoRef.current && messages.length > 0) {
       virtuosoRef.current.scrollToIndex({
@@ -175,9 +206,18 @@ function useVirtualizedMessages(
         behavior: 'smooth',
       });
     }
+    setUnreadCount(0);
   }, [messages.length]);
 
-  return { virtuosoRef, messages, showScrollButton, setShowScrollButton, scrollToBottom };
+  return {
+    virtuosoRef,
+    messages,
+    showScrollButton,
+    setShowScrollButton,
+    scrollToBottom,
+    unreadCount,
+    isAtBottomRef,
+  };
 }
 
 /**
@@ -207,8 +247,15 @@ const ChatWindow = ({
   const { t, formatNumber } = useTranslation(language);
   const messageLabels = useMessageLabels(t);
 
-  const { virtuosoRef, messages, showScrollButton, setShowScrollButton, scrollToBottom } =
-    useVirtualizedMessages(currentConversationId, storedMessages, activeStreams);
+  const {
+    virtuosoRef,
+    messages,
+    showScrollButton,
+    setShowScrollButton,
+    scrollToBottom,
+    unreadCount,
+    isAtBottomRef,
+  } = useVirtualizedMessages(currentConversationId, storedMessages, activeStreams);
 
   // Detect a structured `error` on the last assistant message — replaces the
   // legacy `content.includes('[Error:')` substring heuristic (Prompt 8).
@@ -246,7 +293,10 @@ const ChatWindow = ({
         className="h-full"
         data={messages}
         atBottomThreshold={60}
-        atBottomStateChange={(atBottom) => setShowScrollButton(!atBottom)}
+        atBottomStateChange={(atBottom) => {
+          isAtBottomRef.current = atBottom;
+          setShowScrollButton(!atBottom);
+        }}
         itemContent={(index, msg) => (
           <div className={cn(index === messages.length - 1 && 'pbe-32')}>
             <MessageBubble
@@ -264,7 +314,7 @@ const ChatWindow = ({
       />
       <ScrollShadow visible={showScrollButton && messages.length > 0} />
       {showScrollButton && messages.length > 0 && (
-        <ScrollButton onClick={scrollToBottom} label={t('common.done')} />
+        <ScrollButton onClick={scrollToBottom} label={t('common.done')} unreadCount={unreadCount} />
       )}
       {hasError && (
         <div className="absolute inset-x-0 bottom-0 border-t border-zinc-200 bg-white/95 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-950/95">
