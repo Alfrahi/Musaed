@@ -79,7 +79,7 @@ const ItemActions = ({
         className="hover:text-foreground h-auto min-h-6 w-auto min-w-6 p-1 hover:bg-zinc-300 dark:hover:bg-zinc-700"
         title={editTitle}
       >
-        <Edit2 size={12} />
+        <Edit2 size={14} />
       </Button>
       <Button
         variant="ghost"
@@ -88,7 +88,7 @@ const ItemActions = ({
         className="h-auto min-h-6 w-auto min-w-6 p-1 hover:bg-blue-50 hover:text-blue-500 dark:hover:bg-blue-900/20"
         title={exportTitle}
       >
-        <Download size={12} className="mirror-rtl" />
+        <Download size={14} className="mirror-rtl" />
       </Button>
       <Button
         variant="ghost"
@@ -97,7 +97,7 @@ const ItemActions = ({
         className="h-auto min-h-6 w-auto min-w-6 p-1 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
         title={deleteTitle}
       >
-        <Trash2 size={12} />
+        <Trash2 size={14} />
       </Button>
     </div>
   );

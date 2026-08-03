@@ -51,7 +51,7 @@ const LatencyRow = ({
         </span>
         <span className="text-zinc-400">/ {row.budgetMs} ms</span>
         <X
-          size={11}
+          size={12}
           className={cn(
             'shrink-0',
             isViolation ? 'rotate-45 text-red-500 opacity-100' : 'text-green-500 opacity-30'
@@ -119,7 +119,7 @@ const IpcLatencyPanel = () => {
           className="caption-xs gap-1 font-bold tracking-widest text-blue-600 uppercase hover:text-blue-700"
           title={t('settings.ipcLatency.clear')}
         >
-          <RefreshCw size={12} aria-hidden="true" />
+          <RefreshCw size={14} aria-hidden="true" />
           {t('settings.ipcLatency.clear')}
         </Button>
       </div>

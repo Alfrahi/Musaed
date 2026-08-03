@@ -113,7 +113,7 @@ const LogViewerHeader = ({
   <div className="pbs-6 pbe-6 flex shrink-0 items-center justify-between border-b border-zinc-100 ps-6 pe-6 dark:border-zinc-800">
     <div className="flex items-center gap-4">
       <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
-        <Terminal size={20} aria-hidden="true" />
+        <Terminal size={18} aria-hidden="true" />
       </div>
       <div>
         <h2 id={titleId} className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">
@@ -131,7 +131,7 @@ const LogViewerHeader = ({
         title={t('logs.refreshLogs')}
       >
         <RefreshCw
-          size={20}
+          size={18}
           className={cn(isLoading && 'animate-spin text-blue-500')}
           aria-hidden="true"
         />
@@ -143,7 +143,7 @@ const LogViewerHeader = ({
         className="rounded-xl text-zinc-500 hover:bg-zinc-100 hover:text-red-500 focus-visible:ring-2 focus-visible:ring-red-500 dark:hover:bg-zinc-800"
         title={t('logs.clearLogs')}
       >
-        <Trash2 size={20} aria-hidden="true" />
+        <Trash2 size={18} aria-hidden="true" />
       </Button>
       <Button
         variant="ghost"
@@ -152,7 +152,7 @@ const LogViewerHeader = ({
         className="rounded-xl text-zinc-500 hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
         aria-label={t('a11y.closeModal')}
       >
-        <X size={24} aria-hidden="true" />
+        <X size={20} aria-hidden="true" />
       </Button>
     </div>
   </div>

@@ -82,12 +82,12 @@ const CodeBlock = ({ language, value }: CodeBlockProps) => {
         >
           {copied ? (
             <>
-              <Check size={12} className="text-green-500" aria-hidden="true" />
+              <Check size={14} className="text-green-500" aria-hidden="true" />
               <span>{t('common.copied')}</span>
             </>
           ) : (
             <>
-              <Copy size={12} aria-hidden="true" />
+              <Copy size={14} aria-hidden="true" />
               <span>{t('common.copy')}</span>
             </>
           )}

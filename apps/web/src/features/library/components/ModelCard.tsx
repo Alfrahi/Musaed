@@ -131,7 +131,7 @@ const InstalledModelMeta = ({
   <div className="mbs-1 flex items-center gap-3">
     {displaySize && (
       <span className="caption-xs flex items-center gap-1 font-bold tracking-widest text-zinc-400 uppercase">
-        <HardDrive size={10} />
+        <HardDrive size={12} />
         {displaySize}
       </span>
     )}
@@ -381,7 +381,7 @@ const FeaturedModelCard = ({
         'group duration-slow flex h-full flex-col justify-between rounded-lg border p-5 transition-all',
         isDownloaded
           ? 'border-blue-100 bg-blue-50/30 dark:border-blue-900/30 dark:bg-blue-900/10'
-          : 'shadow-native border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/50 dark:hover:border-zinc-700'
+          : 'shadow-raised border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/50 dark:hover:border-zinc-700'
       )}
     >
       <FeaturedModelHeader

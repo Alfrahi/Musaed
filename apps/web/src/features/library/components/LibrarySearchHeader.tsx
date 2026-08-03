@@ -43,7 +43,7 @@ const HeaderBar = ({
   <div className="pbs-6 pbe-6 flex items-center justify-between border-b border-zinc-100 ps-6 pe-6 dark:border-zinc-800">
     <div className="flex items-center gap-4">
       <div className="shadow-pro flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 text-white shadow-blue-500/20">
-        <HardDrive size={20} />
+        <HardDrive size={18} />
       </div>
       <div>
         <h2 id={titleId} className="text-xl font-bold tracking-tight">
@@ -65,7 +65,7 @@ const HeaderBar = ({
         )}
         title={refreshTitle}
       >
-        <RefreshCw size={20} />
+        <RefreshCw size={18} />
       </Button>
       <Button
         variant="ghost"
@@ -73,7 +73,7 @@ const HeaderBar = ({
         onClick={onClose}
         className="rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
       >
-        <X size={24} />
+        <X size={20} />
       </Button>
     </div>
   </div>
@@ -149,7 +149,7 @@ const CustomPullForm = ({
         className="rounded-lg active:scale-95 disabled:opacity-50"
         title={buttonTitle}
       >
-        <Plus size={18} />
+        <Plus size={14} />
       </Button>
     </form>
   );
