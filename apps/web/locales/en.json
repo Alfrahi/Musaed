@@ -119,6 +119,7 @@
     "invalidOllamaUrl": "Only localhost, *.local, or private network addresses (10.x, 172.16–31.x, 192.168.x) are allowed.",
     "notOllamaService": "The server at this address does not appear to be an Ollama instance.",
     "systemPrompt": "System Prompt",
+    "modelParameters": "Model Parameters",
     "temperature": "Temperature",
     "topP": "Top P",
     "topK": "Top K",

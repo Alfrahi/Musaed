@@ -1,5 +1,6 @@
 'use client';
 
+import { SlidersHorizontal } from 'lucide-react';
 import { useGlobalSettings, useLanguage } from '@/store/settings-store';
 import { useSettingsActions } from '@/features/settings/hooks/useSettingsActions';
 import { useTranslation } from '@/lib/i18n';
@@ -70,6 +71,10 @@ const ModelParamsSettings = () => {
 
   return (
     <div className="flex flex-col gap-5">
+      <div className="text-body flex items-center gap-2 font-medium">
+        <SlidersHorizontal size={14} className="text-zinc-400" />
+        <label>{t('settings.modelParameters')}</label>
+      </div>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <label className="text-body font-medium">{t('settings.temperature')}</label>
