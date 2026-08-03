@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/lib/i18n';
 import { useLanguage } from '@/store';
 import { openerApi } from '@/lib/ipc';
+import { useAppVersion } from '@/hooks';
 
 interface InfoModalProps {
   isOpen: boolean;
@@ -43,7 +44,7 @@ const InfoHeader = ({
 }: {
   title: string;
   titleId: string;
-  version: string;
+  version: string | null;
   onClose: () => void;
 }) => (
   <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 p-6 dark:border-zinc-800">
@@ -55,7 +56,9 @@ const InfoHeader = ({
         <h2 id={titleId} className="text-xl font-bold tracking-tight">
           {title}
         </h2>
-        <p className="caption-md font-bold tracking-widest text-zinc-500 uppercase">v{version}</p>
+        {version && (
+          <p className="caption-md font-bold tracking-widest text-zinc-500 uppercase">v{version}</p>
+        )}
       </div>
     </div>
     <Button
@@ -74,7 +77,7 @@ const InfoModal = ({ isOpen, onClose }: InfoModalProps) => {
   const { t } = useTranslation(language);
   const titleId = useId();
 
-  const appVersion = '0.1.0';
+  const { version: appVersion } = useAppVersion();
   const sections = [
     { icon: Shield, title: t('info.privacy.title'), description: t('info.privacy.description') },
     { icon: Cpu, title: t('info.engine.title'), description: t('info.engine.description') },

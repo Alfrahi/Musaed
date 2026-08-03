@@ -97,6 +97,11 @@ export const COMMAND_VERSIONS = {
   // `context_menu` domain; this registry entry pairs with the typed
   // `cmd_context_menu_show` adapter declared in `apps/web/src/lib/ipc.ts`.
   cmd_context_menu_show: true,
+
+  // App metadata — read-only version string sourced from tauri.conf.json.
+  // Declared shared (see SHARED_COMMANDS) so any feature can call it without
+  // declaring a cross-feature dependency; it carries no domain state.
+  cmd_get_app_version: true,
 } as const;
 
 /**
@@ -107,6 +112,7 @@ export const COMMAND_VERSIONS = {
 export const SHARED_COMMANDS = {
   cmd_dialog_ask: true,
   cmd_opener_open_url: true,
+  cmd_get_app_version: true,
 } as const;
 
 export type CommandName = keyof typeof COMMAND_VERSIONS;

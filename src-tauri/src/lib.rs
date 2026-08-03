@@ -3,6 +3,7 @@ use tauri::Manager;
 use tokio::sync::{Mutex, RwLock};
 use tracing_subscriber::layer::SubscriberExt;
 
+pub mod app_info;
 pub mod context_menu;
 pub mod conversation;
 pub mod dialog;
@@ -99,6 +100,8 @@ pub fn run() {
 
     builder
         .invoke_handler(tauri::generate_handler![
+            // App metadata
+            app_info::cmd_get_app_version,
             ollama::commands::cmd_ollama_chat,
             ollama::commands::cmd_ollama_abort_chat,
             ollama::commands::cmd_ollama_check_health,

@@ -19,6 +19,7 @@ const IPC_TS = join(PROJECT_ROOT, "apps/web/src/lib/ipc.ts");
 const SHARED_COMMANDS = new Set([
   "cmd_dialog_ask",
   "cmd_opener_open_url",
+  "cmd_get_app_version",
 ]);
 
 /**

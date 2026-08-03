@@ -1,0 +1,6 @@
+[[permission]]
+identifier = "allow-app-info-commands"
+description = "Enables read-only application metadata commands (version string from tauri.conf.json)."
+commands.allow = [
+    "cmd_get_app_version",
+]
