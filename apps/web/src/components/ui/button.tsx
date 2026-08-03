@@ -36,7 +36,7 @@ export const buttonVariants = cva(
     'uppercase tracking-widest transition-all duration-fast',
     'active:scale-95',
     'outline-none',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+    'focus-ring',
     'disabled:opacity-20 disabled:pointer-events-none',
   ].join(' '),
   {

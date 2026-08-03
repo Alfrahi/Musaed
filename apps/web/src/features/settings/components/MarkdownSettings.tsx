@@ -40,7 +40,7 @@ const ToggleRow = ({
       {/* eslint-disable-next-line musaed-buttons/prefer-button-primitive -- role="switch" toggle, not an action button */}
       <button
         onClick={onToggle}
-        className={`focus-visible:ring-offset-background duration-normal h-6 w-10 shrink-0 rounded-full p-1 transition-colors ease-in-out focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none ${
+        className={`focus-ring duration-normal h-6 w-10 shrink-0 rounded-full p-1 transition-colors ease-in-out ${
           isEnabled ? 'bg-blue-600' : 'bg-zinc-300 dark:bg-zinc-600'
         }`}
         role="switch"

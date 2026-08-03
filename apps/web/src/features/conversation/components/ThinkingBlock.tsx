@@ -43,7 +43,7 @@ const ThinkingBlock = ({
       <Button
         variant="ghost"
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="flex w-full cursor-pointer items-center justify-between rounded-md py-2.5 ps-4 pe-4 hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800/50"
+        className="focus-ring flex w-full cursor-pointer items-center justify-between rounded-md py-2.5 ps-4 pe-4 hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
         aria-expanded={!isCollapsed}
       >
         <div className="flex items-center gap-2 text-zinc-500">

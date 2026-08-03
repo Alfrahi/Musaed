@@ -61,9 +61,7 @@ describe('Input', () => {
     expect(cls).toContain('transition-all');
     expect(cls).toContain('duration-150');
     // focus ring
-    expect(cls).toContain('focus-visible:ring-2');
-    expect(cls).toContain('focus-visible:ring-blue-500');
-    expect(cls).toContain('focus-visible:ring-offset-1');
+    expect(cls).toContain('focus-ring');
   });
 
   it('lets caller className override defaults via tailwind-merge', () => {
@@ -110,9 +108,7 @@ describe('Textarea', () => {
     expect(cls).toContain('dark:bg-zinc-900');
     expect(cls).toContain('transition-all');
     expect(cls).toContain('duration-150');
-    expect(cls).toContain('focus-visible:ring-2');
-    expect(cls).toContain('focus-visible:ring-blue-500');
-    expect(cls).toContain('focus-visible:ring-offset-1');
+    expect(cls).toContain('focus-ring');
   });
 
   it('lets caller className add resize / sizing overrides', () => {

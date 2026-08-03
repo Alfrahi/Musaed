@@ -323,7 +323,7 @@ const PullProgressBar = ({
               variant="ghost"
               size="icon"
               onClick={onAbortPull}
-              className="h-auto w-auto p-0 hover:text-red-500 focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="focus-ring h-auto w-auto p-0 hover:text-red-500"
               aria-label={t('library.cancelPull')}
               title={t('library.cancelPull')}
             >

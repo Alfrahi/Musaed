@@ -155,7 +155,7 @@ const TabButtons = ({
   <div className="mb-4 flex gap-1 px-4">
     <button
       onClick={() => setActiveTab('chats')}
-      className={`caption-xs duration-fast flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md py-1.5 font-bold tracking-wider uppercase transition-all ${
+      className={`caption-xs focus-ring duration-fast flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md py-1.5 font-bold tracking-wider uppercase transition-all ${
         activeTab === 'chats'
           ? 'bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
           : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/50'
@@ -166,7 +166,7 @@ const TabButtons = ({
     </button>
     <button
       onClick={() => setActiveTab('projects')}
-      className={`caption-xs duration-fast flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md py-1.5 font-bold tracking-wider uppercase transition-all ${
+      className={`caption-xs focus-ring duration-fast flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md py-1.5 font-bold tracking-wider uppercase transition-all ${
         activeTab === 'projects'
           ? 'bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
           : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/50'

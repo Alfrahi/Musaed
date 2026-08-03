@@ -177,9 +177,11 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
       onContextMenu={handleContextMenu}
       className={cn(
         'group text-label duration-fast relative flex cursor-pointer items-center gap-2.5 border-s-2 border-transparent px-3 py-2 transition-all',
-        // focus-visible ring pairs the global :focus-visible outline from globals.css
-        // with this virtualized row so keyboard focus is visible (audit F3).
-        'focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none',
+        // Suppress the browser's default :focus outline — the programmatic
+        // .focus() call on launch triggers it, causing a flash before the user
+        // clicks anywhere. The active row's border-primary + bg-zinc-200/50 is
+        // the sole visual indicator for both active and focused states.
+        'outline-none',
         isActive
           ? 'border-primary text-foreground bg-zinc-200/50 font-semibold dark:bg-zinc-800/50'
           : 'text-zinc-500 hover:border-zinc-300 hover:bg-zinc-100/70 dark:hover:bg-zinc-800/50'

@@ -180,13 +180,22 @@ pre {
   background: color-mix(in srgb, var(--sidebar-border) 80%, var(--foreground));
 }
 
-/* Focus and Selection styles */
-:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-  border-radius: 2px;
+/*
+ * Focus-ring utility (audit §F3 accessibility).
+ * Shared focus-visible ring for all interactive elements — buttons, inputs,
+ * sidebar items, tab buttons, model cards, toggle buttons, the resize handle,
+ * and the scroll-to-bottom button — instead of inlining the five
+ * `focus-visible:*` classes on each element. Apply via `className="focus-ring"`.
+ */
+@utility focus-ring {
+  @apply focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none;
 }
 
+/* Focus and Selection styles — the global :focus-visible outline was
+ * removed because it fired on programmatic .focus() calls (e.g. the active
+ * conversation row on launch), causing a blue outline flash. Focus styling
+ * is now handled exclusively by the `.focus-ring` utility on elements that
+ * need it. Elements that suppress it use `focus-visible:outline-none`. */
 ::selection {
   background-color: color-mix(in srgb, var(--primary) 20%, transparent);
 }

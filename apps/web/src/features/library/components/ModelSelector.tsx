@@ -45,7 +45,7 @@ const SelectorTrigger = ({
     onClick={onClick}
     onKeyDown={onKeyDown}
     className={cn(
-      'hover:border-sidebar-border focus-visible:ring-offset-background text-label duration-normal flex cursor-pointer items-center gap-2 rounded-md border border-transparent py-2 ps-3 pe-3 font-bold text-zinc-500 transition-all hover:bg-zinc-100 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100',
+      'hover:border-sidebar-border focus-ring text-label duration-normal flex cursor-pointer items-center gap-2 rounded-md border border-transparent py-2 ps-3 pe-3 font-bold text-zinc-500 transition-all hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100',
       isOpen &&
         'border-sidebar-border bg-zinc-100 text-zinc-900 dark:bg-zinc-800/50 dark:text-zinc-100'
     )}

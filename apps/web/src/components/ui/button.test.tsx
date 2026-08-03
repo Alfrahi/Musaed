@@ -82,12 +82,10 @@ describe('Button', () => {
     expect(btn.className).not.toContain('bg-blue-600');
   });
 
-  it('always includes the focus-visible ring affordance (STANDARDS §13)', () => {
+  it('always includes the focus-ring utility (STANDARDS §13)', () => {
     render(<Button>Send</Button>);
     const cls = screen.getByRole('button').className;
-    expect(cls).toContain('focus-visible:ring-2');
-    expect(cls).toContain('focus-visible:ring-blue-500');
-    expect(cls).toContain('focus-visible:ring-offset-2');
+    expect(cls).toContain('focus-ring');
   });
 });
 

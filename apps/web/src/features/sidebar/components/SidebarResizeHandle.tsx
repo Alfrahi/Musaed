@@ -88,7 +88,7 @@ const SidebarResizeHandle = () => {
           });
         }
       }}
-      className="hover:bg-sidebar-border/50 relative w-1 shrink-0 cursor-col-resize transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none"
+      className="hover:bg-sidebar-border/50 focus-ring relative w-1 shrink-0 cursor-col-resize transition-colors"
     />
   );
 };
