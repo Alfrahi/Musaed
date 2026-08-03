@@ -90,19 +90,19 @@ export const AppHeader = ({
   <header
     data-tauri-drag-region={isTauri ? 'true' : undefined}
     className={cn(
-      'border-sidebar-border bg-background/50 z-20 flex h-[73px] shrink-0 items-center justify-between border-b px-4 backdrop-blur-md select-none',
+      'border-sidebar-border bg-background/50 z-20 flex h-12 shrink-0 items-center justify-between border-b px-3 backdrop-blur-md select-none',
       isTauri && isMac && (isRtl ? 'pe-20' : 'ps-20')
     )}
   >
-    <div className="pointer-events-none flex items-center gap-4">
+    <div className="pointer-events-none flex items-center gap-3">
       <Image
         src="/favicon.ico"
         loading="eager"
         alt={appName}
-        width={40}
-        height={40}
+        width={28}
+        height={28}
         unoptimized
-        className="h-10 w-10 object-contain"
+        className="h-7 w-7 object-contain"
       />
       <div className="bg-sidebar-border h-3 w-[1px]" />
       <div className="pointer-events-auto">
@@ -115,21 +115,21 @@ export const AppHeader = ({
         variant="ghost"
         size="icon"
         onClick={onLibraryOpen}
-        className="hover:border-sidebar-border h-10 w-10 rounded-md border border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        className="hover:border-sidebar-border h-8 w-8 rounded-md border border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
         title={t('common.library')}
         aria-label={t('common.library')}
       >
-        <Library size={18} />
+        <Library size={16} />
       </Button>
       <Button
         variant="ghost"
         size="icon"
         onClick={onSettingsOpen}
-        className="hover:border-sidebar-border h-10 w-10 rounded-md border border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        className="hover:border-sidebar-border h-8 w-8 rounded-md border border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
         title={t('settings.title')}
         aria-label={t('settings.title')}
       >
-        <Sliders size={18} />
+        <Sliders size={16} />
       </Button>
     </div>
   </header>
