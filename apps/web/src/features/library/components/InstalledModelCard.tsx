@@ -66,7 +66,7 @@ const InstalledModelCard = ({
           <div className="mbs-1 flex items-center gap-3">
             {displaySize && (
               <span className="caption-xs flex items-center gap-1 font-bold tracking-widest text-zinc-400 uppercase">
-                <HardDrive size={10} />
+                <HardDrive size={12} />
                 {displaySize}
               </span>
             )}

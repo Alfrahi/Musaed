@@ -177,7 +177,7 @@ export const InputArea = () => {
         <RagContextBadge />
 
         <div
-          className={`border-sidebar-border shadow-native duration-normal focus-within:shadow-native rounded-md border bg-white p-1 ring-1 ring-zinc-200 transition-all focus-within:ring-blue-500/30 dark:bg-zinc-900 dark:ring-zinc-800 ${isDragOver ? 'ring-offset-background ring-2 ring-blue-500 ring-offset-2' : ''}`}
+          className={`border-sidebar-border shadow-raised duration-normal focus-within:shadow-raised rounded-md border bg-white p-1 ring-1 ring-zinc-200 transition-all focus-within:ring-blue-500/30 dark:bg-zinc-900 dark:ring-zinc-800 ${isDragOver ? 'ring-offset-background ring-2 ring-blue-500 ring-offset-2' : ''}`}
         >
           {isDragOver && (
             <div className="caption-md pointer-events-none px-3 pt-2 text-center text-blue-600 dark:text-blue-400">

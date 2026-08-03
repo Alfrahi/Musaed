@@ -49,7 +49,7 @@ const GroupHeader = ({
         className="h-auto w-auto p-1 text-zinc-400 hover:text-red-500"
         title={clearLabel}
       >
-        <Eraser size={10} />
+        <Eraser size={14} />
       </Button>
     )}
   </div>
@@ -161,7 +161,7 @@ const TabButtons = ({
           : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/50'
       }`}
     >
-      <MessageSquare size={12} />
+      <MessageSquare size={14} />
       {t('sidebar.chats')}
     </button>
     <button
@@ -172,7 +172,7 @@ const TabButtons = ({
           : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/50'
       }`}
     >
-      <Briefcase size={12} />
+      <Briefcase size={14} />
       {t('sidebar.projects')}
     </button>
   </div>
@@ -278,7 +278,7 @@ const Sidebar = () => {
   if (!isHydrated) {
     return (
       <div
-        className="bg-sidebar border-sidebar-border flex h-full flex-col border-e"
+        className="bg-sidebar flex h-full flex-col shadow-[1px_0_2px_rgba(0,0,0,0.06)] select-none"
         style={{ width: sidebarWidth }}
       >
         <SidebarSkeleton />
@@ -297,7 +297,7 @@ const Sidebar = () => {
   return (
     <div
       data-testid="sidebar"
-      className="bg-sidebar border-sidebar-border flex h-full flex-col border-e select-none"
+      className="bg-sidebar flex h-full flex-col shadow-[1px_0_2px_rgba(0,0,0,0.06)] select-none"
       style={{ width: sidebarWidth }}
     >
       <SidebarHeader activeTab={activeTab} onCreateNew={handleCreateNew} />

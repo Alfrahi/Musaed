@@ -27,7 +27,7 @@ const SidebarHeader = ({ activeTab, onCreateNew }: SidebarHeaderProps) => {
           onClick={onCreateNew}
           className="text-caption shadow-native h-10 flex-1 gap-2 rounded-lg ps-4 pe-4 font-bold tracking-normal uppercase"
         >
-          <Plus size={16} />
+          <Plus size={14} />
           {activeTab === 'chats' ? t('sidebar.newChat') : t('sidebar.newProject')}
           <span className="caption-xs font-normal tracking-normal text-zinc-400">
             {isMac ? '⌘N' : 'Ctrl+N'}

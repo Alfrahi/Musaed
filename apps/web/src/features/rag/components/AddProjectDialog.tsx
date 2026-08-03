@@ -311,12 +311,12 @@ const EmbeddingModelSelect = ({
           >
             {isPulling ? (
               <>
-                <Loader2 size={12} className="animate-spin" />
+                <Loader2 size={14} className="animate-spin" />
                 {t('library.pulling')}
               </>
             ) : (
               <>
-                <Download size={12} />
+                <Download size={14} />
                 {t('rag.pullModel')}
               </>
             )}

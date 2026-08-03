@@ -105,7 +105,7 @@ const StorageSettings = () => {
 
       <div className="flex flex-col gap-3">
         <div className="caption-md flex items-center gap-2 font-medium text-zinc-500">
-          <Trash2 size={12} />
+          <Trash2 size={14} />
           <label>{t('settings.storage.autoDelete')}</label>
         </div>
         <select

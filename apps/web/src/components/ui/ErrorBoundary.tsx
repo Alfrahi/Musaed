@@ -129,7 +129,7 @@ class ErrorBoundary extends Component<Props, State> {
             {this.state.errorType === 'general' && this.state.error && config.isDev && (
               <details className="text-start">
                 <summary className="caption-md duration-fast cursor-pointer font-bold tracking-widest text-gray-500 uppercase transition-colors hover:text-gray-700">
-                  <HelpCircle size={12} className="me-1 inline" />
+                  <HelpCircle size={14} className="me-1 inline" />
                   {t('error.details')}
                 </summary>
                 <pre className="caption-xs mbs-2 max-h-24 overflow-auto rounded bg-gray-100 p-2 text-gray-700 dark:bg-gray-900 dark:text-gray-300">
@@ -145,7 +145,7 @@ class ErrorBoundary extends Component<Props, State> {
                   variant={action.primary ? 'secondary' : 'outline'}
                   onClick={action.onClick}
                 >
-                  <RefreshCw size={16} />
+                  <RefreshCw size={14} />
                   {action.label}
                 </Button>
               ))}
