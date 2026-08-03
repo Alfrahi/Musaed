@@ -86,6 +86,7 @@ describe('SearchResults', () => {
         enableMermaid: true,
         density: 1.0,
         sidebarWidth: 260,
+        closeToTray: true,
       },
     });
   });
@@ -289,6 +290,7 @@ describe('SearchResults', () => {
           enableMermaid: true,
           density: 1.0,
           sidebarWidth: 260,
+          closeToTray: true,
         },
       });
       useRagStore.setState({ searchResults: mockResults });

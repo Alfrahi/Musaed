@@ -152,6 +152,8 @@
     "confirmReset": "Are you sure you want to reset all settings to default? This will not delete your chat history.",
     "enterToSend": "Enter to Send",
     "enterToSendDescription": "When enabled, pressing Enter sends the message. Use Shift+Enter for new lines. When disabled, use Cmd/Ctrl+Enter to send.",
+    "closeToTray": "Close to Tray",
+    "closeToTrayDescription": "When enabled, closing the window minimizes it to the system tray instead of quitting. The tray menu's \"Quit\" item is the only exit path. When disabled, the window still minimizes to tray if a background task (chat stream, model pull, or RAG index) is active.",
     "markdown": {
       "title": "Markdown Rendering",
       "enableLatex": "LaTeX Formulas",

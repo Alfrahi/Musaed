@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager, Window, WindowEvent};
+use tauri_plugin_store::StoreExt;
 
 /// Background task kind surfaced to the frontend and tray tooltip.
 /// Mirrors `BackgroundTaskKindSchema` in `packages/contracts/src/schemas/tray.ts`.
@@ -118,6 +119,101 @@ mod menu_ids {
     pub const QUIT: &str = "quit";
 }
 
+/// Tauri-plugin-store filename and zustand persist key for the settings store.
+/// These mirror `apps/web/src/store/settings-store.ts` (filename via
+/// `createTauriStorage('settings-state.json', ...)`, name `musaed-settings-storage`).
+mod settings_keys {
+    pub const STORE_FILE: &str = "settings-state.json";
+    pub const PERSIST_KEY: &str = "musaed-settings-storage";
+}
+
+/// Reads the `closeToTray` setting synchronously from the tauri-plugin-store.
+///
+/// The frontend `settings-store.ts` (Zustand `persist` middleware) writes the
+/// entire settings store as a JSON-encoded string under
+/// `musaed-settings-storage`. The string's shape is:
+/// `{"state":{"globalSettings":{...ChatSettings..., "closeToTray": bool}}, "version": N}`.
+/// We double-decode: the outer `Value::String` holds the JSON wrapper, and the
+/// inner `globalSettings.closeToTray` boolean is what we want.
+///
+/// Returns `true` (always minimize to tray) on any read/parse error so that
+/// the default behavior matches `DEFAULT_SETTINGS.closeToTray = true`. This
+/// means a fresh install with no persisted store still minimizes to tray.
+fn read_close_to_tray_setting(app: &AppHandle) -> bool {
+    let store = match app.store(settings_keys::STORE_FILE) {
+        Ok(s) => s,
+        Err(e) => {
+            tracing::warn!(error = %e, "Failed to open settings store; defaulting closeToTray=true");
+            return true;
+        }
+    };
+
+    let raw = store.get(settings_keys::PERSIST_KEY);
+    let outer = match raw {
+        Some(v) => {
+            tracing::debug!(
+                raw_type = match &v {
+                    serde_json::Value::String(_) => "String",
+                    serde_json::Value::Object(_) => "Object",
+                    serde_json::Value::Bool(_) => "Bool",
+                    _ => "Other",
+                },
+                raw_preview = %v.to_string().chars().take(200).collect::<String>(),
+                "read_close_to_tray_setting: raw store value retrieved"
+            );
+            v
+        }
+        None => {
+            tracing::debug!("read_close_to_tray_setting: no persisted value, defaulting true");
+            // No persisted settings yet (fresh install) — use the default.
+            return true;
+        }
+    };
+
+    // Zustand's JSON storage stores the value as a JSON-encoded String.
+    let outer_str = match &outer {
+        serde_json::Value::String(s) => s.as_str(),
+        other => {
+            // Defensive: if it's already an object (some custom storage path),
+            // try to use it directly.
+            return read_close_to_tray_from_object(other);
+        }
+    };
+
+    let outer_json: serde_json::Value = match serde_json::from_str(outer_str) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::warn!(error = %e, "Settings store outer JSON parse failed; defaulting closeToTray=true");
+            return true;
+        }
+    };
+
+    let result = read_close_to_tray_from_object(&outer_json);
+    tracing::info!(
+        parsed_close_to_tray = result,
+        "read_close_to_tray_setting: parsed from zustand wrapper"
+    );
+    result
+}
+
+/// Navigates `{"state":{"globalSettings":{"closeToTray": bool}}}` and returns
+/// the boolean. Defaults to `true` if the path is missing or the field is
+/// absent — matching `DEFAULT_SETTINGS.closeToTray`.
+fn read_close_to_tray_from_object(v: &serde_json::Value) -> bool {
+    let global_settings = v
+        .get("state")
+        .and_then(|s| s.get("globalSettings"))
+        .or_else(|| v.get("globalSettings"));
+
+    match global_settings {
+        Some(gs) => match gs.get("closeToTray") {
+            Some(serde_json::Value::Bool(b)) => *b,
+            _ => true, // Field absent (e.g. older persisted state) — default true.
+        },
+        None => true, // No globalSettings root — fresh/corrupt store, default true.
+    }
+}
+
 /// Builds and installs the system tray icon + menu during app setup.
 ///
 /// Call from `tauri::Builder::setup()`.
@@ -185,12 +281,39 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Window close-requested handler. When background tasks are active, prevents
-/// the close and hides the window to tray. When idle, allows normal close.
+/// Window close-requested handler. Behavior is governed by the user-facing
+/// "closeToTray" setting (persisted in `settings-state.json` under the
+/// `musaed-settings-storage` key, written by the frontend `settings-store.ts`):
+///
+/// - `closeToTray == true` (DEFAULT): always prevent the close and hide the
+///   window to the tray. The tray menu's "Quit" item is the only exit path.
+/// - `closeToTray == false`: fall back to the background-task-conditional
+///   behavior — minimize-to-tray only when a chat stream / model pull / RAG
+///   index is active; otherwise allow the close to proceed normally.
+///
+/// Read path: `tauri-plugin-store` exposes a synchronous `StoreExt::store()`
+/// accessor on `AppHandle`; `Store::get()` returns `Option<serde_json::Value>`
+/// synchronously, so the close handler does not block on async IPC.
 ///
 /// Call from `.on_window_event()` registered on the `tauri::Builder`.
 pub fn handle_close_requested(window: &Window, api: &tauri::CloseRequestApi) {
-    if has_active_background_tasks() {
+    let close_to_tray = read_close_to_tray_setting(window.app_handle());
+
+    tracing::info!(
+        close_to_tray,
+        has_active_tasks = has_active_background_tasks(),
+        "handle_close_requested: close_to_tray setting read"
+    );
+
+    let minimize_to_tray = if close_to_tray {
+        // User preference: always minimize to tray on close.
+        true
+    } else {
+        // Background-task-conditional fallback (the original audit S-1 behavior).
+        has_active_background_tasks()
+    };
+
+    if minimize_to_tray {
         // Prevent the window from closing; hide it to tray instead.
         api.prevent_close();
         let _ = window.hide();
@@ -201,9 +324,12 @@ pub fn handle_close_requested(window: &Window, api: &tauri::CloseRequestApi) {
             let _ = tray.set_tooltip(Some(tooltip));
         }
 
-        tracing::info!("Window close intercepted — background tasks active, minimized to tray");
+        tracing::info!(
+            close_to_tray,
+            "Window close intercepted — minimized to tray"
+        );
     }
-    // When no background tasks are active, the close proceeds normally
+    // When minimize_to_tray is false, the close proceeds normally
     // (we do NOT call prevent_close).
 }
 
@@ -309,5 +435,70 @@ mod tests {
         // The test still validates that build_tooltip returns a String.
         let tooltip = build_tooltip();
         assert!(!tooltip.is_empty());
+    }
+
+    // ── closeToTray setting parser tests ──────────────────────────────────
+    //
+    // These cover the pure JSON parsing logic in `read_close_to_tray_from_object`.
+    // The `read_close_to_tray_setting` wrapper that opens the tauri-plugin-store
+    // is not testable without a real AppHandle, so we test the parser directly.
+
+    #[test]
+    fn close_to_tray_parses_true_from_zustand_wrapper() {
+        let outer = serde_json::json!({
+            "state": { "globalSettings": { "closeToTray": true } },
+            "version": 2
+        });
+        assert!(read_close_to_tray_from_object(&outer));
+    }
+
+    #[test]
+    fn close_to_tray_parses_false_from_zustand_wrapper() {
+        let outer = serde_json::json!({
+            "state": { "globalSettings": { "closeToTray": false } },
+            "version": 2
+        });
+        assert!(!read_close_to_tray_from_object(&outer));
+    }
+
+    #[test]
+    fn close_to_tray_defaults_true_when_field_absent() {
+        // Older persisted state (pre-closeToTray) — must default to true,
+        // matching DEFAULT_SETTINGS.closeToTray.
+        let outer = serde_json::json!({
+            "state": { "globalSettings": { "temperature": 0.7 } },
+            "version": 1
+        });
+        assert!(read_close_to_tray_from_object(&outer));
+    }
+
+    #[test]
+    fn close_to_tray_defaults_true_when_global_settings_missing() {
+        // Corrupt or partial store — default to true.
+        let outer = serde_json::json!({ "version": 2 });
+        assert!(read_close_to_tray_from_object(&outer));
+    }
+
+    #[test]
+    fn close_to_tray_defaults_true_for_empty_object() {
+        assert!(read_close_to_tray_from_object(&serde_json::json!({})));
+    }
+
+    #[test]
+    fn close_to_tray_parses_bare_global_settings_root() {
+        // Defensive path: if a custom writer serialized the inner state object
+        // directly (no zustand "state" wrapper), still find the value.
+        let outer = serde_json::json!({
+            "globalSettings": { "closeToTray": false }
+        });
+        assert!(!read_close_to_tray_from_object(&outer));
+    }
+
+    #[test]
+    fn close_to_tray_ignores_non_bool_value() {
+        let outer = serde_json::json!({
+            "state": { "globalSettings": { "closeToTray": "yes" } }
+        });
+        assert!(read_close_to_tray_from_object(&outer));
     }
 }

@@ -64,6 +64,7 @@ const baseConversation: ConversationMetadata = {
     enableMermaid: true,
     density: 1.0,
     sidebarWidth: 260,
+    closeToTray: true,
   },
   createdAt: Date.now(),
   updatedAt: Date.now(),
