@@ -89,13 +89,16 @@ function useMessageBubbleActions(
     void sendMessage(lastUser.content, lastUser.images ?? []);
   }, [currentConversationId, messages, sendMessage]);
 
-  const handleContinue = useCallback(() => {
-    if (!currentConversationId) return;
-    const lastUser = messages.findLast((m) => m.role === 'user');
-    if (!lastUser) return;
-    useUIStore.getState().setErrorMessage(null);
-    void sendMessage(lastUser.content, lastUser.images ?? []);
-  }, [currentConversationId, messages, sendMessage]);
+  const handleContinue = useCallback(
+    (_msgId: string) => {
+      if (!currentConversationId) return;
+      const lastUser = messages.findLast((m) => m.role === 'user');
+      if (!lastUser) return;
+      useUIStore.getState().setErrorMessage(null);
+      void sendMessage(lastUser.content, lastUser.images ?? []);
+    },
+    [currentConversationId, messages, sendMessage]
+  );
 
   const handleEditPrompt = useCallback(
     (assistantMsgId: string) => {
@@ -303,10 +306,10 @@ const ChatWindow = ({
               message={msg}
               labels={messageLabels}
               formatNumber={formatNumber}
-              onRegenerate={() => regenerateMessage(msg.id)}
+              onRegenerate={regenerateMessage}
               onContinue={handleContinue}
-              onEditPrompt={() => handleEditPrompt(msg.id)}
-              onEdit={() => handleEdit(msg.id)}
+              onEditPrompt={handleEditPrompt}
+              onEdit={handleEdit}
             />
           </div>
         )}
