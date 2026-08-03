@@ -95,7 +95,7 @@ describe('buttonVariants', () => {
   it('returns a base class string for default args', () => {
     const cls = buttonVariants();
     expect(cls).toContain('inline-flex');
-    expect(cls).toContain('rounded-lg');
+    expect(cls).toContain('rounded-md');
   });
 
   it('composes variant + size deterministically', () => {

@@ -31,17 +31,17 @@ const AttachmentPreview = ({
 
   return (
     <>
-      <div className="mbe-2 flex flex-wrap gap-2 rounded-xl border border-zinc-200 bg-zinc-100 p-2 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="mbe-2 flex flex-wrap gap-2 rounded-md border border-zinc-200 bg-zinc-100 p-2 dark:border-zinc-800 dark:bg-zinc-900">
         {images.map((img, idx) => (
           <div
             key={`img-${idx}`}
-            className="relative h-16 w-16 overflow-hidden rounded-lg border border-zinc-300 shadow-sm dark:border-zinc-700"
+            className="relative h-16 w-16 overflow-hidden rounded-md border border-zinc-300 shadow-sm dark:border-zinc-700"
           >
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setLightboxIndex(idx)}
-              className="h-full w-full cursor-zoom-in rounded-lg p-0"
+              className="h-full w-full cursor-zoom-in rounded-md p-0"
               aria-label={t('common.preview')}
             >
               <Image
@@ -50,7 +50,7 @@ const AttachmentPreview = ({
                 width={64}
                 height={64}
                 unoptimized
-                className="h-full w-full rounded-lg object-cover"
+                className="h-full w-full rounded-md object-cover"
               />
             </Button>
             <Button
@@ -67,7 +67,7 @@ const AttachmentPreview = ({
         {files.map((file, idx) => (
           <div
             key={`file-${idx}`}
-            className="relative flex max-w-[200px] min-w-[120px] items-center gap-2 rounded-lg border border-zinc-300 bg-white p-2 pe-8 shadow-sm dark:border-zinc-700 dark:bg-zinc-800"
+            className="relative flex max-w-[200px] min-w-[120px] items-center gap-2 rounded-md border border-zinc-300 bg-white p-2 pe-8 shadow-sm dark:border-zinc-700 dark:bg-zinc-800"
           >
             <div className="shrink-0 rounded-md bg-blue-50 p-1.5 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400">
               <FileText size={16} />

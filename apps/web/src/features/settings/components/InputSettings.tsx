@@ -18,7 +18,7 @@ const InputSettings = () => {
         <label>{t('settings.enterToSend')}</label>
       </div>
 
-      <div className="flex items-start gap-4 rounded-xl border border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800">
+      <div className="flex items-start gap-4 rounded-md border border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800">
         <div className="min-w-0 flex-1">
           <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
             {t('settings.enterToSendDescription')}

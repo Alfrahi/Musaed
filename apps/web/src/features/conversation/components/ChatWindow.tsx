@@ -50,7 +50,7 @@ const ScrollButton = ({ onClick, label }: { onClick: () => void; label: string }
       variant="outline"
       size="icon"
       onClick={onClick}
-      className="pointer-events-auto rounded-none border-zinc-200 bg-white text-zinc-500 shadow-lg hover:text-blue-500 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+      className="pointer-events-auto rounded-md border-zinc-200 bg-white text-zinc-500 shadow-lg hover:text-blue-500 active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
       aria-label={label}
     >
       <ArrowDown size={20} />

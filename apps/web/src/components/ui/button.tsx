@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils';
 export const buttonVariants = cva(
   // base — applies to every variant
   [
-    'inline-flex items-center justify-center gap-2 rounded-lg font-bold',
+    'inline-flex items-center justify-center gap-2 rounded-md font-bold',
     'uppercase tracking-widest transition-all',
     'active:scale-95',
     'outline-none',

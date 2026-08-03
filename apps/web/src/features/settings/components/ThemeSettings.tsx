@@ -25,14 +25,14 @@ const ThemeSettings = () => {
         <Monitor size={14} className="text-zinc-400" />
         <label>{t('settings.appearance')}</label>
       </div>
-      <div className="flex w-full rounded-none bg-zinc-100 p-1 dark:bg-zinc-800">
+      <div className="flex w-full rounded-md bg-zinc-100 p-1 dark:bg-zinc-800">
         {themes.map(({ id, icon: Icon }) => (
           // eslint-disable-next-line musaed-buttons/prefer-button-primitive -- segmented control toggle, not an action button
           <button
             key={id}
             onClick={() => updateGlobalSettings({ theme: id })}
             className={cn(
-              'flex flex-1 items-center justify-center gap-2 rounded-none py-2 text-xs font-bold tracking-widest uppercase transition-all',
+              'flex flex-1 items-center justify-center gap-2 rounded-md py-2 text-xs font-bold tracking-widest uppercase transition-all',
               globalSettings.theme === id
                 ? 'bg-white text-blue-600 shadow-sm dark:bg-zinc-700'
                 : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
