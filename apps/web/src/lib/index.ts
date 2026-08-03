@@ -49,6 +49,9 @@ export { logger } from '@/lib/logger';
 // Utilities - pure functions
 export { cn } from '@/lib/utils';
 
+// Platform detection
+export { getPlatform, isMac, isWindows } from '@/lib/platform';
+
 // Configuration - environment abstraction
 export { config } from '@/lib/config';
 
