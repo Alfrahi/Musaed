@@ -11,7 +11,7 @@ export const MessageAvatar = React.memo(({ isUser }: MessageAvatarProps) => (
     className={cn(
       'flex h-8 w-8 shrink-0 items-center justify-center border',
       isUser
-        ? 'border-zinc-200 bg-white text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800'
+        ? 'border-blue-500 bg-white text-blue-500 dark:border-blue-400 dark:bg-zinc-800 dark:text-blue-400'
         : 'bg-primary border-primary text-white'
     )}
   >

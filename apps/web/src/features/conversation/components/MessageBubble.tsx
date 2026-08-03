@@ -444,10 +444,12 @@ const MessageBubble = ({
       onContextMenu={handleContextMenu}
       className={cn(
         'border-be border-sidebar-border w-full transition-colors',
-        isUser ? 'bg-background' : 'bg-zinc-50 dark:bg-zinc-900/30'
+        isUser
+          ? 'bg-blue-50/50 dark:bg-blue-950/20'
+          : 'border-s-2 border-blue-500/30 bg-zinc-50 dark:bg-zinc-900/30'
       )}
     >
-      <div className="group ms-auto me-auto flex max-w-4xl gap-6 py-8 ps-6 pe-6">
+      <div className="group ms-auto me-auto flex max-w-4xl gap-6 py-6 ps-5 pe-5">
         <MessageAvatar isUser={isUser} />
 
         <div className="min-w-0 flex-1 space-y-4">
