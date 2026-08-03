@@ -28,8 +28,15 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
 }));
 
 // Mock IntersectionObserver for virtualized chat components
-global.IntersectionObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
+// Must be a constructor function (called with `new` in ScrollShadow).
+class IntersectionObserverMock {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+  takeRecords = vi.fn(() => []);
+  root = null;
+  rootMargin = '';
+  thresholds = [];
+}
+
+global.IntersectionObserver = IntersectionObserverMock;
