@@ -111,7 +111,6 @@ body {
   font-family: var(--font-sans);
   height: 100%;
   overflow: hidden;
-  user-select: none;
   background-color: var(--background);
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
@@ -149,15 +148,6 @@ body {
 }
 :where(.dark) .caption-md {
   color: var(--color-zinc-200);
-}
-
-/* Enable selection only where appropriate */
-.prose,
-input,
-textarea,
-code,
-pre {
-  user-select: text;
 }
 
 /* RTL Mirroring for directional icons */
