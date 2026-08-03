@@ -103,6 +103,9 @@ export const IPC_LATENCY_BUDGETS: Readonly<Record<string, LatencyBudgetMs>> = {
    * Selection wait is bounded by user reaction time, but the show path itself
    * (menu build + popup_at) must stay well under a second. */
   cmd_context_menu_show: 1000,
+  /** App metadata — read-only version string read from compile-time embedded
+   * tauri.conf.json. Must return near-instantly. */
+  cmd_get_app_version: 500,
 } as const;
 
 /**
@@ -135,7 +138,8 @@ export type LatencyBudgetCategory =
   | 'migration'
   | 'context-menu'
   | 'store'
-  | 'fs';
+  | 'fs'
+  | 'app-meta';
 
 export function getIpcLatencyBudgetCategory(command: string): LatencyBudgetCategory | undefined {
   if (command.startsWith('cmd_ollama_check_') || command === 'cmd_ollama_verify_service') {
@@ -152,6 +156,7 @@ export function getIpcLatencyBudgetCategory(command: string): LatencyBudgetCateg
   if (command.startsWith('cmd_dialog_')) return 'dialog';
   if (command === 'cmd_opener_open_url') return 'opener';
   if (command === 'cmd_context_menu_show') return 'context-menu';
+  if (command === 'cmd_get_app_version') return 'app-meta';
   if (command.startsWith('cmd_store_')) return 'store';
   if (command.startsWith('cmd_fs_')) return 'fs';
   if (command.startsWith('cmd_rag_list_') || command.startsWith('cmd_rag_get_')) {

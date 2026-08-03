@@ -5,12 +5,13 @@ import { useSetInfoOpen } from '@/store/hooks';
 import { useLanguage } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
+import { useAppVersion } from '@/hooks';
 
 const SidebarInfo = () => {
   const setInfoOpen = useSetInfoOpen();
   const language = useLanguage();
   const { t } = useTranslation(language);
-  const version = '0.1.0';
+  const { version } = useAppVersion();
 
   return (
     <div className="border-bs border-sidebar-border duration-fast shrink-0 bg-zinc-50/50 transition-colors dark:bg-zinc-900/20">
@@ -28,9 +29,11 @@ const SidebarInfo = () => {
             <span className="mbe-1 text-caption truncate leading-none font-bold dark:text-zinc-200">
               {t('common.appName')}
             </span>
-            <span className="caption-md font-bold tracking-widest text-zinc-500 uppercase">
-              v{version}
-            </span>
+            {version && (
+              <span className="caption-md font-bold tracking-widest text-zinc-500 uppercase">
+                v{version}
+              </span>
+            )}
           </div>
         </div>
       </Button>

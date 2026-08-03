@@ -1,6 +1,6 @@
 [package]
 name = "musaed"
-version = "0.1.0"
+version = "0.1.1"
 description = "Native local AI interface for Ollama"
 authors = ["Musaed Contributors"]
 edition = "2021"
