@@ -33,10 +33,10 @@ export const FONT_SIZE = {
   heading: '16px',
 } as const;
 
-export const SHADOW = {
-  raised: '0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1)',
-  overlay: '0 8px 30px rgba(0, 0, 0, 0.12)',
-} as const;
+// SHADOW was removed (audit UX-009). The CSS @theme block in globals.css is
+// the single source of truth for shadow tokens (`--shadow-native`,
+// `--shadow-raised`, `--shadow-pro`); no JS consumer of a SHADOW constant
+// exists in the codebase.
 
 export const TRANSITION = {
   fast: '150ms',
