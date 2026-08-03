@@ -242,6 +242,7 @@ describe('Sidebar', () => {
         enableMermaid: true,
         density: 1.0,
         sidebarWidth: 260,
+        closeToTray: true,
       },
     });
   });
@@ -392,6 +393,7 @@ describe('Sidebar', () => {
           enableMermaid: true,
           density: 1.0,
           sidebarWidth: 260,
+          closeToTray: true,
         },
       });
 

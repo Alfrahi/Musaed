@@ -27,4 +27,5 @@ export const DEFAULT_SETTINGS: ChatSettings = {
   enableMermaid: true,
   density: 1.0,
   sidebarWidth: 260,
+  closeToTray: true,
 };

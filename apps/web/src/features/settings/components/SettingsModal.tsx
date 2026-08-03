@@ -12,6 +12,7 @@ import DiagnosticsSettings from './DiagnosticsSettings';
 import InputSettings from './InputSettings';
 import StorageSettings from './StorageSettings';
 import MarkdownSettings from './MarkdownSettings';
+import WindowSettings from './WindowSettings';
 import SettingsCard from './SettingsCard';
 import { useTranslation } from '@/lib/i18n';
 import { dialogApi } from '@/lib/ipc';
@@ -33,6 +34,9 @@ const renderGeneralTab = () => (
     </SettingsCard>
     <SettingsCard>
       <InputSettings />
+    </SettingsCard>
+    <SettingsCard>
+      <WindowSettings />
     </SettingsCard>
   </div>
 );
