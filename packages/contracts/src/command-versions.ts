@@ -29,6 +29,7 @@ export const COMMAND_VERSIONS = {
   cmd_ollama_abort_pull: true,
   cmd_ollama_check_health: true,
   cmd_ollama_verify_service: true,
+  cmd_ollama_validate_model: true,
   cmd_ollama_generate_title: true,
 
   // Logging

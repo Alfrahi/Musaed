@@ -130,6 +130,7 @@ pub fn run() {
             ollama::models::cmd_ollama_abort_pull,
             ollama::models::cmd_ollama_delete_model,
             ollama::models::cmd_ollama_verify_service,
+            ollama::models::cmd_ollama_validate_model,
             ollama::title::cmd_ollama_generate_title,
             // Logging commands
             logging::commands::cmd_logs_append,

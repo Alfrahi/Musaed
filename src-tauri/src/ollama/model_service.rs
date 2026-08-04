@@ -144,11 +144,33 @@ impl ModelService {
                             json.get("details").cloned().unwrap_or_default(),
                         )
                         .ok();
-                        tracing::info!("Model {} validation successful", model_name);
+
+                        // Extract the model's context_length from `model_info`.
+                        // The key is architecture-prefixed (e.g.
+                        // `llama.context_length`, `qwen2.context_length`), so
+                        // we scan for any key ending in `.context_length`.
+                        let context_length = json
+                            .get("model_info")
+                            .and_then(|mi| mi.as_object())
+                            .and_then(|obj| {
+                                obj.iter().find_map(|(k, v)| {
+                                    k.ends_with(".context_length")
+                                        .then_some(v)
+                                        .and_then(|v| v.as_u64())
+                                        .map(|n| n as u32)
+                                })
+                            });
+
+                        tracing::info!(
+                            "Model {} validation successful (context_length={:?})",
+                            model_name,
+                            context_length
+                        );
                         Ok(ModelValidation {
                             is_valid: true,
                             model_name: model_name.to_string(),
                             details,
+                            context_length,
                         })
                     }
                     Err(e) => {

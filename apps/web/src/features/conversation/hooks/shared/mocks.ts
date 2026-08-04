@@ -1,6 +1,16 @@
 // Shared mocks for conversation hook tests
 import { vi } from 'vitest';
 
+// Zustand hooks accept an optional selector: `useStore((s) => s.foo)`.
+// The mocks below replicate that — when called with a function, they apply
+// it to the mock state; when called without, they return the full state.
+// This is necessary because hooks like `useTokenUsage` use selectors
+// like `useMessageStore((s) => s.messages[convId])` that must return the
+// selected value, not the whole store object.
+function selectorAware<T>(state: T) {
+  return vi.fn((selector?: (s: T) => unknown) => (selector ? selector(state) : state));
+}
+
 // Mock translation hook
 const mockTranslation = {
   t: vi.fn((key: string, values?: Record<string, string | number | boolean>) => {
@@ -18,11 +28,16 @@ const mockTranslation = {
 };
 
 // Mock to handle the incorrect usage in production code
-const mockUseSettingsStore = vi.fn(() => ({
-  getState: () => ({
-    globalSettings: { language: 'en', ollamaUrl: 'http://localhost:11434' },
-  }),
-}));
+const mockSettingsState = {
+  globalSettings: {
+    language: 'en',
+    ollamaUrl: 'http://localhost:11434',
+    numCtx: 4096,
+  },
+  getState: () => mockSettingsState,
+};
+
+const mockUseSettingsStore = selectorAware(mockSettingsState);
 
 // Mock IPC module
 export const mockIpc = {
@@ -45,6 +60,9 @@ export const mockIpc = {
     assembleContext: vi
       .fn()
       .mockResolvedValue({ assembled_context: '', citations: [], token_count: 0 }),
+  },
+  ollamaApi: {
+    validateModel: vi.fn().mockResolvedValue(null),
   },
   store: {
     load: vi.fn().mockResolvedValue({
@@ -150,11 +168,11 @@ export const mockStores = {
 
 // Mock store hooks
 const mockStoreHooks = {
-  useMessageStore: vi.fn(() => ({
+  useMessageStore: selectorAware({
     ...mockStores.messageStore,
     addMessages: mockStores.messageStore.addMessages,
     updateLastMessage: mockStores.messageStore.updateLastMessage,
-  })),
+  }),
   useStreamingStore: Object.assign(
     vi.fn(() => mockStores.streamingStore),
     {
@@ -165,7 +183,7 @@ const mockStoreHooks = {
     ...mockStores.modelStore,
     selectedModel: mockStores.modelStore.selectedModel,
   })),
-  useConversationStore: vi.fn(() => mockStores.conversationStore),
+  useConversationStore: selectorAware(mockStores.conversationStore),
   useSettingsStore: mockUseSettingsStore,
   useRagStore: vi.fn(() => ({
     ...mockStores.ragStore,
@@ -219,6 +237,7 @@ vi.mock('@/lib/ipc', () => ({
   chatApi: mockIpc.chatApi,
   conversationApi: mockIpc.conversationApi,
   ragApi: mockIpc.ragApi,
+  ollamaApi: mockIpc.ollamaApi,
   store: mockIpc.store,
   logApi: mockIpc.logApi,
   checkIsTauri: mockIpc.checkIsTauri,
@@ -243,6 +262,7 @@ vi.mock('@/store/streaming-store', () => ({
 
 vi.mock('@/store/model-store', () => ({
   useModelStore: mockStoreHooks.useModelStore,
+  useSelectedModel: vi.fn(() => mockStores.modelStore.selectedModel),
   getState: () => mockStores.modelStore,
   selectedModel: mockStores.modelStore.selectedModel,
 }));
@@ -262,7 +282,7 @@ vi.mock('@/store/settings-store', () => ({
   useLanguage: vi.fn(() => 'en'),
   useOllamaUrl: vi.fn(() => 'http://localhost:11434'),
   // Direct store access
-  globalSettings: mockStores.settingsStore.globalSettings,
+  globalSettings: { ...mockStores.settingsStore.globalSettings, numCtx: 4096 },
 }));
 
 vi.mock('@/store/rag-store', () => ({

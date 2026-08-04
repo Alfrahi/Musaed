@@ -10,7 +10,7 @@
 //! All commands are thin adapters that delegate business logic to
 //! [`super::model_service::ModelService`].
 
-use crate::payloads::{ApiResponse, OllamaModel};
+use crate::payloads::{ApiResponse, ModelValidation, OllamaModel};
 use tauri::{AppHandle, Runtime};
 
 use super::model_service::{ModelService, PullModelRequest};
@@ -99,6 +99,30 @@ pub async fn cmd_ollama_verify_service(base_url: String) -> ApiResponse<String> 
         Ok(version) => ApiResponse {
             success: true,
             data: Some(version),
+            error: None,
+        },
+        Err(e) => ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        },
+    }
+}
+
+// ==================== MODEL VALIDATION ====================
+
+/// Validates that a model exists on the Ollama server and returns its
+/// metadata, including the `context_length` parsed from `/api/show`.
+#[tauri::command]
+pub async fn cmd_ollama_validate_model(
+    base_url: String,
+    name: String,
+) -> ApiResponse<ModelValidation> {
+    let service = ModelService;
+    match service.validate_model(&base_url, &name).await {
+        Ok(validation) => ApiResponse {
+            success: true,
+            data: Some(validation),
             error: None,
         },
         Err(e) => ApiResponse {

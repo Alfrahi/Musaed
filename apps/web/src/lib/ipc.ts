@@ -5,8 +5,10 @@ import {
   type ChatMessage,
   type ChatOptions,
   type OllamaHealth,
+  type ModelValidation,
   OllamaModelSchema,
   OllamaHealthSchema,
+  ModelValidationSchema,
   ModelNameSchema,
   RequestIdSchema,
   LanguageSchema,
@@ -222,6 +224,7 @@ export interface CommandMap {
   cmd_ollama_abort_pull: { args: { name: string }; return: void };
   cmd_ollama_check_health: { args: { baseUrl: string }; return: OllamaHealth };
   cmd_ollama_verify_service: { args: { baseUrl: string }; return: string };
+  cmd_ollama_validate_model: { args: { baseUrl: string; name: string }; return: ModelValidation };
   cmd_ollama_generate_title: {
     args: {
       baseUrl: string;
@@ -413,6 +416,7 @@ const CommandInputSchemas: {
   cmd_ollama_abort_pull: z.object({ name: ModelNameSchema }),
   cmd_ollama_check_health: undefined,
   cmd_ollama_verify_service: undefined,
+  cmd_ollama_validate_model: z.object({ baseUrl: z.string(), name: ModelNameSchema }),
   cmd_ollama_generate_title: z.object({
     baseUrl: z.string(),
     model: ModelNameSchema,
@@ -644,6 +648,7 @@ const CommandReturnSchemas: {
   cmd_ollama_abort_pull: voidSchema,
   cmd_ollama_check_health: OllamaHealthSchema,
   cmd_ollama_verify_service: z.string(),
+  cmd_ollama_validate_model: ModelValidationSchema,
   cmd_ollama_generate_title: z.string(),
   cmd_logs_append: voidSchema,
   cmd_logs_request_clear_token: z.string(),
@@ -902,6 +907,15 @@ export const ollamaApi = {
    * @returns A status string (typically "ok") or empty on failure
    */
   verifyService: (baseUrl: string) => callInternal('cmd_ollama_verify_service', { baseUrl }),
+  /**
+   * Validates that a model exists on the Ollama server and returns its
+   * metadata, including the `context_length` parsed from `/api/show`.
+   * @param baseUrl - The Ollama server URL
+   * @param name - The model name to validate
+   * @returns Model validation result with contextLength, or null on failure
+   */
+  validateModel: (baseUrl: string, name: string) =>
+    callInternal('cmd_ollama_validate_model', { baseUrl, name }, { quiet: true }),
 };
 
 /**

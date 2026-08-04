@@ -18,12 +18,9 @@ fn test_store() -> RagStore {
     // Clean up any previous test db
     std::fs::remove_file(&db_path).ok();
     let store = RagStore::open(&db_path).expect("Failed to open test store");
-    // Clean up temp dir when store is dropped
-    let dir_clone = dir.clone();
-    std::thread::spawn(move || {
-        // Best-effort cleanup after a short delay
-        std::thread::sleep(std::time::Duration::from_millis(500));
-        let _ = std::fs::remove_dir_all(&dir_clone);
+    // Clean up temp dir when store goes out of scope (no timing dependency)
+    let _guard = scopeguard::guard(dir, |d| {
+        let _ = std::fs::remove_dir_all(d);
     });
     store
 }
