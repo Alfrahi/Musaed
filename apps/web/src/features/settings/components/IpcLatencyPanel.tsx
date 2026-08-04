@@ -29,7 +29,7 @@ const LatencyRow = ({
     <li className="caption-xs flex items-center justify-between gap-2 py-2" role="listitem">
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="truncate font-mono text-zinc-700 dark:text-zinc-200">{row.command}</span>
-        <span className="caption-xs tracking-widest text-zinc-400 uppercase">
+        <span className="caption-xs font-medium tracking-normal text-zinc-400">
           {t('settings.ipcLatency.category', { category: row.category })}
         </span>
       </div>
@@ -116,7 +116,7 @@ const IpcLatencyPanel = () => {
           variant="ghost"
           size="sm"
           onClick={reset}
-          className="caption-xs gap-1 font-bold tracking-widest text-blue-600 uppercase hover:text-blue-700"
+          className="caption-xs gap-1 font-medium text-blue-600 hover:text-blue-700"
           title={t('settings.ipcLatency.clear')}
         >
           <RefreshCw size={14} aria-hidden="true" />

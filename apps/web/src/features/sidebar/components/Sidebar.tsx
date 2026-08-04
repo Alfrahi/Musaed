@@ -40,7 +40,7 @@ const GroupHeader = ({
   label: string;
 }) => (
   <div className="pbs-6 pbe-2 inset-bs-0 bg-sidebar mbe-1 sticky z-10 flex items-center justify-between border-b border-zinc-100 ps-3 pe-3 dark:border-zinc-800">
-    <span className="caption-md font-black text-zinc-400 uppercase">{label}</span>
+    <span className="caption-md font-bold text-zinc-400 uppercase">{label}</span>
     {showClear && (
       <Button
         variant="ghost"

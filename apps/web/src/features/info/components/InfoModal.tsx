@@ -106,7 +106,7 @@ const InfoModal = ({ isOpen, onClose }: InfoModalProps) => {
         <Button
           variant="secondary"
           onClick={() => openerApi.openUrl('https://github.com/alfrahi/musaed')}
-          className="text-caption shadow-native w-full gap-2 rounded-xl font-bold tracking-widest uppercase"
+          className="text-caption shadow-native w-full gap-2 rounded-xl"
         >
           <Github size={14} />
           {t('info.github')}

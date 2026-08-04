@@ -169,7 +169,7 @@ const LogViewerFooter = ({ t, onClose }: LogViewerFooterProps) => (
     <Button
       variant="secondary"
       onClick={onClose}
-      className="text-body focus-ring shadow-native rounded-xl py-2 ps-6 pe-6 font-bold tracking-normal"
+      className="text-body focus-ring shadow-native rounded-xl py-2 ps-6 pe-6 tracking-normal"
     >
       {t('common.done')}
     </Button>
@@ -259,7 +259,7 @@ const IpcViolationsList = ({ t, formatDate }: IpcViolationsListProps) => {
                 })}
                 ]
               </span>
-              <span className="caption-xs mbs-0.5 h-fit shrink-0 rounded bg-yellow-100 px-1.5 font-bold text-yellow-700 uppercase dark:bg-yellow-400/10 dark:text-yellow-300">
+              <span className="caption-xs mbs-0.5 h-fit shrink-0 rounded bg-yellow-100 px-1.5 font-medium tracking-normal text-yellow-700 dark:bg-yellow-400/10 dark:text-yellow-300">
                 {budgetTag}
               </span>
               <div className="min-w-0 flex-1">
