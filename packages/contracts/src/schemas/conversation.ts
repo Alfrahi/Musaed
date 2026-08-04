@@ -11,6 +11,7 @@ export const MessageSchema = z.object({
   done: z.boolean().nullish(),
   requestId: z.string().nullish(),
   evalCount: z.number().nullish(),
+  promptEvalCount: z.number().nullish(),
   evalDuration: z.number().nullish(),
   totalDuration: z.number().nullish(),
   ragSources: z

@@ -25,4 +25,5 @@ export const ChatSettingsSchema = z.object({
   density: z.number().default(1.0),
   sidebarWidth: z.number().min(200).max(400).default(260),
   closeToTray: z.boolean().default(true),
+  showTokenIndicator: z.boolean().default(true),
 });

@@ -102,6 +102,7 @@ describe('ProjectCard', () => {
         density: 1.0,
         sidebarWidth: 260,
         closeToTray: true,
+        showTokenIndicator: true,
       },
     });
     useRagStore.setState({

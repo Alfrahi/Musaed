@@ -11,6 +11,7 @@ import AttachmentPreview from './AttachmentPreview';
 import { ModelSelector } from '@/features/library';
 import { RagContextBadge } from '@/features/rag';
 import { Button } from '@/components/ui/button';
+import TokenContextBar from './TokenContextBar';
 
 /** Attach action buttons (image + file upload). */
 const AttachButtons = ({
@@ -208,6 +209,7 @@ export const InputArea = () => {
                 imageLabel={t('chat.attachImage')}
                 fileLabel={t('common.files')}
               />
+              <TokenContextBar />
               <ToolbarRight
                 isStreaming={isStreaming}
                 disabled={!canSend}

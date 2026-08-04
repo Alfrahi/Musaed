@@ -66,6 +66,7 @@ describe('RagContextBadge', () => {
         density: 1.0,
         sidebarWidth: 260,
         closeToTray: true,
+        showTokenIndicator: true,
       },
     });
     useUIStore.setState({ sidebarTab: 'chats' });

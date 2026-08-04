@@ -35,6 +35,7 @@ describe('Conversation Backend Service', () => {
       density: 1.0,
       sidebarWidth: 260,
       closeToTray: true,
+      showTokenIndicator: true,
     },
     createdAt: Date.now(),
     updatedAt: Date.now(),

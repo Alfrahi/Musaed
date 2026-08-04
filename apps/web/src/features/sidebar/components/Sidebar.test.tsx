@@ -243,6 +243,7 @@ describe('Sidebar', () => {
         density: 1.0,
         sidebarWidth: 260,
         closeToTray: true,
+        showTokenIndicator: true,
       },
     });
   });
@@ -394,6 +395,7 @@ describe('Sidebar', () => {
           density: 1.0,
           sidebarWidth: 260,
           closeToTray: true,
+          showTokenIndicator: true,
         },
       });
 

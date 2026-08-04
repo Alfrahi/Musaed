@@ -32,8 +32,10 @@ export {
   validateSettings,
   migrateSettingsToV1,
   migrateSettingsToV2,
+  migrateSettingsToV3,
   rollbackSettingsToV0,
   rollbackSettingsToV1,
+  rollbackSettingsToV2,
 } from './versions/settings';
 
 export {

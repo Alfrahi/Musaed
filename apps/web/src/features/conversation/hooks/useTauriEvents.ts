@@ -42,6 +42,7 @@ const handleToken = (payload: OllamaToken) => {
   // Stash metrics so they're included in the next flush
   const metrics: Partial<Message> = {};
   if (payload.evalCount != null) metrics.evalCount = payload.evalCount;
+  if (payload.promptEvalCount != null) metrics.promptEvalCount = payload.promptEvalCount;
   if (payload.evalDuration != null) metrics.evalDuration = payload.evalDuration;
   if (payload.totalDuration != null) metrics.totalDuration = payload.totalDuration;
   if (Object.keys(metrics).length > 0) {

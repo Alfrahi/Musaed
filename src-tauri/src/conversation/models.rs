@@ -45,6 +45,9 @@ pub struct ChatSettings {
     pub enable_latex: bool,
     pub enable_mermaid: bool,
     pub density: f64,
+    pub sidebar_width: u32,
+    pub show_token_indicator: bool,
+    pub close_to_tray: bool,
 }
 
 impl Default for ChatSettings {
@@ -66,6 +69,9 @@ impl Default for ChatSettings {
             enable_latex: false,
             enable_mermaid: true,
             density: 1.0,
+            sidebar_width: 260,
+            show_token_indicator: true,
+            close_to_tray: true,
         }
     }
 }
@@ -87,6 +93,8 @@ pub struct Message {
     pub request_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub eval_count: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt_eval_count: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub total_duration: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]

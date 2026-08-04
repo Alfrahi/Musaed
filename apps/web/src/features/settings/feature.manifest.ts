@@ -47,7 +47,7 @@ const manifest: FeatureManifest = {
     background: [],
   },
   stateSchemas: {
-    settingsStore: 2,
+    settingsStore: 3,
     // `conversationStore` is owned by the `conversation` feature — settings
     // reads it via `useStorageActions` but does not own its schema.
   },

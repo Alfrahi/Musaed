@@ -1,6 +1,6 @@
 'use client';
 
-import { SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal, Gauge } from 'lucide-react';
 import { useGlobalSettings, useLanguage } from '@/store/settings-store';
 import { useSettingsActions } from '@/features/settings/hooks/useSettingsActions';
 import { useTranslation } from '@/lib/i18n';
@@ -127,6 +127,40 @@ const ModelParamsSettings = () => {
           fallback={2048}
           onChange={(v) => updateGlobalSettings({ numPredict: v })}
         />
+      </div>
+
+      <div className="pbs-1 flex items-center gap-3 rounded-md border border-zinc-100 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
+        <div className="shadow-native rounded-md bg-white p-2 dark:bg-zinc-700">
+          <Gauge size={16} className="text-zinc-500" />
+        </div>
+        <div className="min-0 flex-1">
+          <p className="text-caption font-bold dark:text-zinc-200">
+            {t('settings.tokenIndicator')}
+          </p>
+          <p className="caption-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+            {t('settings.tokenIndicatorDescription')}
+          </p>
+        </div>
+        {/* eslint-disable-next-line musaed-buttons/prefer-button-primitive -- role="switch" toggle, not an action button */}
+        <button
+          onClick={() =>
+            updateGlobalSettings({ showTokenIndicator: !globalSettings.showTokenIndicator })
+          }
+          className={`focus-ring duration-normal h-6 w-10 shrink-0 rounded-full p-1 transition-colors ease-in-out ${
+            globalSettings.showTokenIndicator ? 'bg-blue-600' : 'bg-zinc-300 dark:bg-zinc-600'
+          }`}
+          role="switch"
+          aria-checked={globalSettings.showTokenIndicator}
+          aria-label={t('settings.tokenIndicator')}
+        >
+          <div
+            className={`shadow-native duration-normal h-4 w-4 transform rounded-full bg-white transition-transform ease-in-out ${
+              globalSettings.showTokenIndicator
+                ? 'ltr:translate-x-4 rtl:-translate-x-4'
+                : 'translate-x-0'
+            }`}
+          />
+        </button>
       </div>
     </div>
   );

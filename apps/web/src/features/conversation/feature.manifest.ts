@@ -17,8 +17,9 @@ const manifest: FeatureManifest = {
       'useTauriEvents',
       'useAutoTitle',
       'triggerAutoTitle',
+      'useTokenUsage',
     ],
-    components: [],
+    components: ['TokenContextBar'],
     utils: ['isDefaultTitle', 'generateConversationTitle', 'initializeConversations'],
   },
   ipcEndpoints: [

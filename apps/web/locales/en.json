@@ -99,7 +99,12 @@
     "continue": "Continue",
     "editPrompt": "Edit prompt",
     "errorPrefix": "Error",
-    "ragContextFailed": "RAG context lookup failed — continuing without project context"
+    "ragContextFailed": "RAG context lookup failed — continuing without project context",
+    "tokenContext": {
+      "usage": "{used} / {context} tokens",
+      "filling": "Context window filling up — {used} / {context} tokens",
+      "nearlyFull": "Context window nearly full — earlier messages may be truncated. ({used} / {context})"
+    }
   },
   "settings": {
     "title": "Settings",
@@ -127,6 +132,8 @@
     "topK": "Top K",
     "contextWindow": "Context Window",
     "maxTokens": "Max Tokens",
+    "tokenIndicator": "Token Context Indicator",
+    "tokenIndicatorDescription": "Show a progress bar in the chat input indicating context window usage",
     "systemDiagnostics": "System Diagnostics",
     "viewLogs": "View Logs",
     "ipcLatency": {

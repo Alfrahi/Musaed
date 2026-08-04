@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS messages (
     request_id TEXT,
     images TEXT,
     eval_count INTEGER,
+    prompt_eval_count INTEGER,
     total_duration INTEGER,
     eval_duration INTEGER,
     rag_sources TEXT,
@@ -129,6 +130,38 @@ pub(super) fn run_migrations(conn: &Connection) -> Result<(), String> {
         .map_err(|e| format!("Migration v3: failed to record: {}", e))?;
 
         tracing::info!("Migration v3: added messages.error column");
+    }
+
+    // Migration 4: Add `prompt_eval_count` column for context-window
+    // visualization (UX-UI-AUDIT Prompt 14). Stores the prompt/input token
+    // count returned by Ollama's done message. Existing rows store NULL,
+    // which round-trips into the TypeScript `Message.promptEvalCount === undefined`
+    // shape. Idempotent: checks column existence before ALTER.
+    if current_version < 4 {
+        let has_prompt_eval_count_col: bool = conn
+            .prepare("SELECT COUNT(*) FROM pragma_table_info('messages') WHERE name = 'prompt_eval_count'")
+            .and_then(|mut stmt| stmt.query_row([], |row| row.get::<_, i64>(0)))
+            .map(|count| count > 0)
+            .unwrap_or(false);
+
+        if !has_prompt_eval_count_col {
+            conn.execute_batch("ALTER TABLE messages ADD COLUMN prompt_eval_count INTEGER;")
+                .map_err(|e| {
+                    format!(
+                        "Migration v4: failed to add prompt_eval_count column: {}",
+                        e
+                    )
+                })?;
+        }
+
+        conn.execute(
+            "INSERT OR REPLACE INTO _conversations_migrations (version, description, applied_at)
+             VALUES (4, 'Add messages.prompt_eval_count column', datetime('now'))",
+            [],
+        )
+        .map_err(|e| format!("Migration v4: failed to record: {}", e))?;
+
+        tracing::info!("Migration v4: added messages.prompt_eval_count column");
     }
 
     Ok(())
