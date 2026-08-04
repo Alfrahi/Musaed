@@ -87,6 +87,7 @@ describe('SearchResults', () => {
         density: 1.0,
         sidebarWidth: 260,
         closeToTray: true,
+        showTokenIndicator: true,
       },
     });
   });
@@ -291,6 +292,7 @@ describe('SearchResults', () => {
           density: 1.0,
           sidebarWidth: 260,
           closeToTray: true,
+          showTokenIndicator: true,
         },
       });
       useRagStore.setState({ searchResults: mockResults });

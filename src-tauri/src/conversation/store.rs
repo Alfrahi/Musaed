@@ -97,7 +97,7 @@ impl ConversationStore {
 
         let mut stmt_msg = conn.prepare(
             "SELECT id, role, content, timestamp, model, done, request_id, images,
-                    eval_count, total_duration, eval_duration, rag_sources, error
+                    eval_count, prompt_eval_count, total_duration, eval_duration, rag_sources, error
              FROM messages WHERE conversation_id = ?1 ORDER BY timestamp ASC",
         )?;
         let msgs = stmt_msg
@@ -114,13 +114,14 @@ impl ConversationStore {
                         .get::<_, Option<String>>(7)?
                         .map(|s| serde_json::from_str(&s).unwrap_or_default()),
                     eval_count: row.get(8)?,
-                    total_duration: row.get(9)?,
-                    eval_duration: row.get(10)?,
+                    prompt_eval_count: row.get(9)?,
+                    total_duration: row.get(10)?,
+                    eval_duration: row.get(11)?,
                     rag_sources: row
-                        .get::<_, Option<String>>(11)?
+                        .get::<_, Option<String>>(12)?
                         .map(|s| serde_json::from_str(&s).unwrap_or_default()),
                     error: row
-                        .get::<_, Option<String>>(12)?
+                        .get::<_, Option<String>>(13)?
                         .and_then(|s| serde_json::from_str::<MessageError>(&s).ok()),
                 })
             })?
@@ -165,8 +166,8 @@ impl ConversationStore {
         let conn = self.lock_conn().await;
         conn.execute(
             "INSERT INTO messages (id, conversation_id, role, content, timestamp, model, done,
-                                  request_id, images, eval_count, total_duration, eval_duration, rag_sources, error)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+                                  request_id, images, eval_count, prompt_eval_count, total_duration, eval_duration, rag_sources, error)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
             params![
                 &msg.id,
                 conversation_id,
@@ -178,6 +179,7 @@ impl ConversationStore {
                 &msg.request_id,
                 &msg.images.as_ref().map(|v| serde_json::to_string(v).unwrap_or_default()),
                 &msg.eval_count,
+                &msg.prompt_eval_count,
                 &msg.total_duration,
                 &msg.eval_duration,
                 &msg.rag_sources.as_ref().map(|v| serde_json::to_string(v).unwrap_or_default()),

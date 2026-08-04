@@ -14,6 +14,10 @@ import { logger } from '@/lib/logger';
  * Version 2: Convert snake_case fields (top_k, top_p, num_predict, num_ctx)
  *            to camelCase (topK, topP, numPredict, numCtx) to match Rust
  *            `#[serde(rename_all = "camelCase")]` on ChatSettings.
+ * Version 3: Backfill `showTokenIndicator`, `closeToTray`, `sidebarWidth`
+ *            from DEFAULT_SETTINGS so persisted state at v2 does not trip
+ *            Rust serde on `cmd_conversation_create` (UX-UI-AUDIT Prompt 14
+ *            contract alignment, STANDARDS §9 schema-change migration rule).
  */
 const SETTINGS_MIGRATIONS: Record<number, (data: unknown) => Partial<ChatSettings>> = {
   1: (data: unknown) => {
@@ -43,6 +47,8 @@ const SETTINGS_MIGRATIONS: Record<number, (data: unknown) => Partial<ChatSetting
       'enableLatex',
       'enableMermaid',
       'density',
+      'closeToTray',
+      'showTokenIndicator',
     ];
     otherKeys.forEach((k) => {
       if (k in persisted) {
@@ -51,6 +57,19 @@ const SETTINGS_MIGRATIONS: Record<number, (data: unknown) => Partial<ChatSetting
       }
     });
     return { ...DEFAULT_SETTINGS, ...migrated };
+  },
+  3: (data: unknown) => {
+    // Merge with defaults to backfill showTokenIndicator/closeToTray/
+    // sidebarWidth for users with a persisted v2 store. Idempotent and
+    // type-tolerant: invalid values fall back to the DEFAULT_SETTINGS entry
+    // already merged in `merged`.
+    const persisted =
+      typeof data === 'object' && data !== null ? (data as Partial<ChatSettings>) : {};
+    const merged: ChatSettings = { ...DEFAULT_SETTINGS, ...persisted };
+    if (typeof merged.showTokenIndicator !== 'boolean') merged.showTokenIndicator = true;
+    if (typeof merged.closeToTray !== 'boolean') merged.closeToTray = true;
+    if (typeof merged.sidebarWidth !== 'number') merged.sidebarWidth = 260;
+    return merged;
   },
 };
 
@@ -74,9 +93,9 @@ export const useSettingsStore = createWithEqualityFn<SettingsState>()(
     {
       name: 'musaed-settings-storage',
       storage: createJSONStorage(() =>
-        createTauriStorage('settings-state.json', 2, SETTINGS_MIGRATIONS)
+        createTauriStorage('settings-state.json', 3, SETTINGS_MIGRATIONS)
       ),
-      version: 2,
+      version: 3,
       migrate: (_persistedState: unknown, _version: number) => {
         // Migrations are handled by createTauriStorage (canonical path).
         // This is a safety-net default-state merge only.

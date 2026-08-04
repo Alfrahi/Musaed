@@ -99,7 +99,12 @@
     "continue": "متابعة",
     "editPrompt": "تعديل السؤال",
     "errorPrefix": "خطأ",
-    "ragContextFailed": "فشل البحث في سياق RAG — المتابعة بدون سياق المشروع"
+    "ragContextFailed": "فشل البحث في سياق RAG — المتابعة بدون سياق المشروع",
+    "tokenContext": {
+      "usage": "{used} / {context} رمز",
+      "filling": "نافذة السياق تملأ — {used} / {context} رمز",
+      "nearlyFull": "نافذة السياق تكاد تمتلئ — قد يتم اقتطاع الرسائل السابقة. ({used} / {context})"
+    }
   },
   "settings": {
     "title": "الإعدادات",
@@ -127,6 +132,8 @@
     "topK": "Top K",
     "contextWindow": "حجم السياق",
     "maxTokens": "أقصى عدد للرموز",
+    "tokenIndicator": "مؤشر سياق الرموز",
+    "tokenIndicatorDescription": "عرض شريط تقدم في حقل الإدخال يشير إلى استخدام نافذة السياق",
     "systemDiagnostics": "تشخيص النظام",
     "viewLogs": "عرض السجلات",
     "ipcLatency": {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import { type Message } from '@musaed/contracts';
+import { type Message, type ChatSettings } from '@musaed/contracts';
 import { useTranslation } from '@/lib/i18n';
 import { chatApi } from '@/lib/ipc';
 import { config } from '@/lib/config';
@@ -106,12 +106,20 @@ function buildChatPayload(
   ollamaUrl: string,
   fullPrompt: string,
   selectedModel: string,
-  requestId: string
+  requestId: string,
+  settings: ChatSettings
 ) {
   return {
     baseUrl: ollamaUrl,
     messages: [{ role: 'user', content: fullPrompt }],
-    options: { temperature: 0.7, stop: [], topK: 40, topP: 0.9, numPredict: 100, numCtx: 2048 },
+    options: {
+      temperature: settings.temperature,
+      stop: settings.stop,
+      topK: settings.topK,
+      topP: settings.topP,
+      numPredict: settings.numPredict,
+      numCtx: settings.numCtx,
+    },
     model: selectedModel,
     requestId,
   };
@@ -183,7 +191,13 @@ export function useChatSend(): {
       persistMessage(conversationId, userMsg);
 
       try {
-        const payload = buildChatPayload(ollamaUrl, fullPrompt, selectedModel, requestId);
+        const payload = buildChatPayload(
+          ollamaUrl,
+          fullPrompt,
+          selectedModel,
+          requestId,
+          globalSettings
+        );
         const success = await chatApi.chat(payload);
         if (success !== true) throw new Error(t('chat.connectionFailed'));
 
