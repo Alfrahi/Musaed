@@ -108,6 +108,12 @@ export const COMMAND_VERSIONS = {
   // minimize-to-tray and normal exit. Cross-cutting infrastructure, declared
   // shared so any feature can consume it.
   cmd_tray_get_background_status: true,
+
+  // Menu bar — rebuild the native macOS menu bar with translated labels.
+  // Called by the frontend after locale hydration/change so the menu bar
+  // honours the user's language preference. Cross-cutting infrastructure,
+  // declared shared so any feature can trigger a rebuild.
+  cmd_menu_rebuild: true,
 } as const;
 
 /**
@@ -120,6 +126,7 @@ export const SHARED_COMMANDS = {
   cmd_opener_open_url: true,
   cmd_get_app_version: true,
   cmd_tray_get_background_status: true,
+  cmd_menu_rebuild: true,
 } as const;
 
 export type CommandName = keyof typeof COMMAND_VERSIONS;

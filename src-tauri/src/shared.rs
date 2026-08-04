@@ -51,6 +51,10 @@ pub const EVENT_RAG_INDEX_PROGRESS: &str = "rag-index-progress";
 pub const EVENT_RAG_INDEX_COMPLETE: &str = "rag-index-complete";
 pub const EVENT_RAG_INDEX_ERROR: &str = "rag-index-error";
 
+// Menu bar event name — emitted by the macOS menu bar handler for actions
+// that need to be handled by the frontend (e.g. zoom, about).
+pub const EVENT_MENU_ACTION: &str = "menu-action";
+
 // ====================== GLOBAL STATE ======================
 
 /// Map of request_id -> CancellationToken for aborting active chat streams.

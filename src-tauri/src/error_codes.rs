@@ -76,6 +76,9 @@ pub const CONTEXT_MENU_ERROR: &str = "CONTEXT_MENU_ERROR";
 // ── System tray ───────────────────────────────────────
 pub const TRAY_ERROR: &str = "TRAY_ERROR";
 
+// ── Menu bar ──────────────────────────────────────────
+pub const MENU_BAR_ERROR: &str = "MENU_BAR_ERROR";
+
 // ── URL Opener ────────────────────────────────────────
 pub const URL_BLOCKED: &str = "URL_BLOCKED";
 pub const OPEN_URL_ERROR: &str = "OPEN_URL_ERROR";
@@ -155,6 +158,7 @@ mod tests {
             UNKNOWN,
             CONTEXT_MENU_ERROR,
             TRAY_ERROR,
+            MENU_BAR_ERROR,
             MIGRATION_ERROR,
             INVALID_TRACE_ID,
             INVALID_FEATURE,

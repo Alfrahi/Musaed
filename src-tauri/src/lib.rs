@@ -11,6 +11,7 @@ pub mod error_codes;
 pub mod fs_commands;
 pub mod generated_validation;
 pub mod logging;
+pub mod menu_bar;
 pub mod migrations;
 pub mod ollama;
 pub mod ollama_url;
@@ -108,6 +109,12 @@ pub fn run() {
         tray::setup_tray(app.handle())
             .map_err(|e| format!("Failed to initialize system tray: {}", e))?;
 
+        // Initialize native macOS menu bar (UX-UI-AUDIT Phase 5 Prompt 13, L-1).
+        // App/Edit/View/Window submenus with standard predefined items.
+        // No-op on Windows/Linux.
+        menu_bar::setup_menu_bar(app.handle())
+            .map_err(|e| format!("Failed to initialize menu bar: {}", e))?;
+
         Ok(())
     });
 
@@ -163,6 +170,8 @@ pub fn run() {
             context_menu::cmd_context_menu_show,
             // System tray command
             tray::cmd_tray_get_background_status,
+            // Menu bar command — rebuild native macOS menu with translated labels
+            menu_bar::cmd_menu_rebuild,
             // Dialog commands
             dialog::cmd_dialog_ask,
             dialog::cmd_dialog_open_file,

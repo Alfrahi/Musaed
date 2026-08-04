@@ -56,6 +56,8 @@ import {
   // System tray contracts
   BackgroundTasksResponseSchema,
   type BackgroundTasksResponse,
+  MenuBarLabelsSchema,
+  type MenuBarLabels,
 } from '@musaed/contracts';
 import type {
   RagProject,
@@ -375,6 +377,15 @@ export interface CommandMap {
     args: Record<string, never>;
     return: BackgroundTasksResponse;
   };
+
+  // Menu bar — rebuild the native macOS menu bar with translated labels.
+  // Called by the frontend after locale hydration/change. Declared as a
+  // SHARED_COMMAND so any feature can trigger a rebuild without a manifest
+  // dependency.
+  cmd_menu_rebuild: {
+    args: { labels: MenuBarLabels };
+    return: boolean;
+  };
 }
 
 const voidSchema = z.preprocess((val) => (val === null ? undefined : val), z.void());
@@ -613,6 +624,9 @@ const CommandInputSchemas: {
 
   // System tray — no user-facing args; reads the three abort-handle maps.
   cmd_tray_get_background_status: undefined,
+
+  // Menu bar — translated labels for the custom menu items.
+  cmd_menu_rebuild: z.object({ labels: MenuBarLabelsSchema }),
 };
 
 /**
@@ -698,6 +712,9 @@ const CommandReturnSchemas: {
 
   // System tray return schema — active background task list + hasActiveTasks flag.
   cmd_tray_get_background_status: BackgroundTasksResponseSchema,
+
+  // Menu bar return schema — boolean success flag.
+  cmd_menu_rebuild: z.boolean(),
 };
 
 // ============================================================================
@@ -1426,4 +1443,23 @@ export const trayApi = {
    * outside Tauri or if the call fails.
    */
   getBackgroundStatus: () => callInternal('cmd_tray_get_background_status', {}),
+};
+
+/**
+ * Menu bar IPC API.
+ *
+ * @see STANDARDS.md §5  IPC System
+ * @see STANDARDS.md §13 Failure Mode Rule
+ */
+export const menuBarApi = {
+  /**
+   * Rebuilds the native macOS menu bar with translated labels.
+   *
+   * Called after locale hydration or when the user switches language. On
+   * Windows/Linux this is a no-op that returns `true`.
+   *
+   * @param labels - Translated labels for the custom (non-predefined) menu items.
+   * @returns `true` on success, `null` if running outside Tauri.
+   */
+  rebuild: (labels: MenuBarLabels) => callInternal('cmd_menu_rebuild', { labels }),
 };
