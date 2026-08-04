@@ -109,6 +109,10 @@ export const IPC_LATENCY_BUDGETS: Readonly<Record<string, LatencyBudgetMs>> = {
   /** System tray — queries the three abort-handle DashMaps for active counts.
    * Lock-free reads, must return near-instantly. */
   cmd_tray_get_background_status: 500,
+  /** Menu bar — rebuilds the native macOS menu with translated labels.
+   * Menu construction is synchronous and lightweight; must return
+   * near-instantly. */
+  cmd_menu_rebuild: 500,
 } as const;
 
 /**
@@ -143,7 +147,8 @@ export type LatencyBudgetCategory =
   | 'store'
   | 'fs'
   | 'app-meta'
-  | 'tray';
+  | 'tray'
+  | 'menu-bar';
 
 export function getIpcLatencyBudgetCategory(command: string): LatencyBudgetCategory | undefined {
   if (command.startsWith('cmd_ollama_check_') || command === 'cmd_ollama_verify_service') {
@@ -162,6 +167,7 @@ export function getIpcLatencyBudgetCategory(command: string): LatencyBudgetCateg
   if (command === 'cmd_context_menu_show') return 'context-menu';
   if (command === 'cmd_get_app_version') return 'app-meta';
   if (command === 'cmd_tray_get_background_status') return 'tray';
+  if (command === 'cmd_menu_rebuild') return 'menu-bar';
   if (command.startsWith('cmd_store_')) return 'store';
   if (command.startsWith('cmd_fs_')) return 'fs';
   if (command.startsWith('cmd_rag_list_') || command.startsWith('cmd_rag_get_')) {

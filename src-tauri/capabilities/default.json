@@ -66,6 +66,7 @@
     "allow-opener-commands",
     "allow-context-menu-commands",
     "allow-app-info-commands",
-    "allow-tray-commands"
+    "allow-tray-commands",
+    "allow-menu-commands"
   ]
 }

@@ -415,6 +415,14 @@
       "minimizedToTray": "Musaed minimized to tray — background tasks still running."
     }
   },
+  "menuBar": {
+    "about": "About Musaed",
+    "quit": "Quit Musaed",
+    "toggleFullScreen": "Toggle Full Screen",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "actualSize": "Actual Size"
+  },
   "info": {
     "openInfo": "Open application information",
     "description": "Musaed is a privacy-centric desktop interface for Ollama, designed for local-first AI interactions.",

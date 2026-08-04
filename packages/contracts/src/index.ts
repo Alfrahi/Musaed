@@ -24,6 +24,7 @@ export * from './schemas/conversation';
 export * from './schemas/validation';
 export * from './schemas/context-menu';
 export * from './schemas/tray';
+export * from './schemas/menu-bar';
 export * from './utils/sanitize';
 export * from './utils/thinking-tags';
 export * from './utils/workerUtils';

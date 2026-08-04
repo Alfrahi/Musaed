@@ -1,0 +1,6 @@
+[[permission]]
+identifier = "allow-menu-commands"
+description = "Enables commands for the native macOS menu bar (rebuild with translated labels)."
+commands.allow = [
+    "cmd_menu_rebuild",
+]
