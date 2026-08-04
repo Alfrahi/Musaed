@@ -27,6 +27,7 @@ export {
 export {
   coordinateStartStream,
   stopStreamForConversation,
+  completeStreamForConversation,
   flushAndStop,
   stopBatching,
 } from '@/store/coordination';

@@ -7,7 +7,7 @@ import { useSettingsStore } from '@/store/settings-store';
 import { useStreamingStore } from '@/store/streaming-store';
 import { listen } from '@/lib/ipc';
 import { translate } from '@/lib/i18n';
-import { stopStreamForConversation } from '@/store/coordination';
+import { stopStreamForConversation, completeStreamForConversation } from '@/store/coordination';
 import { useMessageStore } from '@/store/message-store';
 import { triggerAutoTitle } from './useAutoTitle';
 import { persistMessage } from '@/features/conversation/utils/message-persistence';
@@ -49,9 +49,13 @@ const handleToken = (payload: OllamaToken) => {
     streamingStore.setPendingMetrics(convId, metrics);
   }
 
-  // On stream completion, flush remaining content immediately and stop
+  // On stream completion, flush remaining content + metrics and clean up.
+  // Uses completeStreamForConversation (not stopStreamForConversation) so the
+  // assistant message is NOT marked stopped:true — that flag is reserved for
+  // user-initiated aborts. This also ensures promptEvalCount/evalCount metrics
+  // are flushed onto the message for TokenContextBar visualization.
   if (payload.done) {
-    stopStreamForConversation(convId);
+    completeStreamForConversation(convId);
 
     // Persist the completed assistant message to Rust backend with retry logic
     const msgs = useMessageStore.getState().messages[convId] ?? [];

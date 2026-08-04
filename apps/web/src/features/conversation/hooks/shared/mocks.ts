@@ -207,6 +207,7 @@ export const mockUtils = {
       mockStores.streamingStore.startStream(conversationId, requestId);
     }),
     stopStreamForConversation: vi.fn(),
+    completeStreamForConversation: vi.fn(),
     flushAndStop: vi.fn(),
   },
   persistUserMessage: vi.fn().mockResolvedValue(true),
