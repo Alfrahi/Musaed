@@ -167,7 +167,16 @@ impl ConversationStore {
         conn.execute(
             "INSERT INTO messages (id, conversation_id, role, content, timestamp, model, done,
                                   request_id, images, eval_count, prompt_eval_count, total_duration, eval_duration, rag_sources, error)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
+             ON CONFLICT(id) DO UPDATE SET
+                 content = excluded.content,
+                 done = excluded.done,
+                 eval_count = excluded.eval_count,
+                 prompt_eval_count = excluded.prompt_eval_count,
+                 total_duration = excluded.total_duration,
+                 eval_duration = excluded.eval_duration,
+                 rag_sources = excluded.rag_sources,
+                 error = excluded.error",
             params![
                 &msg.id,
                 conversation_id,

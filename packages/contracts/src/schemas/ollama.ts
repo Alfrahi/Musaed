@@ -57,6 +57,7 @@ export const ModelValidationSchema = z.object({
   isValid: z.boolean(),
   modelName: z.string(),
   details: OllamaModelDetailsSchema.nullish(),
+  contextLength: z.number().int().nullish(),
 });
 
 export const OllamaHealthSchema = z.object({

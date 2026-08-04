@@ -138,6 +138,12 @@ pub struct ModelValidation {
     pub is_valid: bool,
     pub model_name: String,
     pub details: Option<OllamaModelDetails>,
+    /// The model's maximum context window, parsed from the `/api/show`
+    /// response's `model_info` map. The key is architecture-prefixed
+    /// (e.g. `llama.context_length`, `qwen2.context_length`), so the value
+    /// is extracted by scanning for any key ending in `.context_length`.
+    /// `None` when the field is absent or unsupported by the model.
+    pub context_length: Option<u32>,
 }
 
 #[cfg(test)]
@@ -383,6 +389,7 @@ mod tests {
             is_valid: true,
             model_name: "llama3".to_string(),
             details: None,
+            context_length: None,
         };
         let json = serde_json::to_string(&validation).unwrap();
         assert!(json.contains("\"modelName\":\"llama3\""));

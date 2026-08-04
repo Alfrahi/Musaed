@@ -253,6 +253,86 @@ async fn test_message_with_rag_sources() {
     assert_eq!(sources[0].start_line, 10);
 }
 
+/// Regression test for the assistant-message double-insert race.
+///
+/// The frontend persists the assistant placeholder immediately (NULL metrics,
+/// empty content) and re-persists the same message id when the stream's `done`
+/// event arrives (with final content + `eval_count`/`prompt_eval_count`/...).
+/// `add_message` MUST upsert on conflict; a plain INSERT would lose metrics
+/// on reload because the second insert hits a PRIMARY KEY violation.
+#[tokio::test]
+async fn test_upsert_message_updates_existing_row() {
+    let store = get_test_store();
+    let conv = Conversation {
+        id: "upsert-conv".into(),
+        title: "Upsert".into(),
+        model: "m".into(),
+        settings: ChatSettings::default(),
+        created_at: 0,
+        updated_at: 0,
+        messages: vec![],
+    };
+    store.create_conversation(&conv).await.unwrap();
+
+    // 1) Placeholder insert — empty content, NULL metrics (mimics useChatSend).
+    let placeholder = Message {
+        id: "msg-upsert".into(),
+        role: "assistant".into(),
+        content: "".into(),
+        images: None,
+        timestamp: 1,
+        model: Some("m".into()),
+        done: Some(false),
+        request_id: Some("req-1".into()),
+        eval_count: None,
+        prompt_eval_count: None,
+        total_duration: None,
+        eval_duration: None,
+        rag_sources: None,
+        error: None,
+    };
+    store
+        .add_message(&conv.id, &placeholder)
+        .await
+        .expect("placeholder insert");
+
+    // 2) Final insert — same id, now with content + metrics (mimics useTauriEvents done).
+    let final_msg = Message {
+        id: "msg-upsert".into(),
+        role: "assistant".into(),
+        content: "Hello back".into(),
+        images: None,
+        timestamp: 1,
+        model: Some("m".into()),
+        done: Some(true),
+        request_id: Some("req-1".into()),
+        eval_count: Some(42),
+        prompt_eval_count: Some(10),
+        total_duration: Some(500),
+        eval_duration: Some(50),
+        rag_sources: None,
+        error: None,
+    };
+    store
+        .add_message(&conv.id, &final_msg)
+        .await
+        .expect("final upsert should not error");
+
+    // 3) Verify the persisted row carries the FINAL values, not the placeholder.
+    let fetched = store
+        .get_conversation_with_messages(&conv.id)
+        .await
+        .expect("fetch");
+    assert_eq!(fetched.messages.len(), 1, "should be one row, not two");
+    let m = &fetched.messages[0];
+    assert_eq!(m.content, "Hello back");
+    assert_eq!(m.done, Some(true));
+    assert_eq!(m.eval_count, Some(42));
+    assert_eq!(m.prompt_eval_count, Some(10));
+    assert_eq!(m.total_duration, Some(500));
+    assert_eq!(m.eval_duration, Some(50));
+}
+
 #[tokio::test]
 async fn test_service_layer_list() {
     let store = get_test_store_arc();

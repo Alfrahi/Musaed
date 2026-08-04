@@ -11,6 +11,7 @@ export { useTauriEvents } from './hooks/useTauriEvents';
 export { useAutoTitle, triggerAutoTitle } from './hooks/useAutoTitle';
 export { useConversationMessages } from './hooks/useConversationMessages';
 export { useTokenUsage } from './hooks/useTokenUsage';
+export { useModelContextWindow } from './hooks/useModelContextWindow';
 export { initializeConversations } from './utils/conversation-backend';
 export { isDefaultTitle, generateConversationTitle } from './utils/title-generator';
 export { attachmentImageSrc } from './image-attachment';

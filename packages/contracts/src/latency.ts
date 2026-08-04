@@ -41,6 +41,7 @@ export const IPC_LATENCY_BUDGETS: Readonly<Record<string, LatencyBudgetMs>> = {
   /** Lightweight status checks — must return near-instantly */
   cmd_ollama_check_health: 2000,
   cmd_ollama_verify_service: 2000,
+  cmd_ollama_validate_model: 2000,
   cmd_ollama_get_models: 5000,
   /** Model management — moderate weight */
   cmd_ollama_delete_model: 5000,
@@ -151,7 +152,11 @@ export type LatencyBudgetCategory =
   | 'menu-bar';
 
 export function getIpcLatencyBudgetCategory(command: string): LatencyBudgetCategory | undefined {
-  if (command.startsWith('cmd_ollama_check_') || command === 'cmd_ollama_verify_service') {
+  if (
+    command.startsWith('cmd_ollama_check_') ||
+    command === 'cmd_ollama_verify_service' ||
+    command === 'cmd_ollama_validate_model'
+  ) {
     return 'status';
   }
   if (command.startsWith('cmd_ollama_')) {

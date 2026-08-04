@@ -29,7 +29,7 @@ pub mod types; // placeholder for health refactor
 pub use commands::{cmd_ollama_abort_chat, cmd_ollama_chat, cmd_ollama_check_health};
 pub use models::{
     cmd_ollama_abort_pull, cmd_ollama_delete_model, cmd_ollama_get_models, cmd_ollama_pull_model,
-    cmd_ollama_verify_service,
+    cmd_ollama_validate_model, cmd_ollama_verify_service,
 };
 pub use title::cmd_ollama_generate_title;
 
