@@ -122,6 +122,25 @@ export function stopStreamForConversation(conversationId: string): void {
 }
 
 /**
+ * Natural-completion counterpart to `stopStreamForConversation`. Flushes
+ * buffered content + pending metrics (promptEvalCount, evalCount, etc.)
+ * to the message store and cleans up streaming state — but does NOT set
+ * `stopped: true` on the assistant message, since the stream finished on
+ * its own rather than being aborted by the user.
+ *
+ * Called from `useTauriEvents.handleToken` when `payload.done === true`.
+ */
+export function completeStreamForConversation(conversationId: string): void {
+  flushAndStop(conversationId);
+  useStreamingStore.getState().stopStream(conversationId);
+  useStreamingStore.getState().clearStream(conversationId);
+  const { activeStreams } = useStreamingStore.getState();
+  if (Object.keys(activeStreams).length === 0) {
+    useUIStore.getState().setStreaming(false);
+  }
+}
+
+/**
  * Stops batching for a conversation without flushing.
  * Used when aborting a stream where buffered content should be discarded.
  * Clears the liveContent and pendingMetrics buffers to prevent memory leaks.

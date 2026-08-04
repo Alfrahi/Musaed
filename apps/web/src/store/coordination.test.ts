@@ -10,6 +10,7 @@ import {
   registerHydrationCoordination,
   coordinateStopStream,
   stopStreamForConversation,
+  completeStreamForConversation,
 } from './coordination';
 
 beforeEach(() => {
@@ -170,6 +171,70 @@ describe('stopStreamForConversation', () => {
     });
 
     stopStreamForConversation('conv-1');
+
+    expect(useUIStore.getState().isStreaming).toBe(true);
+  });
+});
+
+describe('completeStreamForConversation', () => {
+  beforeEach(() => {
+    useStreamingStore.setState({
+      liveContent: { 'conv-1': { chunks: ['hello'] } },
+      pendingMetrics: { 'conv-1': { promptEvalCount: 42, evalCount: 10 } },
+      activeStreams: { 'conv-1': 'req-1' },
+      flushedStreams: new Set<string>(),
+    });
+    useMessageStore.setState({
+      messages: {
+        'conv-1': [
+          { id: 'msg-1', role: 'user', content: 'hi', timestamp: 1 },
+          { id: 'msg-2', role: 'assistant', content: 'partial', timestamp: 2, done: false },
+        ],
+      },
+    });
+    useUIStore.setState({ isStreaming: true });
+  });
+
+  it('flushes buffered content + metrics and marks done, but NOT stopped', () => {
+    completeStreamForConversation('conv-1');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    const lastMsg = messages[messages.length - 1];
+    expect(lastMsg.content).toBe('partialhello');
+    expect(lastMsg.done).toBe(true);
+    expect(lastMsg.stopped).toBeUndefined();
+    expect(lastMsg.promptEvalCount).toBe(42);
+    expect(lastMsg.evalCount).toBe(10);
+    expect(useUIStore.getState().isStreaming).toBe(false);
+  });
+
+  it('does not set stopped:true even when there is no buffered content', () => {
+    useStreamingStore.setState({
+      liveContent: {},
+      pendingMetrics: {},
+    });
+
+    completeStreamForConversation('conv-1');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    const lastMsg = messages[messages.length - 1];
+    expect(lastMsg.stopped).toBeUndefined();
+  });
+
+  it('is idempotent — calling twice does not double-flush', () => {
+    completeStreamForConversation('conv-1');
+    completeStreamForConversation('conv-1');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    expect(messages.length).toBe(2);
+  });
+
+  it('does not clear the global streaming flag when other streams are active', () => {
+    useStreamingStore.setState({
+      activeStreams: { 'conv-1': 'req-1', 'conv-2': 'req-2' },
+    });
+
+    completeStreamForConversation('conv-1');
 
     expect(useUIStore.getState().isStreaming).toBe(true);
   });

@@ -58,6 +58,7 @@ vi.mock('@/store/batch-manager', () => ({
 
 vi.mock('@/store/coordination', () => ({
   stopStreamForConversation: vi.fn(),
+  completeStreamForConversation: vi.fn(),
 }));
 
 vi.mock('@/store/message-store', () => ({
