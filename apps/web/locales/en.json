@@ -429,6 +429,29 @@
       "description": "Uses Ollama as the local engine for high-speed LLM inference on your hardware."
     }
   },
+  "commandPalette": {
+    "placeholder": "Search commands and conversations…",
+    "noResults": "No commands found",
+    "categories": {
+      "navigation": "Navigation",
+      "model": "Model",
+      "appearance": "Appearance",
+      "chatActions": "Chat Actions",
+      "help": "Help"
+    },
+    "commands": {
+      "newChat": "New Chat",
+      "goToSettings": "Go to Settings",
+      "goToLibrary": "Go to Model Library",
+      "goToInfo": "Go to About",
+      "switchModel": "Switch to {model}",
+      "toggleTheme": "Toggle Theme",
+      "toggleLanguage": "Toggle Language",
+      "clearAllChats": "Clear All Chats",
+      "exportCurrentChat": "Export Current Chat",
+      "keyboardShortcuts": "Keyboard Shortcuts"
+    }
+  },
   "fallback": {
     "retry": "Retry",
     "general": {
