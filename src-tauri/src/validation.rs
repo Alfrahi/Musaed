@@ -398,7 +398,7 @@ mod tests {
     fn generated_constants_sanity() {
         assert_eq!(MAX_MODEL_NAME_LEN, 128);
         assert_eq!(MAX_REQUEST_ID_LEN, 128);
-        assert_eq!(MAX_MESSAGE_CONTENT_LEN, 50 * 1024);
+        assert_eq!(MAX_MESSAGE_CONTENT_LEN, 64 * 1024);
         assert_eq!(MAX_MESSAGES_COUNT, 1000);
         assert_eq!(MAX_IMAGES_PER_MESSAGE, 10);
         assert_eq!(MAX_IMAGE_B64_LEN, 10 * 1024 * 1024);
