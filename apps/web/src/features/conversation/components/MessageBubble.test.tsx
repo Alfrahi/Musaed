@@ -39,6 +39,12 @@ vi.mock('@/lib/i18n', async () => {
         if (key === 'a11y.showNMoreSources' && values) {
           return `Show ${values.count} more…`;
         }
+        if (key === 'chat.userUploadedImage') {
+          return 'User uploaded image';
+        }
+        if (key === 'chat.userUploadedImageIndexed' && values) {
+          return `User uploaded image ${values.index} of ${values.total}`;
+        }
         return key;
       },
       formatNumber: (num: number) => num.toString(),
@@ -327,5 +333,70 @@ describe('MessageBubble - hover actions (Prompt 14)', () => {
 
     expect(screen.queryByRole('button', { name: 'chat.regenerate' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'chat.editPrompt' })).not.toBeInTheDocument();
+  });
+});
+
+describe('MessageBubble - image alt text (UX-007)', () => {
+  const singleImageMessage: Message = {
+    id: 'msg-img-1',
+    role: 'user',
+    content: 'What is this?',
+    timestamp: Date.now(),
+    images: ['data:image/png;base64,iVBORw0KGgo='],
+  };
+
+  const multiImageMessage: Message = {
+    id: 'msg-img-multi',
+    role: 'user',
+    content: 'Compare these',
+    timestamp: Date.now(),
+    images: [
+      'data:image/png;base64,iVBORw0KGgoAAA==',
+      'data:image/png;base64,iVBORw0KGgoBBB==',
+      'data:image/png;base64,iVBORw0KGgoCCC==',
+    ],
+  };
+
+  it('renders meaningful alt text for a single user uploaded image', () => {
+    render(
+      <MessageBubble message={singleImageMessage} labels={baseLabels} formatNumber={formatNumber} />
+    );
+
+    const img = screen.getByAltText('User uploaded image');
+    expect(img).toBeInTheDocument();
+    expect(img.tagName).toBe('IMG');
+  });
+
+  it('renders indexed alt text when multiple images are attached', () => {
+    render(
+      <MessageBubble message={multiImageMessage} labels={baseLabels} formatNumber={formatNumber} />
+    );
+
+    expect(screen.getByAltText('User uploaded image 1 of 3')).toBeInTheDocument();
+    expect(screen.getByAltText('User uploaded image 2 of 3')).toBeInTheDocument();
+    expect(screen.getByAltText('User uploaded image 3 of 3')).toBeInTheDocument();
+  });
+
+  it('does not render any images when message has no images', () => {
+    const message: Message = {
+      id: 'msg-noimg',
+      role: 'user',
+      content: 'just text',
+      timestamp: Date.now(),
+    };
+    render(<MessageBubble message={message} labels={baseLabels} formatNumber={formatNumber} />);
+
+    expect(screen.queryByAltText('User uploaded image')).not.toBeInTheDocument();
+  });
+
+  it('does not render empty alt text', () => {
+    render(
+      <MessageBubble message={singleImageMessage} labels={baseLabels} formatNumber={formatNumber} />
+    );
+
+    const images = screen.getAllByRole('img');
+    for (const img of images) {
+      expect(img.getAttribute('alt')).not.toBe('');
+    }
   });
 });

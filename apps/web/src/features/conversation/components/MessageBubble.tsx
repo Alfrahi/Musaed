@@ -403,31 +403,40 @@ const MessageHeader = ({
 const MessageImages = ({
   images,
   onImageClick,
+  t,
 }: {
   images: string[];
   onImageClick: (img: string) => void;
-}) => (
-  <div className="flex flex-wrap gap-2">
-    {images.map((img, idx) => (
-      <Button
-        key={idx}
-        variant="ghost"
-        size="icon"
-        onClick={() => onImageClick(img)}
-        className="h-auto w-auto cursor-zoom-in p-0"
-      >
-        <Image
-          src={attachmentImageSrc(img)}
-          alt=""
-          width={384}
-          height={256}
-          unoptimized
-          className="border-sidebar-border shadow-native max-w-sm border"
-        />
-      </Button>
-    ))}
-  </div>
-);
+  t: (key: string, values?: Record<string, string | number | boolean>) => string;
+}) => {
+  const total = images.length;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {images.map((img, idx) => (
+        <Button
+          key={idx}
+          variant="ghost"
+          size="icon"
+          onClick={() => onImageClick(img)}
+          className="h-auto w-auto cursor-zoom-in p-0"
+        >
+          <Image
+            src={attachmentImageSrc(img)}
+            alt={
+              total > 1
+                ? t('chat.userUploadedImageIndexed', { index: idx + 1, total })
+                : t('chat.userUploadedImage')
+            }
+            width={384}
+            height={256}
+            unoptimized
+            className="border-sidebar-border shadow-native max-w-sm border"
+          />
+        </Button>
+      ))}
+    </div>
+  );
+};
 
 /**
  * Renders a single message bubble in the chat window.
@@ -483,7 +492,7 @@ const MessageBubble = ({
           />
 
           {message.images && message.images.length > 0 && (
-            <MessageImages images={message.images} onImageClick={setLightboxImage} />
+            <MessageImages images={message.images} onImageClick={setLightboxImage} t={t} />
           )}
 
           <div className="text-foreground selection:bg-primary/20 text-body leading-relaxed antialiased">

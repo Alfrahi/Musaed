@@ -72,6 +72,8 @@
     "webPreviewWarning": "أنا أعمل في معاينة الويب. للدردشة مع النماذج المحلية، يرجى تشغيل هذا التطبيق باستخدام Tauri.",
     "userQuestion": "سؤال المستخدم:",
     "userUploaded": "تم الرفع بواسطة المستخدم",
+    "userUploadedImage": "صورة مرفوعة بواسطة المستخدم",
+    "userUploadedImageIndexed": "صورة مرفوعة بواسطة المستخدم {index} من {total}",
     "attachImage": "إرفاق صورة",
     "localNode": "العقدة المحلية",
     "localUser": "المستخدم المحلي",
