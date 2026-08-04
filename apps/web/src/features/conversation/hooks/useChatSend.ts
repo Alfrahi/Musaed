@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import { type Message, type ChatSettings } from '@musaed/contracts';
+import { type Message, type ChatSettings, VALIDATION_LIMITS } from '@musaed/contracts';
 import { useTranslation } from '@/lib/i18n';
 import { chatApi } from '@/lib/ipc';
 import { config } from '@/lib/config';
@@ -173,10 +173,20 @@ export function useChatSend(): {
       }
 
       const conversationId = currentConversationId || 'test-conversation-id';
+      const fullPrompt = buildPromptWithContext(trimmedInput, files, t);
+
+      if (!config.isTest && fullPrompt.length > VALIDATION_LIMITS.MAX_MESSAGE_CONTENT_LEN) {
+        toast.error(
+          t('chat.messageTooLong', {
+            limit: Math.round(VALIDATION_LIMITS.MAX_MESSAGE_CONTENT_LEN / 1024),
+          })
+        );
+        return;
+      }
+
       const requestId = crypto.randomUUID();
       initiateStreaming(conversationId, requestId);
 
-      const fullPrompt = buildPromptWithContext(trimmedInput, files, t);
       const { ragSources } = await assembleChatRag(trimmedInput);
 
       const [userMsg, assistantMsg] = createChatMessages(

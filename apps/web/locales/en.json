@@ -79,6 +79,7 @@
     "localUser": "Local User",
     "noModelSelected": "No model selected. Please select a model from the library first.",
     "connectionFailed": "Ollama connection failed. Please ensure it is running.",
+    "messageTooLong": "Message exceeds the {limit} KiB limit. Please shorten your input.",
     "connecting": "Connecting to Ollama",
     "offline": "Offline",
     "startFresh": "Start fresh session",

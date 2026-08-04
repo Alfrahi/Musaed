@@ -22,8 +22,8 @@ export const MAX_MODEL_NAME_LEN = 128;
 /** Maximum length for a request ID. */
 export const MAX_REQUEST_ID_LEN = 128;
 
-/** Maximum length for a single message's content field (50 KiB). */
-export const MAX_MESSAGE_CONTENT_LEN = 50 * 1024;
+/** Maximum length for a single message's content field (64 KiB). */
+export const MAX_MESSAGE_CONTENT_LEN = 64 * 1024;
 
 /** Maximum number of messages in a single chat request. */
 export const MAX_MESSAGES_COUNT = 1000;
