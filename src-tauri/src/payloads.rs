@@ -73,14 +73,25 @@ pub struct ChatOptions {
 #[serde(rename_all = "camelCase")]
 pub struct OllamaToken {
     pub model: Option<String>,
+    /// Ollama sends `created_at` (snake_case); serde expects `createdAt`
+    /// (camelCase). The alias accepts both so the field round-trips from
+    /// Ollama's `/api/chat` NDJSON and serializes to camelCase for the
+    /// TypeScript frontend.
+    #[serde(alias = "created_at")]
     pub created_at: Option<String>,
     pub message: Option<ChatMessage>,
     pub done: bool,
+    #[serde(alias = "total_duration")]
     pub total_duration: Option<u64>,
+    #[serde(alias = "load_duration")]
     pub load_duration: Option<u64>,
+    #[serde(alias = "prompt_eval_count")]
     pub prompt_eval_count: Option<u32>,
+    #[serde(alias = "prompt_eval_duration")]
     pub prompt_eval_duration: Option<u64>,
+    #[serde(alias = "eval_count")]
     pub eval_count: Option<u32>,
+    #[serde(alias = "eval_duration")]
     pub eval_duration: Option<u64>,
     pub request_id: String,
 }
@@ -295,6 +306,49 @@ mod tests {
         let back: OllamaToken = serde_json::from_str(&json).unwrap();
         assert_eq!(back.request_id, "req-1");
         assert!(!back.done);
+    }
+
+    /// Verifies that `OllamaToken` can deserialize the snake_case JSON
+    /// that Ollama's `/api/chat` endpoint actually returns. The struct
+    /// uses `#[serde(rename_all = "camelCase")]` for frontend serialization
+    /// but each underscored field carries `#[serde(alias = "...")]` so the
+    /// snake_case keys from Ollama are also accepted.
+    #[test]
+    fn ollama_token_deser_from_ollama_snake_case() {
+        let ollama_json = serde_json::json!({
+            "model": "llama3",
+            "created_at": "2024-01-01T00:00:00Z",
+            "message": { "role": "assistant", "content": "Hello" },
+            "done": true,
+            "total_duration": 5_000_000_000_u64,
+            "load_duration": 1_000_000_000_u64,
+            "prompt_eval_count": 42,
+            "prompt_eval_duration": 100_000_000_u64,
+            "eval_count": 10,
+            "eval_duration": 500_000_000_u64,
+        });
+        // Simulate what process_chat_stream does: insert requestId after
+        // parsing the raw Ollama line.
+        let mut value = ollama_json.clone();
+        value["requestId"] = serde_json::json!("req-1");
+
+        let token: OllamaToken = serde_json::from_value(value).unwrap();
+        assert_eq!(token.model.as_deref(), Some("llama3"));
+        assert_eq!(token.created_at.as_deref(), Some("2024-01-01T00:00:00Z"));
+        assert!(token.done);
+        assert_eq!(token.total_duration, Some(5_000_000_000));
+        assert_eq!(token.load_duration, Some(1_000_000_000));
+        assert_eq!(token.prompt_eval_count, Some(42));
+        assert_eq!(token.prompt_eval_duration, Some(100_000_000));
+        assert_eq!(token.eval_count, Some(10));
+        assert_eq!(token.eval_duration, Some(500_000_000));
+        assert_eq!(token.request_id, "req-1");
+
+        // Verify the token serializes back to camelCase for the frontend
+        let json = serde_json::to_string(&token).unwrap();
+        assert!(json.contains("\"promptEvalCount\":42"));
+        assert!(json.contains("\"evalCount\":10"));
+        assert!(json.contains("\"totalDuration\":5000000000"));
     }
 
     // --- OllamaModel / OllamaModelDetails tests ---
