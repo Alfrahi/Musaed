@@ -34,7 +34,7 @@ const TaskStatus = () => {
 
         <div className="flex min-w-0 flex-col">
           <div className="flex items-center gap-2">
-            <span className="caption-md max-w-[100px] truncate font-bold tracking-widest text-zinc-900 uppercase dark:text-zinc-100">
+            <span className="caption-md max-w-[100px] truncate font-bold text-zinc-900 dark:text-zinc-100">
               {name === 'current' ? t('library.pulling') : name}
             </span>
             {status?.progress !== undefined && (
@@ -69,7 +69,7 @@ const TaskStatus = () => {
 
         <div className="flex min-w-0 flex-col">
           <div className="flex items-center gap-2">
-            <span className="caption-md max-w-[100px] truncate font-bold tracking-widest text-zinc-900 uppercase dark:text-zinc-100">
+            <span className="caption-md max-w-[100px] truncate font-bold text-zinc-900 dark:text-zinc-100">
               {name === 'current' ? t('library.pulling') : name}
             </span>
             {status?.progress !== undefined && (

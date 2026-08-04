@@ -34,7 +34,7 @@ const ExportActions = ({
       <Button
         variant="ghost"
         onClick={onExportJson}
-        className="text-caption flex-1 gap-2 rounded-md bg-zinc-100 py-2 font-bold tracking-widest uppercase hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+        className="text-caption flex-1 gap-2 rounded-md bg-zinc-100 py-2 font-medium hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
       >
         <Download size={14} />
         {labels.exportJson}
@@ -43,7 +43,7 @@ const ExportActions = ({
         variant="ghost"
         disabled
         onClick={onImportJson}
-        className="text-caption flex-1 cursor-not-allowed gap-2 rounded-md bg-zinc-100 py-2 font-bold tracking-widest uppercase opacity-40 grayscale dark:bg-zinc-800"
+        className="text-caption flex-1 cursor-not-allowed gap-2 rounded-md bg-zinc-100 py-2 font-medium opacity-40 grayscale dark:bg-zinc-800"
         title={comingSoon}
       >
         <Upload size={14} />
@@ -53,7 +53,7 @@ const ExportActions = ({
     <Button
       variant="outline"
       onClick={onExportMarkdown}
-      className="text-caption gap-2 rounded-md py-2 font-bold tracking-widest text-zinc-600 uppercase hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800"
+      className="text-caption gap-2 rounded-md py-2 font-medium text-zinc-600 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800"
     >
       <FileText size={14} />
       {labels.exportMarkdown}

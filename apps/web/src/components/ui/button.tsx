@@ -13,6 +13,14 @@ import { cn } from '@/lib/utils';
  * footers so the migration is visually neutral. See: ImplementationPromptSequence
  * Prompt 4.
  *
+ * Typography is variant-specific (UXUIOrderedPromptSequence Phase 3 Prompt 8):
+ * `font-semibold` on primary/secondary/danger (let color carry the weight),
+ * `font-medium` on ghost/outline. The base no longer applies `font-bold`,
+ * `uppercase`, or `tracking-widest` — those treatments are reserved for
+ * micro-labels, tab navigation, and eyebrow text (see
+ * typography-uppercase-convention memory). Individual button instances that
+ * need uppercase (e.g. NEW CHAT, modal DONE) add it via `className`.
+ *
  * `size: 'icon'` is reserved for square icon-only buttons (e.g. modal close,
  * refresh) — it collapses the padding and centres an icon.
  *
@@ -23,17 +31,17 @@ import { cn } from '@/lib/utils';
  * (zinc-600 / 700 + dark-mode overrides) — they would clobber the variant's
  * own `text-*` color (`text-white` on `primary`, `text-zinc-900` on the dark
  * `secondary` override, …) under CSS source-order precedence. The variant's
- * `variant` slot owns color; the `size` slot owns only height / padding /
- * font-size. This keeps size→font-size a self-contained contract while still
- * honoring the STANDARDS.md §13 / WCAG 1.4.3 minimum-typesize floor (12px)
- * that `musaed-typography/no-sub-12px-typography` enforces unconditionally —
- * including on this file.
+ * `variant` slot owns color and font-weight; the `size` slot owns only
+ * height / padding / font-size. This keeps size→font-size a self-contained
+ * contract while still honoring the STANDARDS.md §13 / WCAG 1.4.3 minimum
+ * typesize floor (12px) that `musaed-typography/no-sub-12px-typography`
+ * enforces unconditionally — including on this file.
  */
 export const buttonVariants = cva(
   // base — applies to every variant
   [
-    'inline-flex items-center justify-center gap-2 rounded-md font-bold',
-    'uppercase tracking-widest transition-all duration-fast',
+    'inline-flex items-center justify-center gap-2 rounded-md',
+    'transition-all duration-fast',
     'active:scale-95',
     'outline-none',
     'focus-ring',
@@ -43,21 +51,23 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         // Solid primary action — used for Send, modal footer confirm.
-        primary: 'bg-blue-600 text-white shadow-native hover:opacity-90 dark:bg-blue-500',
+        // font-semibold (not bold) — let color carry the weight.
+        primary:
+          'bg-blue-600 font-semibold text-white shadow-native hover:opacity-90 dark:bg-blue-500',
         // High-contrast "utility" solid — used on the Abort button and the
         // modal Done footer. Preserves the existing dark-on-light / light-on-dark
         // contrast pair these surfaces already had.
         secondary:
-          'bg-zinc-900 text-white shadow-native hover:opacity-90 dark:bg-zinc-100 dark:text-zinc-900',
+          'bg-zinc-900 font-semibold text-white shadow-native hover:opacity-90 dark:bg-zinc-100 dark:text-zinc-900',
         // Transparent — used for tab navigation, modal close, refresh, attach.
         ghost:
-          'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100',
+          'font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100',
         // Bordered — used for reset / destructive-but-not-primary buttons.
         outline:
-          'border border-zinc-200 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800',
+          'border border-zinc-200 font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800',
         // Destructive — used for project delete, reset preferences, abort.
         danger:
-          'bg-red-500 text-white shadow-native hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500',
+          'bg-red-500 font-semibold text-white shadow-native hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500',
       },
       size: {
         sm: 'h-8 px-3 text-caption',

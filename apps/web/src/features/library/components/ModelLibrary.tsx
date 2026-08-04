@@ -116,7 +116,7 @@ const InstalledList = ({
         <Button
           variant="secondary"
           onClick={onBrowseLibrary}
-          className="text-caption rounded-lg font-bold tracking-widest uppercase"
+          className="text-caption rounded-lg font-semibold"
         >
           {emptyCta}
         </Button>
@@ -177,7 +177,7 @@ const LibraryFooter = ({
     <Button
       variant="secondary"
       onClick={onClose}
-      className="text-caption shadow-native h-10 rounded-lg ps-6 pe-6 font-bold tracking-normal uppercase"
+      className="text-caption shadow-native h-10 rounded-lg ps-6 pe-6 tracking-normal uppercase"
     >
       {closeLabel}
     </Button>

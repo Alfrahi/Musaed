@@ -69,15 +69,13 @@ const CodeBlock = ({ language, value }: CodeBlockProps) => {
     >
       <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900 px-4 py-2">
         <div className="flex items-center gap-3">
-          <span className="caption-md font-bold tracking-widest text-zinc-500 uppercase">
-            {displayLanguage}
-          </span>
+          <span className="caption-md font-mono font-medium text-zinc-500">{displayLanguage}</span>
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={onCopy}
-          className="caption-xs cursor-pointer gap-1.5 rounded px-2 py-1 font-bold tracking-widest text-zinc-400 uppercase hover:text-white focus-visible:ring-1 focus-visible:ring-blue-500"
+          className="caption-xs cursor-pointer gap-1.5 rounded px-2 py-1 font-medium text-zinc-400 hover:text-white focus-visible:ring-1 focus-visible:ring-blue-500"
           aria-label={t('a11y.copyCode')}
         >
           {copied ? (

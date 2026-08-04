@@ -23,7 +23,7 @@ const DiagnosticsSettings = () => {
           {/* eslint-disable-next-line musaed-buttons/prefer-button-primitive -- inline text-link, not a CVA button */}
           <button
             onClick={() => setIsLogViewerOpen(true)}
-            className="caption-xs font-bold tracking-widest text-blue-600 uppercase transition-colors hover:text-blue-700"
+            className="caption-xs font-medium text-blue-600 transition-colors hover:text-blue-700"
           >
             {t('settings.viewLogs')}
           </button>

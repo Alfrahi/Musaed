@@ -53,7 +53,7 @@ const InstalledModelCard = ({
             {details?.parameterSize && (
               <span
                 className={cn(
-                  'caption-xs rounded-sm px-1.5 py-0.5 font-black tracking-tighter uppercase',
+                  'caption-xs rounded-sm px-1.5 py-0.5 font-semibold tracking-tighter',
                   isHeavy
                     ? 'bg-red-100 text-red-600 dark:bg-red-900/30'
                     : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800'
@@ -65,7 +65,7 @@ const InstalledModelCard = ({
           </div>
           <div className="mbs-1 flex items-center gap-3">
             {displaySize && (
-              <span className="caption-xs flex items-center gap-1 font-bold tracking-widest text-zinc-400 uppercase">
+              <span className="caption-xs flex items-center gap-1 font-medium tracking-normal text-zinc-400">
                 <HardDrive size={12} />
                 {displaySize}
               </span>
@@ -79,7 +79,7 @@ const InstalledModelCard = ({
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <div className="caption-xs flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 font-bold tracking-widest text-green-600 uppercase dark:bg-green-900/20 dark:text-green-400">
+        <div className="caption-xs flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 font-semibold text-green-600 dark:bg-green-900/20 dark:text-green-400">
           <ShieldCheck size={12} />
           {t('common.ready')}
         </div>
