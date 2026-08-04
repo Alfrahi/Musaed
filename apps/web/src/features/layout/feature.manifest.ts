@@ -25,8 +25,10 @@ const manifest: FeatureManifest = {
    */
   dependencies: [
     'conversation', // Composition dependency (exempt from import rules)
-    'sidebar', // Composition dependency (exempt from import rules)
+    'sidebar', // Composition dependency — exportToMarkdown used by CommandPalette
     'settings', // HomeClient.tsx imports SettingsModal from @/features/settings
+    'library', // HomeClient.tsx imports ModelLibrary from @/features/library
+    'info', // HomeClient.tsx imports InfoModal from @/features/info
   ],
 } as const;
 

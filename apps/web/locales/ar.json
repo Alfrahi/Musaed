@@ -429,6 +429,29 @@
       "description": "يستخدم Ollama كمحرك محلي للاستدلال السريع لنماذج اللغة على جهازك."
     }
   },
+  "commandPalette": {
+    "placeholder": "ابحث في الأوامر والمحادثات…",
+    "noResults": "لم يتم العثور على أوامر",
+    "categories": {
+      "navigation": "التنقل",
+      "model": "النموذج",
+      "appearance": "المظهر",
+      "chatActions": "إجراءات المحادثة",
+      "help": "المساعدة"
+    },
+    "commands": {
+      "newChat": "محادثة جديدة",
+      "goToSettings": "الذهاب إلى الإعدادات",
+      "goToLibrary": "الذهاب إلى مكتبة النماذج",
+      "goToInfo": "الذهاب إلى حول",
+      "switchModel": "التبديل إلى {model}",
+      "toggleTheme": "تبديل المظهر",
+      "toggleLanguage": "تبديل اللغة",
+      "clearAllChats": "مسح جميع المحادثات",
+      "exportCurrentChat": "تصدير المحادثة الحالية",
+      "keyboardShortcuts": "اختصارات لوحة المفاتيح"
+    }
+  },
   "fallback": {
     "retry": "إعادة المحاولة",
     "general": {

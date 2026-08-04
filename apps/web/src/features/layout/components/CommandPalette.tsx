@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useId, useEffect, useRef, useCallback } from 'react';
-import { Search, MessageSquare, Settings, Plus } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import { useSettingsStore } from '@/store';
-import { useConversationActions } from '@/features/conversation';
-import { useSetLibraryOpen, useSetSettingsOpen } from '@/store/hooks';
 import { ModalLayout } from '@/components/ui';
+import { useCommands } from '../hooks/useCommands';
+import { CATEGORY_ORDER, type Command, type CommandCategory } from '../utils/build-commands';
 
 /**
  * CommandPalette — app-wide ⌘K palette.
@@ -15,19 +15,15 @@ import { ModalLayout } from '@/components/ui';
  * that orchestrates multiple features (conversation, library, settings).
  * `layout` is the composition root (STANDARDS.md §3) and is exempt from
  * cross-feature import rules, so it may freely import from `@/features/*`.
+ *
+ * The command list is assembled by `useCommands` (hooks/useCommands.ts) from
+ * live store state; the pure builder pipeline lives in
+ * `utils/build-commands.ts`. This file is presentational only.
  */
 
 interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
-}
-
-interface Command {
-  id: string;
-  label: string;
-  keywords: string[];
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  action: () => void;
 }
 
 /** Single command option in the palette listbox. */
@@ -94,47 +90,12 @@ const PaletteSearch = ({
   </div>
 );
 
-/** Build the command list from translated labels and action closures. */
-function buildCommands(
-  t: (key: string) => string,
-  createNewConversation: () => void,
-  setLibraryOpen: (v: boolean) => void,
-  setSettingsOpen: (v: boolean) => void,
-  onClose: () => void
-): Command[] {
-  return [
-    {
-      id: 'new-chat',
-      label: t('chat.newChat'),
-      keywords: ['new', 'chat', 'conversation'],
-      icon: Plus,
-      action: () => {
-        createNewConversation();
-        onClose();
-      },
-    },
-    {
-      id: 'library',
-      label: t('common.library'),
-      keywords: ['library', 'models', 'pull', 'download'],
-      icon: MessageSquare,
-      action: () => {
-        setLibraryOpen(true);
-        onClose();
-      },
-    },
-    {
-      id: 'settings',
-      label: t('settings.title'),
-      keywords: ['settings', 'preferences', 'config'],
-      icon: Settings,
-      action: () => {
-        setSettingsOpen(true);
-        onClose();
-      },
-    },
-  ];
-}
+/** Category section header inside the listbox. */
+const CategoryHeader = ({ label }: { label: string }) => (
+  <div className="caption-xs px-4 pt-3 pb-1 font-semibold tracking-normal text-zinc-400">
+    {label}
+  </div>
+);
 
 /** Renders the filtered command list or empty state. */
 const CommandList = ({
@@ -142,28 +103,51 @@ const CommandList = ({
   activeIndex,
   onHover,
   emptyLabel,
+  t,
 }: {
   filtered: Command[];
   activeIndex: number;
   onHover: (i: number) => void;
   emptyLabel: string;
-}) => (
-  <div role="listbox" className="max-h-64 overflow-y-auto py-2">
-    {filtered.length === 0 ? (
-      <p className="text-caption px-4 py-6 text-center text-zinc-400">{emptyLabel}</p>
-    ) : (
-      filtered.map((cmd, i) => (
-        <CommandOption
-          key={cmd.id}
-          cmd={cmd}
-          isActive={i === activeIndex}
-          onSelect={cmd.action}
-          onHover={() => onHover(i)}
-        />
-      ))
-    )}
-  </div>
-);
+  t: (key: string) => string;
+}) => {
+  if (filtered.length === 0) {
+    return (
+      <div role="listbox" className="max-h-80 overflow-y-auto py-2">
+        <p className="text-caption px-4 py-6 text-center text-zinc-400">{emptyLabel}</p>
+      </div>
+    );
+  }
+
+  // Group by category in display order, only show categories that have matches.
+  const groups: { category: CommandCategory; items: { cmd: Command; index: number }[] }[] = [];
+  for (const cat of CATEGORY_ORDER) {
+    const items: { cmd: Command; index: number }[] = [];
+    filtered.forEach((cmd, i) => {
+      if (cmd.category === cat) items.push({ cmd, index: i });
+    });
+    if (items.length > 0) groups.push({ category: cat, items });
+  }
+
+  return (
+    <div role="listbox" className="max-h-80 overflow-y-auto py-2">
+      {groups.map((group) => (
+        <div key={group.category}>
+          <CategoryHeader label={t(group.category)} />
+          {group.items.map(({ cmd, index }) => (
+            <CommandOption
+              key={cmd.id}
+              cmd={cmd}
+              isActive={index === activeIndex}
+              onSelect={cmd.action}
+              onHover={() => onHover(index)}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
   const [query, setQuery] = useState('');
@@ -172,17 +156,7 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
   const titleId = useId();
   const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
-  const { createNewConversation } = useConversationActions();
-  const setLibraryOpen = useSetLibraryOpen();
-  const setSettingsOpen = useSetSettingsOpen();
-
-  const commands = buildCommands(
-    t,
-    createNewConversation,
-    setLibraryOpen,
-    setSettingsOpen,
-    onClose
-  );
+  const commands = useCommands(onClose);
 
   const filtered = query
     ? commands.filter(
@@ -228,14 +202,15 @@ const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
             setActiveIndex(0);
           }}
           onKeyDown={handleKeyDown}
-          placeholder={t('a11y.searchModels')}
+          placeholder={t('commandPalette.placeholder')}
           inputRef={inputRef}
         />
         <CommandList
           filtered={filtered}
           activeIndex={activeIndex}
           onHover={setActiveIndex}
-          emptyLabel={t('library.noModelsFound')}
+          emptyLabel={t('commandPalette.noResults')}
+          t={t}
         />
       </div>
     </ModalLayout>
