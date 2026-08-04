@@ -72,6 +72,8 @@
     "webPreviewWarning": "I'm running in a web preview. To chat with local models, please run this application using Tauri.",
     "userQuestion": "User Question:",
     "userUploaded": "User uploaded",
+    "userUploadedImage": "User uploaded image",
+    "userUploadedImageIndexed": "User uploaded image {index} of {total}",
     "attachImage": "Attach image",
     "localNode": "Local Node",
     "localUser": "Local User",
