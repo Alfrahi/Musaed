@@ -10,6 +10,7 @@ let mockModels: { name: string }[] = [];
 const mockSetSelectedModel = vi.fn();
 const mockFetchModels = vi.fn();
 const mockIsStreaming = { value: false };
+const mockIsFetching = { value: false };
 
 vi.mock('@/lib/i18n', async () => {
   const actual = await vi.importActual('@/lib/i18n');
@@ -51,7 +52,7 @@ vi.mock('@/store/settings-store', () => ({
 }));
 
 vi.mock('@/features/library/hooks/useModelActions', () => ({
-  useModelActions: () => ({ fetchModels: mockFetchModels }),
+  useModelActions: () => ({ fetchModels: mockFetchModels, isFetching: mockIsFetching.value }),
 }));
 
 // `act` is needed when firing keyboard events that setState synchronously.
@@ -68,6 +69,7 @@ describe('ModelSelector — ARIA combobox pattern (audit F8)', () => {
     mockSetSelectedModel.mockClear();
     mockFetchModels.mockClear();
     mockIsStreaming.value = false;
+    mockIsFetching.value = false;
   });
 
   describe('Trigger semantics', () => {
@@ -265,6 +267,44 @@ describe('ModelSelector — ARIA combobox pattern (audit F8)', () => {
       const refresh = screen.getByTitle('library.refreshModels');
       fireEvent.click(refresh);
       expect(mockFetchModels).toHaveBeenCalledWith(true);
+    });
+  });
+
+  describe('Loading state (audit UX-012 / S-7)', () => {
+    it('shows loading indicator instead of empty state when isFetching and no models', () => {
+      mockModels = [];
+      mockIsFetching.value = true;
+      render(<ModelSelector />);
+      fireEvent.click(screen.getByRole('combobox'));
+      // The loading indicator uses role=status + aria-live=polite.
+      const listbox = screen.getByRole('listbox');
+      const status = screen.getByRole('status');
+      expect(status).toHaveAttribute('aria-live', 'polite');
+      expect(status).toHaveTextContent('library.loadingModels');
+      // The empty-state "no models found" should NOT appear inside the listbox.
+      expect(listbox).not.toHaveTextContent('library.noModelsFound');
+    });
+
+    it('shows empty state (not loading) when fetch completed with zero models', () => {
+      mockModels = [];
+      mockIsFetching.value = false;
+      render(<ModelSelector />);
+      fireEvent.click(screen.getByRole('combobox'));
+      // No loading indicator.
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      // Empty state is shown inside the dropdown listbox (not the trigger).
+      const listbox = screen.getByRole('listbox');
+      expect(listbox).toHaveTextContent('library.noModelsFound');
+    });
+
+    it('shows model list (not loading indicator) when models are available during fetch', () => {
+      mockModels = [{ name: 'llama3.1' }];
+      mockIsFetching.value = true;
+      render(<ModelSelector />);
+      fireEvent.click(screen.getByRole('combobox'));
+      // Models are already present — list renders normally even during a refetch.
+      expect(screen.getAllByRole('option')).toHaveLength(1);
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
   });
 });

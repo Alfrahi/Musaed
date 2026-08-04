@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Settings2, RefreshCw, ChevronDown, Check } from 'lucide-react';
+import { Settings2, RefreshCw, ChevronDown, Check, Loader2 } from 'lucide-react';
 import { useUIStore } from '@/store/ui-store';
 import { useModelStore, useSettingsStore } from '@/store';
 import { cn } from '@/lib/utils';
@@ -66,10 +66,12 @@ const SelectorTrigger = ({
 const RefreshButton = ({
   onClick,
   isStreaming,
+  isFetching,
   title,
 }: {
   onClick: () => void;
   isStreaming: boolean;
+  isFetching: boolean;
   title: string;
 }) => (
   <Button
@@ -79,7 +81,7 @@ const RefreshButton = ({
     className="rounded-md text-zinc-400 hover:bg-zinc-100 hover:text-blue-500 dark:hover:bg-zinc-800"
     title={title}
   >
-    <RefreshCw size={14} className={cn(isStreaming && 'animate-spin')} />
+    <RefreshCw size={14} className={cn((isStreaming || isFetching) && 'animate-spin')} />
   </Button>
 );
 
@@ -135,6 +137,66 @@ const EmptyModels = ({ message }: { message: string }) => (
   </div>
 );
 
+/** Loading state shown while models are being fetched (audit UX-012 / S-7). */
+const LoadingModels = ({ message }: { message: string }) => (
+  <div
+    className="text-body flex items-center justify-center gap-2 py-6 ps-4 pe-4 text-zinc-500 dark:text-zinc-400"
+    role="status"
+    aria-live="polite"
+  >
+    <Loader2 size={14} className="animate-spin" />
+    <span>{message}</span>
+  </div>
+);
+
+/** List body — options, loading, or empty state. Extracted to keep
+ * `ModelDropdown` under the lint max-lines-per-function budget. */
+const ModelListBody = ({
+  filtered,
+  selectedModel,
+  activeIndex,
+  optionIdPrefix,
+  onSelect,
+  onOptionHover,
+  isFetching,
+  emptyLabel,
+  loadingLabel,
+}: {
+  filtered: { name: string }[];
+  selectedModel: string;
+  activeIndex: number;
+  optionIdPrefix: string;
+  onSelect: (name: string) => void;
+  onOptionHover: (index: number) => void;
+  isFetching: boolean;
+  emptyLabel: string;
+  loadingLabel: string;
+}) => {
+  if (filtered.length > 0) {
+    return (
+      <>
+        {filtered.map((m, i) => (
+          <ModelOption
+            key={m.name}
+            id={`${optionIdPrefix}-${i}`}
+            name={m.name}
+            isSelected={selectedModel === m.name}
+            isActive={i === activeIndex}
+            index={i}
+            onSelect={() => onSelect(m.name)}
+            onOptionHover={onOptionHover}
+          />
+        ))}
+      </>
+    );
+  }
+  return isFetching ? (
+    <LoadingModels message={loadingLabel} />
+  ) : (
+    <EmptyModels message={emptyLabel} />
+  );
+};
+
 /** Dropdown panel with model list and optional search filter. */
 const ModelDropdown = ({
   listboxId,
@@ -150,6 +212,8 @@ const ModelDropdown = ({
   searchQuery,
   onSearchChange,
   searchPlaceholder,
+  isFetching,
+  loadingLabel,
 }: {
   listboxId: string;
   triggerId: string;
@@ -164,6 +228,8 @@ const ModelDropdown = ({
   searchQuery: string;
   onSearchChange: (q: string) => void;
   searchPlaceholder: string;
+  isFetching: boolean;
+  loadingLabel: string;
 }) => {
   const filtered = searchQuery
     ? models.filter((m) => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -190,26 +256,37 @@ const ModelDropdown = ({
         />
       </div>
       <div className="max-h-[300px] overflow-y-auto">
-        {filtered.length > 0 ? (
-          filtered.map((m, i) => (
-            <ModelOption
-              key={m.name}
-              id={`${optionIdPrefix}-${i}`}
-              name={m.name}
-              isSelected={selectedModel === m.name}
-              isActive={i === activeIndex}
-              index={i}
-              onSelect={() => onSelect(m.name)}
-              onOptionHover={onOptionHover}
-            />
-          ))
-        ) : (
-          <EmptyModels message={emptyLabel} />
-        )}
+        <ModelListBody
+          filtered={filtered}
+          selectedModel={selectedModel}
+          activeIndex={activeIndex}
+          optionIdPrefix={optionIdPrefix}
+          onSelect={onSelect}
+          onOptionHover={onOptionHover}
+          isFetching={isFetching}
+          emptyLabel={emptyLabel}
+          loadingLabel={loadingLabel}
+        />
       </div>
     </div>
   );
 };
+
+/** Closes the dropdown when a `mousedown` event fires outside `ref`. */
+function useOutsideClick(
+  ref: React.RefObject<HTMLElement | null>,
+  active: boolean,
+  onClose: () => void
+) {
+  useEffect(() => {
+    if (!active) return;
+    const handler = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) onClose();
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [ref, active, onClose]);
+}
 
 const ModelSelector = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -223,7 +300,7 @@ const ModelSelector = () => {
   const setSelectedModel = useModelStore((s) => s.setSelectedModel);
   const isStreaming = useUIStore((s) => s.isStreaming);
   const language = useSettingsStore((s) => s.globalSettings.language);
-  const { fetchModels } = useModelActions();
+  const { fetchModels, isFetching } = useModelActions();
   const { t } = useTranslation(language);
 
   // reason: `useId()` returns a stable, unique base for the lifetime of this
@@ -263,16 +340,7 @@ const ModelSelector = () => {
   }, [isOpen, modelNames, selectedModel, typeAheadRef]);
 
   // Outside-click close (preserved from the previous behavior — audit F8 task 4).
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
+  useOutsideClick(dropdownRef, isOpen, () => setIsOpen(false));
 
   const activeOptionId =
     isOpen && activeIndex >= 0 ? `${optionIdPrefix}-${activeIndex}` : undefined;
@@ -303,6 +371,7 @@ const ModelSelector = () => {
         <RefreshButton
           onClick={() => fetchModels(true)}
           isStreaming={isStreaming}
+          isFetching={isFetching}
           title={t('library.refreshModels')}
         />
       </div>
@@ -322,6 +391,8 @@ const ModelSelector = () => {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           searchPlaceholder={t('a11y.searchModels')}
+          isFetching={isFetching}
+          loadingLabel={t('library.loadingModels')}
         />
       )}
     </div>

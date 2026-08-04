@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useModelStore } from '@/store/model-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { useUIStore } from '@/store/ui-store';
@@ -11,6 +11,11 @@ import { useTranslation } from '@/lib/i18n';
 
 /**
  * Hook providing actions for fetching and deleting Ollama models.
+ *
+ * `isFetching` is ephemeral UI state local to the hook instance — it is NOT
+ * persisted in the model store. ModelSelector reads it to distinguish the
+ * "fetch in progress" loading state from the "fetch completed, zero models"
+ * empty state (audit finding UX-012 / S-7).
  */
 export function useModelActions() {
   const setModels = useModelStore((s) => s.setModels);
@@ -20,6 +25,7 @@ export function useModelActions() {
   const setErrorMessage = useUIStore((s) => s.setErrorMessage);
   const setOllamaConnected = useUIStore((s) => s.setOllamaConnected);
   const { t } = useTranslation(language);
+  const [isFetching, setIsFetching] = useState(false);
 
   /**
    * Fetches the list of available models from the configured Ollama server.
@@ -28,6 +34,7 @@ export function useModelActions() {
     async (isManual = false) => {
       const { ollamaUrl: baseUrl } = useSettingsStore.getState().globalSettings;
       if (isManual) toast.loading(t('library.refreshing'), { id: 'fetch-models' });
+      setIsFetching(true);
 
       try {
         const data = await ollamaApi.getModels(baseUrl);
@@ -56,6 +63,8 @@ export function useModelActions() {
         setFetchError(t('error.failedToFetchModels'));
         setErrorMessage(t('error.failedToFetchModels'));
         if (isManual) toast.error(t('error.failedToFetchModels'), { id: 'fetch-models' });
+      } finally {
+        setIsFetching(false);
       }
     },
     [setModels, setSelectedModel, setFetchError, setErrorMessage, setOllamaConnected, t]
@@ -78,5 +87,5 @@ export function useModelActions() {
     [fetchModels]
   );
 
-  return { fetchModels, deleteModel };
+  return { fetchModels, deleteModel, isFetching };
 }
