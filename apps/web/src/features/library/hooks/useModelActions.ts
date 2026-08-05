@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { useModelStore } from '@/store/model-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { useUIStore } from '@/store/ui-store';
+import { useModelParamsStore } from '@/store/model-params-store';
 import { ollamaApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
 import toast from 'react-hot-toast';
@@ -43,6 +44,10 @@ export function useModelActions() {
           setOllamaConnected(true);
           setModels(data);
           setFetchError(null);
+
+          // Auto-prune orphaned per-model param profiles for models no longer
+          // present on the Ollama server (delete, refresh, app start).
+          useModelParamsStore.getState().prune(data.map((m) => m.name));
 
           const { selectedModel: currentSelected } = useModelStore.getState();
           if (!currentSelected && data.length > 0) setSelectedModel(data[0].name);

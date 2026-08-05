@@ -22,6 +22,7 @@ vi.mock('@/lib/i18n', () => ({
 
 vi.mock('@/features/library', () => ({
   ModelSelector: () => <div data-testid="model-selector">ModelSelector</div>,
+  useModelContextWindow: () => ({ contextWindow: null, loading: false, error: null }),
 }));
 
 vi.mock('@/features/rag', () => ({

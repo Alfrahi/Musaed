@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { useMessageStore } from '@/store/message-store';
 import { useConversationStore } from '@/store/conversation-store';
 import { useSettingsStore } from '@/store/settings-store';
-import { useModelContextWindow } from './useModelContextWindow';
+import { useModelContextWindow } from '@/features/library';
 
 export interface TokenUsageInfo {
   /** Total tokens used in the current conversation (prompt + completion). */

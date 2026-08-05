@@ -4,10 +4,13 @@ import { useEffect, useState } from 'react';
 import { ollamaApi } from '@/lib/ipc';
 import { useSelectedModel } from '@/store/model-store';
 import { useOllamaUrl } from '@/store/settings-store';
+import type { ModelDefaultParams } from '@musaed/contracts';
 
 export interface ModelContextWindowInfo {
   /** The resolved context window size for the current model. */
   contextWindow: number | null;
+  /** Per-model sampling defaults from the Modelfile's `PARAMETER` directives. */
+  defaultParams: ModelDefaultParams | null;
   /** True while the context window is being fetched. */
   loading: boolean;
   /** Error message if the fetch failed; null otherwise. */
@@ -15,25 +18,30 @@ export interface ModelContextWindowInfo {
 }
 
 /**
- * Fetches the current model's `context_length` from the Ollama server
- * via `cmd_ollama_validate_model` (which calls `/api/show`). The value
- * is architecture-prefixed in the response (e.g. `llama.context_length`),
- * extracted dynamically on the Rust side.
+ * Fetches the current model's `context_length` and per-model sampling
+ * defaults from the Ollama server via `cmd_ollama_validate_model` (which
+ * calls `/api/show`). The `contextWindow` value is architecture-prefixed
+ * (e.g. `llama.context_length`), extracted on the Rust side. The
+ * `defaultParams` are parsed from the Modelfile's `PARAMETER` directives;
+ * null when the model has no Modelfile or those directives are absent.
  *
- * Falls back to `null` when the model is invalid, the server is
- * unreachable, or `context_length` is absent — callers (e.g.
- * `useTokenUsage`) should fall back to `numCtx` from settings in that case.
+ * Falls back to `null` for both `contextWindow` and `defaultParams` when
+ * the model is invalid or the server is unreachable —
+ * `selectResolvedParams` / `useResolvedModelParams` then fall back to
+ * `DEFAULT_MODEL_PARAMS` per field.
  */
 export function useModelContextWindow(): ModelContextWindowInfo {
   const selectedModel = useSelectedModel();
   const baseUrl = useOllamaUrl();
   const [contextWindow, setContextWindow] = useState<number | null>(null);
+  const [defaultParams, setDefaultParams] = useState<ModelDefaultParams | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedModel || !baseUrl) {
       setContextWindow(null);
+      setDefaultParams(null);
       setError(null);
       return;
     }
@@ -46,15 +54,18 @@ export function useModelContextWindow(): ModelContextWindowInfo {
       .validateModel(baseUrl, selectedModel)
       .then((result) => {
         if (cancelled) return;
-        if (result && result.isValid && result.contextLength) {
-          setContextWindow(result.contextLength);
+        if (result && result.isValid) {
+          setContextWindow(result.contextLength ?? null);
+          setDefaultParams(result.defaultParams ?? null);
         } else {
           setContextWindow(null);
+          setDefaultParams(null);
         }
       })
       .catch(() => {
         if (cancelled) return;
         setContextWindow(null);
+        setDefaultParams(null);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -65,5 +76,5 @@ export function useModelContextWindow(): ModelContextWindowInfo {
     };
   }, [selectedModel, baseUrl]);
 
-  return { contextWindow, loading, error };
+  return { contextWindow, defaultParams, loading, error };
 }

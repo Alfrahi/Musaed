@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Settings2, RefreshCw, ChevronDown, Check, Loader2 } from 'lucide-react';
+import { Settings2, RefreshCw, ChevronDown, Check, Loader2, SlidersHorizontal } from 'lucide-react';
 import { useUIStore } from '@/store/ui-store';
 import { useModelStore, useSettingsStore } from '@/store';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,7 @@ import { useModelActions } from '@/features/library/hooks/useModelActions';
 import { useModelSelectorKeyboard } from '@/features/library/hooks/useModelSelectorKeyboard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import ModelParamsPanel from './ModelParamsPanel';
 
 /** Dropdown trigger button with selected model name. */
 const SelectorTrigger = ({
@@ -198,6 +199,48 @@ const ModelListBody = ({
 };
 
 /** Dropdown panel with model list and optional search filter. */
+/**
+ * Collapsible "Parameters" section at the bottom of the model dropdown.
+ * Extracted from `ModelDropdown` to keep the parent under the lint
+ * `max-lines-per-function` cap. Only renders when a model is selected.
+ */
+const ParamsCollapsible = ({
+  selectedModel,
+  parametersLabel,
+}: {
+  selectedModel: string;
+  parametersLabel: string;
+}) => {
+  const [paramsOpen, setParamsOpen] = useState(false);
+  if (!selectedModel) return null;
+  return (
+    <div className="border-sidebar-border border-t">
+      <button
+        type="button"
+        onClick={() => setParamsOpen((v) => !v)}
+        className={cn(
+          'text-body duration-normal flex w-full cursor-pointer items-center justify-between py-2.5 ps-4 pe-4 font-semibold text-zinc-500 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+        )}
+        aria-expanded={paramsOpen}
+      >
+        <span className="flex items-center gap-2">
+          <SlidersHorizontal size={14} />
+          <span>{parametersLabel}</span>
+        </span>
+        <ChevronDown
+          size={14}
+          className={cn('duration-normal transition-transform', paramsOpen && 'rotate-180')}
+        />
+      </button>
+      {paramsOpen && (
+        <div className="pbs-2 pbe-2">
+          <ModelParamsPanel />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ModelDropdown = ({
   listboxId,
   triggerId,
@@ -214,6 +257,7 @@ const ModelDropdown = ({
   searchPlaceholder,
   isFetching,
   loadingLabel,
+  parametersLabel,
 }: {
   listboxId: string;
   triggerId: string;
@@ -230,6 +274,7 @@ const ModelDropdown = ({
   searchPlaceholder: string;
   isFetching: boolean;
   loadingLabel: string;
+  parametersLabel: string;
 }) => {
   const filtered = searchQuery
     ? models.filter((m) => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -238,7 +283,7 @@ const ModelDropdown = ({
   return (
     <div
       id={listboxId}
-      className="inset-be-full mbe-2 border-sidebar-border shadow-pro animate-in fade-in slide-in-from-bottom-2 duration-normal absolute start-0 z-50 min-w-[240px] border bg-white py-1 transition-all dark:bg-zinc-900"
+      className="inset-be-full mbe-2 border-sidebar-border shadow-pro animate-in fade-in slide-in-from-bottom-2 duration-normal absolute start-0 z-50 min-w-[280px] border bg-white py-1 transition-all dark:bg-zinc-900"
       role="listbox"
       aria-labelledby={triggerId}
     >
@@ -268,6 +313,8 @@ const ModelDropdown = ({
           loadingLabel={loadingLabel}
         />
       </div>
+
+      <ParamsCollapsible selectedModel={selectedModel} parametersLabel={parametersLabel} />
     </div>
   );
 };
@@ -393,6 +440,7 @@ const ModelSelector = () => {
           searchPlaceholder={t('a11y.searchModels')}
           isFetching={isFetching}
           loadingLabel={t('library.loadingModels')}
+          parametersLabel={t('library.modelParameters')}
         />
       )}
     </div>

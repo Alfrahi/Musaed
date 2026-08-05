@@ -7,4 +7,6 @@ export { useLibraryInitialization } from './hooks/useLibraryInitialization';
 export { useModelCapabilities } from './hooks/useModelCapabilities';
 export { useEmbeddingModels } from './hooks/useEmbeddingModels';
 export { useLibraryTauriEvents } from './hooks/useLibraryTauriEvents';
+export { useModelContextWindow } from './hooks/useModelContextWindow';
+export type { ModelContextWindowInfo } from './hooks/useModelContextWindow';
 export type { default as LibraryFeature } from './feature.manifest';

@@ -53,11 +53,20 @@ export const PullErrorSchema = z.object({
   duration: z.coerce.number().optional(),
 });
 
+export const ModelDefaultParamsSchema = z.object({
+  temperature: z.number().nullish(),
+  topP: z.number().nullish(),
+  topK: z.number().int().nullish(),
+  numCtx: z.number().int().nonnegative().nullish(),
+  numPredict: z.number().int().nullish(),
+});
+
 export const ModelValidationSchema = z.object({
   isValid: z.boolean(),
   modelName: z.string(),
   details: OllamaModelDetailsSchema.nullish(),
   contextLength: z.number().int().nullish(),
+  defaultParams: ModelDefaultParamsSchema.nullish(),
 });
 
 export const OllamaHealthSchema = z.object({
