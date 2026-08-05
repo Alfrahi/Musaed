@@ -118,6 +118,16 @@ pub struct RagSource {
     pub language: Option<String>,
 }
 
+/// A message matched by a full-text search, bundled with its parent
+/// conversation metadata so the frontend can group results by conversation.
+#[derive(Debug, Serialize, Deserialize, Clone, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct MessageSearchResult {
+    pub message: Message,
+    pub conversation_id: String,
+    pub conversation_title: String,
+}
+
 /// Initialize the conversation store - creates necessary directories and database
 pub fn init_conversation_store(_app_handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     // Implementation would go here

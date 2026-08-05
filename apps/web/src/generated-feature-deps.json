@@ -1,9 +1,10 @@
 {
   "conversation": ["library", "rag"],
   "info": [],
-  "layout": ["conversation", "sidebar", "settings"],
+  "layout": ["conversation", "sidebar", "settings", "library", "info", "search"],
   "library": [],
   "rag": ["library"],
+  "search": ["conversation"],
   "settings": ["library"],
   "sidebar": ["conversation", "rag"]
 }

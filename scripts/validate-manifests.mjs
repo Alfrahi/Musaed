@@ -326,11 +326,13 @@ function parseIpcNamespaceToCommandMap() {
  */
 function scanFeatureIpcUsage(featureDir, nsToCmd) {
   const used = new Set();
-  // Build a regex that matches any `namespaceApi.method` call.
+  // Build a regex that matches any `namespaceApi.method` call, tolerating
+  // whitespace (including newlines) between the namespace and the `.method`
+  // accessor — common in chained-promise call sites like `ollamaApi\n  .foo()`.
   const patterns = [];
   for (const [nsKey] of nsToCmd) {
     const [ns, method] = nsKey.split('.');
-    patterns.push(`${ns}\\.${method}\\b`);
+    patterns.push(`${ns}\\s*\\.${method}\\b`);
   }
   const combined = new RegExp(patterns.join('|'), 'g');
 
@@ -353,7 +355,9 @@ function scanFeatureIpcUsage(featureDir, nsToCmd) {
           .replace(/\/\/[^\n]*/g, '');        // line comments
         let match;
         while ((match = combined.exec(content)) !== null) {
-          const nsKey = match[0];
+          // Normalize whitespace (incl. newlines) so `ns\n  .method` maps
+          // to the canonical `ns.method` key the map is built with.
+          const nsKey = match[0].replace(/\s+/g, '');
           const cmds = nsToCmd.get(nsKey);
           if (cmds) for (const cmd of cmds) used.add(cmd);
         }

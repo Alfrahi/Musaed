@@ -21,6 +21,7 @@ interface UIState {
   isInfoOpen: boolean;
   isCheatsheetOpen: boolean;
   isCommandPaletteOpen: boolean;
+  isSearchOpen: boolean;
   sidebarTab: SidebarTab;
   /** Counter for pending store rehydrations. Decremented by each store's onRehydrateStorage callback. */
   _pendingRehydrations: number;
@@ -34,6 +35,7 @@ interface UIState {
   setInfoOpen: (isInfoOpen: boolean) => void;
   setCheatsheetOpen: (isCheatsheetOpen: boolean) => void;
   setCommandPaletteOpen: (isCommandPaletteOpen: boolean) => void;
+  setSearchOpen: (isSearchOpen: boolean) => void;
   setSidebarTab: (tab: SidebarTab) => void;
   /** Called before rehydration starts. Increments the pending counter by `count`. */
   setPendingRehydrations: (count: number) => void;
@@ -47,7 +49,8 @@ export const selectIsAnyModalOpen = (state: UIState) =>
   state.isLibraryOpen ||
   state.isInfoOpen ||
   state.isCheatsheetOpen ||
-  state.isCommandPaletteOpen;
+  state.isCommandPaletteOpen ||
+  state.isSearchOpen;
 
 export const selectHasError = (state: UIState) => !!state.errorMessage;
 
@@ -63,6 +66,7 @@ export const useUIStore = createWithEqualityFn<UIState>()(
     isInfoOpen: false,
     isCheatsheetOpen: false,
     isCommandPaletteOpen: false,
+    isSearchOpen: false,
     sidebarTab: 'chats',
     _pendingRehydrations: 0,
     setStreaming: (isStreaming) => set({ isStreaming }),
@@ -75,6 +79,7 @@ export const useUIStore = createWithEqualityFn<UIState>()(
     setInfoOpen: (isInfoOpen) => set({ isInfoOpen }),
     setCheatsheetOpen: (isCheatsheetOpen) => set({ isCheatsheetOpen }),
     setCommandPaletteOpen: (isCommandPaletteOpen) => set({ isCommandPaletteOpen }),
+    setSearchOpen: (isSearchOpen) => set({ isSearchOpen }),
     setSidebarTab: (sidebarTab) => set({ sidebarTab }),
     setPendingRehydrations: (count) => set({ _pendingRehydrations: count }),
     onStoreRehydrated: () =>
@@ -109,5 +114,6 @@ export const useSetLibraryOpen = () => useUIStore((s) => s.setLibraryOpen);
 export const useSetInfoOpen = () => useUIStore((s) => s.setInfoOpen);
 export const useSetCheatsheetOpen = () => useUIStore((s) => s.setCheatsheetOpen);
 export const useSetCommandPaletteOpen = () => useUIStore((s) => s.setCommandPaletteOpen);
+export const useSetSearchOpen = () => useUIStore((s) => s.setSearchOpen);
 export const useSidebarTab = () => useUIStore((s) => s.sidebarTab);
 export const useSetSidebarTab = () => useUIStore((s) => s.setSidebarTab);

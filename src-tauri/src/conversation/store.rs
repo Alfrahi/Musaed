@@ -1,5 +1,5 @@
 use crate::conversation::connection::open_connection;
-use crate::conversation::models::{Conversation, Message, MessageError};
+use crate::conversation::models::{Conversation, Message, MessageError, MessageSearchResult};
 use rusqlite::{params, Connection, Result as SqlResult};
 use std::path::Path;
 use tokio::sync::Mutex;
@@ -196,5 +196,312 @@ impl ConversationStore {
             ],
         )?;
         Ok(())
+    }
+
+    /// Search messages across all conversations using SQL LIKE on content.
+    /// Returns results grouped by conversation, ordered by most recent match.
+    ///
+    /// The `query` is treated as a literal substring: `%` and `_` characters
+    /// in the query are escaped (with `\`) so they match literally rather than
+    /// acting as SQL LIKE wildcards. The `\` escape character itself is also
+    /// escaped. The pattern is then wrapped in `%...%` for substring matching.
+    pub async fn search_messages(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> SqlResult<Vec<MessageSearchResult>> {
+        let conn = self.lock_conn().await;
+        // Escape LIKE pattern metacharacters so the user query is matched
+        // literally. Order matters: backslash must be escaped first so we
+        // don't double-escape the escape characters we add for `%` and `_`.
+        let escaped = query
+            .replace('\\', "\\\\")
+            .replace('%', "\\%")
+            .replace('_', "\\_");
+        let like_pattern = format!("%{}%", escaped);
+        let limit_i64 = limit as i64;
+
+        let mut stmt = conn.prepare(
+            "SELECT m.id, m.role, m.content, m.timestamp, m.model, m.done,
+                    m.request_id, m.images, m.eval_count, m.prompt_eval_count,
+                    m.total_duration, m.eval_duration, m.rag_sources, m.error,
+                    c.id AS conv_id, c.title AS conv_title
+             FROM messages m
+             JOIN conversations c ON m.conversation_id = c.id
+             WHERE m.content LIKE ?1 ESCAPE '\\'
+             ORDER BY m.timestamp DESC
+             LIMIT ?2",
+        )?;
+
+        let results = stmt
+            .query_map(params![like_pattern, limit_i64], |row| {
+                Ok(MessageSearchResult {
+                    message: Message {
+                        id: row.get(0)?,
+                        role: row.get(1)?,
+                        content: row.get(2)?,
+                        timestamp: row.get(3)?,
+                        model: row.get(4)?,
+                        done: row.get(5)?,
+                        request_id: row.get(6)?,
+                        images: row
+                            .get::<_, Option<String>>(7)?
+                            .map(|s| serde_json::from_str(&s).unwrap_or_default()),
+                        eval_count: row.get(8)?,
+                        prompt_eval_count: row.get(9)?,
+                        total_duration: row.get(10)?,
+                        eval_duration: row.get(11)?,
+                        rag_sources: row
+                            .get::<_, Option<String>>(12)?
+                            .map(|s| serde_json::from_str(&s).unwrap_or_default()),
+                        error: row
+                            .get::<_, Option<String>>(13)?
+                            .and_then(|s| serde_json::from_str::<MessageError>(&s).ok()),
+                    },
+                    conversation_id: row.get(14)?,
+                    conversation_title: row.get(15)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(results)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::conversation::models::{ChatSettings, Conversation, Message};
+    use tempfile::tempdir;
+
+    /// Build a `ConversationStore` backed by a fresh temp-directory SQLite DB.
+    async fn make_store() -> ConversationStore {
+        let dir = tempdir().unwrap();
+        ConversationStore::new(&dir.path().join("test.sqlite3")).unwrap()
+    }
+
+    /// Helper: insert a conversation + one message into the store.
+    async fn seed_message(
+        store: &ConversationStore,
+        conv_id: &str,
+        conv_title: &str,
+        msg_id: &str,
+        role: &str,
+        content: &str,
+        timestamp: i64,
+    ) {
+        let conv = Conversation {
+            id: conv_id.to_string(),
+            title: conv_title.to_string(),
+            model: "test-model".to_string(),
+            settings: ChatSettings::default(),
+            created_at: timestamp,
+            updated_at: timestamp,
+            messages: vec![],
+        };
+        store.create_conversation(&conv).await.unwrap();
+        let msg = Message {
+            id: msg_id.to_string(),
+            role: role.to_string(),
+            content: content.to_string(),
+            images: None,
+            timestamp,
+            model: None,
+            done: None,
+            request_id: None,
+            eval_count: None,
+            prompt_eval_count: None,
+            total_duration: None,
+            eval_duration: None,
+            rag_sources: None,
+            error: None,
+        };
+        store.add_message(conv_id, &msg).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_search_returns_matching_messages() {
+        let store = make_store().await;
+        seed_message(
+            &store,
+            "conv-1",
+            "First Chat",
+            "msg-1",
+            "user",
+            "What is the capital of France?",
+            1000,
+        )
+        .await;
+        seed_message(
+            &store,
+            "conv-2",
+            "Second Chat",
+            "msg-2",
+            "assistant",
+            "The capital of France is Paris.",
+            2000,
+        )
+        .await;
+
+        let results = store.search_messages("France", 50).await.unwrap();
+        assert_eq!(results.len(), 2);
+        // Ordered by timestamp DESC — most recent first.
+        assert_eq!(results[0].message.id, "msg-2");
+        assert_eq!(results[0].conversation_id, "conv-2");
+        assert_eq!(results[0].conversation_title, "Second Chat");
+        assert_eq!(results[1].message.id, "msg-1");
+        assert_eq!(results[1].conversation_title, "First Chat");
+    }
+
+    #[tokio::test]
+    async fn test_search_returns_empty_when_no_match() {
+        let store = make_store().await;
+        seed_message(
+            &store,
+            "conv-1",
+            "Chat",
+            "msg-1",
+            "user",
+            "Hello world",
+            1000,
+        )
+        .await;
+
+        let results = store.search_messages("nonexistent term", 50).await.unwrap();
+        assert!(results.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_search_respects_limit() {
+        let store = make_store().await;
+        // Seed 5 messages across 5 conversations, all matching "alpha".
+        for i in 0..5 {
+            let ts = (i as i64) * 1000;
+            seed_message(
+                &store,
+                &format!("conv-{i}"),
+                &format!("Chat {i}"),
+                &format!("msg-{i}"),
+                "user",
+                "alpha content",
+                ts,
+            )
+            .await;
+        }
+
+        let results = store.search_messages("alpha", 3).await.unwrap();
+        assert_eq!(results.len(), 3);
+        // Most recent 3 (timestamps 4000, 3000, 2000).
+        assert_eq!(results[0].message.id, "msg-4");
+        assert_eq!(results[1].message.id, "msg-3");
+        assert_eq!(results[2].message.id, "msg-2");
+    }
+
+    #[tokio::test]
+    async fn test_search_matches_case_insensitively() {
+        let store = make_store().await;
+        seed_message(
+            &store,
+            "conv-1",
+            "Chat",
+            "msg-1",
+            "user",
+            "The Quick Brown Fox",
+            1000,
+        )
+        .await;
+
+        // SQL LIKE is case-insensitive for ASCII by default.
+        let results = store.search_messages("quick brown", 50).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].message.id, "msg-1");
+    }
+
+    #[tokio::test]
+    async fn test_search_escapes_percent_wildcard() {
+        let store = make_store().await;
+        // Message containing a literal percent sign.
+        seed_message(
+            &store,
+            "conv-1",
+            "Sales Chat",
+            "msg-1",
+            "assistant",
+            "Revenue growth was 50% this quarter.",
+            1000,
+        )
+        .await;
+        // Message without a percent sign.
+        seed_message(
+            &store,
+            "conv-2",
+            "Other Chat",
+            "msg-2",
+            "user",
+            "No special characters here",
+            2000,
+        )
+        .await;
+
+        // Searching for the literal "50%" should match ONLY the first message
+        // — if `%` were not escaped, LIKE would treat it as a wildcard and
+        // match any content containing "50" followed by anything.
+        let results = store.search_messages("50%", 50).await.unwrap();
+        assert_eq!(results.len(), 1, "should match only the percent message");
+        assert_eq!(results[0].message.id, "msg-1");
+    }
+
+    #[tokio::test]
+    async fn test_search_escapes_underscore_wildcard() {
+        let store = make_store().await;
+        // Message containing a literal underscore.
+        seed_message(
+            &store,
+            "conv-1",
+            "Code Chat",
+            "msg-1",
+            "user",
+            "The variable is named my_var in the code.",
+            1000,
+        )
+        .await;
+        // A different message that contains "myXvar" (no underscore) —
+        // should NOT match "my_var" if `_` is escaped. Without escaping,
+        // `_` matches any single character, so "myXvar" would match.
+        seed_message(
+            &store,
+            "conv-2",
+            "Other Chat",
+            "msg-2",
+            "assistant",
+            "The value is myXvar here.",
+            2000,
+        )
+        .await;
+
+        let results = store.search_messages("my_var", 50).await.unwrap();
+        assert_eq!(results.len(), 1, "underscore should match literally");
+        assert_eq!(results[0].message.id, "msg-1");
+    }
+
+    #[tokio::test]
+    async fn test_search_escapes_backslash() {
+        let store = make_store().await;
+        // Message containing a literal backslash.
+        seed_message(
+            &store,
+            "conv-1",
+            "Path Chat",
+            "msg-1",
+            "user",
+            "Windows path C:\\Users\\test in the logs.",
+            1000,
+        )
+        .await;
+
+        // Searching for the literal backslash sequence should find it.
+        let results = store.search_messages("C:\\Users", 50).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].message.id, "msg-1");
     }
 }

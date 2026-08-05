@@ -93,6 +93,8 @@ vi.mock('@/store/hooks', () => ({
   useSetSettingsOpen: () => vi.fn(),
   useSetInfoOpen: () => vi.fn(),
   useSetCheatsheetOpen: () => vi.fn(),
+  useSetCommandPaletteOpen: () => vi.fn(),
+  useSetSearchOpen: () => vi.fn(),
 }));
 
 // Mock conversation actions.

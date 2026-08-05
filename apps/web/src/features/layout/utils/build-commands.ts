@@ -21,6 +21,7 @@ import {
   Download,
   Keyboard,
   MessageSquare,
+  Search,
 } from 'lucide-react';
 import { dialogApi } from '@/lib/ipc';
 import type { ConversationMetadata } from '@/store/conversation-store';
@@ -58,6 +59,8 @@ export interface CommandCallbacks {
   setSettingsOpen: (v: boolean) => void;
   setInfoOpen: (v: boolean) => void;
   setCheatsheetOpen: (v: boolean) => void;
+  setCommandPaletteOpen: (v: boolean) => void;
+  setSearchOpen: (v: boolean) => void;
   setCurrentConversationId: (id: string) => void;
   setSelectedModel: (model: string) => void;
   updateGlobalSettings: (update: Record<string, unknown>) => void;
@@ -117,6 +120,19 @@ function buildNavCommands(
       action: () => {
         cb.setInfoOpen(true);
         onClose();
+      },
+    },
+    {
+      id: 'nav-search',
+      label: t('search.commandLabel'),
+      keywords: ['search', 'find', 'messages', 'chats', 'lookup', 'grep'],
+      icon: Search,
+      category: nav,
+      action: () => {
+        // Close the palette first so the search modal can take focus without
+        // the palette's escape handler racing against it.
+        cb.setCommandPaletteOpen(false);
+        cb.setSearchOpen(true);
       },
     },
   ];

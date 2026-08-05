@@ -388,6 +388,7 @@
     "deselectProject": "إلغاء تحديد المشروع",
     "removeProject": "إزالة المشروع",
     "commandPalette": "لوحة الأوامر",
+    "searchMessages": "البحث في رسائل المحادثات",
     "shortcutCheatsheet": "اختصارات لوحة المفاتيح",
     "closePreview": "إغلاق معاينة الصورة"
   },
@@ -444,6 +445,15 @@
       "title": "مدعوم بواسطة Ollama",
       "description": "يستخدم Ollama كمحرك محلي للاستدلال السريع لنماذج اللغة على جهازك."
     }
+  },
+  "search": {
+    "title": "البحث في الرسائل",
+    "placeholder": "ابحث في الرسائل عبر جميع المحادثات…",
+    "noResults": "لم يتم العثور على رسائل",
+    "startTyping": "ابدأ الكتابة للبحث في الرسائل",
+    "roleUser": "أنت",
+    "roleAssistant": "المساعد",
+    "commandLabel": "البحث في المحادثات"
   },
   "commandPalette": {
     "placeholder": "ابحث في الأوامر والمحادثات…",

@@ -160,6 +160,8 @@ export const VALIDATION_LIMITS = {
   NUM_CTX_RANGE,
   MAX_STOP_SEQUENCES,
   MAX_STOP_SEQUENCE_LEN,
+  // Search (used by both RAG and conversation message search)
+  MAX_SEARCH_QUERY_LEN,
 } as const;
 
 /** Grouped RAG validation limits (mirrors Rust `rag::validation` module). */

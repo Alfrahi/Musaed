@@ -85,6 +85,7 @@ export const COMMAND_VERSIONS = {
   cmd_conversation_delete: true,
   cmd_conversations_clear: true,
   cmd_conversation_update: true,
+  cmd_conversation_search: true,
 
   // Migrations — backend SQLite schema migrations, exposed to the frontend
   // via the typed IPC bridge so the Settings/Diagnostics UI can drive them.

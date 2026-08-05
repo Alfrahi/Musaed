@@ -19,6 +19,7 @@ vi.mock('@/store/hooks', () => ({
   useSetInfoOpen: () => vi.fn(),
   useSetCheatsheetOpen: () => vi.fn(),
   useSetCommandPaletteOpen: () => vi.fn(),
+  useSetSearchOpen: () => vi.fn(),
 }));
 
 vi.mock('@/store/ui-store', () => ({
@@ -26,6 +27,7 @@ vi.mock('@/store/ui-store', () => ({
     selector({
       isCheatsheetOpen: false,
       isCommandPaletteOpen: false,
+      isSearchOpen: false,
     })
   ),
 }));

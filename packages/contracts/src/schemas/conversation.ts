@@ -42,3 +42,11 @@ export const ConversationSchema = z.object({
   createdAt: z.number(),
   updatedAt: z.number(),
 });
+
+export const MessageSearchResultSchema = z.object({
+  message: MessageSchema,
+  conversationId: z.string(),
+  conversationTitle: z.string(),
+});
+
+export type MessageSearchResult = z.infer<typeof MessageSearchResultSchema>;

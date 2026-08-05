@@ -66,6 +66,7 @@ pub const CONVERSATION_DELETE_ERROR: &str = "CONVERSATION_DELETE_ERROR";
 pub const CONVERSATION_UPDATE_ERROR: &str = "CONVERSATION_UPDATE_ERROR";
 pub const MESSAGE_APPEND_ERROR: &str = "MESSAGE_APPEND_ERROR";
 pub const CONVERSATION_LOCK_ERROR: &str = "CONVERSATION_LOCK_ERROR";
+pub const CONVERSATION_SEARCH_ERROR: &str = "CONVERSATION_SEARCH_ERROR";
 
 // ── Dialog ────────────────────────────────────────────
 pub const DIALOG_ERROR: &str = "DIALOG_ERROR";
@@ -153,6 +154,7 @@ mod tests {
             CONVERSATION_UPDATE_ERROR,
             MESSAGE_APPEND_ERROR,
             CONVERSATION_LOCK_ERROR,
+            CONVERSATION_SEARCH_ERROR,
             INTERNAL_ERROR,
             ABORTED,
             UNKNOWN,

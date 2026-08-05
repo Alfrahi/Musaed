@@ -10,6 +10,7 @@ import {
   useSetInfoOpen,
   useSetCheatsheetOpen,
   useSetCommandPaletteOpen,
+  useSetSearchOpen,
 } from '@/store/hooks';
 import { selectIsAnyModalOpen, useUIStore } from '@/store/ui-store';
 import { useConversationStore } from '@/store/conversation-store';
@@ -35,6 +36,7 @@ export function useGlobalShortcuts() {
   const setInfoOpen = useSetInfoOpen();
   const setCheatsheetOpen = useSetCheatsheetOpen();
   const setCommandPaletteOpen = useSetCommandPaletteOpen();
+  const setSearchOpen = useSetSearchOpen();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -63,6 +65,11 @@ export function useGlobalShortcuts() {
         setCommandPaletteOpen(true);
       }
 
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+
       if (e.key === 'Escape') {
         // Modal-first routing: read state straight from the store so Escape
         // routing stays current without re-running this effect on every toggle.
@@ -73,6 +80,7 @@ export function useGlobalShortcuts() {
           setInfoOpen(false);
           setCheatsheetOpen(false);
           setCommandPaletteOpen(false);
+          setSearchOpen(false);
           return;
         }
 
@@ -98,5 +106,6 @@ export function useGlobalShortcuts() {
     setInfoOpen,
     setCheatsheetOpen,
     setCommandPaletteOpen,
+    setSearchOpen,
   ]);
 }

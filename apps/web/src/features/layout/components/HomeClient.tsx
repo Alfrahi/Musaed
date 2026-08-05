@@ -13,6 +13,7 @@ import {
   useSetInfoOpen,
   useSetCheatsheetOpen,
   useSetCommandPaletteOpen,
+  useSetSearchOpen,
 } from '@/store/hooks';
 import { useUIStore } from '@/store/ui-store';
 import { useGlobalSettings } from '@/store/settings-store';
@@ -65,6 +66,9 @@ const ModelLibrary = dynamic(() => import('@/features/library').then((m) => m.Mo
   ssr: false,
 });
 const InfoModal = dynamic(() => import('@/features/info').then((m) => m.InfoModal), { ssr: false });
+const SearchModalDynamic = dynamic(() => import('@/features/search').then((m) => m.SearchModal), {
+  ssr: false,
+});
 const CommandPalette = dynamic(() => import('./CommandPalette'), { ssr: false });
 const ShortcutCheatsheet = dynamic(() => import('@/components/ui/ShortcutCheatsheet'), {
   ssr: false,
@@ -150,8 +154,10 @@ const HomeClient = () => {
   const setInfoOpen = useSetInfoOpen();
   const setCheatsheetOpen = useSetCheatsheetOpen();
   const setCommandPaletteOpen = useSetCommandPaletteOpen();
+  const setSearchOpen = useSetSearchOpen();
   const isCheatsheetOpen = useUIStore((s) => s.isCheatsheetOpen);
   const isCommandPaletteOpen = useUIStore((s) => s.isCommandPaletteOpen);
+  const isSearchOpen = useUIStore((s) => s.isSearchOpen);
   const { initializeApp } = useAppInitialization();
   const { reconnect } = useOllamaConnection();
   const [mounted, setMounted] = useState(false);
@@ -208,6 +214,9 @@ const HomeClient = () => {
           <ModelLibrary isOpen={isLibraryOpen} onClose={() => setLibraryOpen(false)} />
         )}
         {isInfoOpen && <InfoModal isOpen={isInfoOpen} onClose={() => setInfoOpen(false)} />}
+        {isSearchOpen && (
+          <SearchModalDynamic isOpen={isSearchOpen} onClose={() => setSearchOpen(false)} />
+        )}
         {isCheatsheetOpen && (
           <ShortcutCheatsheet isOpen={isCheatsheetOpen} onClose={() => setCheatsheetOpen(false)} />
         )}

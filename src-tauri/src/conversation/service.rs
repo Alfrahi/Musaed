@@ -1,4 +1,4 @@
-use crate::conversation::models::{Conversation, Message};
+use crate::conversation::models::{Conversation, Message, MessageSearchResult};
 use crate::conversation::store::ConversationStore;
 use crate::error_codes;
 use crate::payloads::{ApiResponse, BackendError};
@@ -180,5 +180,110 @@ pub async fn update_conversation(
             tracing::error!("Failed to update conversation {}: {}", id, e);
             backend_error_to_response(error_codes::CONVERSATION_UPDATE_ERROR, e)
         }
+    }
+}
+
+/// Search messages across all conversations.
+pub async fn search_messages(
+    store: Arc<Mutex<ConversationStore>>,
+    query: String,
+    limit: usize,
+) -> ApiResponse<Vec<MessageSearchResult>> {
+    tracing::info!("Searching messages: query={}, limit={}", query, limit);
+    let guard = store.lock().await;
+    match guard.search_messages(&query, limit).await {
+        Ok(results) => {
+            tracing::info!("Message search returned {} results", results.len());
+            ApiResponse {
+                success: true,
+                data: Some(results),
+                error: None,
+            }
+        }
+        Err(e) => {
+            tracing::error!("Message search failed: {}", e);
+            backend_error_to_response(error_codes::CONVERSATION_SEARCH_ERROR, e)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::conversation::models::{ChatSettings, Conversation, Message};
+    use std::sync::Arc;
+    use tempfile::tempdir;
+    use tokio::sync::Mutex;
+
+    /// Build a service-ready `Arc<Mutex<ConversationStore>>` backed by a
+    /// temp-directory SQLite DB, then seed it with one conversation + message.
+    async fn make_store_with_message(
+        conv_id: &str,
+        conv_title: &str,
+        msg_id: &str,
+        role: &str,
+        content: &str,
+    ) -> Arc<Mutex<ConversationStore>> {
+        let dir = tempdir().unwrap();
+        let store = ConversationStore::new(&dir.path().join("test.sqlite3")).unwrap();
+        let ts = 1000i64;
+        let conv = Conversation {
+            id: conv_id.to_string(),
+            title: conv_title.to_string(),
+            model: "test-model".to_string(),
+            settings: ChatSettings::default(),
+            created_at: ts,
+            updated_at: ts,
+            messages: vec![],
+        };
+        store.create_conversation(&conv).await.unwrap();
+        let msg = Message {
+            id: msg_id.to_string(),
+            role: role.to_string(),
+            content: content.to_string(),
+            images: None,
+            timestamp: ts,
+            model: None,
+            done: None,
+            request_id: None,
+            eval_count: None,
+            prompt_eval_count: None,
+            total_duration: None,
+            eval_duration: None,
+            rag_sources: None,
+            error: None,
+        };
+        store.add_message(conv_id, &msg).await.unwrap();
+        Arc::new(Mutex::new(store))
+    }
+
+    #[tokio::test]
+    async fn test_service_search_returns_success_with_results() {
+        let store = make_store_with_message(
+            "conv-1",
+            "Test Chat",
+            "msg-1",
+            "user",
+            "Tell me about Rust programming.",
+        )
+        .await;
+
+        let resp = search_messages(store, "Rust".to_string(), 50).await;
+        assert!(resp.success);
+        let results = resp.data.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].message.id, "msg-1");
+        assert_eq!(results[0].conversation_id, "conv-1");
+        assert_eq!(results[0].conversation_title, "Test Chat");
+    }
+
+    #[tokio::test]
+    async fn test_service_search_returns_empty_success_when_no_match() {
+        let store =
+            make_store_with_message("conv-1", "Test Chat", "msg-1", "user", "Hello world").await;
+
+        let resp = search_messages(store, "nonexistent".to_string(), 50).await;
+        assert!(resp.success);
+        assert!(resp.data.unwrap().is_empty());
     }
 }
