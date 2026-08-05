@@ -10,6 +10,7 @@ import {
   stripRedactedThinkingBlocks,
   findThinkingTags,
   PullErrorSchema,
+  ModelValidationSchema,
   REDACTED_THINKING_TAG_START,
   REDACTED_THINKING_TAG_END,
   THINK_TAG_START,
@@ -31,6 +32,94 @@ describe('Contracts: Zod Schemas', () => {
       },
     };
     expect(OllamaModelSchema.safeParse(validModel).success).toBe(true);
+  });
+
+  it('validates a ModelValidation with defaultParams populated', () => {
+    const validation = {
+      isValid: true,
+      modelName: 'llama3',
+      details: null,
+      contextLength: 8192,
+      defaultParams: {
+        temperature: 0.7,
+        topP: 0.9,
+        topK: 40,
+        numCtx: 8192,
+        numPredict: -1,
+      },
+    };
+    const parsed = ModelValidationSchema.safeParse(validation);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.defaultParams?.numPredict).toBe(-1);
+      expect(parsed.data.defaultParams?.temperature).toBe(0.7);
+    }
+  });
+
+  it('validates a ModelValidation with defaultParams null (Modelfile absent)', () => {
+    const validation = {
+      isValid: true,
+      modelName: 'llama3',
+      details: null,
+      contextLength: null,
+      defaultParams: null,
+    };
+    expect(ModelValidationSchema.safeParse(validation).success).toBe(true);
+  });
+
+  it('validates a ModelValidation with partial defaultParams (some fields null)', () => {
+    const validation = {
+      isValid: true,
+      modelName: 'llama3',
+      details: null,
+      contextLength: 4096,
+      defaultParams: {
+        temperature: null,
+        topP: 0.95,
+        topK: null,
+        numCtx: null,
+        numPredict: 2048,
+      },
+    };
+    const parsed = ModelValidationSchema.safeParse(validation);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.defaultParams?.topP).toBe(0.95);
+      expect(parsed.data.defaultParams?.temperature).toBeNull();
+    }
+  });
+
+  it('rejects a ModelValidation with negative numCtx in defaultParams', () => {
+    const validation = {
+      isValid: true,
+      modelName: 'llama3',
+      details: null,
+      contextLength: null,
+      defaultParams: {
+        temperature: 0.7,
+        topP: 0.9,
+        topK: 40,
+        numCtx: -1024, // nonnegative() should reject
+        numPredict: 2048,
+      },
+    };
+    expect(ModelValidationSchema.safeParse(validation).success).toBe(false);
+  });
+
+  it('accepts a ModelValidation without defaultParams key (back-compat)', () => {
+    // Older Rust responses (pre-feature) would not include defaultParams at
+    // all; the schema treats it as nullish so older payloads still parse.
+    const validation = {
+      isValid: true,
+      modelName: 'llama3',
+      details: null,
+      contextLength: 4096,
+    };
+    const parsed = ModelValidationSchema.safeParse(validation);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.defaultParams).toBeUndefined();
+    }
   });
 
   it('validates a message structure', () => {

@@ -16,14 +16,15 @@ pub use crate::generated_validation::*;
 
 // ====================== REGEX PATTERNS ======================
 
-/// Pattern for valid model names: alphanumeric, dash, underscore, colon, dot.
+/// Pattern for valid model names: alphanumeric, dash, underscore, colon, dot,
+/// and forward slash (for namespaced models like `UncensoredAi/diddy`).
 /// Must also be within [`MAX_MODEL_NAME_LEN`].
 pub fn is_valid_model_name(name: &str) -> bool {
     if name.is_empty() || name.len() > MAX_MODEL_NAME_LEN {
         return false;
     }
     name.chars()
-        .all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == ':' || c == '.')
+        .all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == ':' || c == '.' || c == '/')
 }
 
 /// Pattern for valid request IDs: alphanumeric with dash and underscore.
@@ -173,13 +174,16 @@ mod tests {
         assert!(is_valid_model_name("llama3:latest"));
         assert!(is_valid_model_name("my-model_v2.1"));
         assert!(is_valid_model_name("a"));
+        assert!(is_valid_model_name("UncensoredAi/diddy"));
+        assert!(is_valid_model_name("UncensoredAi/diddy:latest"));
     }
 
     #[test]
     fn invalid_model_names() {
         assert!(!is_valid_model_name(""));
         assert!(!is_valid_model_name("model with spaces"));
-        assert!(!is_valid_model_name("model/slash"));
+        assert!(!is_valid_model_name("model;injection"));
+        assert!(!is_valid_model_name("model\nnewline"));
         assert!(!is_valid_model_name(&"x".repeat(MAX_MODEL_NAME_LEN + 1)));
     }
 

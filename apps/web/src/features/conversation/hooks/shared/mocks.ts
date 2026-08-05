@@ -1,5 +1,6 @@
 // Shared mocks for conversation hook tests
 import { vi } from 'vitest';
+import { DEFAULT_MODEL_PARAMS } from '@musaed/contracts';
 
 // Zustand hooks accept an optional selector: `useStore((s) => s.foo)`.
 // The mocks below replicate that — when called with a function, they apply
@@ -292,6 +293,11 @@ vi.mock('@/store/rag-store', () => ({
   // Direct store access
   getState: () => mockStores.ragStore,
   activeProjectId: mockStores.ragStore.activeProjectId,
+}));
+
+vi.mock('@/store/model-params-store', () => ({
+  useModelParamsStore: selectorAware({ profiles: {} }),
+  selectResolvedParams: vi.fn(() => DEFAULT_MODEL_PARAMS),
 }));
 
 vi.mock('@/features/conversation/utils/message-persistence', () => ({

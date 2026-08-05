@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use specta::Type;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -155,6 +156,28 @@ pub struct ModelValidation {
     /// is extracted by scanning for any key ending in `.context_length`.
     /// `None` when the field is absent or unsupported by the model.
     pub context_length: Option<u32>,
+    /// Per-model sampling defaults parsed from the Modelfile's `PARAMETER`
+    /// directives (the top-level `parameters` string returned by
+    /// `/api/show`). Each field is `None` when the corresponding
+    /// `PARAMETER` directive is absent from the Modelfile or malformed.
+    /// `None` on the outer field indicates the `parameters` string was
+    /// absent or unparseable in its entirety.
+    pub default_params: Option<ModelDefaultParams>,
+}
+
+/// Per-model sampling defaults parsed from a Modelfile's `PARAMETER`
+/// directives. Mirrors `ModelDefaultParamsSchema` in
+/// `packages/contracts/src/schemas/ollama.ts` — keep both sides in
+/// lockstep; `pnpm validate:contracts --strict` cross-checks the
+/// `ModelValidation` return type end-to-end.
+#[derive(Debug, Serialize, Deserialize, Clone, Type, Default, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelDefaultParams {
+    pub temperature: Option<f64>,
+    pub top_p: Option<f64>,
+    pub top_k: Option<i32>,
+    pub num_ctx: Option<u32>,
+    pub num_predict: Option<i32>,
 }
 
 #[cfg(test)]
@@ -444,10 +467,67 @@ mod tests {
             model_name: "llama3".to_string(),
             details: None,
             context_length: None,
+            default_params: None,
         };
         let json = serde_json::to_string(&validation).unwrap();
         assert!(json.contains("\"modelName\":\"llama3\""));
         let back: ModelValidation = serde_json::from_str(&json).unwrap();
         assert!(back.is_valid);
+    }
+
+    #[test]
+    fn model_default_params_roundtrip() {
+        let params = ModelDefaultParams {
+            temperature: Some(0.8),
+            top_p: Some(0.9),
+            top_k: Some(40),
+            num_ctx: Some(8192),
+            num_predict: Some(256),
+        };
+        let json = serde_json::to_string(&params).unwrap();
+        // camelCase serialization
+        assert!(json.contains("\"temperature\":0.8"));
+        assert!(json.contains("\"topP\":0.9"));
+        assert!(json.contains("\"topK\":40"));
+        assert!(json.contains("\"numCtx\":8192"));
+        assert!(json.contains("\"numPredict\":256"));
+        let back: ModelDefaultParams = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, params);
+    }
+
+    #[test]
+    fn model_default_params_defaults_all_none() {
+        let params = ModelDefaultParams::default();
+        assert!(params.temperature.is_none());
+        assert!(params.top_p.is_none());
+        assert!(params.top_k.is_none());
+        assert!(params.num_ctx.is_none());
+        assert!(params.num_predict.is_none());
+    }
+
+    #[test]
+    fn model_validation_with_default_params_roundtrip() {
+        let validation = ModelValidation {
+            is_valid: true,
+            model_name: "llama3".to_string(),
+            details: None,
+            context_length: Some(8192),
+            default_params: Some(ModelDefaultParams {
+                temperature: Some(0.7),
+                top_p: None,
+                top_k: Some(40),
+                num_ctx: None,
+                num_predict: Some(-1),
+            }),
+        };
+        let json = serde_json::to_string(&validation).unwrap();
+        assert!(json.contains("\"defaultParams\":{"));
+        assert!(json.contains("\"numPredict\":-1"));
+        let back: ModelValidation = serde_json::from_str(&json).unwrap();
+        assert!(back.is_valid);
+        let dp = back.default_params.unwrap();
+        assert_eq!(dp.temperature.unwrap(), 0.7);
+        assert!(dp.top_p.is_none());
+        assert_eq!(dp.num_predict.unwrap(), -1);
     }
 }

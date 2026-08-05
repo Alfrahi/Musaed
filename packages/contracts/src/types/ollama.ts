@@ -3,6 +3,7 @@ import {
   type OllamaModelDetailsSchema,
   type OllamaModelSchema,
   type ModelStateSchema,
+  type ModelDefaultParamsSchema,
   type ModelValidationSchema,
   type OllamaTokenSchema,
   type PullProgressSchema,
@@ -13,6 +14,7 @@ import {
 export type OllamaModelDetails = z.infer<typeof OllamaModelDetailsSchema>;
 export type OllamaModel = z.infer<typeof OllamaModelSchema>;
 export type ModelState = z.infer<typeof ModelStateSchema>;
+export type ModelDefaultParams = z.infer<typeof ModelDefaultParamsSchema>;
 export type ModelValidation = z.infer<typeof ModelValidationSchema>;
 export type OllamaToken = z.infer<typeof OllamaTokenSchema>;
 export type PullProgress = z.infer<typeof PullProgressSchema>;

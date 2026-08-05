@@ -16,6 +16,7 @@ export * from './streaming-store';
 // Settings domain stores (global because every feature reads settings/model state)
 export * from './settings-store';
 export * from './model-store';
+export * from './model-params-store';
 
 // RAG domain store (global because conversation, layout, and UI badges consume it)
 export * from './rag-store';

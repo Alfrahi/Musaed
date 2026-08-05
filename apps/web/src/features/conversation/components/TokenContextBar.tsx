@@ -40,11 +40,15 @@ function getTooltip(
 
 const TokenContextBar = () => {
   const language = useSettingsStore((s) => s.globalSettings.language);
-  const showTokenIndicator = useSettingsStore((s) => s.globalSettings.showTokenIndicator);
   const { t } = useTranslation(language);
   const { usedTokens, contextWindow, percentage, hasData }: TokenUsageInfo = useTokenUsage();
 
-  if (!showTokenIndicator || !hasData) return null;
+  // The indicator is always shown when there is token-usage data available.
+  // The previous `showTokenIndicator` settings toggle has been removed from the
+  // UI — sampling parameters are now per-model (see model-params-store), so a
+  // global on/off switch no longer makes sense. The contract field is retained
+  // for IPC alignment with the Rust ChatSettings struct.
+  if (!hasData) return null;
 
   const severity = getSeverity(percentage);
   const tooltip = getTooltip(severity, usedTokens, contextWindow, t);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import { type Message, type ChatSettings, VALIDATION_LIMITS } from '@musaed/contracts';
+import { type Message, type ModelParams, VALIDATION_LIMITS } from '@musaed/contracts';
 import { useTranslation } from '@/lib/i18n';
 import { chatApi } from '@/lib/ipc';
 import { config } from '@/lib/config';
@@ -13,6 +13,8 @@ import { useMessageStore } from '@/store/message-store';
 import { useCurrentConversationId, useConversations } from '@/store/conversation-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { useModelStore } from '@/store/model-store';
+import { selectResolvedParams } from '@/store/model-params-store';
+import { useModelContextWindow } from '@/features/library';
 import { persistUserMessage } from '@/features/conversation/utils/message-persistence';
 import { useChatRag, type ChatRagSource } from './useChatRag';
 import { useChatStream } from './useChatStream';
@@ -107,18 +109,19 @@ function buildChatPayload(
   fullPrompt: string,
   selectedModel: string,
   requestId: string,
-  settings: ChatSettings
+  params: ModelParams,
+  stop: string[]
 ) {
   return {
     baseUrl: ollamaUrl,
     messages: [{ role: 'user', content: fullPrompt }],
     options: {
-      temperature: settings.temperature,
-      stop: settings.stop,
-      topK: settings.topK,
-      topP: settings.topP,
-      numPredict: settings.numPredict,
-      numCtx: settings.numCtx,
+      temperature: params.temperature,
+      stop,
+      topK: params.topK,
+      topP: params.topP,
+      numPredict: params.numPredict,
+      numCtx: params.numCtx,
     },
     model: selectedModel,
     requestId,
@@ -147,12 +150,21 @@ export function useChatSend(): {
   const { assembleChatRag } = useChatRag();
   const { handleStreamError } = useChatStream();
 
+  // Per-model sampling params: resolved from model-params store with the
+  // model's context_length and Modelfile `PARAMETER` defaults as the
+  // fallback when not overridden.
+  const selectedModel = modelStore.selectedModel;
+  const { contextWindow, defaultParams } = useModelContextWindow();
+  const paramsStop = useSettingsStore((s) => s.globalSettings.stop);
+  // `selectResolvedParams` is intentionally a getState-based snapshot for the
+  // non-react send path; we read it inside the callback so the latest override
+  // is used at send time without re-subscribing this hook to every keystroke.
+
   const sendMessage = useCallback(
     async (input: string, images: string[] = [], files: FileAttachment[] = []) => {
       const trimmedInput = input.trim();
       const hasAttachments = images.length > 0 || files.length > 0;
 
-      const selectedModel = modelStore.selectedModel;
       const globalSettings =
         settingsStore.globalSettings ||
         ({ language: 'en', ollamaUrl: 'http://localhost:11434' } as const);
@@ -201,12 +213,14 @@ export function useChatSend(): {
       persistMessage(conversationId, userMsg);
 
       try {
+        const params = selectResolvedParams(selectedModel, contextWindow, defaultParams);
         const payload = buildChatPayload(
           ollamaUrl,
           fullPrompt,
           selectedModel,
           requestId,
-          globalSettings
+          params,
+          paramsStop
         );
         const success = await chatApi.chat(payload);
         if (success !== true) throw new Error(t('chat.connectionFailed'));
@@ -230,9 +244,12 @@ export function useChatSend(): {
       currentConversationId,
       conversations,
       settingsStore.globalSettings,
-      modelStore.selectedModel,
+      selectedModel,
       assembleChatRag,
       handleStreamError,
+      contextWindow,
+      defaultParams,
+      paramsStop,
     ]
   );
 

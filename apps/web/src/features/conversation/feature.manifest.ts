@@ -18,7 +18,6 @@ const manifest: FeatureManifest = {
       'useAutoTitle',
       'triggerAutoTitle',
       'useTokenUsage',
-      'useModelContextWindow',
     ],
     components: ['TokenContextBar'],
     utils: ['isDefaultTitle', 'generateConversationTitle', 'initializeConversations'],
@@ -27,7 +26,6 @@ const manifest: FeatureManifest = {
     'cmd_ollama_chat',
     'cmd_ollama_abort_chat',
     'cmd_ollama_generate_title',
-    'cmd_ollama_validate_model',
     'cmd_conversation_create',
     'cmd_conversation_delete',
     'cmd_conversation_update',
@@ -81,11 +79,6 @@ const manifest: FeatureManifest = {
     },
     cmd_ollama_generate_title: {
       fallback: 'Use default title — title generation is non-critical',
-      retry: 'none',
-      messageKey: 'error.genericError',
-    },
-    cmd_ollama_validate_model: {
-      fallback: 'Fall back to numCtx from user settings for context-window visualization',
       retry: 'none',
       messageKey: 'error.genericError',
     },

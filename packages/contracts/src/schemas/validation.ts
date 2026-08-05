@@ -6,7 +6,7 @@ export const ModelNameSchema = z
   .string()
   .min(1)
   .max(VALIDATION_LIMITS.MAX_MODEL_NAME_LEN)
-  .regex(/^[a-zA-Z0-9._:-]+$/);
+  .regex(/^[a-zA-Z0-9._:/-]+$/);
 
 export const RequestIdSchema = z
   .string()

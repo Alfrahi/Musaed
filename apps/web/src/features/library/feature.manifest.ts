@@ -17,6 +17,7 @@ const manifest: FeatureManifest = {
       'useEmbeddingModels',
       'useLibraryInitialization',
       'useLibraryTauriEvents',
+      'useModelContextWindow',
     ],
     utils: [],
   },
@@ -25,6 +26,7 @@ const manifest: FeatureManifest = {
     'cmd_ollama_delete_model',
     'cmd_ollama_pull_model',
     'cmd_ollama_abort_pull',
+    'cmd_ollama_validate_model',
   ],
   /**
    * Performance-sensitive IPC endpoints owned by this feature. The actual
@@ -33,7 +35,7 @@ const manifest: FeatureManifest = {
    * @see STANDARDS.md §15 Performance Rules — IPC latency budgets per feature
    */
   latencyProfiles: {
-    interactive: ['cmd_ollama_get_models'],
+    interactive: ['cmd_ollama_get_models', 'cmd_ollama_validate_model'],
     background: ['cmd_ollama_pull_model', 'cmd_ollama_delete_model'],
   },
   stateSchemas: {
@@ -63,6 +65,11 @@ const manifest: FeatureManifest = {
     },
     cmd_ollama_abort_pull: {
       fallback: 'Silently ignore — abort is fire-and-forget',
+      retry: 'none',
+      messageKey: 'error.genericError',
+    },
+    cmd_ollama_validate_model: {
+      fallback: 'Fall back to numCtx from user settings for context-window visualization',
       retry: 'none',
       messageKey: 'error.genericError',
     },

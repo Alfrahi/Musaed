@@ -55,6 +55,14 @@ vi.mock('@/features/library/hooks/useModelActions', () => ({
   useModelActions: () => ({ fetchModels: mockFetchModels, isFetching: mockIsFetching.value }),
 }));
 
+// Stub the per-model params panel so the new collapsible "Parameters" section
+// does not pull in `useModelContextWindow` / `useModelParamsStore` (which would
+// require their own mocks). The panel has its own test file.
+vi.mock('./ModelParamsPanel', () => ({
+  __esModule: true,
+  default: () => <div data-testid="model-params-panel">ModelParamsPanel</div>,
+}));
+
 // `act` is needed when firing keyboard events that setState synchronously.
 const wrappedKeyDown = (el: HTMLElement, key: string, opts: Record<string, unknown> = {}) => {
   act(() => {
@@ -305,6 +313,51 @@ describe('ModelSelector — ARIA combobox pattern (audit F8)', () => {
       // Models are already present — list renders normally even during a refetch.
       expect(screen.getAllByRole('option')).toHaveLength(1);
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Per-model Parameters section (new collapsible)', () => {
+    it('is hidden when no model is selected', () => {
+      mockSelectedModel = '';
+      render(<ModelSelector />);
+      fireEvent.click(screen.getByRole('combobox'));
+      // The collapsible only renders when a model is selected.
+      expect(screen.queryByTestId('model-params-panel')).not.toBeInTheDocument();
+    });
+
+    it('shows the Parameters header (collapsed) when a model is selected', () => {
+      mockSelectedModel = 'llama3.1';
+      render(<ModelSelector />);
+      fireEvent.click(screen.getByRole('combobox'));
+      // The header button uses the library.modelParameters i18n key (identity t).
+      const header = screen.getByText('library.modelParameters');
+      expect(header).toBeInTheDocument();
+      // Panel is collapsed by default.
+      expect(screen.queryByTestId('model-params-panel')).not.toBeInTheDocument();
+    });
+
+    it('expands and renders the panel when the Parameters header is clicked', () => {
+      mockSelectedModel = 'llama3.1';
+      render(<ModelSelector />);
+      fireEvent.click(screen.getByRole('combobox'));
+      const header = screen.getByText('library.modelParameters');
+      fireEvent.click(header);
+      // Wait for the uncollapsed panel.
+      expect(screen.getByTestId('model-params-panel')).toBeInTheDocument();
+      // aria-expanded on the header button reflects the open state.
+      expect(header.closest('button')).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    it('collapses back when the Parameters header is clicked again', () => {
+      mockSelectedModel = 'llama3.1';
+      render(<ModelSelector />);
+      fireEvent.click(screen.getByRole('combobox'));
+      const header = screen.getByText('library.modelParameters');
+      fireEvent.click(header);
+      expect(screen.getByTestId('model-params-panel')).toBeInTheDocument();
+      fireEvent.click(header);
+      expect(screen.queryByTestId('model-params-panel')).not.toBeInTheDocument();
+      expect(header.closest('button')).toHaveAttribute('aria-expanded', 'false');
     });
   });
 });

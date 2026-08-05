@@ -30,3 +30,18 @@ export const DEFAULT_SETTINGS: ChatSettings = {
   closeToTray: true,
   showTokenIndicator: true,
 };
+
+/**
+ * Fallback values for the five per-model sampling parameters. Used by
+ * `selectResolvedParams` when a field is not overridden AND (for `numCtx`)
+ * model metadata is unavailable. These mirror the sampling subset of
+ * {@link DEFAULT_SETTINGS} but are kept as a separate constant because the
+ * per-model domain should not depend on the global settings shape.
+ */
+export const DEFAULT_MODEL_PARAMS = {
+  temperature: 0.7,
+  topK: 40,
+  topP: 0.9,
+  numCtx: 4096,
+  numPredict: 2048,
+} as const;

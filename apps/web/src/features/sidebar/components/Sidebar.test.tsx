@@ -107,6 +107,7 @@ vi.mock('@/lib/ipc', async () => {
 vi.mock('@/features/library', async () => {
   return {
     ModelSelector: () => <div data-testid="model-selector">ModelSelector</div>,
+    useModelContextWindow: () => ({ contextWindow: null, loading: false, error: null }),
   };
 });
 
