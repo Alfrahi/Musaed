@@ -9,4 +9,5 @@ commands.allow = [
   "cmd_conversation_delete",
   "cmd_conversations_clear",
   "cmd_conversation_update",
+  "cmd_conversation_search",
 ]

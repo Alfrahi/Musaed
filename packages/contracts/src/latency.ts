@@ -84,6 +84,7 @@ export const IPC_LATENCY_BUDGETS: Readonly<Record<string, LatencyBudgetMs>> = {
   cmd_conversation_delete: 1000,
   cmd_conversations_clear: 2000,
   cmd_conversation_update: 2000,
+  cmd_conversation_search: 5000,
   cmd_message_append: 1000,
   /** Store persistence — lightweight key-value reads/writes */
   cmd_store_load: 1000,
@@ -143,6 +144,7 @@ export type LatencyBudgetCategory =
   | 'rag-mutation'
   | 'rag-heavy'
   | 'conversation'
+  | 'conversation-search'
   | 'migration'
   | 'context-menu'
   | 'store'
@@ -196,6 +198,7 @@ export function getIpcLatencyBudgetCategory(command: string): LatencyBudgetCateg
     return 'migration';
   }
   if (command.startsWith('cmd_conversation') || command.startsWith('cmd_message_')) {
+    if (command === 'cmd_conversation_search') return 'conversation-search';
     return 'conversation';
   }
   return undefined;

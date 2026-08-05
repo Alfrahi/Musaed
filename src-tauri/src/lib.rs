@@ -167,6 +167,7 @@ pub fn run() {
             conversation::commands::cmd_conversation_delete,
             conversation::commands::cmd_conversations_clear,
             conversation::commands::cmd_conversation_update,
+            conversation::commands::cmd_conversation_search,
             // Context menu command
             context_menu::cmd_context_menu_show,
             // System tray command

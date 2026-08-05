@@ -388,6 +388,7 @@
     "deselectProject": "Deselect project",
     "removeProject": "Remove project",
     "commandPalette": "Command palette",
+    "searchMessages": "Search messages in chats",
     "shortcutCheatsheet": "Keyboard shortcuts",
     "closePreview": "Close image preview"
   },
@@ -444,6 +445,15 @@
       "title": "Powered by Ollama",
       "description": "Uses Ollama as the local engine for high-speed LLM inference on your hardware."
     }
+  },
+  "search": {
+    "title": "Search Messages",
+    "placeholder": "Search messages across all conversations…",
+    "noResults": "No messages found",
+    "startTyping": "Start typing to search messages",
+    "roleUser": "You",
+    "roleAssistant": "Assistant",
+    "commandLabel": "Search in chats"
   },
   "commandPalette": {
     "placeholder": "Search commands and conversations…",

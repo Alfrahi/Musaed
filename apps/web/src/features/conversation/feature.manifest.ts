@@ -30,6 +30,7 @@ const manifest: FeatureManifest = {
     'cmd_ollama_validate_model',
     'cmd_conversation_create',
     'cmd_conversation_delete',
+    'cmd_conversation_update',
     'cmd_conversation_get',
     'cmd_conversations_clear',
     'cmd_conversations_list',
@@ -95,6 +96,11 @@ const manifest: FeatureManifest = {
     },
     cmd_conversation_delete: {
       fallback: 'Show error toast; conversation remains in list',
+      retry: 'once',
+      messageKey: 'error.genericError',
+    },
+    cmd_conversation_update: {
+      fallback: 'Show error toast; title update remains in local state only',
       retry: 'once',
       messageKey: 'error.genericError',
     },

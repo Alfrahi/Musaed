@@ -35,7 +35,7 @@ function loadFeatureDeps() {
 }
 
 function buildCrossFeatureRules() {
-  const features = ['conversation', 'info', 'library', 'rag', 'settings', 'sidebar'];
+  const features = ['conversation', 'info', 'library', 'rag', 'search', 'settings', 'sidebar'];
   return features
     .filter((feature) => !EXEMPT_FEATURES.includes(feature))
     .map((feature) => {

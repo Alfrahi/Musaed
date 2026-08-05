@@ -30,6 +30,8 @@ import {
   type Conversation,
   type Message,
   ConversationSchema,
+  MessageSearchResultSchema,
+  type MessageSearchResult,
   // Structured logging types
   TraceEntryInputSchema,
   TraceContextSchema,
@@ -335,6 +337,13 @@ export interface CommandMap {
   cmd_conversations_clear: { args: Record<string, never>; return: void };
   cmd_conversation_update: { args: { id: string; title: string; updatedAt: number }; return: void };
 
+  // Message search — full-text search across all conversation messages.
+  // Returns results grouped by conversation with matching message snippets.
+  cmd_conversation_search: {
+    args: { query: string; limit: number };
+    return: MessageSearchResult[];
+  };
+
   // Migration commands — backend SQLite schema migrations. Exposed so the
   // Settings/Diagnostics UI can run, roll back, and report on migrations.
   cmd_run_migrations: {
@@ -598,6 +607,10 @@ const CommandInputSchemas: {
     title: z.string().min(1),
     updatedAt: z.number(),
   }),
+  cmd_conversation_search: z.object({
+    query: z.string().min(1).max(VALIDATION_LIMITS.MAX_SEARCH_QUERY_LEN),
+    limit: z.number().int().min(1).max(100),
+  }),
 
   // Migration input schemas
   cmd_run_migrations: RunMigrationsRequestSchema,
@@ -702,6 +715,7 @@ const CommandReturnSchemas: {
   cmd_conversation_delete: voidSchema,
   cmd_conversations_clear: voidSchema,
   cmd_conversation_update: voidSchema,
+  cmd_conversation_search: z.array(MessageSearchResultSchema),
 
   // Migration return schemas
   cmd_run_migrations: RunMigrationsResponseSchema,
@@ -1345,6 +1359,14 @@ export const conversationApi = {
   clearAllConversations: () => callInternal('cmd_conversations_clear', {}),
   updateConversation: (id: string, title: string, updatedAt: number) =>
     callInternal('cmd_conversation_update', { id, title, updatedAt }),
+  /**
+   * Search messages across all conversations.
+   * @param query - Search query string (min 1 char)
+   * @param limit - Maximum number of results (1-100)
+   * @returns Array of MessageSearchResult grouped by conversation
+   */
+  searchMessages: (query: string, limit: number) =>
+    callInternal('cmd_conversation_search', { query, limit }),
 };
 
 /**

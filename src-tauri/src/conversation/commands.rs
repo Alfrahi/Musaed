@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::conversation::models::{Conversation, Message};
+use crate::conversation::models::{Conversation, Message, MessageSearchResult};
 use crate::conversation::service;
 use crate::conversation::store::ConversationStore;
 use crate::payloads::ApiResponse;
@@ -62,4 +62,13 @@ pub async fn cmd_conversation_update(
     updated_at: i64,
 ) -> Result<ApiResponse<()>, String> {
     Ok(service::update_conversation(state.inner().clone(), id, title, updated_at).await)
+}
+
+#[tauri::command]
+pub async fn cmd_conversation_search(
+    state: State<'_, Arc<Mutex<ConversationStore>>>,
+    query: String,
+    limit: usize,
+) -> Result<ApiResponse<Vec<MessageSearchResult>>, String> {
+    Ok(service::search_messages(state.inner().clone(), query, limit).await)
 }

@@ -10,6 +10,8 @@ import {
   useSetSettingsOpen,
   useSetInfoOpen,
   useSetCheatsheetOpen,
+  useSetCommandPaletteOpen,
+  useSetSearchOpen,
 } from '@/store/hooks';
 import { exportToMarkdown } from '@/features/sidebar';
 import { useTranslation } from '@/lib/i18n';
@@ -30,6 +32,8 @@ export function useCommands(onClose: () => void): Command[] {
   const setSettingsOpen = useSetSettingsOpen();
   const setInfoOpen = useSetInfoOpen();
   const setCheatsheetOpen = useSetCheatsheetOpen();
+  const setCommandPaletteOpen = useSetCommandPaletteOpen();
+  const setSearchOpen = useSetSearchOpen();
   const setGlobalSettings = useSetGlobalSettings();
   const models = useModelStore((s) => s.models);
   const conversations = useConversationStore((s) => s.conversations);
@@ -61,6 +65,8 @@ export function useCommands(onClose: () => void): Command[] {
           setSettingsOpen,
           setInfoOpen,
           setCheatsheetOpen,
+          setCommandPaletteOpen,
+          setSearchOpen,
           setCurrentConversationId: useConversationStore.getState().setCurrentConversationId,
           setSelectedModel: useModelStore.getState().setSelectedModel,
           updateGlobalSettings,
@@ -81,6 +87,8 @@ export function useCommands(onClose: () => void): Command[] {
       setSettingsOpen,
       setInfoOpen,
       setCheatsheetOpen,
+      setCommandPaletteOpen,
+      setSearchOpen,
       updateGlobalSettings,
       clearAllConversations,
       exportCurrentChat,

@@ -29,6 +29,7 @@ const manifest: FeatureManifest = {
     'settings', // HomeClient.tsx imports SettingsModal from @/features/settings
     'library', // HomeClient.tsx imports ModelLibrary from @/features/library
     'info', // HomeClient.tsx imports InfoModal from @/features/info
+    'search', // HomeClient.tsx imports SearchModal from @/features/search
   ],
 } as const;
 
