@@ -68,10 +68,14 @@ impl OllamaChatService {
         let url = ollama_endpoint(&req.base_url, "api/chat")
             .map_err(|msg| BackendError::new(error_codes::INVALID_URL, msg))?;
 
-        let _global_permit = acquire_global_permit()
-            .await
-            .map_err(|msg| BackendError::new(error_codes::RATE_LIMITED, msg))?;
-
+        // Bug 1.11: Duplicate detection MUST run before acquiring any permits.
+        // If the cache check happened after the global permit / semaphore, a
+        // duplicate arriving while the first request was still waiting on a
+        // permit would be rejected even though the first request had not yet
+        // claimed its slot — and if that first request then failed, the
+        // duplicate had been incorrectly rejected. Checking the cache first
+        // guarantees only the request that actually claims the slot is
+        // tracked, and any later failure path cleans up its own cache entry.
         if !request_cache_try_insert(req.request_id.clone()) {
             tracing::warn!("Duplicate request detected: {}", req.request_id);
             return Err(BackendError::new(
@@ -80,6 +84,14 @@ impl OllamaChatService {
             )
             .with_request_id(req.request_id.clone()));
         }
+
+        // From here on the cache entry is owned by this request and MUST be
+        // removed on every error path to avoid leaking a dedup entry that
+        // would block future retries.
+        let _global_permit = acquire_global_permit().await.map_err(|msg| {
+            REQUEST_CACHE.remove(&req.request_id);
+            BackendError::new(error_codes::RATE_LIMITED, msg)
+        })?;
 
         let permit = CONCURRENT_SEMAPHORE.acquire().await.map_err(|_| {
             REQUEST_CACHE.remove(&req.request_id);

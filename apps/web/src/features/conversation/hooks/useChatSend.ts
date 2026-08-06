@@ -152,6 +152,11 @@ function cleanupOrphanedStream(conversationId: string, requestId: string): void 
   }
 }
 
+/** Resolve the Ollama base URL from global settings, with a safe default. */
+function resolveOllamaUrl(globalSettings: { ollamaUrl?: string } | undefined): string {
+  return globalSettings?.ollamaUrl || 'http://localhost:11434';
+}
+
 /** Parameters for the chat send attempt. */
 interface ChatSendAttemptParams {
   conversationId: string;
@@ -248,10 +253,7 @@ export function useChatSend(): {
       const trimmedInput = input.trim();
       const hasAttachments = images.length > 0 || files.length > 0;
 
-      const globalSettings =
-        settingsStore.globalSettings ||
-        ({ language: 'en', ollamaUrl: 'http://localhost:11434' } as const);
-      const ollamaUrl: string = globalSettings.ollamaUrl || 'http://localhost:11434';
+      const ollamaUrl: string = resolveOllamaUrl(settingsStore.globalSettings);
 
       if (!config.isTest) {
         if (
