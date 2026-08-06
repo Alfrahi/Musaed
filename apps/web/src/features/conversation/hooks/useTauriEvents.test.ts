@@ -63,7 +63,9 @@ vi.mock('@/store/coordination', () => ({
 
 vi.mock('@/store/message-store', () => ({
   useMessageStore: {
-    getState: () => ({ messages: {} }),
+    getState: () => ({
+      messages: {},
+    }),
   },
 }));
 

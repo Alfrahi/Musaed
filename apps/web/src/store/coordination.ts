@@ -135,6 +135,11 @@ export function completeStreamForConversation(conversationId: string): void {
   flushAndStop(conversationId);
   useStreamingStore.getState().stopStream(conversationId);
   useStreamingStore.getState().clearStream(conversationId);
+  // Explicitly clear the user-stopped flag on natural completion. Without
+  // this, a previously-stopped message in this conversation would retain
+  // `stopped: true` and the UI would show "Stopped by user" on a message
+  // that completed naturally (audit bug 1.4).
+  useMessageStore.getState().updateLastMessage(conversationId, { stopped: false });
   const { activeStreams } = useStreamingStore.getState();
   if (Object.keys(activeStreams).length === 0) {
     useUIStore.getState().setStreaming(false);

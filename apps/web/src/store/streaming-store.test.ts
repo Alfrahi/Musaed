@@ -195,6 +195,30 @@ describe('useStreamingStore', () => {
       expect(result).toBeNull();
     });
 
+    it('should flush late-arriving tokens even when already flushed (no token loss)', () => {
+      // Reproduces audit bug 1.2: tokens arriving after the first flush
+      // but before clearStream must be flushed, not silently dropped.
+      useStreamingStore.getState().startStream('conv1', 'req1');
+      useStreamingStore.getState().appendToken('conv1', 'part1');
+      useStreamingStore.getState().flushToConversation('conv1');
+      useStreamingStore.getState().markFlushed('conv1');
+
+      // Late tokens arrive (stream still in activeStreams, not yet cleared)
+      useStreamingStore.getState().appendToken('conv1', 'part2');
+      useStreamingStore.getState().setPendingMetrics('conv1', { evalCount: 5 });
+
+      const result = useStreamingStore.getState().flushToConversation('conv1');
+      expect(result).toEqual({
+        content: 'part2',
+        metrics: { evalCount: 5 },
+      });
+
+      // Buffer is now cleared
+      const state = useStreamingStore.getState();
+      expect(state.liveContent.conv1).toBeUndefined();
+      expect(state.pendingMetrics.conv1).toBeUndefined();
+    });
+
     it('should return empty string content when buffer has no chunks', () => {
       useStreamingStore.getState().startStream('conv1', 'req1');
       useStreamingStore.getState().setPendingMetrics('conv1', { role: 'assistant' });
