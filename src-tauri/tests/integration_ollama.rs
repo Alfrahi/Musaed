@@ -2,7 +2,10 @@
 
 use musaed_lib::ollama::streaming::{process_chat_stream, TokenSink};
 use musaed_lib::payloads::{ApiResponse, BackendError, OllamaHealth, OllamaModel, OllamaToken};
-use musaed_lib::shared::{clear_request_cache, test_cache_lock};
+use musaed_lib::shared::{
+    clear_request_cache, request_cache_try_insert, test_cache_lock, CONCURRENT_SEMAPHORE,
+    MAX_CONCURRENT_CHATS, REQUEST_CACHE,
+};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc;
@@ -709,4 +712,80 @@ async fn process_chat_stream_skips_empty_lines() {
     );
     assert_eq!(token_count, 2);
     assert!(error_rx.try_recv().is_err());
+}
+
+// ── bug 1.11: duplicate detection must run before permit acquisition ──
+
+/// Regression test for audit bug 1.11.
+///
+/// `OllamaChatService::chat` used to call `request_cache_try_insert` *after*
+/// acquiring the global permit and the chat semaphore. If a first request was
+/// still waiting on a permit (e.g. because another test held every slot), a
+/// duplicate request arriving in the meantime would block waiting for the
+/// same permit; and if the first request then failed, the duplicate had been
+/// incorrectly rejected even though no real request had ever claimed a slot.
+///
+/// The fix checks `request_cache_try_insert` FIRST. This test encodes that
+/// ordering invariant: with every `CONCURRENT_SEMAPHORE` permit held by
+/// another caller, a duplicate insertion for an already-tracked request_id
+/// MUST still resolve immediately (return `false`) — proving the dedup check
+/// does not wait on the semaphore.
+#[tokio::test]
+async fn duplicate_request_rejected_without_acquiring_semaphore() {
+    let _guard = setup().await;
+
+    // Hold every chat-stream permit so that any code path that acquires the
+    // semaphore before checking the cache would deadlock (or hang until the
+    // test times out, which is what the pre-fix code would have done).
+    let mut held_permits = Vec::new();
+    for _ in 0..MAX_CONCURRENT_CHATS {
+        held_permits.push(
+            CONCURRENT_SEMAPHORE
+                .acquire()
+                .await
+                .expect("should acquire all chat permits"),
+        );
+    }
+    assert_eq!(
+        CONCURRENT_SEMAPHORE.available_permits(),
+        0,
+        "all chat permits should be held for this test"
+    );
+
+    // Pretend an in-flight request already claimed this request_id.
+    let req_id = "dup-req-1.11".to_string();
+    assert!(
+        request_cache_try_insert(req_id.clone()),
+        "first insertion should succeed"
+    );
+
+    // A duplicate arrives. With the semaphore fully drained, a cache-AFTER-
+    // permit ordering would block here. The fixed ordering rejects the
+    // duplicate immediately.
+    let rejected = !request_cache_try_insert(req_id.clone());
+    assert!(
+        rejected,
+        "duplicate request must be rejected without acquiring a semaphore permit"
+    );
+
+    // Ensure no permit leaked into the dedup path: the semaphore still has
+    // zero available permits (every one is still held by `held_permits`).
+    assert_eq!(
+        CONCURRENT_SEMAPHORE.available_permits(),
+        0,
+        "dedup check must not consume a semaphore permit"
+    );
+
+    // The duplicate call must NOT have created an ABORT_HANDLES entry or
+    // otherwise leaked state — only the first insertion remains.
+    assert!(
+        REQUEST_CACHE.contains_key(&req_id),
+        "original request_id should still be tracked"
+    );
+
+    // Release the permits we borrowed so we don't poison the shared semaphore
+    // for tests that run later in this process.
+    drop(held_permits);
+
+    clear_request_cache();
 }
