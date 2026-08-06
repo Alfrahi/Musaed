@@ -206,6 +206,13 @@ pub async fn start_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResp
         }
     };
     let cancel_token = Arc::new(CancellationToken::new());
+    // If a prior indexing task is still in flight for the same project, cancel
+    // it before overwriting the slot. Without this, the previous token would
+    // be orphaned and the task would continue running indefinitely with no way
+    // to abort it (`abort_index` could only reach the new token).
+    if let Some((_, existing)) = crate::shared::RAG_INDEX_ABORT_HANDLES.remove(&req.project_id) {
+        existing.cancel();
+    }
     crate::shared::RAG_INDEX_ABORT_HANDLES.insert(req.project_id.clone(), cancel_token.clone());
 
     // Retry loop for transient failures (Ollama timeout, DB lock, etc.)

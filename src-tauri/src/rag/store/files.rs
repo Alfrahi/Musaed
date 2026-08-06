@@ -41,31 +41,38 @@ pub(super) async fn upsert_file(
 /// Delete a file and all its associated chunks and embeddings.
 ///
 /// All three deletions (embeddings, chunks, file) must happen under a **single**
-/// lock acquisition to prevent race conditions.
+/// lock acquisition to prevent race conditions, and within a **single
+/// transaction** so a crash between statements cannot leave the DB in an
+/// inconsistent state (orphaned chunks/embeddings for a deleted file).
 pub(super) async fn delete_file(store: &super::RagStore, file_id: i64) -> Result<(), String> {
     let conn = store.write_conn().await;
+    let tx = conn
+        .unchecked_transaction()
+        .map_err(|e| format!("Failed to begin transaction: {}", e))?;
 
-    // Delete embeddings first (via subquery)
-    conn.execute(
+    // Delete embeddings first (via subquery for chunks belonging to this file).
+    tx.execute(
         "DELETE FROM vec_chunks WHERE chunk_id IN (SELECT id FROM chunks WHERE file_id = ?1)",
         rusqlite::params![file_id],
     )
     .map_err(|e| format!("Failed to delete embeddings: {}", e))?;
 
     // Delete chunks explicitly for safety, though CASCADE should handle
-    conn.execute(
+    tx.execute(
         "DELETE FROM chunks WHERE file_id = ?1",
         rusqlite::params![file_id],
     )
     .map_err(|e| format!("Failed to delete chunks: {}", e))?;
 
     // Delete file
-    conn.execute(
+    tx.execute(
         "DELETE FROM files WHERE id = ?1",
         rusqlite::params![file_id],
     )
     .map_err(|e| format!("Failed to delete file: {}", e))?;
 
+    tx.commit()
+        .map_err(|e| format!("Failed to commit file deletion: {}", e))?;
     Ok(())
 }
 

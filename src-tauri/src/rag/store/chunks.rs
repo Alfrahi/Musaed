@@ -90,23 +90,30 @@ pub(super) async fn get_file_chunks(
 /// Delete all chunks for a given file (and their embeddings).
 ///
 /// Both deletions must happen under a **single** lock acquisition to prevent
-/// race conditions.
+/// race conditions, and within a **single transaction** so a crash between the
+/// two deletes cannot leave orphaned chunks whose embeddings were already
+/// removed (or vice versa).
 pub(super) async fn delete_file_chunks(
     store: &super::RagStore,
     file_id: i64,
 ) -> Result<(), String> {
     let conn = store.write_conn().await;
+    let tx = conn
+        .unchecked_transaction()
+        .map_err(|e| format!("Failed to begin transaction: {}", e))?;
 
     // Delete embeddings first (via subquery)
-    conn.execute(
+    tx.execute(
         "DELETE FROM vec_chunks WHERE chunk_id IN (SELECT id FROM chunks WHERE file_id = ?1)",
         params![file_id],
     )
     .map_err(|e| format!("Failed to delete embeddings: {}", e))?;
 
     // Delete chunks
-    conn.execute("DELETE FROM chunks WHERE file_id = ?1", params![file_id])
+    tx.execute("DELETE FROM chunks WHERE file_id = ?1", params![file_id])
         .map_err(|e| format!("Failed to delete chunks: {}", e))?;
 
+    tx.commit()
+        .map_err(|e| format!("Failed to commit chunk deletion: {}", e))?;
     Ok(())
 }
