@@ -7,6 +7,25 @@ use crate::shared::{acquire_global_permit, ollama_endpoint, retry_with_backoff, 
 use serde::{Deserialize, Serialize};
 use tracing;
 
+/// Known embedding models that require a task-specific prefix (`search_query:`
+/// for queries, `search_document:` for documents).  This is an **exact-match
+/// allowlist** rather than a substring match on "nomic" so that custom
+/// fine-tunes or unrelated models whose names happen to contain "nomic" are
+/// not incorrectly prefixed (audit bug 1.6).
+const PREFIX_MODELS: &[&str] = &[
+    "nomic-embed-text",
+    "nomic-embed-text-v1",
+    "nomic-embed-text-v1.5",
+    "nomic-embed-text-v2-moe",
+];
+
+/// Returns true if `model` is a known model that requires the
+/// `search_query:` / `search_document:` prefix on embedding inputs.
+fn needs_prefix(model: &str) -> bool {
+    let lower = model.to_lowercase();
+    PREFIX_MODELS.iter().any(|m| lower == *m)
+}
+
 /// Progress callback for batched embedding: `(batch_index, total_batches, chunks_embedded)`.
 type EmbedProgressFn = Box<dyn Fn(usize, usize, usize) + Send + Sync>;
 
@@ -59,7 +78,7 @@ impl OllamaEmbedder {
 
     /// Embed a single text (for query embedding).
     pub async fn embed_query(&self, text: &str) -> Result<Vec<f32>, String> {
-        let input = if self.model.to_lowercase().contains("nomic") {
+        let input = if needs_prefix(&self.model) {
             format!("search_query: {}", text)
         } else {
             text.to_string()
@@ -77,7 +96,7 @@ impl OllamaEmbedder {
             return Ok(vec![]);
         }
 
-        let inputs = if self.model.to_lowercase().contains("nomic") {
+        let inputs = if needs_prefix(&self.model) {
             texts
                 .into_iter()
                 .map(|t| format!("search_document: {}", t))
@@ -249,5 +268,27 @@ mod tests {
         let json = serde_json::to_string(&validation).unwrap();
         assert!(json.contains("\"isValid\":true"));
         assert!(json.contains("\"embeddingDimension\":768"));
+    }
+
+    #[test]
+    fn test_needs_prefix_known_nomic_models() {
+        assert!(needs_prefix("nomic-embed-text"));
+        assert!(needs_prefix("nomic-embed-text-v1"));
+        assert!(needs_prefix("nomic-embed-text-v1.5"));
+        assert!(needs_prefix("nomic-embed-text-v2-moe"));
+        // Case-insensitive
+        assert!(needs_prefix("NOMIC-EMBED-TEXT"));
+        assert!(needs_prefix("Nomic-Embed-Text-v2-MoE"));
+    }
+
+    #[test]
+    fn test_needs_prefix_rejects_substring_match() {
+        // The old `contains("nomic")` logic would have matched these;
+        // the allowlist must NOT (audit bug 1.6).
+        assert!(!needs_prefix("my-nomic-finetune"));
+        assert!(!needs_prefix("nomic-code"));
+        assert!(!needs_prefix("bge-m3"));
+        assert!(!needs_prefix("mxbai-embed-large"));
+        assert!(!needs_prefix("all-MiniLM-L6-v2"));
     }
 }
