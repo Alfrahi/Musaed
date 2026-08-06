@@ -18,7 +18,7 @@ describe('useStreamingStore', () => {
     it('should reset all state to initial values', () => {
       // Setup: add some data
       useStreamingStore.getState().startStream('conv1', 'req1');
-      useStreamingStore.getState().appendToken('conv1', 'hello');
+      useStreamingStore.getState().appendToken('conv1', 'hello', 'req1');
       useStreamingStore.getState().setPendingMetrics('conv1', { role: 'assistant' });
       useStreamingStore.getState().markFlushed('conv1');
 
@@ -90,8 +90,8 @@ describe('useStreamingStore', () => {
   describe('appendToken', () => {
     it('should append token to liveContent for active stream', () => {
       useStreamingStore.getState().startStream('conv1', 'req1');
-      useStreamingStore.getState().appendToken('conv1', 'hello');
-      useStreamingStore.getState().appendToken('conv1', ' world');
+      useStreamingStore.getState().appendToken('conv1', 'hello', 'req1');
+      useStreamingStore.getState().appendToken('conv1', ' world', 'req1');
 
       const state = useStreamingStore.getState();
       expect(state.liveContent.conv1?.chunks).toEqual(['hello', ' world']);
@@ -99,7 +99,7 @@ describe('useStreamingStore', () => {
 
     it('should initialize buffer if not exists', () => {
       useStreamingStore.getState().startStream('conv1', 'req1');
-      useStreamingStore.getState().appendToken('conv1', 'first');
+      useStreamingStore.getState().appendToken('conv1', 'first', 'req1');
 
       const state = useStreamingStore.getState();
       expect(state.liveContent.conv1).toEqual({ chunks: ['first'] });
@@ -107,7 +107,7 @@ describe('useStreamingStore', () => {
 
     it('should silently ignore tokens for non-active streams', () => {
       // Don't start stream
-      useStreamingStore.getState().appendToken('conv1', 'ignored');
+      useStreamingStore.getState().appendToken('conv1', 'ignored', 'req1');
 
       const state = useStreamingStore.getState();
       expect(state.liveContent.conv1).toBeUndefined();
@@ -115,12 +115,26 @@ describe('useStreamingStore', () => {
 
     it('should ignore tokens after stream is stopped', () => {
       useStreamingStore.getState().startStream('conv1', 'req1');
-      useStreamingStore.getState().appendToken('conv1', 'before');
+      useStreamingStore.getState().appendToken('conv1', 'before', 'req1');
       useStreamingStore.getState().stopStream('conv1');
-      useStreamingStore.getState().appendToken('conv1', 'after');
+      useStreamingStore.getState().appendToken('conv1', 'after', 'req1');
 
       const state = useStreamingStore.getState();
       expect(state.liveContent.conv1?.chunks).toEqual(['before']);
+    });
+
+    it('should ignore tokens from a stale requestId (audit bug 2.1)', () => {
+      useStreamingStore.getState().startStream('conv1', 'req1');
+      useStreamingStore.getState().appendToken('conv1', 'old', 'req1');
+      // New stream replaces the old one
+      useStreamingStore.getState().startStream('conv1', 'req2');
+      // Token from the old requestId should be dropped
+      useStreamingStore.getState().appendToken('conv1', 'stale', 'req1');
+      // Token from the new requestId should be appended
+      useStreamingStore.getState().appendToken('conv1', 'new', 'req2');
+
+      const state = useStreamingStore.getState();
+      expect(state.liveContent.conv1?.chunks).toEqual(['old', 'new']);
     });
   });
 
@@ -164,8 +178,8 @@ describe('useStreamingStore', () => {
   describe('flushToConversation', () => {
     it('should return content and metrics and clear them', () => {
       useStreamingStore.getState().startStream('conv1', 'req1');
-      useStreamingStore.getState().appendToken('conv1', 'hello');
-      useStreamingStore.getState().appendToken('conv1', ' world');
+      useStreamingStore.getState().appendToken('conv1', 'hello', 'req1');
+      useStreamingStore.getState().appendToken('conv1', ' world', 'req1');
       useStreamingStore.getState().setPendingMetrics('conv1', { role: 'assistant' });
 
       const result = useStreamingStore.getState().flushToConversation('conv1');
@@ -187,7 +201,7 @@ describe('useStreamingStore', () => {
 
     it('should return null if already flushed (idempotency guard)', () => {
       useStreamingStore.getState().startStream('conv1', 'req1');
-      useStreamingStore.getState().appendToken('conv1', 'test');
+      useStreamingStore.getState().appendToken('conv1', 'test', 'req1');
       useStreamingStore.getState().flushToConversation('conv1');
       useStreamingStore.getState().markFlushed('conv1');
 
@@ -199,12 +213,12 @@ describe('useStreamingStore', () => {
       // Reproduces audit bug 1.2: tokens arriving after the first flush
       // but before clearStream must be flushed, not silently dropped.
       useStreamingStore.getState().startStream('conv1', 'req1');
-      useStreamingStore.getState().appendToken('conv1', 'part1');
+      useStreamingStore.getState().appendToken('conv1', 'part1', 'req1');
       useStreamingStore.getState().flushToConversation('conv1');
       useStreamingStore.getState().markFlushed('conv1');
 
       // Late tokens arrive (stream still in activeStreams, not yet cleared)
-      useStreamingStore.getState().appendToken('conv1', 'part2');
+      useStreamingStore.getState().appendToken('conv1', 'part2', 'req1');
       useStreamingStore.getState().setPendingMetrics('conv1', { evalCount: 5 });
 
       const result = useStreamingStore.getState().flushToConversation('conv1');
@@ -259,7 +273,7 @@ describe('useStreamingStore', () => {
   describe('clearStream', () => {
     it('should remove all stream-related data for a conversation', () => {
       useStreamingStore.getState().startStream('conv1', 'req1');
-      useStreamingStore.getState().appendToken('conv1', 'test');
+      useStreamingStore.getState().appendToken('conv1', 'test', 'req1');
       useStreamingStore.getState().setPendingMetrics('conv1', { role: 'assistant' });
       useStreamingStore.getState().markFlushed('conv1');
 
@@ -275,8 +289,8 @@ describe('useStreamingStore', () => {
     it('should not affect other conversations', () => {
       useStreamingStore.getState().startStream('conv1', 'req1');
       useStreamingStore.getState().startStream('conv2', 'req2');
-      useStreamingStore.getState().appendToken('conv1', 'test1');
-      useStreamingStore.getState().appendToken('conv2', 'test2');
+      useStreamingStore.getState().appendToken('conv1', 'test1', 'req1');
+      useStreamingStore.getState().appendToken('conv2', 'test2', 'req2');
 
       useStreamingStore.getState().clearStream('conv1');
 
@@ -296,9 +310,9 @@ describe('useStreamingStore', () => {
     describe('selectLiveContent', () => {
       it('should return joined chunks for conversation', () => {
         useStreamingStore.getState().startStream('conv1', 'req1');
-        useStreamingStore.getState().appendToken('conv1', 'hello');
-        useStreamingStore.getState().appendToken('conv1', ' ');
-        useStreamingStore.getState().appendToken('conv1', 'world');
+        useStreamingStore.getState().appendToken('conv1', 'hello', 'req1');
+        useStreamingStore.getState().appendToken('conv1', ' ', 'req1');
+        useStreamingStore.getState().appendToken('conv1', 'world', 'req1');
 
         const result = selectLiveContent('conv1')(useStreamingStore.getState());
         expect(result).toBe('hello world');
@@ -354,8 +368,8 @@ describe('useStreamingStore', () => {
       expect(selectIsLiveStreaming('conv1')(useStreamingStore.getState())).toBe(true);
 
       // Append tokens
-      useStreamingStore.getState().appendToken('conv1', 'chunk1');
-      useStreamingStore.getState().appendToken('conv1', 'chunk2');
+      useStreamingStore.getState().appendToken('conv1', 'chunk1', 'req1');
+      useStreamingStore.getState().appendToken('conv1', 'chunk2', 'req1');
       useStreamingStore.getState().setPendingMetrics('conv1', { role: 'assistant' });
 
       // Flush
@@ -377,9 +391,9 @@ describe('useStreamingStore', () => {
 
     it('should handle appendToken after clearStream (zombie buffer prevention)', () => {
       useStreamingStore.getState().startStream('conv1', 'req1');
-      useStreamingStore.getState().appendToken('conv1', 'before');
+      useStreamingStore.getState().appendToken('conv1', 'before', 'req1');
       useStreamingStore.getState().clearStream('conv1');
-      useStreamingStore.getState().appendToken('conv1', 'after');
+      useStreamingStore.getState().appendToken('conv1', 'after', 'req1');
 
       const result = selectLiveContent('conv1')(useStreamingStore.getState());
       expect(result).toBeNull(); // 'after' should be ignored
@@ -431,10 +445,10 @@ describe('useStreamingStore', () => {
     it('emits a trace entry on the Nth appendToken for a started stream', async () => {
       useStreamingStore.getState().startStream('obs-conv', 'req-1');
       for (let i = 1; i < N; i++) {
-        useStreamingStore.getState().appendToken('obs-conv', 't');
+        useStreamingStore.getState().appendToken('obs-conv', 't', 'req-1');
       }
       expect(traceApi.append).not.toHaveBeenCalled();
-      useStreamingStore.getState().appendToken('obs-conv', 't');
+      useStreamingStore.getState().appendToken('obs-conv', 't', 'req-1');
 
       expect(traceApi.append).toHaveBeenCalledTimes(1);
       const input = (vi.mocked(traceApi.append).mock.calls[0] as unknown[])[0] as Parameters<
@@ -451,7 +465,7 @@ describe('useStreamingStore', () => {
 
     it('emits a flushToConversation trace on a successful flush', () => {
       useStreamingStore.getState().startStream('flush-conv', 'req-2');
-      useStreamingStore.getState().appendToken('flush-conv', 'hello');
+      useStreamingStore.getState().appendToken('flush-conv', 'hello', 'req-2');
       useStreamingStore.getState().flushToConversation('flush-conv');
 
       const flushCall = vi
@@ -470,7 +484,7 @@ describe('useStreamingStore', () => {
       // No startStream — appendToken short-circuits inside set(); the trace
       // helper itself still runs (counts the token) but the audit contract is
       // that we only care that flushToConversation still emits on proper flush.
-      useStreamingStore.getState().appendToken('ghost-conv', 't');
+      useStreamingStore.getState().appendToken('ghost-conv', 't', 'req-ghost');
       expect(
         vi
           .mocked(traceApi.append)

@@ -37,7 +37,7 @@ const handleToken = (payload: OllamaToken) => {
   const _isFirstToken = !(convId in streamingStore.liveContent);
 
   // Accumulate token in the lightweight streaming buffer
-  streamingStore.appendToken(convId, token);
+  streamingStore.appendToken(convId, token, requestId);
 
   // Stash metrics so they're included in the next flush
   const metrics: Partial<Message> = {};

@@ -85,7 +85,7 @@ export interface StreamingState {
   /** Track which conversations have been flushed to prevent duplicate flushes. */
   flushedStreams: Set<string>;
 
-  appendToken: (conversationId: string, token: string) => void;
+  appendToken: (conversationId: string, token: string, requestId: string) => void;
   setPendingMetrics: (conversationId: string, metrics: Partial<Message>) => void;
   flushToConversation: (
     conversationId: string
@@ -104,11 +104,16 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
     activeStreams: {},
     flushedStreams: new Set<string>(),
 
-    appendToken: (conversationId, token) => {
+    appendToken: (conversationId, token, requestId) => {
       const currentChunks = get().liveContent[conversationId]?.chunks.length ?? 0;
       traceAppendToken(conversationId, currentChunks);
       set((state) => {
-        if (!(conversationId in state.activeStreams)) {
+        // Gate on the requestId to prevent tokens from a stale stream
+        // being appended to a newer stream (or after stop). If the
+        // registered requestId for this conversation does not match the
+        // one the caller provided, the token belongs to an old stream
+        // and must be dropped (audit bug 2.1).
+        if (state.activeStreams[conversationId] !== requestId) {
           return state;
         }
 
