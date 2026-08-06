@@ -428,9 +428,17 @@ async fn phase_embed(ctx: &PhaseContext<'_>, chunked: &ChunkOutput) -> Result<Em
 
 // ====================== PHASE 6: STORE ======================
 
-/// Store chunks and their embeddings in the database.  Holds the write
-/// guard only while actively writing; progress events are emitted every
-/// 100 records.
+/// Store chunks and their embeddings in the database.
+///
+/// The write guard is acquired **per file** (not held across the entire
+/// phase) so other operations — index abort, project updates, searches,
+/// deletions — are not starved for the full duration of a large store phase
+/// (audit bug 1.5).  Progress events are emitted every 100 chunks.
+///
+/// Cancellation is checked at the top of each file iteration **and** every
+/// 100 chunks inside the inner loop, so a very large file (e.g. 10 000+
+/// chunks) does not keep running for minutes after the user clicks cancel
+/// (audit bug 1.9).
 async fn phase_store(
     ctx: &PhaseContext<'_>,
     discovered: &[crate::rag::ignore::DiscoveredFile],
@@ -444,40 +452,48 @@ async fn phase_store(
         "Storing chunks and embeddings...".to_string(),
     );
 
-    {
-        let s = ctx.store.write().await;
-        let mut embedding_idx = 0;
-        let mut total_stored = 0usize;
-        let mut total_bytes: u64 = 0;
+    let mut embedding_idx = 0;
+    let mut total_stored = 0usize;
+    let mut total_bytes: u64 = 0;
 
-        for (relative_path, file_size, file_hash, chunks) in &chunked.all_raw_chunks {
-            ctx.check_cancelled()?;
-            total_bytes += file_size;
+    for (relative_path, file_size, file_hash, chunks) in &chunked.all_raw_chunks {
+        ctx.check_cancelled()?;
+        total_bytes += file_size;
 
-            let full_path = ctx.project_path.join(relative_path);
-            let mtime = std::fs::metadata(&full_path)
-                .ok()
-                .and_then(|m| m.modified().ok())
-                .map(|t| {
-                    let datetime: chrono::DateTime<chrono::Utc> = t.into();
-                    datetime.to_rfc3339()
-                })
-                .unwrap_or_default();
+        let full_path = ctx.project_path.join(relative_path);
+        let mtime = std::fs::metadata(&full_path)
+            .ok()
+            .and_then(|m| m.modified().ok())
+            .map(|t| {
+                let datetime: chrono::DateTime<chrono::Utc> = t.into();
+                datetime.to_rfc3339()
+            })
+            .unwrap_or_default();
 
-            let file_record = FileRecord {
-                id: None,
-                project_id: ctx.project_id.to_string(),
-                relative_path: relative_path.clone(),
-                file_hash: file_hash.clone(),
-                file_size: *file_size,
-                modified_at: mtime,
-                chunk_count: chunks.len(),
-            };
+        let file_record = FileRecord {
+            id: None,
+            project_id: ctx.project_id.to_string(),
+            relative_path: relative_path.clone(),
+            file_hash: file_hash.clone(),
+            file_size: *file_size,
+            modified_at: mtime,
+            chunk_count: chunks.len(),
+        };
 
+        // Acquire the write guard only for this file's writes, then drop
+        // it before the next file so concurrent operations are not blocked.
+        {
+            let s = ctx.store.write().await;
             let file_id = s.upsert_file(&file_record).await?;
             let _ = s.delete_file_chunks(file_id).await;
 
             for (chunk_idx, chunk) in chunks.iter().enumerate() {
+                // Check cancellation every 100 chunks so a very large file
+                // does not block the cancel token between file boundaries.
+                if chunk_idx > 0 && chunk_idx % 100 == 0 {
+                    ctx.check_cancelled()?;
+                }
+
                 let chunk_row = ChunkRow {
                     id: None,
                     project_id: ctx.project_id.to_string(),
@@ -511,7 +527,11 @@ async fn phase_store(
                 }
             }
         }
+    }
 
+    // Final stats update under its own short-lived write guard.
+    {
+        let s = ctx.store.write().await;
         let file_count = discovered.len() as u64;
         let stats = s.get_project_stats(ctx.project_id).await?;
         s.update_project_stats(

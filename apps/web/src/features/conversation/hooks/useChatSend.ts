@@ -1,7 +1,12 @@
 'use client';
 
 import { useCallback } from 'react';
-import { type Message, type ModelParams, VALIDATION_LIMITS } from '@musaed/contracts';
+import {
+  type Message,
+  type ModelParams,
+  type ModelDefaultParams,
+  VALIDATION_LIMITS,
+} from '@musaed/contracts';
 import { useTranslation } from '@/lib/i18n';
 import { chatApi } from '@/lib/ipc';
 import { config } from '@/lib/config';
@@ -14,6 +19,8 @@ import { useCurrentConversationId, useConversations } from '@/store/conversation
 import { useSettingsStore } from '@/store/settings-store';
 import { useModelStore } from '@/store/model-store';
 import { selectResolvedParams } from '@/store/model-params-store';
+import { useStreamingStore } from '@/store/streaming-store';
+import { useUIStore } from '@/store/ui-store';
 import { useModelContextWindow } from '@/features/library';
 import { persistUserMessage } from '@/features/conversation/utils/message-persistence';
 import { useChatRag, type ChatRagSource } from './useChatRag';
@@ -129,6 +136,82 @@ function buildChatPayload(
 }
 
 /**
+ * Safety-net cleanup for orphaned `activeStreams` entries (audit bug 1.8).
+ * If a stream entry is still registered for `conversationId` with the
+ * given `requestId` at this point, no completion or error path cleaned it
+ * up (e.g. `assembleChatRag` threw before the inner try/catch). Removes
+ * the entry to prevent a memory leak and orphaned streaming state.
+ */
+function cleanupOrphanedStream(conversationId: string, requestId: string): void {
+  const { activeStreams } = useStreamingStore.getState();
+  if (activeStreams[conversationId] !== requestId) return;
+  useStreamingStore.getState().stopStream(conversationId);
+  useStreamingStore.getState().clearStream(conversationId);
+  if (Object.keys(useStreamingStore.getState().activeStreams).length === 0) {
+    useUIStore.getState().setStreaming(false);
+  }
+}
+
+/** Parameters for the chat send attempt. */
+interface ChatSendAttemptParams {
+  conversationId: string;
+  requestId: string;
+  ollamaUrl: string;
+  fullPrompt: string;
+  selectedModel: string;
+  contextWindow: number | null;
+  defaultParams: ModelDefaultParams | null;
+  paramsStop: string[];
+  messages: Record<string, Message[]>;
+  addMessages: (conversationId: string, messages: Message[]) => void;
+  updateLastMessage: (conversationId: string, update: Partial<Message>, replace?: boolean) => void;
+  handleStreamError: ReturnType<typeof useChatStream>['handleStreamError'];
+  t: (key: string) => string;
+}
+
+/** Execute the chat API call and persist the assistant message on success. */
+async function executeChatSendAttempt(params: ChatSendAttemptParams): Promise<void> {
+  const {
+    conversationId,
+    requestId,
+    ollamaUrl,
+    fullPrompt,
+    selectedModel,
+    contextWindow,
+    defaultParams,
+    paramsStop,
+    messages,
+    handleStreamError,
+    t,
+  } = params;
+
+  try {
+    const resolved = selectResolvedParams(selectedModel, contextWindow, defaultParams);
+    const payload = buildChatPayload(
+      ollamaUrl,
+      fullPrompt,
+      selectedModel,
+      requestId,
+      resolved,
+      paramsStop
+    );
+    const success = await chatApi.chat(payload);
+    if (success !== true) throw new Error(t('chat.connectionFailed'));
+
+    const convMessages = messages[conversationId] || [];
+    await persistAssistantMessage(conversationId, requestId, convMessages);
+  } catch (err) {
+    handleStreamError(
+      err,
+      conversationId,
+      requestId,
+      (id, update, replace) => params.updateLastMessage(id, update, replace),
+      t
+    );
+  }
+}
+
+/**
  * Send pipeline for the chat feature. Extracted from the former God hook
  * (audit F4). Owns: validation → message creation → RAG context →
  * persist → chatApi.chat → persist assistant message → error handling.
@@ -199,42 +282,58 @@ export function useChatSend(): {
       const requestId = crypto.randomUUID();
       initiateStreaming(conversationId, requestId);
 
-      const { ragSources } = await assembleChatRag(trimmedInput);
-
-      const [userMsg, assistantMsg] = createChatMessages(
-        trimmedInput,
-        images,
-        selectedModel,
-        requestId,
-        ragSources
-      );
-
-      messageStore.addMessages(conversationId, [userMsg, assistantMsg]);
-      persistMessage(conversationId, userMsg);
-
+      // Guard against unbounded `activeStreams` growth (audit bug 1.8):
+      // if an error occurs after `initiateStreaming` registers the stream
+      // in `activeStreams` but before `executeChatSendAttempt` (e.g.
+      // `assembleChatRag` throws), no cleanup path runs and the entry leaks
+      // forever. We catch such errors here, clean up the orphaned stream,
+      // and re-throw so the caller can still react.
+      //
+      // We deliberately do NOT use `finally` here — the normal streaming
+      // completion path is handled asynchronously by `handleToken` /
+      // `completeStreamForConversation` in useTauriEvents, which runs
+      // AFTER `chatApi.chat` resolves. A `finally` would clear the
+      // stream entry before the tokens arrive, killing the response.
       try {
-        const params = selectResolvedParams(selectedModel, contextWindow, defaultParams);
-        const payload = buildChatPayload(
+        const { ragSources } = await assembleChatRag(trimmedInput);
+
+        const [userMsg, assistantMsg] = createChatMessages(
+          trimmedInput,
+          images,
+          selectedModel,
+          requestId,
+          ragSources
+        );
+
+        messageStore.addMessages(conversationId, [userMsg, assistantMsg]);
+        persistMessage(conversationId, userMsg);
+
+        await executeChatSendAttempt({
+          conversationId,
+          requestId,
           ollamaUrl,
           fullPrompt,
           selectedModel,
-          requestId,
-          params,
-          paramsStop
-        );
-        const success = await chatApi.chat(payload);
-        if (success !== true) throw new Error(t('chat.connectionFailed'));
-
-        const messages = messageStore.messages[conversationId] || [];
-        await persistAssistantMessage(conversationId, requestId, messages);
+          contextWindow,
+          defaultParams,
+          paramsStop,
+          messages: messageStore.messages,
+          addMessages: messageStore.addMessages,
+          updateLastMessage: messageStore.updateLastMessage,
+          handleStreamError,
+          t,
+        });
       } catch (err) {
-        handleStreamError(
-          err,
+        // `executeChatSendAttempt` has its own catch that calls
+        // `handleStreamError` — if we get here the error happened before
+        // that inner try (e.g. `assembleChatRag` threw). Clean up the
+        // orphaned stream entry to prevent a memory leak.
+        cleanupOrphanedStream(conversationId, requestId);
+        logger.error('Chat send failed before stream start', {
+          error: err instanceof Error ? err.message : String(err),
           conversationId,
           requestId,
-          (id, update, replace) => messageStore.updateLastMessage(id, update, replace),
-          t
-        );
+        });
       }
     },
     [

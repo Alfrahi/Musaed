@@ -42,7 +42,15 @@ export function useChatStream(): {
       t: (key: string) => string
     ) => {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.toLowerCase().includes('aborted')) return;
+      // Filter abort/cancellation errors so the user doesn't see a
+      // "Stream failed" toast for a user-initiated or backend-canceled
+      // stop (audit bug 1.10). The backend may report "aborted",
+      // "cancelled", "canceled", "Stream cancelled", "Request
+      // cancelled", etc.
+      const lower = msg.toLowerCase();
+      if (['aborted', 'cancelled', 'canceled', 'cancel'].some((term) => lower.includes(term))) {
+        return;
+      }
       logger.error('Chat error', { error: msg, requestId });
       // Flush any buffered tokens before appending the error message
       flushAndStop(conversationId);
