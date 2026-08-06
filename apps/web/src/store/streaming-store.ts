@@ -22,16 +22,9 @@ function runFlushToConversation(
     partial: Partial<StreamingState> | ((state: StreamingState) => Partial<StreamingState>)
   ) => void
 ): { content: string; metrics: Partial<Message> } | null {
-  const { liveContent, pendingMetrics, flushedStreams } = get();
-
-  // Prevent duplicate flushes (idempotency guard) — check-and-mark
-  // atomically inside the set callback to close the TOCTOU window.
-  if (flushedStreams.has(conversationId)) {
-    return null;
-  }
-
+  const { liveContent, pendingMetrics } = get();
   const buffer = liveContent[conversationId];
-  // If no buffer, but may have pending metrics, return null as before
+  // If no buffer, but may have pending metrics, return metrics as before
   if (!buffer) {
     if (!pendingMetrics[conversationId]) return null;
     const metrics = pendingMetrics[conversationId] ?? {};
@@ -44,10 +37,17 @@ function runFlushToConversation(
     });
     return { content: '', metrics };
   }
+
   const content = buffer.chunks.join('');
   const metrics = pendingMetrics[conversationId] ?? {};
 
-  // Clear flushed content and metrics, and mark as flushed atomically
+  // Clear flushed content and metrics, and mark as flushed atomically.
+  // We intentionally do NOT early-return when the conversation is already
+  // in `flushedStreams`. A prior flush may have happened (e.g. user clicked
+  // stop), then more tokens arrived via `appendToken` before `clearStream`
+  // ran. Those late tokens are still in `liveContent` and must be flushed,
+  // otherwise they are permanently lost. Returning `{ content, metrics }`
+  // here lets the caller (flushAndStop → updateLastMessage) append them.
   set((state) => {
     const { [conversationId]: _flushed, ...remaining } = state.liveContent;
     const { [conversationId]: _metrics, ...remainingMetrics } = state.pendingMetrics;

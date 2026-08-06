@@ -57,9 +57,12 @@ const handleToken = (payload: OllamaToken) => {
   if (payload.done) {
     completeStreamForConversation(convId);
 
-    // Persist the completed assistant message to Rust backend with retry logic
-    const msgs = useMessageStore.getState().messages[convId] ?? [];
-    const lastMsg = msgs[msgs.length - 1];
+    // Persist the completed assistant message to Rust backend with retry logic.
+    // Guard against the conversation being deleted between stream start and
+    // completion (audit bug 1.3): `messages[convId]` may be undefined if the
+    // user deleted the conversation while the stream was still in flight.
+    const msgs = useMessageStore.getState().messages[convId];
+    const lastMsg = msgs?.[msgs.length - 1];
     if (lastMsg && lastMsg.role === 'assistant') {
       persistMessage(convId, lastMsg).then((result) => {
         if (!result.success) {
@@ -76,8 +79,10 @@ const handleToken = (payload: OllamaToken) => {
       });
     }
 
-    // Auto-generate title for conversations that still have the default title
-    triggerAutoTitle(convId);
+    // Auto-generate title only if the conversation still exists
+    if (msgs?.length) {
+      triggerAutoTitle(convId);
+    }
   }
 };
 

@@ -198,17 +198,46 @@ describe('completeStreamForConversation', () => {
     useUIStore.setState({ isStreaming: true });
   });
 
-  it('flushes buffered content + metrics and marks done, but NOT stopped', () => {
+  it('flushes buffered content + metrics and marks done, and clears stopped', () => {
     completeStreamForConversation('conv-1');
 
     const messages = useMessageStore.getState().messages['conv-1'];
     const lastMsg = messages[messages.length - 1];
     expect(lastMsg.content).toBe('partialhello');
     expect(lastMsg.done).toBe(true);
-    expect(lastMsg.stopped).toBeUndefined();
+    // Natural completion must NOT show "Stopped by user" — explicitly false
+    expect(lastMsg.stopped).toBe(false);
     expect(lastMsg.promptEvalCount).toBe(42);
     expect(lastMsg.evalCount).toBe(10);
     expect(useUIStore.getState().isStreaming).toBe(false);
+  });
+
+  it('clears a previously-set stopped:true flag on natural completion', () => {
+    // Reproduces audit bug 1.4: a conversation whose previous message was
+    // user-stopped should not carry `stopped: true` forward onto the next
+    // naturally-completed message.
+    useMessageStore.setState({
+      messages: {
+        'conv-1': [
+          { id: 'msg-1', role: 'user', content: 'hi', timestamp: 1 },
+          {
+            id: 'msg-2',
+            role: 'assistant',
+            content: 'partial',
+            timestamp: 2,
+            done: false,
+            stopped: true,
+          },
+        ],
+      },
+    });
+
+    completeStreamForConversation('conv-1');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    const lastMsg = messages[messages.length - 1];
+    expect(lastMsg.done).toBe(true);
+    expect(lastMsg.stopped).toBe(false);
   });
 
   it('does not set stopped:true even when there is no buffered content', () => {
@@ -221,7 +250,7 @@ describe('completeStreamForConversation', () => {
 
     const messages = useMessageStore.getState().messages['conv-1'];
     const lastMsg = messages[messages.length - 1];
-    expect(lastMsg.stopped).toBeUndefined();
+    expect(lastMsg.stopped).toBe(false);
   });
 
   it('is idempotent — calling twice does not double-flush', () => {
