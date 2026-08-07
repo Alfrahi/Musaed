@@ -144,7 +144,10 @@ export const InputArea = () => {
     if (currentConversationId) {
       const requestId = useStreamingStore.getState().activeStreams[currentConversationId];
       if (requestId) chatApi.abort(requestId);
-      stopStreamForConversation(currentConversationId);
+      // Pass the requestId so stopStreamForConversation bails out if a
+      // new stream has replaced the old one before this call runs
+      // (audit bug 2.3 — abort race).
+      stopStreamForConversation(currentConversationId, requestId);
     }
   }, [currentConversationId]);
 

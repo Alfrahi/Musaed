@@ -98,7 +98,9 @@ const handleError = (payload: BackendError) => {
       ([_, id]) => id === sanitized.requestId
     )?.[0];
     if (convId) {
-      stopStreamForConversation(convId);
+      // Pass the requestId so stopStreamForConversation bails out if a new
+      // stream has replaced the old one before this call runs (audit bug 2.3).
+      stopStreamForConversation(convId, sanitized.requestId);
       toast.error(translate('error.backendError', lang, { message: sanitized.message }));
       return;
     }

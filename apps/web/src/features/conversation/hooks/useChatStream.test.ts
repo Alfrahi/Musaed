@@ -66,8 +66,13 @@ describe('useChatStream', () => {
       result.current.abortMessage('conv1');
     });
 
-    // abortMessage calls stopStreamForConversation directly
-    expect(mockUtils.coordination.stopStreamForConversation).toHaveBeenCalledWith('conv1');
+    // abortMessage reads the active requestId from the streaming store and
+    // passes it to stopStreamForConversation so the abort race guard can
+    // bail out if the stream has been replaced (audit bug 2.3).
+    expect(mockUtils.coordination.stopStreamForConversation).toHaveBeenCalledWith(
+      'conv1',
+      'request1'
+    );
   });
 
   it('abortMessage is a no-op when conversationId is null', () => {

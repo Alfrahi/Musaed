@@ -98,7 +98,12 @@ describe('useGlobalShortcuts', () => {
       dispatchEscape();
 
       expect(coordinationMock.stopStreamForConversation).toHaveBeenCalledTimes(1);
-      expect(coordinationMock.stopStreamForConversation).toHaveBeenCalledWith('conv-active');
+      // The requestId is passed so the abort race guard can bail out if the
+      // stream has been replaced before the stop runs (audit bug 2.3).
+      expect(coordinationMock.stopStreamForConversation).toHaveBeenCalledWith(
+        'conv-active',
+        'req-1'
+      );
     });
 
     it('(b) Escape while streaming and modal open → modal closes, stopStreamForConversation not called', () => {

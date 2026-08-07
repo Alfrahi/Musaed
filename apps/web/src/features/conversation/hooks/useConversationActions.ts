@@ -68,7 +68,9 @@ export const useConversationActions = () => {
     (id: string) => {
       const requestId = useStreamingStore.getState().activeStreams[id];
       if (requestId) chatApi.abort(requestId);
-      stopStreamForConversation(id);
+      // Pass the requestId so stopStreamForConversation bails out if a new
+      // stream has replaced the old one before this call runs (audit bug 2.3).
+      stopStreamForConversation(id, requestId);
       const state = useConversationStore.getState();
       const { [id]: _removed, ...remainingConversations } = state.conversations;
       const remainingIds = state.conversationIds.filter((cid) => cid !== id);
@@ -111,7 +113,9 @@ export const useConversationActions = () => {
     const activeStreams = useStreamingStore.getState().activeStreams;
     Object.entries(activeStreams).forEach(([convId, requestId]) => {
       chatApi.abort(requestId);
-      stopStreamForConversation(convId);
+      // Pass the requestId so stopStreamForConversation bails out if a new
+      // stream has replaced the old one before this call runs (audit bug 2.3).
+      stopStreamForConversation(convId, requestId);
     });
 
     // Persist clearing via Rust backend

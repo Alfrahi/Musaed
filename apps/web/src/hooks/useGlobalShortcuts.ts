@@ -91,8 +91,12 @@ export function useGlobalShortcuts() {
         if (!conversationId) return;
         const activeStreams = useStreamingStore.getState().activeStreams;
         if (conversationId in activeStreams) {
-          chatApi.abort(activeStreams[conversationId]);
-          stopStreamForConversation(conversationId);
+          const requestId = activeStreams[conversationId];
+          chatApi.abort(requestId);
+          // Pass the requestId so stopStreamForConversation bails out if a
+          // new stream has replaced the old one before this call runs
+          // (audit bug 2.3 — abort race).
+          stopStreamForConversation(conversationId, requestId);
         }
       }
     };
