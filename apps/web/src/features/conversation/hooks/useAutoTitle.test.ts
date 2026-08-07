@@ -109,14 +109,89 @@ describe('triggerAutoTitle', () => {
     expect(titleGenerator.generateConversationTitle).not.toHaveBeenCalled();
   });
 
-  it('returns early if already pending', async () => {
-    const loggerModule = await import('@/lib/logger');
-    pendingAutoTitles.add('conv123');
+  it('returns early if already pending (same conversation instance)', async () => {
+    pendingAutoTitles.add(`conv123:${mockConversationState.conv123.createdAt}`);
 
     await triggerAutoTitle('conv123');
 
-    expect(loggerModule.logger.warn).not.toHaveBeenCalled();
-    pendingAutoTitles.delete('conv123');
+    expect(titleGenerator.generateConversationTitle).not.toHaveBeenCalled();
+    pendingAutoTitles.clear();
+  });
+
+  it('does NOT treat a recycled id as the same pending request (audit bug 2.2)', async () => {
+    // Simulate: original conversation (createdAt T1) is pending; a new
+    // conversation reuses the same id with createdAt T2. The two should be
+    // treated as distinct pending entries so the new conversation can still
+    // generate a title.
+    const t1 = mockConversationState.conv123.createdAt;
+    pendingAutoTitles.add(`conv123:${t1}`);
+
+    // New conversation with the same id but a later createdAt
+    const t2 = t1 + 10_000;
+    mockConversationState.conv123 = {
+      ...mockConversationState.conv123,
+      createdAt: t2,
+      updatedAt: t2,
+    };
+
+    await triggerAutoTitle('conv123');
+
+    expect(titleGenerator.generateConversationTitle).toHaveBeenCalled();
+    pendingAutoTitles.clear();
+  });
+
+  it('discards generated title when conversation is replaced mid-flight (audit bug 2.2)', async () => {
+    // Race scenario: lookup finds conversation A (createdAt T1); while the
+    // title is being generated, conversation A is deleted and a new
+    // conversation B reuses the id with createdAt T2. The title generated
+    // from A's messages MUST NOT be applied to B.
+    const t1 = mockConversationState.conv123.createdAt;
+    const t2 = t1 + 10_000;
+
+    // Make title generation async so we can mutate the store mid-flight.
+    let resolveTitle: (value: string | null) => void = () => {};
+    const titlePromise = new Promise<string | null>((r) => {
+      resolveTitle = r;
+    });
+    vi.spyOn(titleGenerator, 'generateConversationTitle').mockReturnValue(titlePromise);
+
+    const conversationStore = await import('@/store/conversation-store');
+    const getStateMock = conversationStore.useConversationStore.getState as ReturnType<
+      typeof vi.fn
+    >;
+    const mockUpdateConversation = vi.fn();
+    // First call (lookup) returns A; subsequent calls see B until title resolves.
+    getStateMock.mockImplementation(() => ({
+      conversations: {
+        conv123: {
+          ...mockConversationState.conv123,
+          createdAt: t1,
+          updatedAt: t1,
+        },
+      },
+      updateConversation: mockUpdateConversation,
+    }));
+
+    const pending = triggerAutoTitle('conv123');
+
+    // Mid-flight: replace conversation A with conversation B (same id, new createdAt).
+    getStateMock.mockImplementation(() => ({
+      conversations: {
+        conv123: {
+          ...mockConversationState.conv123,
+          createdAt: t2,
+          updatedAt: t2,
+        },
+      },
+      updateConversation: mockUpdateConversation,
+    }));
+
+    resolveTitle('Title from conversation A');
+    await pending;
+
+    // Title generated from A's messages must NOT be applied to conversation B.
+    expect(mockUpdateConversation).not.toHaveBeenCalled();
+    pendingAutoTitles.clear();
   });
 
   it('handles retry loop when conversation missing initially', async () => {
