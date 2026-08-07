@@ -40,10 +40,31 @@ export function coordinateStartStream(conversationId: string, requestId: string)
  * This ensures buffered tokens are persisted before abort/stop so no content
  * is silently discarded.
  *
+ * **Abort race guard (audit bug 2.3)**: When `expectedRequestId` is provided,
+ * the function first checks whether the stream currently registered for
+ * `conversationId` still matches that requestId. If a new stream has already
+ * replaced the old one (e.g. the user sent a new message between the caller
+ * reading `activeStreams[conversationId]` and calling this function), the flush
+ * is skipped entirely — the new stream is left untouched and its buffered
+ * tokens are not stolen. Without this guard, a user-initiated stop on an old
+ * stream would destroy the content of a newer stream that happened to reuse
+ * the same conversation.
+ *
  * Idempotent: calling multiple times for the same conversationId is safe.
  */
-export function flushAndStop(conversationId: string): void {
+export function flushAndStop(conversationId: string, expectedRequestId?: string): void {
   const streamingStore = useStreamingStore.getState();
+
+  // Abort race guard (audit bug 2.3): if the caller read a requestId from
+  // `activeStreams[conversationId]` before calling this function, bail out
+  // when the active stream has already been replaced by a newer one. This
+  // prevents flush-to-completion from stealing the new stream's buffered
+  // tokens when the old stream was aborted.
+  if (expectedRequestId !== undefined) {
+    const activeRequestId = streamingStore.activeStreams[conversationId];
+    if (activeRequestId !== expectedRequestId) return;
+  }
+
   const result = streamingStore.flushToConversation(conversationId);
 
   if (result) {
@@ -78,8 +99,25 @@ export function flushAndStop(conversationId: string): void {
  * clears the stream, and updates the UI flag if no other streams are active.
  * Also marks the last assistant message as `stopped: true` so the UI can
  * render the "Stopped by user • Continue" affordance (Prompt 14).
+ *
+ * **Abort race guard (audit bug 2.3)**: When `expectedRequestId` is provided,
+ * the function first checks whether the stream currently registered for
+ * `conversationId` still matches that requestId. If a new stream has already
+ * replaced the old one, the stop is skipped entirely — the new stream is
+ * left untouched. Without this guard, a user-initiated stop on an old stream
+ * would clean up a newer stream that happened to reuse the same conversation,
+ * causing the new message to be incorrectly marked `stopped: true` and its
+ * content to be lost.
  */
-export function coordinateStopStream(conversationId: string): void {
+export function coordinateStopStream(conversationId: string, expectedRequestId?: string): void {
+  // Abort race guard (audit bug 2.3): bail out when the active stream has
+  // already been replaced by a newer one, so a user-initiated stop on an old
+  // stream does not destroy the content/state of the new stream.
+  if (expectedRequestId !== undefined) {
+    const activeRequestId = useStreamingStore.getState().activeStreams[conversationId];
+    if (activeRequestId !== expectedRequestId) return;
+  }
+
   useStreamingStore.getState().stopStream(conversationId);
   useStreamingStore.getState().clearStream(conversationId);
 
@@ -115,11 +153,21 @@ export function coordinateStopStream(conversationId: string): void {
  * Callers that need to abort the backend stream MUST call chatApi.abort(requestId)
  * BEFORE calling this function. The store layer does not initiate IPC.
  *
+ * **Abort race guard (audit bug 2.3)**: Pass the `expectedRequestId` that was
+ * read from `activeStreams[conversationId]` before calling `chatApi.abort`.
+ * When provided, both `flushAndStop` and `coordinateStopStream` verify the
+ * active stream still matches before proceeding. If a new stream has replaced
+ * the old one between the caller's read and this call, the stop is a no-op
+ * and the new stream is left untouched.
+ *
  * Idempotent: safe to call multiple times for the same conversation.
  */
-export function stopStreamForConversation(conversationId: string): void {
-  flushAndStop(conversationId);
-  coordinateStopStream(conversationId);
+export function stopStreamForConversation(
+  conversationId: string,
+  expectedRequestId?: string
+): void {
+  flushAndStop(conversationId, expectedRequestId);
+  coordinateStopStream(conversationId, expectedRequestId);
 }
 
 /**

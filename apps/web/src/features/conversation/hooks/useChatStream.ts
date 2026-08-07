@@ -81,7 +81,10 @@ export function useChatStream(): {
     if (conversationId) {
       const requestId = useStreamingStore.getState().activeStreams[conversationId];
       if (requestId) chatApi.abort(requestId);
-      stopStreamForConversation(conversationId);
+      // Pass the requestId we read so stopStreamForConversation can bail out
+      // if a new stream has already replaced the old one between the read
+      // above and this call (audit bug 2.3 — abort race).
+      stopStreamForConversation(conversationId, requestId);
     }
   }, []);
 

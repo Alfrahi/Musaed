@@ -179,6 +179,75 @@ describe('stopStreamForConversation', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Abort race guard (audit bug 2.3)
+// ---------------------------------------------------------------------------
+// When a caller reads `activeStreams[convId]` to abort a request and then
+// calls `stopStreamForConversation(convId, expectedRequestId)`, a new stream
+// may have already replaced the old one. The guard ensures the new stream is
+// left untouched — its buffered content is not flushed, its state is not
+// cleared, and the last message is not marked `stopped: true`.
+describe('stopStreamForConversation — abort race guard (audit bug 2.3)', () => {
+  beforeEach(() => {
+    useStreamingStore.setState({
+      liveContent: { 'conv-1': { chunks: ['new-stream-content'] } },
+      pendingMetrics: {},
+      activeStreams: { 'conv-1': 'req-2' },
+      flushedStreams: new Set<string>(),
+    });
+    useMessageStore.setState({
+      messages: {
+        'conv-1': [
+          { id: 'msg-1', role: 'user', content: 'hi', timestamp: 1 },
+          { id: 'msg-2', role: 'assistant', content: 'partial', timestamp: 2, done: false },
+        ],
+      },
+    });
+    useUIStore.setState({ isStreaming: true });
+  });
+
+  it('bails out when expectedRequestId does not match the active stream', () => {
+    // The caller read req-1 (the old stream), but the active stream is now req-2.
+    stopStreamForConversation('conv-1', 'req-1');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    const lastMsg = messages[messages.length - 1];
+    // The new stream's buffered content must NOT be flushed onto the message
+    expect(lastMsg.content).toBe('partial');
+    expect(lastMsg.done).toBe(false);
+    // `stopped` must not be set to true by the guard bail-out. (It may be
+    // undefined, which is falsy — the key is that it's not `true`.)
+    expect(lastMsg.stopped).not.toBe(true);
+    // The active stream must remain untouched
+    expect(useStreamingStore.getState().activeStreams['conv-1']).toBe('req-2');
+    expect(useStreamingStore.getState().liveContent['conv-1']).toBeDefined();
+    // The global streaming flag must NOT be cleared (new stream is active)
+    expect(useUIStore.getState().isStreaming).toBe(true);
+  });
+
+  it('proceeds normally when expectedRequestId matches the active stream', () => {
+    stopStreamForConversation('conv-1', 'req-2');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    const lastMsg = messages[messages.length - 1];
+    expect(lastMsg.content).toBe('partialnew-stream-content');
+    expect(lastMsg.done).toBe(true);
+    expect(lastMsg.stopped).toBe(true);
+    expect(useStreamingStore.getState().activeStreams['conv-1']).toBeUndefined();
+    expect(useUIStore.getState().isStreaming).toBe(false);
+  });
+
+  it('proceeds normally when expectedRequestId is omitted (backward compat)', () => {
+    stopStreamForConversation('conv-1');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    const lastMsg = messages[messages.length - 1];
+    expect(lastMsg.content).toBe('partialnew-stream-content');
+    expect(lastMsg.done).toBe(true);
+    expect(lastMsg.stopped).toBe(true);
+  });
+});
+
 describe('completeStreamForConversation', () => {
   beforeEach(() => {
     useStreamingStore.setState({
