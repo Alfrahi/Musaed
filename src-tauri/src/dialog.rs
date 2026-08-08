@@ -1,7 +1,7 @@
 use crate::payloads::ApiResponse;
 use serde::Deserialize;
 use tauri::AppHandle;
-use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 
 /// Shows a native confirmation dialog to the user and returns their response.
 ///
@@ -20,29 +20,16 @@ pub async fn cmd_dialog_ask(
     message: String,
     kind: Option<String>,
 ) -> ApiResponse<bool> {
-    // Map kind to dialog type - default to confirm for boolean response
+    // Map kind to dialog type — default to confirm for boolean response
     let dialog_kind = kind.as_deref().unwrap_or("confirm");
 
-    let confirmed = match dialog_kind {
-        "alert" | "info" | "warning" | "error" => {
-            // For non-confirmation dialogs, show alert and return true (acknowledged)
-            app.dialog()
-                .message(message)
-                .title(title)
-                .kind(to_dialog_kind(dialog_kind))
-                .blocking_show();
-            true
-        }
-        _ => {
-            // For confirm dialogs, use Info kind (no Question variant exists)
-            // and return user's choice
-            app.dialog()
-                .message(message)
-                .title(title)
-                .kind(tauri_plugin_dialog::MessageDialogKind::Info)
-                .blocking_show()
-        }
-    };
+    let confirmed = app
+        .dialog()
+        .message(message)
+        .title(title)
+        .kind(to_dialog_kind(dialog_kind))
+        .buttons(MessageDialogButtons::OkCancel)
+        .blocking_show();
 
     ApiResponse {
         success: true,
