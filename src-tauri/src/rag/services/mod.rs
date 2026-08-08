@@ -13,6 +13,7 @@ use std::sync::Arc;
 use crate::error_codes;
 use crate::payloads::{ApiResponse, BackendError};
 use crate::rag::context_assembler;
+use crate::rag::error::RagError;
 use crate::rag::indexing::{self, IndexOptions};
 use crate::rag::search::RagSearchEngine;
 use crate::rag::store::RagStore;
@@ -32,46 +33,27 @@ const INDEX_MAX_RETRIES: u32 = 3;
 /// Initial backoff in milliseconds for indexing retries (exponential with jitter).
 const INDEX_RETRY_BACKOFF_MS: u64 = 2000;
 
-/// Returns true if the error is transient (worth retrying) vs permanent.
-/// Cancellation, project-not-found, and validation errors are not retried.
-fn is_transient_index_error(err: &str) -> bool {
-    let lower = err.to_lowercase();
-    // Permanent failures — don't retry
-    if lower.contains("cancelled") || lower.contains("canceled") {
-        return false;
-    }
-    if lower.contains("not found") || lower.contains("does not exist") {
-        return false;
-    }
-    if lower.contains("invalid") || lower.contains("validation") {
-        return false;
-    }
-    if lower.contains("non-utf-8") || lower.contains("permission denied") {
-        return false;
-    }
-    // Transient failures — retry
-    // (timeout, connection refused, embedding failed, DB locked, etc.)
-    true
-}
-
 /// Canonicalizes a path and verifies it stays within the project root.
 pub(crate) fn canonicalize_path_within_project(
     project_root: &Path,
     target_path: &Path,
-) -> Result<PathBuf, String> {
+) -> Result<PathBuf, RagError> {
     let canonical_root = project_root
         .canonicalize()
-        .map_err(|e| format!("Failed to resolve project root: {}", e))?;
-    let canonical_target = target_path
-        .canonicalize()
-        .map_err(|e| format!("Target path does not exist or is inaccessible: {}", e))?;
+        .map_err(|e| RagError::Config(format!("Failed to resolve project root: {}", e)))?;
+    let canonical_target = target_path.canonicalize().map_err(|e| {
+        RagError::Config(format!(
+            "Target path does not exist or is inaccessible: {}",
+            e
+        ))
+    })?;
     let root_with_sep = format!("{}/", canonical_root.to_string_lossy());
     let target_with_sep = format!("{}/", canonical_target.to_string_lossy());
     if !target_with_sep.starts_with(&root_with_sep) {
-        return Err(format!(
+        return Err(RagError::Config(format!(
             "Path escapes project boundary: {:?} is not within {:?}",
             canonical_target, canonical_root
-        ));
+        )));
     }
     Ok(canonical_target)
 }
@@ -80,12 +62,12 @@ pub(crate) fn canonicalize_path_within_project(
 pub(crate) fn validate_and_canonicalize_file_path(
     project_root: &Path,
     relative_path: &str,
-) -> Result<PathBuf, String> {
+) -> Result<PathBuf, RagError> {
     if relative_path.contains("..") {
-        return Err("Path traversal not allowed".to_string());
+        return Err(RagError::Config("Path traversal not allowed".to_string()));
     }
     if relative_path.starts_with('/') || relative_path.starts_with('\\') {
-        return Err("Absolute paths not allowed".to_string());
+        return Err(RagError::Config("Absolute paths not allowed".to_string()));
     }
     let full_path = project_root.join(relative_path);
     canonicalize_path_within_project(project_root, &full_path)
@@ -201,7 +183,7 @@ pub async fn start_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResp
                     success: false,
                     data: None,
                     error: Some(
-                        BackendError::new(error_codes::RAG_FETCH_ERROR, e)
+                        BackendError::new(error_codes::RAG_FETCH_ERROR, e.to_string())
                             .with_context("Failed to load RAG project for indexing".to_string()),
                     ),
                 }
@@ -220,6 +202,7 @@ pub async fn start_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResp
 
     // Retry loop for transient failures (Ollama timeout, DB lock, etc.)
     let mut last_error = String::new();
+    let mut last_error_transient = false;
     let mut backoff_ms = INDEX_RETRY_BACKOFF_MS;
 
     for attempt in 0..=INDEX_MAX_RETRIES {
@@ -288,12 +271,14 @@ pub async fn start_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResp
                 };
             }
             Err(e) => {
-                last_error = e.clone();
-                if !is_transient_index_error(&e) {
+                let is_transient = e.is_transient();
+                last_error_transient = is_transient;
+                last_error = e.to_string();
+                if !is_transient {
                     tracing::error!(
                         "Indexing failed with non-retryable error for project_id {}: {}",
                         req.project_id,
-                        e
+                        last_error
                     );
                     break;
                 }
@@ -302,7 +287,7 @@ pub async fn start_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResp
                         "Indexing failed after {} retries for project_id {}: {}",
                         INDEX_MAX_RETRIES,
                         req.project_id,
-                        e
+                        last_error
                     );
                     break;
                 }
@@ -310,7 +295,7 @@ pub async fn start_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResp
                     "Indexing attempt {} failed for project_id {}: {}",
                     attempt + 1,
                     req.project_id,
-                    e
+                    last_error
                 );
             }
         }
@@ -325,8 +310,8 @@ pub async fn start_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResp
     // Surface retryability so the frontend (now receiving `isRetryable`
     // via the preserved field) can offer a retry affordance for
     // transient failures — connection/timeout/DB-lock categories that
-    // `is_transient_index_error` already classifies.
-    let index_err = if is_transient_index_error(&last_error) {
+    // `RagError::is_transient()` already classifies.
+    let index_err = if last_error_transient {
         index_err.retryable()
     } else {
         index_err
@@ -362,7 +347,7 @@ pub async fn search<'a>(req: SearchRequest<'a>) -> ApiResponse<Vec<SearchResult>
                     success: false,
                     data: None,
                     error: Some(
-                        BackendError::new(error_codes::RAG_FETCH_ERROR, e)
+                        BackendError::new(error_codes::RAG_FETCH_ERROR, e.to_string())
                             .with_context("Failed to load RAG project for search".to_string()),
                     ),
                 }
@@ -396,7 +381,7 @@ pub async fn search<'a>(req: SearchRequest<'a>) -> ApiResponse<Vec<SearchResult>
             success: false,
             data: None,
             error: Some(
-                BackendError::new(error_codes::RAG_SEARCH_ERROR, e)
+                BackendError::new(error_codes::RAG_SEARCH_ERROR, e.to_string())
                     .with_context("RAG vector search failed".to_string())
                     .retryable(),
             ),
@@ -427,7 +412,7 @@ pub async fn get_file_chunks<'a>(req: GetFileChunksRequest<'a>) -> ApiResponse<V
                 success: false,
                 data: None,
                 error: Some(
-                    BackendError::new(error_codes::RAG_FETCH_ERROR, e)
+                    BackendError::new(error_codes::RAG_FETCH_ERROR, e.to_string())
                         .with_context("Failed to load RAG project for file chunks".to_string()),
                 ),
             }
@@ -456,7 +441,7 @@ pub async fn get_file_chunks<'a>(req: GetFileChunksRequest<'a>) -> ApiResponse<V
                         success: false,
                         data: None,
                         error: Some(
-                            BackendError::new(error_codes::RAG_FETCH_ERROR, e)
+                            BackendError::new(error_codes::RAG_FETCH_ERROR, e.to_string())
                                 .with_context("Failed to load file chunks".to_string()),
                         ),
                     },
@@ -478,7 +463,7 @@ pub async fn get_file_chunks<'a>(req: GetFileChunksRequest<'a>) -> ApiResponse<V
             success: false,
             data: None,
             error: Some(
-                BackendError::new(error_codes::RAG_FETCH_ERROR, e)
+                BackendError::new(error_codes::RAG_FETCH_ERROR, e.to_string())
                     .with_context("Failed to look up file in RAG store".to_string()),
             ),
         },
@@ -502,7 +487,7 @@ pub async fn set_embedding_model<'a>(req: SetEmbeddingModelRequest<'a>) -> ApiRe
             success: false,
             data: None,
             error: Some(
-                BackendError::new(error_codes::RAG_UPDATE_ERROR, e)
+                BackendError::new(error_codes::RAG_UPDATE_ERROR, e.to_string())
                     .with_context("Failed to update RAG embedding model".to_string()),
             ),
         };
@@ -546,9 +531,10 @@ pub async fn assemble_context<'a>(
                     success: false,
                     data: None,
                     error: Some(
-                        BackendError::new(error_codes::RAG_FETCH_ERROR, e).with_context(
-                            "Failed to load RAG project for context assembly".to_string(),
-                        ),
+                        BackendError::new(error_codes::RAG_FETCH_ERROR, e.to_string())
+                            .with_context(
+                                "Failed to load RAG project for context assembly".to_string(),
+                            ),
                     ),
                 }
             }
@@ -578,7 +564,7 @@ pub async fn assemble_context<'a>(
                 success: false,
                 data: None,
                 error: Some(
-                    BackendError::new(error_codes::RAG_SEARCH_ERROR, e)
+                    BackendError::new(error_codes::RAG_SEARCH_ERROR, e.to_string())
                         .with_context("RAG context assembly search failed".to_string())
                         .retryable(),
                 ),

@@ -5,6 +5,7 @@
 
 use crate::rag::bm25::BM25;
 use crate::rag::embedder::OllamaEmbedder;
+use crate::rag::error::RagResult;
 use crate::rag::store::RagStore;
 use crate::rag::types::SearchResult;
 use std::sync::Arc;
@@ -37,7 +38,7 @@ impl RagSearchEngine {
         embedding_model: &str,
         top_k: Option<usize>,
         threshold: Option<f32>,
-    ) -> Result<Vec<SearchResult>, String> {
+    ) -> RagResult<Vec<SearchResult>> {
         let top_k = top_k.unwrap_or(DEFAULT_TOP_K);
         let threshold = threshold.unwrap_or(DEFAULT_THRESHOLD);
 

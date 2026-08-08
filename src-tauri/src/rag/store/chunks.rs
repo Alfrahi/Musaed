@@ -1,10 +1,11 @@
 //! Chunk CRUD operations.
 
+use crate::rag::error::RagResult;
 use crate::rag::types::ChunkRow;
 use rusqlite::params;
 
 /// Insert a single chunk and return its ID.
-pub(super) async fn insert_chunk(store: &super::RagStore, chunk: &ChunkRow) -> Result<i64, String> {
+pub(super) async fn insert_chunk(store: &super::RagStore, chunk: &ChunkRow) -> RagResult<i64> {
     let conn = store.write_conn().await;
     conn.execute(
         "INSERT INTO chunks (project_id, file_id, chunk_index, content, chunk_type, language, start_line, end_line, metadata) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
@@ -17,10 +18,9 @@ pub(super) async fn insert_chunk(store: &super::RagStore, chunk: &ChunkRow) -> R
             chunk.language,
             chunk.start_line as i64,
             chunk.end_line as i64,
-            serde_json::to_string(&chunk.metadata).unwrap_or_else(|_| "{}".to_string()),
+            serde_json::to_string(&chunk.metadata)?,
         ],
-    )
-    .map_err(|e| format!("Failed to insert chunk: {}", e))?;
+    )?;
     Ok(conn.last_insert_rowid())
 }
 
@@ -28,16 +28,13 @@ pub(super) async fn insert_chunk(store: &super::RagStore, chunk: &ChunkRow) -> R
 pub(super) async fn insert_chunks_batch(
     store: &super::RagStore,
     chunks: &[ChunkRow],
-) -> Result<(), String> {
+) -> RagResult<()> {
     let conn = store.write_conn().await;
-    let tx = conn
-        .unchecked_transaction()
-        .map_err(|e| format!("Failed to begin transaction: {}", e))?;
+    let tx = conn.unchecked_transaction()?;
     {
         let mut stmt = tx.prepare(
             "INSERT INTO chunks (project_id, file_id, chunk_index, content, chunk_type, language, start_line, end_line, metadata) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-        )
-        .map_err(|e| format!("Failed to prepare insert: {}", e))?;
+        )?;
         for chunk in chunks {
             stmt.execute(params![
                 chunk.project_id,
@@ -48,13 +45,11 @@ pub(super) async fn insert_chunks_batch(
                 chunk.language,
                 chunk.start_line as i64,
                 chunk.end_line as i64,
-                serde_json::to_string(&chunk.metadata).unwrap_or_else(|_| "{}".to_string()),
-            ])
-            .map_err(|e| format!("Failed to insert chunk: {}", e))?;
+                serde_json::to_string(&chunk.metadata)?,
+            ])?;
         }
     }
-    tx.commit()
-        .map_err(|e| format!("Failed to commit chunk batch: {}", e))?;
+    tx.commit()?;
     Ok(())
 }
 
@@ -62,12 +57,11 @@ pub(super) async fn insert_chunks_batch(
 pub(super) async fn get_file_chunks(
     store: &super::RagStore,
     file_id: i64,
-) -> Result<Vec<crate::rag::types::ChunkRecord>, String> {
+) -> RagResult<Vec<crate::rag::types::ChunkRecord>> {
     let conn = store.read_conn().await;
     let mut stmt = conn
-        .prepare("SELECT id, chunk_index, content, chunk_type, language, start_line, end_line, metadata FROM chunks WHERE file_id = ?1 ORDER BY chunk_index")
-        .map_err(|e| format!("Failed to prepare query: {}", e))?;
-    let chunks = stmt
+        .prepare("SELECT id, chunk_index, content, chunk_type, language, start_line, end_line, metadata FROM chunks WHERE file_id = ?1 ORDER BY chunk_index")?;
+    let chunks: Vec<crate::rag::types::ChunkRecord> = stmt
         .query_map(params![file_id], |row| {
             let metadata_str: String = row.get(7)?;
             Ok(crate::rag::types::ChunkRecord {
@@ -80,10 +74,8 @@ pub(super) async fn get_file_chunks(
                 end_line: row.get::<_, i64>(6)? as usize,
                 metadata: serde_json::from_str(&metadata_str).unwrap_or(serde_json::json!({})),
             })
-        })
-        .map_err(|e| format!("Failed to query chunks: {}", e))?
-        .filter_map(|r| r.ok())
-        .collect();
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(chunks)
 }
 
@@ -93,27 +85,19 @@ pub(super) async fn get_file_chunks(
 /// race conditions, and within a **single transaction** so a crash between the
 /// two deletes cannot leave orphaned chunks whose embeddings were already
 /// removed (or vice versa).
-pub(super) async fn delete_file_chunks(
-    store: &super::RagStore,
-    file_id: i64,
-) -> Result<(), String> {
+pub(super) async fn delete_file_chunks(store: &super::RagStore, file_id: i64) -> RagResult<()> {
     let conn = store.write_conn().await;
-    let tx = conn
-        .unchecked_transaction()
-        .map_err(|e| format!("Failed to begin transaction: {}", e))?;
+    let tx = conn.unchecked_transaction()?;
 
     // Delete embeddings first (via subquery)
     tx.execute(
         "DELETE FROM vec_chunks WHERE chunk_id IN (SELECT id FROM chunks WHERE file_id = ?1)",
         params![file_id],
-    )
-    .map_err(|e| format!("Failed to delete embeddings: {}", e))?;
+    )?;
 
     // Delete chunks
-    tx.execute("DELETE FROM chunks WHERE file_id = ?1", params![file_id])
-        .map_err(|e| format!("Failed to delete chunks: {}", e))?;
+    tx.execute("DELETE FROM chunks WHERE file_id = ?1", params![file_id])?;
 
-    tx.commit()
-        .map_err(|e| format!("Failed to commit chunk deletion: {}", e))?;
+    tx.commit()?;
     Ok(())
 }

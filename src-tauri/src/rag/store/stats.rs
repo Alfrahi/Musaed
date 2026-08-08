@@ -1,6 +1,7 @@
 //! Project statistics computation.
 
 use super::connection::MAX_EMBEDDING_DIMENSION;
+use crate::rag::error::RagResult;
 use crate::rag::types::ProjectStats;
 use rusqlite::OptionalExtension;
 
@@ -8,40 +9,32 @@ use rusqlite::OptionalExtension;
 pub(super) async fn get_project_stats(
     store: &super::RagStore,
     project_id: &str,
-) -> Result<ProjectStats, String> {
+) -> RagResult<ProjectStats> {
     let conn = store.read_conn().await;
 
-    let file_count: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM files WHERE project_id = ?1",
-            rusqlite::params![project_id],
-            |row| row.get(0),
-        )
-        .map_err(|e| format!("Failed to count files: {}", e))?;
+    let file_count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM files WHERE project_id = ?1",
+        rusqlite::params![project_id],
+        |row| row.get(0),
+    )?;
 
-    let chunk_count: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM chunks WHERE project_id = ?1",
-            rusqlite::params![project_id],
-            |row| row.get(0),
-        )
-        .map_err(|e| format!("Failed to count chunks: {}", e))?;
+    let chunk_count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM chunks WHERE project_id = ?1",
+        rusqlite::params![project_id],
+        |row| row.get(0),
+    )?;
 
-    let total_bytes: i64 = conn
-        .query_row(
-            "SELECT COALESCE(SUM(file_size), 0) FROM files WHERE project_id = ?1",
-            rusqlite::params![project_id],
-            |row| row.get(0),
-        )
-        .map_err(|e| format!("Failed to sum bytes: {}", e))?;
+    let total_bytes: i64 = conn.query_row(
+        "SELECT COALESCE(SUM(file_size), 0) FROM files WHERE project_id = ?1",
+        rusqlite::params![project_id],
+        |row| row.get(0),
+    )?;
 
-    let embedding_dimension: i64 = conn
-        .query_row(
-            "SELECT embedding_dimension FROM projects WHERE id = ?1",
-            rusqlite::params![project_id],
-            |row| row.get(0),
-        )
-        .map_err(|e| format!("Failed to get embedding dimension: {}", e))?;
+    let embedding_dimension: i64 = conn.query_row(
+        "SELECT embedding_dimension FROM projects WHERE id = ?1",
+        rusqlite::params![project_id],
+        |row| row.get(0),
+    )?;
 
     let last_indexed: Option<String> = conn
         .query_row(
@@ -49,8 +42,7 @@ pub(super) async fn get_project_stats(
             rusqlite::params![project_id],
             |row| row.get(0),
         )
-        .optional()
-        .map_err(|e| format!("Failed to get last indexed: {}", e))?
+        .optional()?
         .flatten();
 
     // Estimate index size (rough: vectors + metadata)

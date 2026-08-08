@@ -22,6 +22,7 @@ pub mod chunker;
 pub mod commands;
 pub mod context_assembler;
 pub mod embedder;
+pub mod error;
 pub mod ignore;
 pub mod indexing;
 pub mod search;
@@ -31,6 +32,7 @@ pub mod types;
 pub mod validation;
 
 // Re-export key types
+pub use error::{RagError, RagResult};
 pub use store::connection::DEFAULT_EMBEDDING_DIMENSION;
 pub use store::RagStore;
 pub use types::*;

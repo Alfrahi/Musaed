@@ -1,6 +1,7 @@
 //! Vector similarity search operations.
 
 use super::connection::MAX_EMBEDDING_DIMENSION;
+use crate::rag::error::RagResult;
 use crate::rag::types::SearchResult;
 
 /// Search for similar chunks using vector similarity.
@@ -10,7 +11,7 @@ pub(super) async fn search_similar(
     query_embedding: &[f32],
     top_k: usize,
     threshold: f32,
-) -> Result<Vec<SearchResult>, String> {
+) -> RagResult<Vec<SearchResult>> {
     let conn = store.read_conn().await;
 
     // Zero-pad query embedding
@@ -41,11 +42,9 @@ pub(super) async fn search_similar(
         ORDER BY v.distance
     "#;
 
-    let mut stmt = conn
-        .prepare(sql)
-        .map_err(|e| format!("Failed to prepare search: {}", e))?;
+    let mut stmt = conn.prepare(sql)?;
 
-    let results = stmt
+    let results: Vec<SearchResult> = stmt
         .query_map(rusqlite::params![query_bytes, project_id, top_k], |row| {
             let metadata_str: String = row.get(6)?;
             let distance: f32 = row.get(8)?;
@@ -60,9 +59,9 @@ pub(super) async fn search_similar(
                 file_path: row.get(7)?,
                 score: 1.0 - distance, // Convert distance to similarity score
             })
-        })
-        .map_err(|e| format!("Failed to execute search: {}", e))?
-        .filter_map(|r| r.ok())
+        })?
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
         .filter(|r| r.score >= threshold)
         .collect();
 
