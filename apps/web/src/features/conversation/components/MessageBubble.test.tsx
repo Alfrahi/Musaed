@@ -1,7 +1,8 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import type { Message } from '@musaed/contracts';
 import MessageBubble from './MessageBubble';
+import { dialogApi } from '@/lib/ipc';
 
 // The citation chip mounts FileChunkViewer in a modal. Mock it to a stub so
 // the test doesn't pull in the full RAG IPC pipeline.
@@ -21,6 +22,21 @@ vi.mock('@/features/rag', () => ({
 
 vi.mock('@/features/conversation/hooks/useMessageActions', () => ({
   useMessageActions: () => ({ copied: false, handleCopy: vi.fn(), tps: null }),
+}));
+
+vi.mock('@/lib/ipc', () => ({
+  dialogApi: {
+    ask: vi.fn().mockResolvedValue(true),
+  },
+}));
+
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
+  },
 }));
 
 vi.mock('./MessageContent', () => ({
@@ -276,31 +292,8 @@ describe('MessageBubble - hover actions', () => {
     expect(onRegenerate).toHaveBeenCalledWith('msg-1');
   });
 
-  it('renders Edit prompt button on assistant when onEditPrompt is provided', () => {
-    const onEditPrompt = vi.fn();
-    const message: Message = {
-      id: 'msg-1',
-      role: 'assistant',
-      content: 'Response',
-      timestamp: Date.now(),
-    };
-    render(
-      <MessageBubble
-        message={message}
-        labels={baseLabels}
-        formatNumber={formatNumber}
-        onEditPrompt={onEditPrompt}
-      />
-    );
-
-    const btn = screen.getByRole('button', { name: 'chat.editPrompt' });
-    expect(btn).toBeInTheDocument();
-    fireEvent.click(btn);
-    expect(onEditPrompt).toHaveBeenCalledWith('msg-1');
-  });
-
-  it('renders Edit button on user messages when onEdit is provided', () => {
-    const onEdit = vi.fn();
+  it('renders inline editor on user messages when onEditMessage is provided', () => {
+    const onEditMessage = vi.fn();
     const message: Message = {
       id: 'msg-1',
       role: 'user',
@@ -312,14 +305,53 @@ describe('MessageBubble - hover actions', () => {
         message={message}
         labels={baseLabels}
         formatNumber={formatNumber}
-        onEdit={onEdit}
+        onEditMessage={onEditMessage}
       />
     );
 
-    const btn = screen.getByRole('button', { name: 'chat.editPrompt' });
-    expect(btn).toBeInTheDocument();
-    fireEvent.click(btn);
-    expect(onEdit).toHaveBeenCalledWith('msg-1');
+    // Click the Edit button to enter inline edit mode.
+    const editBtn = screen.getByRole('button', { name: 'chat.editPrompt' });
+    fireEvent.click(editBtn);
+
+    // A textarea should appear pre-populated with the original content.
+    const textarea = screen.getByRole('textbox');
+    expect(textarea).toBeInTheDocument();
+    expect(textarea).toHaveValue('My question');
+
+    // Modify the content and save.
+    fireEvent.change(textarea, { target: { value: 'Edited question' } });
+    const saveBtn = screen.getByRole('button', { name: 'common.save' });
+    fireEvent.click(saveBtn);
+
+    expect(onEditMessage).toHaveBeenCalledWith('msg-1', 'Edited question');
+  });
+
+  it('cancels inline edit without calling onEditMessage', () => {
+    const onEditMessage = vi.fn();
+    const message: Message = {
+      id: 'msg-1',
+      role: 'user',
+      content: 'My question',
+      timestamp: Date.now(),
+    };
+    render(
+      <MessageBubble
+        message={message}
+        labels={baseLabels}
+        formatNumber={formatNumber}
+        onEditMessage={onEditMessage}
+      />
+    );
+
+    const editBtn = screen.getByRole('button', { name: 'chat.editPrompt' });
+    fireEvent.click(editBtn);
+
+    const cancelBtn = screen.getByRole('button', { name: 'common.cancel' });
+    fireEvent.click(cancelBtn);
+
+    expect(onEditMessage).not.toHaveBeenCalled();
+    // After cancel, the textarea should be gone and original content visible.
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
 
   it('does not render hover actions when no callbacks are provided', () => {
@@ -398,5 +430,101 @@ describe('MessageBubble - image alt text (UX-007)', () => {
     for (const img of images) {
       expect(img.getAttribute('alt')).not.toBe('');
     }
+  });
+});
+
+describe('MessageBubble - delete action', () => {
+  afterEach(() => {
+    vi.mocked(dialogApi.ask).mockReset();
+  });
+
+  it('renders a delete button when onDeleteMessage is provided', () => {
+    const onDeleteMessage = vi.fn();
+    const message: Message = {
+      id: 'msg-1',
+      role: 'user',
+      content: 'Hello',
+      timestamp: Date.now(),
+    };
+    render(
+      <MessageBubble
+        message={message}
+        labels={baseLabels}
+        formatNumber={formatNumber}
+        onDeleteMessage={onDeleteMessage}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'common.delete' })).toBeInTheDocument();
+  });
+
+  it('does not render a delete button when onDeleteMessage is not provided', () => {
+    const message: Message = {
+      id: 'msg-1',
+      role: 'user',
+      content: 'Hello',
+      timestamp: Date.now(),
+    };
+    render(<MessageBubble message={message} labels={baseLabels} formatNumber={formatNumber} />);
+
+    expect(screen.queryByRole('button', { name: 'common.delete' })).not.toBeInTheDocument();
+  });
+
+  it('shows confirmation dialog and calls onDeleteMessage when confirmed', async () => {
+    vi.mocked(dialogApi.ask).mockResolvedValue(true);
+    const onDeleteMessage = vi.fn();
+    const message: Message = {
+      id: 'msg-del-1',
+      role: 'assistant',
+      content: 'Response',
+      timestamp: Date.now(),
+    };
+    render(
+      <MessageBubble
+        message={message}
+        labels={baseLabels}
+        formatNumber={formatNumber}
+        onDeleteMessage={onDeleteMessage}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'common.delete' }));
+
+    await vi.waitFor(() => {
+      expect(dialogApi.ask).toHaveBeenCalledWith(
+        'chat.deleteMessage',
+        'chat.confirmDeleteMessage',
+        'warning'
+      );
+    });
+    await vi.waitFor(() => {
+      expect(onDeleteMessage).toHaveBeenCalledWith('msg-del-1');
+    });
+  });
+
+  it('does not call onDeleteMessage when confirmation is cancelled', async () => {
+    vi.mocked(dialogApi.ask).mockResolvedValue(false);
+    const onDeleteMessage = vi.fn();
+    const message: Message = {
+      id: 'msg-del-2',
+      role: 'user',
+      content: 'Hello',
+      timestamp: Date.now(),
+    };
+    render(
+      <MessageBubble
+        message={message}
+        labels={baseLabels}
+        formatNumber={formatNumber}
+        onDeleteMessage={onDeleteMessage}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'common.delete' }));
+
+    await vi.waitFor(() => {
+      expect(dialogApi.ask).toHaveBeenCalled();
+    });
+    expect(onDeleteMessage).not.toHaveBeenCalled();
   });
 });

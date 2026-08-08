@@ -33,6 +33,7 @@ const manifest: FeatureManifest = {
     'cmd_conversations_clear',
     'cmd_conversations_list',
     'cmd_message_append',
+    'cmd_message_delete',
     // Attachment handling — `hooks/useAttachmentUtils.ts` opens native file
     // dialogs and reads file contents (images as base64, text as UTF-8) via
     // the IPC-layer `dialogApi`/`fsApi` namespaces. Feature-scoped, not shared.
@@ -116,6 +117,11 @@ const manifest: FeatureManifest = {
       fallback: 'Message is already displayed in UI; retry save in background',
       retry: 'exponential',
       messageKey: 'error.messageSaveFailed',
+    },
+    cmd_message_delete: {
+      fallback: 'Old assistant message remains in UI; retry on next send',
+      retry: 'once',
+      messageKey: 'error.genericError',
     },
     cmd_dialog_open_file: {
       fallback: 'Silently ignore — attachment picker is user-initiated',

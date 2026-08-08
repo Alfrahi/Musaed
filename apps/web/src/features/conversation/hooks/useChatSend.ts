@@ -5,6 +5,7 @@ import {
   type Message,
   type ModelParams,
   type ModelDefaultParams,
+  type Language,
   VALIDATION_LIMITS,
 } from '@musaed/contracts';
 import { useTranslation } from '@/lib/i18n';
@@ -14,15 +15,16 @@ import { logger } from '@/lib/logger';
 import toast from 'react-hot-toast';
 import { useConversationActions } from './useConversationActions';
 import { type FileAttachment } from './useAttachmentUtils';
-import { useMessageStore } from '@/store/message-store';
+import { useMessageStore, type MessageState } from '@/store/message-store';
 import { useCurrentConversationId, useConversations } from '@/store/conversation-store';
-import { useSettingsStore } from '@/store/settings-store';
+import { useSettingsStore, type SettingsState } from '@/store/settings-store';
 import { useModelStore } from '@/store/model-store';
 import { selectResolvedParams } from '@/store/model-params-store';
 import { useStreamingStore } from '@/store/streaming-store';
 import { useUIStore } from '@/store/ui-store';
 import { useModelContextWindow } from '@/features/library';
 import { persistUserMessage } from '@/features/conversation/utils/message-persistence';
+import { conversationApi } from '@/lib/ipc';
 import { useChatRag, type ChatRagSource } from './useChatRag';
 import { useChatStream } from './useChatStream';
 
@@ -216,6 +218,131 @@ async function executeChatSendAttempt(params: ChatSendAttemptParams): Promise<vo
   }
 }
 
+/** Parameters for the edit-and-resend attempt. */
+interface EditAndResendParams {
+  conversationId: string;
+  editedMessageId: string;
+  newContent: string;
+  images: string[];
+  selectedModel: string;
+  requestId: string;
+  ollamaUrl: string;
+  fullPrompt: string;
+  contextWindow: number | null;
+  defaultParams: ModelDefaultParams | null;
+  paramsStop: string[];
+  messages: Record<string, Message[]>;
+  initiateStreaming: (conversationId: string, requestId: string) => void;
+  updateMessage: (conversationId: string, messageId: string, patch: Partial<Message>) => void;
+  removeMessage: (conversationId: string, messageId: string) => void;
+  addMessage: (conversationId: string, message: Message) => void;
+  addMessages: (conversationId: string, messages: Message[]) => void;
+  updateLastMessage: (conversationId: string, update: Partial<Message>, replace?: boolean) => void;
+  assembleChatRag: (input: string) => Promise<{ ragSources?: ChatRagSource[] }>;
+  handleStreamError: ReturnType<typeof useChatStream>['handleStreamError'];
+  t: (key: string) => string;
+}
+
+/** Execute an inline edit: update the user message, remove the old
+ *  assistant response, append a fresh placeholder, and stream. */
+async function executeEditAndResend(params: EditAndResendParams): Promise<void> {
+  const {
+    conversationId,
+    editedMessageId,
+    newContent,
+    images,
+    selectedModel,
+    requestId,
+    ollamaUrl,
+    fullPrompt,
+    contextWindow,
+    defaultParams,
+    paramsStop,
+    messages,
+    initiateStreaming,
+    updateMessage,
+    removeMessage,
+    addMessage,
+    addMessages,
+    updateLastMessage,
+    assembleChatRag,
+    handleStreamError,
+    t,
+  } = params;
+
+  const trimmedInput = newContent.trim();
+  if (!trimmedInput && images.length === 0) return;
+
+  initiateStreaming(conversationId, requestId);
+
+  try {
+    const { ragSources } = await assembleChatRag(trimmedInput);
+
+    const editedMsg = (messages[conversationId] ?? []).find((m) => m.id === editedMessageId);
+    if (!editedMsg || editedMsg.role !== 'user') return;
+
+    updateMessage(conversationId, editedMessageId, {
+      content: trimmedInput,
+      images: images.length > 0 ? images : undefined,
+    });
+    persistMessage(conversationId, {
+      ...editedMsg,
+      content: trimmedInput,
+      images: images.length > 0 ? images : undefined,
+    });
+
+    const msgs = messages[conversationId] ?? [];
+    const editedIdx = msgs.findIndex((m) => m.id === editedMessageId);
+    if (editedIdx !== -1) {
+      const nextAssistant = msgs.slice(editedIdx + 1).find((m) => m.role === 'assistant');
+      if (nextAssistant) {
+        removeMessage(conversationId, nextAssistant.id);
+        conversationApi.deleteMessage(conversationId, nextAssistant.id).catch((err) => {
+          logger.error('Failed to delete old assistant message from backend', {
+            error: err instanceof Error ? err.message : String(err),
+            conversationId,
+            messageId: nextAssistant.id,
+          });
+        });
+      }
+    }
+
+    const assistantMsg: Message = {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: '',
+      timestamp: Date.now(),
+      model: selectedModel,
+      requestId,
+      ragSources,
+    };
+    addMessage(conversationId, assistantMsg);
+
+    await executeChatSendAttempt({
+      conversationId,
+      requestId,
+      ollamaUrl,
+      fullPrompt,
+      selectedModel,
+      contextWindow,
+      defaultParams,
+      paramsStop,
+      messages,
+      addMessages,
+      updateLastMessage,
+      handleStreamError,
+      t,
+    });
+  } catch (err) {
+    cleanupOrphanedStream(conversationId, requestId);
+    logger.error('Edit and resend failed before stream start', {
+      error: err instanceof Error ? err.message : String(err),
+      conversationId,
+      requestId,
+    });
+  }
+}
+
 /**
  * Send pipeline for the chat feature. Extracted from the former God hook
  * Owns: validation → message creation → RAG context →
@@ -224,31 +351,25 @@ async function executeChatSendAttempt(params: ChatSendAttemptParams): Promise<vo
  * Composes `useChatRag` (RAG context assembly) and `useChatStream` (stream
  * error handling).
  */
-export function useChatSend(): {
-  sendMessage: (input: string, images?: string[], files?: FileAttachment[]) => Promise<void>;
-} {
-  const settingsStore = useSettingsStore();
-  const language = settingsStore.globalSettings?.language || 'en';
+/** Build the `sendMessage` callback. Extracted from `useChatSend` to keep
+ *  the hook body under the project's max-lines-per-function lint gate. */
+function useSendMessageCallback(
+  settingsStore: SettingsState,
+  language: Language,
+  currentConversationId: string | null,
+  conversations: Record<string, unknown>,
+  selectedModel: string | undefined,
+  contextWindow: number | null,
+  defaultParams: ModelDefaultParams | null,
+  paramsStop: string[],
+  messageStore: MessageState,
+  initiateStreaming: ReturnType<typeof useConversationActions>['initiateStreaming'],
+  assembleChatRag: ReturnType<typeof useChatRag>['assembleChatRag'],
+  handleStreamError: ReturnType<typeof useChatStream>['handleStreamError']
+) {
   const { t } = useTranslation(language);
-  const { initiateStreaming } = useConversationActions();
-  const messageStore = useMessageStore();
-  const currentConversationId = useCurrentConversationId();
-  const conversations = useConversations();
-  const modelStore = useModelStore();
-  const { assembleChatRag } = useChatRag();
-  const { handleStreamError } = useChatStream();
 
-  // Per-model sampling params: resolved from model-params store with the
-  // model's context_length and Modelfile `PARAMETER` defaults as the
-  // fallback when not overridden.
-  const selectedModel = modelStore.selectedModel;
-  const { contextWindow, defaultParams } = useModelContextWindow();
-  const paramsStop = useSettingsStore((s) => s.globalSettings.stop);
-  // `selectResolvedParams` is intentionally a getState-based snapshot for the
-  // non-react send path; we read it inside the callback so the latest override
-  // is used at send time without re-subscribing this hook to every keystroke.
-
-  const sendMessage = useCallback(
+  return useCallback(
     async (input: string, images: string[] = [], files: FileAttachment[] = []) => {
       const trimmedInput = input.trim();
       const hasAttachments = images.length > 0 || files.length > 0;
@@ -269,6 +390,7 @@ export function useChatSend(): {
           return;
       }
 
+      const model = selectedModel as string;
       const conversationId = currentConversationId || 'test-conversation-id';
       const fullPrompt = buildPromptWithContext(trimmedInput, files, t);
 
@@ -302,7 +424,7 @@ export function useChatSend(): {
         const [userMsg, assistantMsg] = createChatMessages(
           trimmedInput,
           images,
-          selectedModel,
+          model,
           requestId,
           ragSources
         );
@@ -315,7 +437,7 @@ export function useChatSend(): {
           requestId,
           ollamaUrl,
           fullPrompt,
-          selectedModel,
+          selectedModel: model,
           contextWindow,
           defaultParams,
           paramsStop,
@@ -353,6 +475,120 @@ export function useChatSend(): {
       paramsStop,
     ]
   );
+}
 
-  return { sendMessage };
+/** Build the `editAndResend` callback. Extracted from `useChatSend` to keep
+ *  the hook body under the project's max-lines-per-function lint gate. */
+function useEditAndResendCallback(
+  currentConversationId: string | null,
+  selectedModel: string | undefined,
+  settingsStore: SettingsState,
+  language: Language,
+  contextWindow: number | null,
+  defaultParams: ModelDefaultParams | null,
+  paramsStop: string[],
+  messageStore: MessageState,
+  initiateStreaming: ReturnType<typeof useConversationActions>['initiateStreaming'],
+  assembleChatRag: ReturnType<typeof useChatRag>['assembleChatRag'],
+  handleStreamError: ReturnType<typeof useChatStream>['handleStreamError']
+) {
+  const { t } = useTranslation(language);
+
+  return useCallback(
+    async (editedMessageId: string, newContent: string, images: string[] = []) => {
+      if (!currentConversationId || !selectedModel) return;
+      await executeEditAndResend({
+        conversationId: currentConversationId,
+        editedMessageId,
+        newContent,
+        images,
+        selectedModel,
+        requestId: crypto.randomUUID(),
+        ollamaUrl: resolveOllamaUrl(settingsStore.globalSettings),
+        fullPrompt: buildPromptWithContext(newContent.trim(), [], t),
+        contextWindow,
+        defaultParams,
+        paramsStop,
+        messages: messageStore.messages,
+        initiateStreaming,
+        updateMessage: messageStore.updateMessage,
+        removeMessage: messageStore.removeMessage,
+        addMessage: messageStore.addMessage,
+        addMessages: messageStore.addMessages,
+        updateLastMessage: messageStore.updateLastMessage,
+        assembleChatRag,
+        handleStreamError,
+        t,
+      });
+    },
+    [
+      t,
+      currentConversationId,
+      selectedModel,
+      settingsStore.globalSettings,
+      contextWindow,
+      defaultParams,
+      paramsStop,
+      messageStore,
+      initiateStreaming,
+      assembleChatRag,
+      handleStreamError,
+    ]
+  );
+}
+
+export function useChatSend(): {
+  sendMessage: (input: string, images?: string[], files?: FileAttachment[]) => Promise<void>;
+  editAndResend: (editedMessageId: string, newContent: string, images?: string[]) => Promise<void>;
+} {
+  const settingsStore = useSettingsStore();
+  const language = settingsStore.globalSettings?.language || 'en';
+  const { initiateStreaming } = useConversationActions();
+  const messageStore = useMessageStore();
+  const currentConversationId = useCurrentConversationId();
+  const conversations = useConversations();
+  const modelStore = useModelStore();
+  const { assembleChatRag } = useChatRag();
+  const { handleStreamError } = useChatStream();
+
+  // Per-model sampling params: resolved from model-params store with the
+  // model's context_length and Modelfile `PARAMETER` defaults as the
+  // fallback when not overridden.
+  const selectedModel = modelStore.selectedModel;
+  const { contextWindow, defaultParams } = useModelContextWindow();
+  const paramsStop = useSettingsStore((s) => s.globalSettings.stop);
+  // `selectResolvedParams` is intentionally a getState-based snapshot for the
+  // non-react send path; we read it inside the callback so the latest override
+  // is used at send time without re-subscribing this hook to every keystroke.
+
+  const editAndResendCb = useEditAndResendCallback(
+    currentConversationId,
+    selectedModel,
+    settingsStore,
+    language,
+    contextWindow,
+    defaultParams,
+    paramsStop,
+    messageStore,
+    initiateStreaming,
+    assembleChatRag,
+    handleStreamError
+  );
+
+  const sendMessage = useSendMessageCallback(
+    settingsStore,
+    language,
+    currentConversationId,
+    conversations,
+    selectedModel,
+    contextWindow,
+    defaultParams,
+    paramsStop,
+    messageStore,
+    initiateStreaming,
+    assembleChatRag,
+    handleStreamError
+  );
+
+  return { sendMessage, editAndResend: editAndResendCb };
 }

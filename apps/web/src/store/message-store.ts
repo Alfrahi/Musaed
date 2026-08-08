@@ -8,13 +8,15 @@ import { shallow } from 'zustand/shallow';
 import { type Message } from '@musaed/contracts';
 import { traceStoreMutation } from '@/lib/store-tracing';
 
-interface MessageState {
+export interface MessageState {
   /** conversationId -> messages */
   messages: Record<string, Message[]>;
   setMessages: (conversationId: string, messages: Message[]) => void;
   addMessage: (conversationId: string, message: Message) => void;
   addMessages: (conversationId: string, messages: Message[]) => void;
   updateLastMessage: (conversationId: string, update: Partial<Message>, replace?: boolean) => void;
+  updateMessage: (conversationId: string, messageId: string, patch: Partial<Message>) => void;
+  removeMessage: (conversationId: string, messageId: string) => void;
   clearMessages: (conversationId: string) => void;
   clearAllMessages: () => void;
 }
@@ -79,6 +81,31 @@ export const useMessageStore = createWithEqualityFn<MessageState>()(
         });
         return {
           messages: { ...state.messages, [conversationId]: newMsgs },
+        };
+      }),
+
+    updateMessage: (conversationId, messageId, patch) =>
+      set((state) => {
+        const msgs = state.messages[conversationId];
+        if (!msgs) return state;
+        const idx = msgs.findIndex((m) => m.id === messageId);
+        if (idx === -1) return state;
+        const newMsgs = [...msgs];
+        newMsgs[idx] = { ...newMsgs[idx], ...patch };
+        return {
+          messages: { ...state.messages, [conversationId]: newMsgs },
+        };
+      }),
+
+    removeMessage: (conversationId, messageId) =>
+      set((state) => {
+        const msgs = state.messages[conversationId];
+        if (!msgs) return state;
+        return {
+          messages: {
+            ...state.messages,
+            [conversationId]: msgs.filter((m) => m.id !== messageId),
+          },
         };
       }),
 

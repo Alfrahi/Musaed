@@ -73,7 +73,7 @@ const SETTINGS_MIGRATIONS: Record<number, (data: unknown) => Partial<ChatSetting
   },
 };
 
-interface SettingsState {
+export interface SettingsState {
   globalSettings: ChatSettings;
   setGlobalSettings: (globalSettings: ChatSettings) => void;
 }

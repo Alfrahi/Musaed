@@ -79,6 +79,10 @@ fn items_for_kind(kind: ContextMenuKind, labels: &ContextMenuLabels) -> Vec<Menu
                 id: "regenerate",
                 label: labels.regenerate.clone(),
             },
+            MenuItemSpec {
+                id: "delete",
+                label: labels.delete.clone(),
+            },
         ],
         ContextMenuKind::CodeBlock => vec![MenuItemSpec {
             id: "copy",
@@ -266,13 +270,13 @@ mod tests {
     }
 
     #[test]
-    fn items_for_kind_message_returns_copy_regenerate() {
+    fn items_for_kind_message_returns_copy_regenerate_delete() {
         let labels = ContextMenuLabels::default();
         let ids: Vec<&'static str> = items_for_kind(ContextMenuKind::Message, &labels)
             .into_iter()
             .map(|s| s.id)
             .collect();
-        assert_eq!(ids, vec!["copy", "regenerate"]);
+        assert_eq!(ids, vec!["copy", "regenerate", "delete"]);
     }
 
     #[test]

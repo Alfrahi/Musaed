@@ -149,6 +149,7 @@ pub fn run() {
             conversation::commands::cmd_conversation_get,
             conversation::commands::cmd_conversation_create,
             conversation::commands::cmd_message_append,
+            conversation::commands::cmd_message_delete,
             conversation::commands::cmd_conversation_delete,
             conversation::commands::cmd_conversations_clear,
             conversation::commands::cmd_conversation_update,

@@ -333,6 +333,7 @@ export interface CommandMap {
   cmd_conversation_get: { args: { id: string }; return: Conversation };
   cmd_conversation_create: { args: { conversation: Conversation }; return: string };
   cmd_message_append: { args: { conversationId: string; message: Message }; return: void };
+  cmd_message_delete: { args: { conversationId: string; messageId: string }; return: void };
   cmd_conversation_delete: { args: { id: string }; return: void };
   cmd_conversations_clear: { args: Record<string, never>; return: void };
   cmd_conversation_update: { args: { id: string; title: string; updatedAt: number }; return: void };
@@ -600,6 +601,10 @@ const CommandInputSchemas: {
     conversationId: z.string().min(1),
     message: MessageSchema,
   }),
+  cmd_message_delete: z.object({
+    conversationId: z.string().min(1),
+    messageId: z.string().min(1),
+  }),
   cmd_conversation_delete: z.object({ id: z.string().min(1) }),
   cmd_conversations_clear: undefined,
   cmd_conversation_update: z.object({
@@ -712,6 +717,7 @@ const CommandReturnSchemas: {
   cmd_conversation_get: ConversationSchema,
   cmd_conversation_create: z.string(),
   cmd_message_append: voidSchema,
+  cmd_message_delete: voidSchema,
   cmd_conversation_delete: voidSchema,
   cmd_conversations_clear: voidSchema,
   cmd_conversation_update: voidSchema,
@@ -1355,6 +1361,8 @@ export const conversationApi = {
     callInternal('cmd_conversation_create', { conversation }),
   appendMessage: (conversationId: string, message: Message) =>
     callInternal('cmd_message_append', { conversationId, message }),
+  deleteMessage: (conversationId: string, messageId: string) =>
+    callInternal('cmd_message_delete', { conversationId, messageId }),
   deleteConversation: (id: string) => callInternal('cmd_conversation_delete', { id }),
   clearAllConversations: () => callInternal('cmd_conversations_clear', {}),
   updateConversation: (id: string, title: string, updatedAt: number) =>

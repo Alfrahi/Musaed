@@ -99,6 +99,8 @@
     "regenerate": "إعادة التوليد",
     "continue": "متابعة",
     "editPrompt": "تعديل السؤال",
+    "deleteMessage": "حذف الرسالة",
+    "confirmDeleteMessage": "حذف هذه الرسالة؟",
     "errorPrefix": "خطأ",
     "ragContextFailed": "فشل البحث في سياق RAG — المتابعة بدون سياق المشروع",
     "tokenContext": {
@@ -400,7 +402,8 @@
     },
     "message": {
       "copy": "نسخ",
-      "regenerate": "إعادة التوليد"
+      "regenerate": "إعادة التوليد",
+      "delete": "حذف"
     },
     "codeBlock": {
       "copy": "نسخ"

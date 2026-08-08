@@ -138,6 +138,43 @@ pub async fn delete_conversation(
     }
 }
 
+/// Delete a single message from a conversation.
+pub async fn delete_message(
+    store: Arc<Mutex<ConversationStore>>,
+    conversation_id: String,
+    message_id: String,
+) -> ApiResponse<()> {
+    tracing::info!(
+        "Deleting message {} from conversation {}",
+        message_id,
+        conversation_id
+    );
+    let guard = store.lock().await;
+    match guard.delete_message(&conversation_id, &message_id).await {
+        Ok(_) => {
+            tracing::info!(
+                "Deleted message {} from conversation {}",
+                message_id,
+                conversation_id
+            );
+            ApiResponse {
+                success: true,
+                data: Some(()),
+                error: None,
+            }
+        }
+        Err(e) => {
+            tracing::error!(
+                "Failed to delete message {} from conversation {}: {}",
+                message_id,
+                conversation_id,
+                e
+            );
+            backend_error_to_response(error_codes::MESSAGE_DELETE_ERROR, e)
+        }
+    }
+}
+
 /// Clear all conversations.
 pub async fn clear_all_conversations(store: Arc<Mutex<ConversationStore>>) -> ApiResponse<()> {
     tracing::info!("Clearing all conversations");
@@ -285,5 +322,23 @@ mod tests {
         let resp = search_messages(store, "nonexistent".to_string(), 50).await;
         assert!(resp.success);
         assert!(resp.data.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_service_delete_message_removes_message() {
+        let store =
+            make_store_with_message("conv-1", "Test Chat", "msg-1", "user", "Hello world").await;
+
+        let resp = delete_message(store, "conv-1".to_string(), "msg-1".to_string()).await;
+        assert!(resp.success);
+    }
+
+    #[tokio::test]
+    async fn test_service_delete_message_succeeds_even_if_not_found() {
+        let store =
+            make_store_with_message("conv-1", "Test Chat", "msg-1", "user", "Hello world").await;
+
+        let resp = delete_message(store, "conv-1".to_string(), "nonexistent".to_string()).await;
+        assert!(resp.success);
     }
 }
