@@ -23,6 +23,8 @@ import {
   RAG_VALIDATION_LIMITS,
   MAX_FILE_PATH_LEN,
   sanitizeError,
+  IpcError,
+  BackendErrorCode,
   COMMAND_VERSIONS,
   MessageSchema,
   type CommandName,
@@ -818,7 +820,13 @@ async function callInternal<K extends keyof CommandMap>(
       const result = schema.safeParse(response.data);
       if (!result.success) {
         console.error(`[IPC] Response validation failed for "${command}"`, result.error.issues);
-        throw new Error('Invalid response from backend');
+        throw new IpcError({
+          code: BackendErrorCode.InvalidResponse,
+          message: `Invalid response shape from backend for "${command}"`,
+          requestId: undefined,
+          context: undefined,
+          isRetryable: false,
+        });
       }
       recordIpcLatency(command, latencyMs, budgetMs);
       return result.data;
@@ -834,12 +842,23 @@ async function callInternal<K extends keyof CommandMap>(
       }
       return null;
     }
-    throw new Error('Unknown error occurred during IPC call');
+    throw new IpcError({
+      code: BackendErrorCode.InternalError,
+      message: `IPC call "${command}" returned no success/error payload`,
+      requestId: undefined,
+      context: undefined,
+      isRetryable: false,
+    });
   } catch (err) {
     const latencyMs = Math.round(performance.now() - callStart);
     recordIpcLatency(command, latencyMs, budgetMs);
-    const sanitized = sanitizeError(err);
-    throw new Error(sanitized.message);
+    // Re-throw IpcError instances unchanged (they already carry the
+    // structured fields from sanitizeError); sanitize anything else so
+    // callers always catch a typed, context-carrying IpcError.
+    if (err instanceof IpcError) {
+      throw err;
+    }
+    throw new IpcError(sanitizeError(err));
   }
 }
 

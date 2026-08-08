@@ -175,10 +175,23 @@ pub fn discover_files(
                 }
 
                 let path = entry.path().to_path_buf();
-                let relative = path
-                    .strip_prefix(project_path)
-                    .map(|p| p.to_string_lossy().to_string())
-                    .unwrap_or_default();
+                // Previously this silently stored `""` as the relative path
+                // when `strip_prefix` failed, which corrupted the file record
+                // (every key looked like the project root joined with "").
+                // Skip the file with a diagnostic instead of recording silent
+                // garbage.
+                let relative = match path.strip_prefix(project_path) {
+                    Ok(p) => p.to_string_lossy().to_string(),
+                    Err(e) => {
+                        tracing::warn!(
+                            "Skipping file {:?}: path is not within project root {:?}: {}",
+                            path,
+                            project_path,
+                            e
+                        );
+                        continue;
+                    }
+                };
 
                 let metadata = match std::fs::metadata(&path) {
                     Ok(m) => m,

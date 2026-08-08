@@ -104,3 +104,38 @@ export const BackendErrorSchema = z.object({
 });
 
 export type BackendError = z.infer<typeof BackendErrorSchema>;
+
+/**
+ * Typed IPC error thrown by the IPC bridge when a backend call fails.
+ *
+ * Carries the structured fields from `BackendError` (`code`, `context`,
+ * `isRetryable`, `requestId`) through to JS `catch` sites, so callers can
+ * branch on retryability or error code instead of parsing `error.message`.
+ *
+ * Replaces the prior `throw new Error(sanitized.message)` in `callInternal`
+ * which discarded everything but the message string.
+ */
+export class IpcError extends Error {
+  readonly code: BackendErrorCode;
+  readonly isRetryable: boolean;
+  readonly context?: string;
+  readonly requestId?: string;
+
+  constructor(backend: BackendError) {
+    super(backend.message);
+    this.name = 'IpcError';
+    // `BackendErrorSchema.code` is typed as `string` (Zod defaults widen
+    // string-literal unions); narrow to `BackendErrorCode` here so callers
+    // can branch on the enum.
+    this.code = backend.code as BackendErrorCode;
+    this.isRetryable = backend.isRetryable;
+    // `nullish()` yields `string | null | undefined`; collapse `null` to
+    // `undefined` so the class fields remain `string | undefined`.
+    this.context = backend.context ?? undefined;
+    this.requestId = backend.requestId ?? undefined;
+
+    // Restore prototype chain when transpiled to ES5 — without this,
+    // `instanceof IpcError` returns false after downlevel compilation.
+    Object.setPrototypeOf(this, IpcError.prototype);
+  }
+}

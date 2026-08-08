@@ -8,6 +8,8 @@ export const sanitizeError = (error: unknown): BackendError => {
   let message = 'An unknown error occurred';
   let code = BackendErrorCode.Unknown;
   let requestId: string | undefined;
+  let context: string | undefined;
+  let isRetryable = false;
 
   if (typeof error === 'string') {
     message = error;
@@ -27,6 +29,18 @@ export const sanitizeError = (error: unknown): BackendError => {
     const rid = errObj.requestId;
     if (typeof rid === 'string') {
       requestId = rid;
+    }
+
+    // Preserve structured context and retryability from backend errors so
+    // downstream callers can branch on it; only fall back to null/false
+    // when the source error does not carry these fields.
+    const ctx = errObj.context;
+    if (typeof ctx === 'string') {
+      context = ctx;
+    }
+
+    if (typeof errObj.isRetryable === 'boolean') {
+      isRetryable = errObj.isRetryable;
     }
   }
 
@@ -76,6 +90,22 @@ export const sanitizeError = (error: unknown): BackendError => {
   // Normalize whitespace and trim
   message = message.replace(/\s+/g, ' ').trim();
 
+  // Apply the same redaction pipeline to `context` so backend-provided
+  // context strings cannot leak sensitive paths/IPs/keys through a field
+  // the previous sanitizer left untouched.
+  if (context) {
+    context = context.replace(urlRegex, '[URL REDACTED]');
+    context = context.replace(dbRegex, '[CONNECTION STRING REDACTED]');
+    for (const [pattern, replacement] of sensitivePatterns) {
+      context = context.replace(pattern, replacement);
+    }
+    context = context.replace(ipRegex, '[PRIVATE IP REDACTED]');
+    context = context.replace(unixPathRegex, '[PATH REDACTED]');
+    context = context.replace(winPathRegex, '[PATH REDACTED]');
+    context = context.replace(genericPathRegex, '[PATH REDACTED]');
+    context = context.replace(/\s+/g, ' ').trim();
+  }
+
   // Fallback for empty messages
   if (!message || message.length < 2) {
     message = 'An error occurred. Please try again.';
@@ -85,7 +115,7 @@ export const sanitizeError = (error: unknown): BackendError => {
     code,
     message,
     requestId,
-    context: null,
-    isRetryable: false,
+    context,
+    isRetryable,
   };
 };

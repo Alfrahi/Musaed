@@ -5,8 +5,21 @@ use rusqlite::Row;
 
 pub(super) fn row_to_project(row: &Row<'_>) -> Result<RagProject, rusqlite::Error> {
     let ignore_patterns_str: String = row.get(4)?;
+    // Surface deserialization failures instead of silently swallowing them.
+    // Previously this was `unwrap_or_default()`, which returned `[]` on
+    // corrupted JSON — silently reindexing files the user had explicitly
+    // asked to ignore. Now we log the corruption and fall back to an empty
+    // list while making the failure observable for diagnostics.
     let ignore_patterns: Vec<String> =
-        serde_json::from_str(&ignore_patterns_str).unwrap_or_default();
+        serde_json::from_str(&ignore_patterns_str).unwrap_or_else(|e| {
+            tracing::warn!(
+                "Corrupted ignore_patterns JSON in RAG project row; falling back to empty list. \
+             Parse error: {}. Raw value: {:?}",
+                e,
+                ignore_patterns_str
+            );
+            Vec::new()
+        });
 
     // Read status from the column, falling back to derivation from indexed_at
     let status: ProjectStatus = row

@@ -67,7 +67,10 @@ pub async fn add_project(req: AddProjectRequest) -> ApiResponse<RagProject> {
         Err(e) => ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new(error_codes::RAG_CREATE_ERROR, e)),
+            error: Some(
+                BackendError::new(error_codes::RAG_CREATE_ERROR, e)
+                    .with_context("Failed to create RAG project".to_string()),
+            ),
         },
     }
 }
@@ -86,7 +89,10 @@ pub async fn remove_project(req: RemoveProjectRequest) -> ApiResponse<bool> {
         Err(e) => ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new(error_codes::RAG_DELETE_ERROR, e)),
+            error: Some(
+                BackendError::new(error_codes::RAG_DELETE_ERROR, e)
+                    .with_context("Failed to delete RAG project".to_string()),
+            ),
         },
     }
 }
@@ -107,7 +113,10 @@ pub async fn update_project(req: UpdateProjectRequest) -> ApiResponse<RagProject
         return ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new(error_codes::RAG_UPDATE_ERROR, e)),
+            error: Some(
+                BackendError::new(error_codes::RAG_UPDATE_ERROR, e)
+                    .with_context("Failed to update RAG project metadata".to_string()),
+            ),
         };
     }
     match s.get_project(&req.project_id).await {
@@ -127,7 +136,10 @@ pub async fn update_project(req: UpdateProjectRequest) -> ApiResponse<RagProject
         Err(e) => ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new(error_codes::RAG_FETCH_ERROR, e)),
+            error: Some(
+                BackendError::new(error_codes::RAG_FETCH_ERROR, e)
+                    .with_context("Failed to reload RAG project after update".to_string()),
+            ),
         },
     }
 }
@@ -143,7 +155,10 @@ pub async fn list_projects(req: ListProjectsRequest) -> ApiResponse<Vec<RagProje
         Err(e) => ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new(error_codes::RAG_LIST_ERROR, e)),
+            error: Some(
+                BackendError::new(error_codes::RAG_LIST_ERROR, e)
+                    .with_context("Failed to list RAG projects".to_string()),
+            ),
         },
     }
 }
