@@ -34,21 +34,20 @@ Manages application-wide configuration — Ollama connection, model parameters, 
 
 All components are internal — **not** re-exported from `index.ts` (per DDD rules). They are rendered inside the `SettingsModal` which is imported directly by the `layout` composition layer.
 
-| Component             | Description                                                                                                                                      |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `SettingsModal`       | Top-level modal that hosts all settings tabs                                                                                                     |
-| `SettingsCard`        | Shared card container used by individual settings panels                                                                                         |
-| `OllamaSettings`      | Ollama endpoint URL, health check, connection status                                                                                             |
-| `ModelParamsSettings` | Pointer card — per-model params now live in the library `ModelSelector` dropdown (`ModelParamsPanel`). This section only directs the user there. |
-| `ThemeSettings`       | Light/dark/system theme selection                                                                                                                |
-| `LanguageSettings`    | UI language selection (en/ar)                                                                                                                    |
-| `MarkdownSettings`    | Markdown rendering preferences                                                                                                                   |
-| `InputSettings`       | Input behavior (enter to send, etc.)                                                                                                             |
-| `WindowSettings`      | Window behavior (close to tray, etc.)                                                                                                            |
-| `StorageSettings`     | Storage usage display and cleanup controls                                                                                                       |
-| `LogViewer`           | Application log viewer with filtering                                                                                                            |
-| `DiagnosticsSettings` | System diagnostics and debug info                                                                                                                |
-| `IpcLatencyPanel`     | IPC latency monitoring panel (mounted inside Diagnostics)                                                                                        |
+| Component             | Description                                               |
+| --------------------- | --------------------------------------------------------- |
+| `SettingsModal`       | Top-level modal that hosts all settings tabs              |
+| `SettingsCard`        | Shared card container used by individual settings panels  |
+| `OllamaSettings`      | Ollama endpoint URL, health check, connection status      |
+| `ThemeSettings`       | Light/dark/system theme selection                         |
+| `LanguageSettings`    | UI language selection (en/ar)                             |
+| `MarkdownSettings`    | Markdown rendering preferences                            |
+| `InputSettings`       | Input behavior (enter to send, etc.)                      |
+| `WindowSettings`      | Window behavior (close to tray, etc.)                     |
+| `StorageSettings`     | Storage usage display and cleanup controls                |
+| `LogViewer`           | Application log viewer with filtering                     |
+| `DiagnosticsSettings` | System diagnostics and debug info                         |
+| `IpcLatencyPanel`     | IPC latency monitoring panel (mounted inside Diagnostics) |
 
 ## IPC Endpoints
 

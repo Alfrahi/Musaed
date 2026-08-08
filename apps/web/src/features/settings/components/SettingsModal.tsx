@@ -7,7 +7,6 @@ import { useSettingsActions } from '@/features/settings/hooks/useSettingsActions
 import LanguageSettings from './LanguageSettings';
 import ThemeSettings from './ThemeSettings';
 import OllamaSettings from './OllamaSettings';
-import ModelParamsSettings from './ModelParamsSettings';
 import DiagnosticsSettings from './DiagnosticsSettings';
 import InputSettings from './InputSettings';
 import StorageSettings from './StorageSettings';
@@ -56,9 +55,6 @@ const renderAITab = () => (
   <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-6">
     <SettingsCard>
       <OllamaSettings />
-    </SettingsCard>
-    <SettingsCard>
-      <ModelParamsSettings />
     </SettingsCard>
   </div>
 );

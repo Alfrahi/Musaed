@@ -47,10 +47,6 @@ vi.mock('./OllamaSettings', () => ({
   __esModule: true,
   default: () => <div data-testid="ollama" />,
 }));
-vi.mock('./ModelParamsSettings', () => ({
-  __esModule: true,
-  default: () => <div data-testid="params" />,
-}));
 vi.mock('./DiagnosticsSettings', () => ({
   __esModule: true,
   default: () => <div data-testid="diagnostics" />,
