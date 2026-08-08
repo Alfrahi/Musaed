@@ -14,14 +14,20 @@ const manifest: FeatureManifest = {
     hooks: [],
     utils: [],
   },
-  ipcEndpoints: [],
+  ipcEndpoints: ['cmd_opener_open_url'],
   stateSchemas: {}, // No feature-specific state
   /**
    * Failure modes for this feature's IPC endpoints.
    *
    * @see STANDARDS.md §13 — Failure Mode Rule
    */
-  failureModes: {},
+  failureModes: {
+    cmd_opener_open_url: {
+      fallback: 'Silently ignore — external link open is fire-and-forget',
+      retry: 'none',
+      messageKey: 'error.genericError',
+    },
+  },
   dependencies: [], // Standalone feature with no dependencies
 } as const;
 
