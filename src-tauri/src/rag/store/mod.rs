@@ -19,6 +19,7 @@ mod row_mapping;
 mod search_internal;
 mod stats;
 
+use crate::rag::error::{RagError, RagResult};
 use crate::rag::types::*;
 use chunks::*;
 use connection::open_connection;
@@ -32,8 +33,8 @@ use tokio::sync::Mutex;
 
 /// Number of read connections in the pool. Each reader takes one slot;
 /// concurrent readers take distinct slots and run in parallel. The single
-/// writer (always under an outer `RwLock` write guard in the services layer)
-/// takes the first slot.
+/// writer (always under an outer `RwLock<RagStore>` write guard in the services
+/// layer) takes the first slot.
 const READ_POOL_SIZE: usize = 4;
 
 /// The RAG store. Provides async-safe access via a small connection pool —
@@ -62,7 +63,7 @@ impl RagStore {
     /// If the sqlite-vec extension fails to load, RAG features (vector
     /// embeddings and similarity search) are disabled and a warning is logged.
     /// The store still opens successfully for basic metadata operations.
-    pub fn open(db_path: &Path) -> Result<Self, String> {
+    pub fn open(db_path: &Path) -> RagResult<Self> {
         match open_connection(db_path) {
             Ok(conn) => {
                 let mut conns = Vec::with_capacity(READ_POOL_SIZE);
@@ -99,8 +100,7 @@ impl RagStore {
                 );
                 // Open a basic connection without the vector extension for
                 // metadata operations (projects, files, chunks without vectors).
-                let conn = rusqlite::Connection::open(db_path)
-                    .map_err(|e| format!("Failed to open RAG database: {}", e))?;
+                let conn = rusqlite::Connection::open(db_path).map_err(RagError::from)?;
                 Ok(Self {
                     conns: vec![Mutex::new(conn)],
                     next_slot: std::sync::atomic::AtomicUsize::new(0),
@@ -147,7 +147,7 @@ impl RagStore {
 
     // ====================== PROJECT OPERATIONS ======================
 
-    pub async fn create_project(&self, project: &RagProject) -> Result<(), String> {
+    pub async fn create_project(&self, project: &RagProject) -> RagResult<()> {
         create_project(self, project).await
     }
 
@@ -157,19 +157,19 @@ impl RagStore {
         path: &str,
         embedding_model: &str,
         ignore_patterns: &[String],
-    ) -> Result<RagProject, String> {
+    ) -> RagResult<RagProject> {
         create_project_with_params(self, name, path, embedding_model, ignore_patterns).await
     }
 
-    pub async fn get_project(&self, id: &str) -> Result<Option<RagProject>, String> {
+    pub async fn get_project(&self, id: &str) -> RagResult<Option<RagProject>> {
         get_project(self, id).await
     }
 
-    pub async fn list_projects(&self) -> Result<Vec<RagProject>, String> {
+    pub async fn list_projects(&self) -> RagResult<Vec<RagProject>> {
         list_projects(self).await
     }
 
-    pub async fn delete_project(&self, id: &str) -> Result<(), String> {
+    pub async fn delete_project(&self, id: &str) -> RagResult<()> {
         delete_project(self, id).await
     }
 
@@ -178,7 +178,7 @@ impl RagStore {
         id: &str,
         name: Option<&str>,
         ignore_patterns: Option<&[String]>,
-    ) -> Result<(), String> {
+    ) -> RagResult<()> {
         update_project_metadata(self, id, name, ignore_patterns).await
     }
 
@@ -189,33 +189,33 @@ impl RagStore {
         chunk_count: u64,
         total_bytes: u64,
         indexed_at: Option<&str>,
-    ) -> Result<(), String> {
+    ) -> RagResult<()> {
         update_project_stats(self, id, file_count, chunk_count, total_bytes, indexed_at).await
     }
 
-    pub async fn get_embedding_dimension(&self, id: &str) -> Result<usize, String> {
+    pub async fn get_embedding_dimension(&self, id: &str) -> RagResult<usize> {
         get_embedding_dimension(self, id).await
     }
 
-    pub async fn set_embedding_dimension(&self, id: &str, dimension: usize) -> Result<(), String> {
+    pub async fn set_embedding_dimension(&self, id: &str, dimension: usize) -> RagResult<()> {
         set_embedding_dimension(self, id, dimension).await
     }
 
-    pub async fn set_status(&self, id: &str, status: &ProjectStatus) -> Result<(), String> {
+    pub async fn set_status(&self, id: &str, status: &ProjectStatus) -> RagResult<()> {
         set_status(self, id, status).await
     }
 
-    pub async fn update_embedding_model(&self, id: &str, model: &str) -> Result<(), String> {
+    pub async fn update_embedding_model(&self, id: &str, model: &str) -> RagResult<()> {
         update_embedding_model(self, id, model).await
     }
 
     // ====================== FILE OPERATIONS ======================
 
-    pub async fn upsert_file(&self, file: &FileRecord) -> Result<i64, String> {
+    pub async fn upsert_file(&self, file: &FileRecord) -> RagResult<i64> {
         upsert_file(self, file).await
     }
 
-    pub async fn delete_file(&self, file_id: i64) -> Result<(), String> {
+    pub async fn delete_file(&self, file_id: i64) -> RagResult<()> {
         delete_file(self, file_id).await
     }
 
@@ -223,33 +223,33 @@ impl RagStore {
         &self,
         project_id: &str,
         relative_path: &str,
-    ) -> Result<Option<FileRecord>, String> {
+    ) -> RagResult<Option<FileRecord>> {
         get_file_by_path(self, project_id, relative_path).await
     }
 
-    pub async fn get_project_files(&self, project_id: &str) -> Result<Vec<FileRecord>, String> {
+    pub async fn get_project_files(&self, project_id: &str) -> RagResult<Vec<FileRecord>> {
         get_project_files(self, project_id).await
     }
 
-    pub async fn get_stale_files(&self, project_id: &str) -> Result<Vec<FileRecord>, String> {
+    pub async fn get_stale_files(&self, project_id: &str) -> RagResult<Vec<FileRecord>> {
         get_stale_files(self, project_id).await
     }
 
     // ====================== CHUNK OPERATIONS ======================
 
-    pub async fn insert_chunk(&self, chunk: &ChunkRow) -> Result<i64, String> {
+    pub async fn insert_chunk(&self, chunk: &ChunkRow) -> RagResult<i64> {
         insert_chunk(self, chunk).await
     }
 
-    pub async fn insert_chunks_batch(&self, chunks: &[ChunkRow]) -> Result<(), String> {
+    pub async fn insert_chunks_batch(&self, chunks: &[ChunkRow]) -> RagResult<()> {
         insert_chunks_batch(self, chunks).await
     }
 
-    pub async fn get_file_chunks(&self, file_id: i64) -> Result<Vec<ChunkRecord>, String> {
+    pub async fn get_file_chunks(&self, file_id: i64) -> RagResult<Vec<ChunkRecord>> {
         get_file_chunks(self, file_id).await
     }
 
-    pub async fn delete_file_chunks(&self, file_id: i64) -> Result<(), String> {
+    pub async fn delete_file_chunks(&self, file_id: i64) -> RagResult<()> {
         delete_file_chunks(self, file_id).await
     }
 
@@ -260,9 +260,11 @@ impl RagStore {
     /// # Errors
     ///
     /// Returns an error if the sqlite-vec extension is not loaded.
-    pub async fn insert_embedding(&self, chunk_id: i64, embedding: &[f32]) -> Result<(), String> {
+    pub async fn insert_embedding(&self, chunk_id: i64, embedding: &[f32]) -> RagResult<()> {
         if !self.rag_enabled {
-            return Err("RAG features are disabled: sqlite-vec extension not loaded".to_string());
+            return Err(RagError::VecDisabled(
+                "sqlite-vec extension not loaded".to_string(),
+            ));
         }
         insert_embedding(self, chunk_id, embedding).await
     }
@@ -276,9 +278,11 @@ impl RagStore {
         &self,
         chunk_ids: &[i64],
         embeddings: &[Vec<f32>],
-    ) -> Result<(), String> {
+    ) -> RagResult<()> {
         if !self.rag_enabled {
-            return Err("RAG features are disabled: sqlite-vec extension not loaded".to_string());
+            return Err(RagError::VecDisabled(
+                "sqlite-vec extension not loaded".to_string(),
+            ));
         }
         insert_embeddings_batch(self, chunk_ids, embeddings).await
     }
@@ -296,16 +300,18 @@ impl RagStore {
         query_embedding: &[f32],
         top_k: usize,
         threshold: f32,
-    ) -> Result<Vec<SearchResult>, String> {
+    ) -> RagResult<Vec<SearchResult>> {
         if !self.rag_enabled {
-            return Err("RAG features are disabled: sqlite-vec extension not loaded".to_string());
+            return Err(RagError::VecDisabled(
+                "sqlite-vec extension not loaded".to_string(),
+            ));
         }
         search_similar(self, project_id, query_embedding, top_k, threshold).await
     }
 
     // ====================== STATS ======================
 
-    pub async fn get_project_stats(&self, project_id: &str) -> Result<ProjectStats, String> {
+    pub async fn get_project_stats(&self, project_id: &str) -> RagResult<ProjectStats> {
         get_project_stats(self, project_id).await
     }
 }

@@ -246,7 +246,10 @@ mod path_security_tests {
 
         let result = canonicalize_path_within_project(project_root, &target);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("escapes project boundary"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("escapes project boundary"));
     }
 
     #[test]
@@ -276,7 +279,7 @@ mod path_security_tests {
         let project_root = dir.path();
         let result = validate_and_canonicalize_file_path(project_root, "../etc/passwd");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("traversal"));
+        assert!(result.unwrap_err().to_string().contains("traversal"));
     }
 
     #[test]
@@ -285,7 +288,7 @@ mod path_security_tests {
         let project_root = dir.path();
         let result = validate_and_canonicalize_file_path(project_root, "/etc/passwd");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Absolute"));
+        assert!(result.unwrap_err().to_string().contains("Absolute"));
     }
 
     #[test]

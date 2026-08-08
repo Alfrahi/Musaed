@@ -2,6 +2,7 @@
 //!
 //! Wraps the `/api/embed` endpoint for batched embedding generation.
 
+use crate::rag::error::RagResult;
 use crate::rag::types::RagModelValidation;
 use crate::shared::{acquire_global_permit, ollama_endpoint, retry_with_backoff, HTTP_CLIENT};
 use serde::{Deserialize, Serialize};
@@ -77,21 +78,20 @@ impl OllamaEmbedder {
     }
 
     /// Embed a single text (for query embedding).
-    pub async fn embed_query(&self, text: &str) -> Result<Vec<f32>, String> {
+    pub async fn embed_query(&self, text: &str) -> RagResult<Vec<f32>> {
         let input = if needs_prefix(&self.model) {
             format!("search_query: {}", text)
         } else {
             text.to_string()
         };
         let results = self.embed_batch_internal(vec![input]).await?;
-        results
-            .into_iter()
-            .next()
-            .ok_or_else(|| "No embedding returned".to_string())
+        results.into_iter().next().ok_or_else(|| {
+            crate::rag::error::RagError::EmbedFailed("No embedding returned".to_string())
+        })
     }
 
     /// Embed a batch of texts (for indexing).
-    pub async fn embed_batch(&self, texts: Vec<String>) -> Result<Vec<Vec<f32>>, String> {
+    pub async fn embed_batch(&self, texts: Vec<String>) -> RagResult<Vec<Vec<f32>>> {
         if texts.is_empty() {
             return Ok(vec![]);
         }
@@ -109,23 +109,25 @@ impl OllamaEmbedder {
     }
 
     /// Internal helper for embedding after prefixing.
-    async fn embed_batch_internal(&self, texts: Vec<String>) -> Result<Vec<Vec<f32>>, String> {
+    async fn embed_batch_internal(&self, texts: Vec<String>) -> RagResult<Vec<Vec<f32>>> {
         if texts.is_empty() {
             return Ok(vec![]);
         }
 
-        let _permit = acquire_global_permit().await.map_err(|e| e.to_string())?;
+        let _permit = acquire_global_permit()
+            .await
+            .map_err(|e| crate::rag::error::RagError::Http(e.to_string()))?;
 
-        let endpoint = ollama_endpoint(&self.base_url, "api/embed")
-            .map_err(|e| format!("Invalid Ollama URL: {}", e))?;
+        let endpoint = ollama_endpoint(&self.base_url, "api/embed").map_err(|e| {
+            crate::rag::error::RagError::Config(format!("Invalid Ollama URL: {}", e))
+        })?;
 
         let request = EmbedRequest {
             model: self.model.clone(),
             input: texts,
         };
 
-        let body_str = serde_json::to_string(&request)
-            .map_err(|e| format!("Failed to serialize embedding request: {}", e))?;
+        let body_str = serde_json::to_string(&request)?;
 
         let response = retry_with_backoff(
             || {
@@ -145,21 +147,28 @@ impl OllamaEmbedder {
             EMBED_BACKOFF_MS,
         )
         .await
-        .map_err(|e| format!("Embedding request failed: {}", e))?;
+        .map_err(|e| {
+            crate::rag::error::RagError::Http(format!("Embedding request failed: {}", e))
+        })?;
 
         if !response.status().is_success() {
             let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            return Err(format!(
+            let body = response.text().await.unwrap_or_else(|e| {
+                tracing::warn!("Failed to read embedding error response body: {}", e);
+                String::new()
+            });
+            return Err(crate::rag::error::RagError::EmbedFailed(format!(
                 "Embedding request returned status {}: {}",
                 status, body
-            ));
+            )));
         }
 
-        let embed_response: EmbedResponse = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse embedding response: {}", e))?;
+        let embed_response: EmbedResponse = response.json().await.map_err(|e| {
+            crate::rag::error::RagError::EmbedFailed(format!(
+                "Failed to parse embedding response: {}",
+                e
+            ))
+        })?;
 
         // Detect dimension from first response
         if self.dimension.is_none() {
@@ -181,7 +190,7 @@ impl OllamaEmbedder {
         &mut self,
         chunks: Vec<String>,
         progress_fn: Option<EmbedProgressFn>,
-    ) -> Result<Vec<Vec<f32>>, String> {
+    ) -> RagResult<Vec<Vec<f32>>> {
         if chunks.is_empty() {
             return Ok(vec![]);
         }
@@ -210,7 +219,7 @@ impl OllamaEmbedder {
     }
 
     /// Detect the embedding dimension from the model by embedding a test string.
-    pub async fn detect_dimension(&mut self) -> Result<usize, String> {
+    pub async fn detect_dimension(&mut self) -> RagResult<usize> {
         if let Some(dim) = self.dimension {
             return Ok(dim);
         }
@@ -227,7 +236,7 @@ impl OllamaEmbedder {
     }
 
     /// Validate that the model supports embeddings by trying to embed a test string.
-    pub async fn validate(&self) -> Result<RagModelValidation, String> {
+    pub async fn validate(&self) -> RagResult<RagModelValidation> {
         match self.embed_query("validation test").await {
             Ok(embedding) => Ok(RagModelValidation {
                 is_valid: true,
@@ -239,7 +248,7 @@ impl OllamaEmbedder {
                 is_valid: false,
                 model_name: self.model.clone(),
                 embedding_dimension: None,
-                error: Some(e),
+                error: Some(e.to_string()),
             }),
         }
     }

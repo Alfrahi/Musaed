@@ -68,7 +68,7 @@ pub async fn add_project(req: AddProjectRequest) -> ApiResponse<RagProject> {
             success: false,
             data: None,
             error: Some(
-                BackendError::new(error_codes::RAG_CREATE_ERROR, e)
+                BackendError::new(error_codes::RAG_CREATE_ERROR, e.to_string())
                     .with_context("Failed to create RAG project".to_string()),
             ),
         },
@@ -90,7 +90,7 @@ pub async fn remove_project(req: RemoveProjectRequest) -> ApiResponse<bool> {
             success: false,
             data: None,
             error: Some(
-                BackendError::new(error_codes::RAG_DELETE_ERROR, e)
+                BackendError::new(error_codes::RAG_DELETE_ERROR, e.to_string())
                     .with_context("Failed to delete RAG project".to_string()),
             ),
         },
@@ -114,7 +114,7 @@ pub async fn update_project(req: UpdateProjectRequest) -> ApiResponse<RagProject
             success: false,
             data: None,
             error: Some(
-                BackendError::new(error_codes::RAG_UPDATE_ERROR, e)
+                BackendError::new(error_codes::RAG_UPDATE_ERROR, e.to_string())
                     .with_context("Failed to update RAG project metadata".to_string()),
             ),
         };
@@ -137,7 +137,7 @@ pub async fn update_project(req: UpdateProjectRequest) -> ApiResponse<RagProject
             success: false,
             data: None,
             error: Some(
-                BackendError::new(error_codes::RAG_FETCH_ERROR, e)
+                BackendError::new(error_codes::RAG_FETCH_ERROR, e.to_string())
                     .with_context("Failed to reload RAG project after update".to_string()),
             ),
         },
@@ -156,7 +156,7 @@ pub async fn list_projects(req: ListProjectsRequest) -> ApiResponse<Vec<RagProje
             success: false,
             data: None,
             error: Some(
-                BackendError::new(error_codes::RAG_LIST_ERROR, e)
+                BackendError::new(error_codes::RAG_LIST_ERROR, e.to_string())
                     .with_context("Failed to list RAG projects".to_string()),
             ),
         },

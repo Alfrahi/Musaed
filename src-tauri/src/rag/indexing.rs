@@ -7,6 +7,7 @@
 
 use crate::rag::chunker::chunk_content;
 use crate::rag::embedder::OllamaEmbedder;
+use crate::rag::error::{RagError, RagResult};
 use crate::rag::ignore::discover_files;
 use crate::rag::store::RagStore;
 use crate::rag::types::{ChunkRow, FileRecord, IndexPhase, IndexProgress, ProjectStatus, RawChunk};
@@ -40,9 +41,9 @@ pub struct PhaseContext<'a> {
 }
 
 impl PhaseContext<'_> {
-    fn check_cancelled(&self) -> Result<(), String> {
+    fn check_cancelled(&self) -> RagResult<()> {
         if self.cancel_token.is_cancelled() {
-            Err("Indexing cancelled".to_string())
+            Err(RagError::Cancelled("by user request".to_string()))
         } else {
             Ok(())
         }
@@ -109,7 +110,7 @@ pub async fn index_project(
     opts: IndexOptions<'_>,
     cancel_token: Arc<CancellationToken>,
     app_handle: tauri::AppHandle,
-) -> Result<(), String> {
+) -> RagResult<()> {
     let ctx = PhaseContext {
         store,
         cancel_token,
@@ -140,7 +141,7 @@ pub async fn index_project(
     if let Err(ref e) = result {
         tracing::warn!(
             project_id = %project_id_clone,
-            error = e,
+            error = %e,
             "Indexing pipeline failed — marking project as Error"
         );
         if let Ok(s) = store_clone.try_write() {
@@ -151,7 +152,7 @@ pub async fn index_project(
     result
 }
 
-async fn run_pipeline(ctx: PhaseContext<'_>) -> Result<(), String> {
+async fn run_pipeline(ctx: PhaseContext<'_>) -> RagResult<()> {
     let discovered = phase_discover(&ctx)?;
     let diff = phase_diff(&ctx, &discovered).await?;
     phase_delete_stale(&ctx, &diff.files_to_delete).await?;
@@ -166,7 +167,7 @@ async fn run_pipeline(ctx: PhaseContext<'_>) -> Result<(), String> {
 // ====================== PHASE 1: DISCOVER ======================
 
 /// Discover files in the project directory, respecting ignore patterns.
-fn phase_discover(ctx: &PhaseContext) -> Result<Vec<crate::rag::ignore::DiscoveredFile>, String> {
+fn phase_discover(ctx: &PhaseContext) -> RagResult<Vec<crate::rag::ignore::DiscoveredFile>> {
     ctx.emit(
         IndexPhase::DiscoveringFiles,
         0,
@@ -195,7 +196,7 @@ fn phase_discover(ctx: &PhaseContext) -> Result<Vec<crate::rag::ignore::Discover
 async fn phase_diff(
     ctx: &PhaseContext<'_>,
     discovered: &[crate::rag::ignore::DiscoveredFile],
-) -> Result<DiffOutput, String> {
+) -> RagResult<DiffOutput> {
     let total_files = discovered.len();
     ctx.emit(
         IndexPhase::DiffingFiles,
@@ -278,7 +279,7 @@ async fn phase_diff(
 /// Delete stale file records (files that exist in the index but no longer
 /// on disk).  Drops the write guard between batches so other operations
 /// are not starved.
-async fn phase_delete_stale(ctx: &PhaseContext<'_>, files_to_delete: &[i64]) -> Result<(), String> {
+async fn phase_delete_stale(ctx: &PhaseContext<'_>, files_to_delete: &[i64]) -> RagResult<()> {
     ctx.emit(
         IndexPhase::DeletingStale,
         0,
@@ -309,7 +310,7 @@ async fn phase_delete_stale(ctx: &PhaseContext<'_>, files_to_delete: &[i64]) -> 
 
 /// Read cached file content and split into chunks.  Uses the content
 /// cached during the diff phase to avoid re-reading files from disk.
-async fn phase_chunk(ctx: &PhaseContext<'_>, diff: &DiffOutput) -> Result<ChunkOutput, String> {
+async fn phase_chunk(ctx: &PhaseContext<'_>, diff: &DiffOutput) -> RagResult<ChunkOutput> {
     let file_count = diff.files_to_index.len();
     ctx.emit(
         IndexPhase::ReadingFiles,
@@ -366,7 +367,7 @@ async fn phase_chunk(ctx: &PhaseContext<'_>, diff: &DiffOutput) -> Result<ChunkO
 
 /// Generate embeddings for all chunks via the Ollama embedder.
 /// Detects the embedding dimension on the first run and stores it.
-async fn phase_embed(ctx: &PhaseContext<'_>, chunked: &ChunkOutput) -> Result<EmbedOutput, String> {
+async fn phase_embed(ctx: &PhaseContext<'_>, chunked: &ChunkOutput) -> RagResult<EmbedOutput> {
     ctx.emit(
         IndexPhase::EmbeddingChunks,
         0,
@@ -380,10 +381,10 @@ async fn phase_embed(ctx: &PhaseContext<'_>, chunked: &ChunkOutput) -> Result<Em
     let mut embedder = OllamaEmbedder::new(ctx.base_url, ctx.embedding_model);
 
     if let Err(e) = embedder.detect_dimension().await {
-        return Err(format!(
+        return Err(RagError::EmbedFailed(format!(
             "Failed to detect embedding dimension: {}. Is the model '{}' running?",
             e, ctx.embedding_model
-        ));
+        )));
     }
 
     let dimension = embedder.dimension().unwrap_or(768);
@@ -443,7 +444,7 @@ async fn phase_store(
     discovered: &[crate::rag::ignore::DiscoveredFile],
     chunked: &ChunkOutput,
     embedded: &EmbedOutput,
-) -> Result<(), String> {
+) -> RagResult<()> {
     ctx.emit(
         IndexPhase::StoringChunks,
         0,
@@ -467,7 +468,13 @@ async fn phase_store(
                 let datetime: chrono::DateTime<chrono::Utc> = t.into();
                 datetime.to_rfc3339()
             })
-            .unwrap_or_default();
+            .unwrap_or_else(|| {
+                tracing::warn!(
+                    "Failed to read file mtime for {:?}; storing empty modified_at",
+                    full_path
+                );
+                String::new()
+            });
 
         let file_record = FileRecord {
             id: None,
@@ -553,7 +560,7 @@ async fn phase_complete(
     ctx: &PhaseContext<'_>,
     discovered: &[crate::rag::ignore::DiscoveredFile],
     total_chunks: usize,
-) -> Result<(), String> {
+) -> RagResult<()> {
     ctx.emit(
         IndexPhase::Completed,
         total_chunks,

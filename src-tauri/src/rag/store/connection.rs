@@ -1,5 +1,6 @@
 //! Database connection management, schema, and migrations.
 
+use crate::rag::error::RagResult;
 use rusqlite::{ffi, Connection};
 use std::path::Path;
 
@@ -93,7 +94,7 @@ extern "C" fn sqlite3_vec_init_wrapper(
 }
 
 /// Loads the sqlite-vec extension into the SQLite runtime.
-pub(super) fn load_vec_extension() -> Result<(), String> {
+pub(super) fn load_vec_extension() -> RagResult<()> {
     // SAFETY: `sqlite3_auto_extension` expects an `extern "C"` callback
     // matching its prototype (`*mut sqlite3`, `*mut *mut c_char`,
     // `*const sqlite3_api_routines` -> `c_int`). `sqlite3_vec_init_wrapper`
@@ -110,20 +111,17 @@ pub(super) fn load_vec_extension() -> Result<(), String> {
 
 /// Open (or create) the RAG SQLite database at the given path.
 /// The parent directory must already exist.
-pub(super) fn open_connection(db_path: &Path) -> Result<Connection, String> {
+pub(super) fn open_connection(db_path: &Path) -> RagResult<Connection> {
     // Load sqlite-vec extension globally BEFORE opening the connection
     load_vec_extension()?;
 
-    let conn =
-        Connection::open(db_path).map_err(|e| format!("Failed to open RAG database: {}", e))?;
+    let conn = Connection::open(db_path)?;
 
     // Apply pragmas
-    conn.execute_batch(PRAGMAS_SQL)
-        .map_err(|e| format!("Failed to set pragmas: {}", e))?;
+    conn.execute_batch(PRAGMAS_SQL)?;
 
     // Create schema
-    conn.execute_batch(SCHEMA_SQL)
-        .map_err(|e| format!("Failed to create RAG schema: {}", e))?;
+    conn.execute_batch(SCHEMA_SQL)?;
 
     // Run migrations
     run_migrations(&conn)?;
@@ -138,24 +136,21 @@ pub(super) fn open_connection(db_path: &Path) -> Result<Connection, String> {
 ///
 /// Used to populate the read pool in [`super::RagStore::open`] so concurrent
 /// readers can run in parallel.
-pub(super) fn open_read_connection(db_path: &Path) -> Result<Connection, String> {
-    let conn =
-        Connection::open(db_path).map_err(|e| format!("Failed to open RAG database: {}", e))?;
-    conn.execute_batch(PRAGMAS_SQL)
-        .map_err(|e| format!("Failed to set pragmas for read pool: {}", e))?;
+pub(super) fn open_read_connection(db_path: &Path) -> RagResult<Connection> {
+    let conn = Connection::open(db_path)?;
+    conn.execute_batch(PRAGMAS_SQL)?;
     Ok(conn)
 }
 
 /// Run database migrations for schema changes across versions.
-pub(super) fn run_migrations(conn: &Connection) -> Result<(), String> {
+pub(super) fn run_migrations(conn: &Connection) -> RagResult<()> {
     // Migration 1: Add `status` column to projects table.
     let has_status_column: bool = conn.prepare("SELECT status FROM projects LIMIT 0").is_ok();
     if !has_status_column {
         conn.execute(
             "ALTER TABLE projects ADD COLUMN status TEXT NOT NULL DEFAULT 'idle'",
             [],
-        )
-        .map_err(|e| format!("Migration: failed to add status column: {}", e))?;
+        )?;
         tracing::info!("Migration: added status column to projects table");
     }
 
@@ -190,14 +185,12 @@ pub(super) fn run_migrations(conn: &Connection) -> Result<(), String> {
              );
              CREATE TABLE IF NOT EXISTS _rag_migrations (name TEXT PRIMARY KEY, value TEXT);
              INSERT OR REPLACE INTO _rag_migrations (name, value) VALUES ('vec_cosine_metric', '1');",
-        )
-        .map_err(|e| format!("Migration: failed to rebuild vec_chunks: {}", e))?;
+        )?;
 
         conn.execute(
             "UPDATE projects SET chunk_count = 0, indexed_at = NULL WHERE 1",
             [],
-        )
-        .map_err(|e| format!("Migration: failed to reset project stats: {}", e))?;
+        )?;
 
         tracing::info!("Migration: vec_chunks rebuilt with cosine metric");
     }
@@ -206,8 +199,7 @@ pub(super) fn run_migrations(conn: &Connection) -> Result<(), String> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS _rag_migrations (name TEXT PRIMARY KEY, value TEXT);
          INSERT OR IGNORE INTO _rag_migrations (name, value) VALUES ('vec_cosine_metric', '1');",
-    )
-    .map_err(|e| format!("Migration: failed to ensure migration tracking: {}", e))?;
+    )?;
 
     Ok(())
 }

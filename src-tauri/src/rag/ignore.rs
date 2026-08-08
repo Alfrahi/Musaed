@@ -3,6 +3,7 @@
 //! Uses the `ignore` crate (ripgrep's walker) to traverse project directories
 //! while respecting .gitignore, .ignore, and custom patterns.
 
+use crate::rag::error::{RagError, RagResult};
 use ignore::overrides::OverrideBuilder;
 use ignore::WalkBuilder;
 use std::path::{Path, PathBuf};
@@ -114,15 +115,18 @@ pub struct DiscoveredFile {
 pub fn discover_files(
     project_path: &Path,
     extra_ignore_patterns: &[String],
-) -> Result<Vec<DiscoveredFile>, String> {
+) -> RagResult<Vec<DiscoveredFile>> {
     if !project_path.exists() {
-        return Err(format!("Project path does not exist: {:?}", project_path));
+        return Err(RagError::Config(format!(
+            "Project path does not exist: {:?}",
+            project_path
+        )));
     }
     if !project_path.is_dir() {
-        return Err(format!(
+        return Err(RagError::Config(format!(
             "Project path is not a directory: {:?}",
             project_path
-        ));
+        )));
     }
 
     let mut builder = WalkBuilder::new(project_path);
@@ -139,19 +143,23 @@ pub fn discover_files(
     for pattern in ALWAYS_IGNORE {
         override_builder
             .add(&format!("!{}", pattern))
-            .map_err(|e| format!("Invalid ignore pattern '{}': {}", pattern, e))?;
+            .map_err(|e| {
+                RagError::Config(format!("Invalid ignore pattern '{}': {}", pattern, e))
+            })?;
     }
 
     // Add user-provided extra ignore patterns
     for pattern in extra_ignore_patterns {
         override_builder
             .add(&format!("!{}", pattern))
-            .map_err(|e| format!("Invalid ignore pattern '{}': {}", pattern, e))?;
+            .map_err(|e| {
+                RagError::Config(format!("Invalid ignore pattern '{}': {}", pattern, e))
+            })?;
     }
 
     let overrides = override_builder
         .build()
-        .map_err(|e| format!("Failed to build ignore overrides: {}", e))?;
+        .map_err(|e| RagError::Config(format!("Failed to build ignore overrides: {}", e)))?;
 
     builder.overrides(overrides);
 
