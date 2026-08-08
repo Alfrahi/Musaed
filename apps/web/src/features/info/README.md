@@ -50,4 +50,4 @@ function App() {
 
 ## Related Docs
 
-- [Migration Framework](../../../docs/migration-framework.md)
+- [Migration Framework](../../../../../docs/migration-framework.md)

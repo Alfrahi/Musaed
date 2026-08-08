@@ -40,7 +40,7 @@ export function coordinateStartStream(conversationId: string, requestId: string)
  * This ensures buffered tokens are persisted before abort/stop so no content
  * is silently discarded.
  *
- * **Abort race guard (audit bug 2.3)**: When `expectedRequestId` is provided,
+ * **Abort race guard**: When `expectedRequestId` is provided,
  * the function first checks whether the stream currently registered for
  * `conversationId` still matches that requestId. If a new stream has already
  * replaced the old one (e.g. the user sent a new message between the caller
@@ -55,7 +55,7 @@ export function coordinateStartStream(conversationId: string, requestId: string)
 export function flushAndStop(conversationId: string, expectedRequestId?: string): void {
   const streamingStore = useStreamingStore.getState();
 
-  // Abort race guard (audit bug 2.3): if the caller read a requestId from
+  // Abort race guard: if the caller read a requestId from
   // `activeStreams[conversationId]` before calling this function, bail out
   // when the active stream has already been replaced by a newer one. This
   // prevents flush-to-completion from stealing the new stream's buffered
@@ -98,9 +98,9 @@ export function flushAndStop(conversationId: string, expectedRequestId?: string)
  * Stops streaming for a conversation — flushes any remaining content,
  * clears the stream, and updates the UI flag if no other streams are active.
  * Also marks the last assistant message as `stopped: true` so the UI can
- * render the "Stopped by user • Continue" affordance (Prompt 14).
+ * render the "Stopped by user • Continue" affordance.
  *
- * **Abort race guard (audit bug 2.3)**: When `expectedRequestId` is provided,
+ * **Abort race guard**: When `expectedRequestId` is provided,
  * the function first checks whether the stream currently registered for
  * `conversationId` still matches that requestId. If a new stream has already
  * replaced the old one, the stop is skipped entirely — the new stream is
@@ -110,7 +110,7 @@ export function flushAndStop(conversationId: string, expectedRequestId?: string)
  * content to be lost.
  */
 export function coordinateStopStream(conversationId: string, expectedRequestId?: string): void {
-  // Abort race guard (audit bug 2.3): bail out when the active stream has
+  // Abort race guard: bail out when the active stream has
   // already been replaced by a newer one, so a user-initiated stop on an old
   // stream does not destroy the content/state of the new stream.
   if (expectedRequestId !== undefined) {
@@ -153,7 +153,7 @@ export function coordinateStopStream(conversationId: string, expectedRequestId?:
  * Callers that need to abort the backend stream MUST call chatApi.abort(requestId)
  * BEFORE calling this function. The store layer does not initiate IPC.
  *
- * **Abort race guard (audit bug 2.3)**: Pass the `expectedRequestId` that was
+ * **Abort race guard**: Pass the `expectedRequestId` that was
  * read from `activeStreams[conversationId]` before calling `chatApi.abort`.
  * When provided, both `flushAndStop` and `coordinateStopStream` verify the
  * active stream still matches before proceeding. If a new stream has replaced
@@ -172,10 +172,10 @@ export function stopStreamForConversation(
 
 /**
  * Natural-completion counterpart to `stopStreamForConversation`. Flushes
- * buffered content + pending metrics (promptEvalCount, evalCount, etc.)
- * to the message store and cleans up streaming state — but does NOT set
- * `stopped: true` on the assistant message, since the stream finished on
- * its own rather than being aborted by the user.
+ * buffered content + pending metrics to the message store and cleans up
+ * streaming state — but does NOT set `stopped: true` on the assistant
+ * message, since the stream finished on its own rather than being
+ * aborted by the user.
  *
  * Called from `useTauriEvents.handleToken` when `payload.done === true`.
  */
@@ -186,7 +186,7 @@ export function completeStreamForConversation(conversationId: string): void {
   // Explicitly clear the user-stopped flag on natural completion. Without
   // this, a previously-stopped message in this conversation would retain
   // `stopped: true` and the UI would show "Stopped by user" on a message
-  // that completed naturally (audit bug 1.4).
+  // that completed naturally.
   useMessageStore.getState().updateLastMessage(conversationId, { stopped: false });
   const { activeStreams } = useStreamingStore.getState();
   if (Object.keys(activeStreams).length === 0) {

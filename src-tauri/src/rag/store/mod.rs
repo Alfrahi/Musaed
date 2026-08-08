@@ -4,7 +4,7 @@
 //! and vector similarity search. This module is split into sub-modules for
 //! maintainability and testability.
 //!
-//! Concurrency model (Maj-3, AUDIT-REPORT.md): a small pool of SQLite
+//! Concurrency model: a small pool of SQLite
 //! `Connection`s is opened against the same WAL-mode database file. Distinct
 //! readers draw distinct slots from the pool and run in parallel; the single
 //! writer is serialized by the outer `RwLock<RagStore>` write guard held in

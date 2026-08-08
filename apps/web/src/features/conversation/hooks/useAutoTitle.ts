@@ -46,7 +46,7 @@ async function lookupConversation(
  * Builds a deduplication key that binds pending state to a specific
  * conversation instance, not just its (recyclable) id.
  *
- * Audit bug 2.2 — Auto-Title Race Condition: if a conversation is deleted and
+ * Auto-Title Race Condition: if a conversation is deleted and
  * a new conversation reuses the same id while a title generation is in
  * flight, using the bare `conversationId` as the dedup key could cause the
  * title generated for the old conversation to be applied to the new one.
@@ -106,7 +106,7 @@ async function runAutoGenerate(conversationId: string, pending: Set<string>): Pr
     // Re-check that the conversation is still the same instance (same
     // createdAt) and still has the default title before updating. This
     // guards against the conversation being deleted and a new one reusing
-    // the id during the await above (audit bug 2.2).
+    // the id during the await above.
     const current = useConversationStore.getState().conversations[conversationId];
     if (!current || current.createdAt !== conversation.createdAt) return;
     if (!isDefaultTitle(current.title)) return;

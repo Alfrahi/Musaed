@@ -358,7 +358,7 @@ export interface CommandMap {
   cmd_list_migrations: { args: { target: string }; return: MigrationInfo[] };
 
   // Context menu — native Tauri popup menu for right-click surfaces
-  // (audit F13, Prompt 12). The frontend sends the surface kind, screen
+  // The frontend sends the surface kind, screen
   // coordinates, and translated labels; the backend builds a native menu
   // and returns the selected action id (or null if dismissed).
   // Args are declared inline (not via ContextMenuRequest) so the CI
@@ -375,7 +375,7 @@ export interface CommandMap {
   };
 
   // App metadata — canonical version string sourced from tauri.conf.json
-  // via the compile-time embedded PackageInfo (audit UX-010). The Rust
+  // via the compile-time embedded PackageInfo. The Rust
   // command takes only the Tauri-injected `AppHandle`, so its user-facing
   // argument shape is empty. Declared as a SHARED_COMMAND so any feature
   // can fetch the version without declaring an IPC endpoint in its manifest.
@@ -1234,7 +1234,7 @@ export const ragApi = {
   setEmbeddingModel: (projectId: string, modelName: string) =>
     callInternal('cmd_rag_set_embedding_model', { projectId, modelName }),
   /**
-   * Performs semantic search and assembles a RAG context prompt in a single IPC call.
+   * Performs semantic search and assembles a RAG context in a single IPC call.
    * Replaces the previous two-step process of search + client-side context assembly.
    * @param args - { projectId, query, topK?, threshold?, maxChars?, baseUrl? }
    * @returns AssembledContext with the formatted context string, citations, and token count
@@ -1439,7 +1439,7 @@ export const contextMenuApi = {
  *
  * The version returned here is the single source of truth — `Cargo.toml`
  * and `apps/web/package.json` are aligned to match it so the installer,
- * About modal, and sidebar all show the same string (audit UX-010).
+ * About modal, and sidebar all show the same string.
  *
  * Declared as a SHARED_COMMAND in `packages/contracts/src/command-versions.ts`
  * so any feature can consume it without declaring an IPC endpoint in its

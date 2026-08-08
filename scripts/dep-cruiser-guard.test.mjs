@@ -1,10 +1,7 @@
 /**
- * Dep-cruiser guard test (AUDIT.txt §3.1, §17 Testing).
+ * Dep-cruiser guard test.
  *
- * The audit found "zero architectural tests" — dep-cruiser was reported green
- * even while dozens of cross-feature imports existed because the chassis was
- * wrongly wired. This test closes that gap. It runs dep-cruiser
- * programmatically against:
+ * This test runs dep-cruiser programmatically against:
  *
  *   1. A deliberately polluted tree — a synthetic module that imports every
  *      sibling feature from inside `features/conversation/`. The manifest
@@ -109,11 +106,11 @@ test('manifest-driven rules fire on an undeclared cross-feature import', async (
     // declared, so it must NOT fire). The ridiculously low bar here is
     // deliberate — the point is "the rules fire at all", not "they fire for
     // every bad import". If this passes with zero, the chassis is silent
-    // again (which is exactly what AUDIT.txt §3.1 reported).
+    // again.
     assert.ok(
       convViolations.length > 0,
       'dep-cruiser did NOT fire for a polluted conversation→{settings,rag} import. ' +
-        'The architecture enforcement layer is silent — see AUDIT.txt §3.1.',
+        'The architecture enforcement layer is silent.',
     );
 
     // And specifically: library (declared) must NOT be flagged.

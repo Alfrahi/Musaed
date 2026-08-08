@@ -5,7 +5,7 @@ import { contextMenuApi } from '@/lib/ipc';
 import type { ContextMenuKind, ContextMenuLabels } from '@musaed/contracts';
 
 /**
- * Shared hook for native Tauri context-menu dispatch (audit F13, Prompt 12).
+ * Shared hook for native Tauri context-menu dispatch.
  *
  * Returns a `showContextMenu` callback that calls `contextMenuApi.show` with
  * the given kind, target id, and translated labels, then dispatches the

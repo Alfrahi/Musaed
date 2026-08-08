@@ -11,7 +11,7 @@ use tracing;
 /// for queries, `search_document:` for documents).  This is an **exact-match
 /// allowlist** rather than a substring match on "nomic" so that custom
 /// fine-tunes or unrelated models whose names happen to contain "nomic" are
-/// not incorrectly prefixed (audit bug 1.6).
+/// not incorrectly prefixed.
 const PREFIX_MODELS: &[&str] = &[
     "nomic-embed-text",
     "nomic-embed-text-v1",
@@ -284,7 +284,7 @@ mod tests {
     #[test]
     fn test_needs_prefix_rejects_substring_match() {
         // The old `contains("nomic")` logic would have matched these;
-        // the allowlist must NOT (audit bug 1.6).
+        // the allowlist must NOT.
         assert!(!needs_prefix("my-nomic-finetune"));
         assert!(!needs_prefix("nomic-code"));
         assert!(!needs_prefix("bge-m3"));

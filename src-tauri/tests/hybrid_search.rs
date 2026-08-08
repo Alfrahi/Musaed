@@ -207,12 +207,12 @@ async fn test_insert_and_search_chunks() {
     assert_eq!(results[0].file_path, "src/main.rs");
 }
 
-/// Regression test for AUDIT-REPORT.md Min-4: §8 mandates "Results MUST be
-/// deterministic". The hybrid ranking pipeline (BM25 + vector) is fed by
-/// `search_similar`; if its ordering or float scoring ever became
-/// non-deterministic — e.g. from a SQLite plan change, a float-ordering
-/// refactor in BM25, or a future swap to a non-stable sort — silent
-/// regressions would surface as query results that drift between runs.
+/// Regression test: Results MUST be deterministic. The hybrid ranking
+/// pipeline (BM25 + vector) is fed by `search_similar`; if its ordering or
+/// float scoring ever became non-deterministic — e.g. from a SQLite plan
+/// change, a float-ordering refactor in BM25, or a future swap to a
+/// non-stable sort — silent regressions would surface as query results
+/// that drift between runs.
 ///
 /// This test asserts that the same query issued twice against the same
 /// store returns byte-identical serialised ranked output (chunk ids,
@@ -365,9 +365,9 @@ async fn test_embedding_dimension() {
     assert_eq!(dim, 1024);
 }
 
-/// Regression test for BUG-001: delete_file must not deadlock when
-/// deleting embeddings, chunks, and the file row under a single Mutex
-/// lock acquisition. std::sync::Mutex is non-recursive on Linux.
+/// Regression test: delete_file must not deadlock when deleting
+/// embeddings, chunks, and the file row under a single Mutex lock
+/// acquisition. std::sync::Mutex is non-recursive on Linux.
 #[tokio::test]
 async fn test_delete_file_no_deadlock() {
     let store = test_store();
@@ -421,8 +421,8 @@ async fn test_delete_file_no_deadlock() {
         .is_none());
 }
 
-/// Regression test for BUG-001: delete_file_chunks must not deadlock
-/// when deleting embeddings and chunks under a single Mutex lock.
+/// Regression test: delete_file_chunks must not deadlock when deleting
+/// embeddings and chunks under a single Mutex lock.
 #[tokio::test]
 async fn test_delete_file_chunks_no_deadlock() {
     let store = test_store();
@@ -468,7 +468,7 @@ async fn test_delete_file_chunks_no_deadlock() {
 }
 
 // ---------------------------------------------------------------------------
-// Maj-3 regression tests (AUDIT-REPORT.md): RAG store read parallelism.
+// Maj-3 regression tests: RAG store read parallelism.
 //
 // The store used to be a global `tokio::sync::Mutex<RagStore>` serializing
 // every RAG op against every other op. The fix wraps it in a read/write lock

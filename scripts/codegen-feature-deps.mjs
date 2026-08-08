@@ -8,10 +8,10 @@
  * checker can consume — so dep-cruiser can honor each feature's declared
  * dependency list instead of enforcing an unconditional cross-feature ban.
  *
- * This closes the AUDIT.txt §3.1 gap: the manifest's `dependencies` field
- * was documentation only. With this script + the dep-cruiser rule that
- * reads the generated JSON, `dependencies` becomes a machine-validated
- * contract: any cross-feature import not listed here is a CI failure.
+ * This closes the gap: the manifest's `dependencies` field was documentation
+ * only. With this script + the dep-cruiser rule that reads the generated
+ * JSON, `dependencies` becomes a machine-validated contract: any cross-feature
+ * import not listed here is a CI failure.
  *
  * Usage:
  *   pnpm codegen:feature-deps          # write generated file

@@ -180,14 +180,14 @@ describe('stopStreamForConversation', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Abort race guard (audit bug 2.3)
+// Abort race guard
 // ---------------------------------------------------------------------------
 // When a caller reads `activeStreams[convId]` to abort a request and then
 // calls `stopStreamForConversation(convId, expectedRequestId)`, a new stream
 // may have already replaced the old one. The guard ensures the new stream is
 // left untouched — its buffered content is not flushed, its state is not
 // cleared, and the last message is not marked `stopped: true`.
-describe('stopStreamForConversation — abort race guard (audit bug 2.3)', () => {
+describe('stopStreamForConversation — abort race guard', () => {
   beforeEach(() => {
     useStreamingStore.setState({
       liveContent: { 'conv-1': { chunks: ['new-stream-content'] } },
@@ -282,7 +282,7 @@ describe('completeStreamForConversation', () => {
   });
 
   it('clears a previously-set stopped:true flag on natural completion', () => {
-    // Reproduces audit bug 1.4: a conversation whose previous message was
+    // Reproduces: a conversation whose previous message was
     // user-stopped should not carry `stopped: true` forward onto the next
     // naturally-completed message.
     useMessageStore.setState({

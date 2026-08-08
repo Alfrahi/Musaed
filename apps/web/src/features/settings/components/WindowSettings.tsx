@@ -13,7 +13,7 @@ import { useTranslation } from '@/lib/i18n';
  * is the only exit path. When disabled, the close button exits normally
  * unless a background task (chat stream / model pull / RAG index) is
  * active — in which case the window still minimizes to tray to protect
- * the in-flight work (audit S-1 fallback).
+ * the in-flight work.
  */
 const WindowSettings = () => {
   const globalSettings = useGlobalSettings();

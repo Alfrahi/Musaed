@@ -16,7 +16,7 @@ import { logger } from '@/lib/logger';
  *            `#[serde(rename_all = "camelCase")]` on ChatSettings.
  * Version 3: Backfill `showTokenIndicator`, `closeToTray`, `sidebarWidth`
  *            from DEFAULT_SETTINGS so persisted state at v2 does not trip
- *            Rust serde on `cmd_conversation_create` (UX-UI-AUDIT Prompt 14
+ *            Rust serde on `cmd_conversation_create`
  *            contract alignment, STANDARDS §9 schema-change migration rule).
  */
 const SETTINGS_MIGRATIONS: Record<number, (data: unknown) => Partial<ChatSettings>> = {

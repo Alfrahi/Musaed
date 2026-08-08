@@ -40,7 +40,6 @@ pub fn run() {
                 cwd
             );
 
-            // Focus the existing main window
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_focus();
                 let _ = window.unminimize();
@@ -52,14 +51,12 @@ pub fn run() {
         }));
 
     // Intercept window close: if background tasks (chat stream, model pull,
-    // RAG indexing) are active, hide to tray instead of exiting. The tray
-    // icon + menu is also initialized inside setup() (UX-UI-AUDIT S-1).
+    // RAG indexing) are active, hide to tray instead of exiting.
     builder = builder.on_window_event(|window, event| {
         tray::on_window_event(window, event);
     });
 
     builder = builder.setup(|app| -> Result<(), Box<dyn std::error::Error>> {
-        // Initialize file logger and get the channel sender for tracing
         let log_tx = logging::init_file_logger(app.handle())
             .map_err(|e| format!("Failed to initialize file logger: {}", e))?;
 
@@ -73,8 +70,6 @@ pub fn run() {
         // interferes with tokio test runtimes configured with worker_threads = 1
         #[cfg(not(test))]
         shared::spawn_cache_eviction_task();
-
-        // Initialize conversation store
         let app_data_dir = app
             .path()
             .app_data_dir()
@@ -88,7 +83,6 @@ pub fn run() {
             .map_err(|e| format!("Failed to initialize conversation store: {}", e))?;
         app.manage(Arc::new(Mutex::new(conversation_store)));
 
-        // Initialize RAG store
         let app_data_dir = app
             .path()
             .app_data_dir()
@@ -104,14 +98,11 @@ pub fn run() {
 
         log::info!("RAG store initialized at {:?}", db_path);
 
-        // Initialize system tray (UX-UI-AUDIT Phase 2 Prompt 6, S-1).
         // Tray icon + menu + close interception for background task protection.
         tray::setup_tray(app.handle())
             .map_err(|e| format!("Failed to initialize system tray: {}", e))?;
 
-        // Initialize native macOS menu bar (UX-UI-AUDIT Phase 5 Prompt 13, L-1).
-        // App/Edit/View/Window submenus with standard predefined items.
-        // No-op on Windows/Linux.
+        // Native macOS menu bar. No-op on Windows/Linux.
         menu_bar::setup_menu_bar(app.handle())
             .map_err(|e| format!("Failed to initialize menu bar: {}", e))?;
 
@@ -120,7 +111,6 @@ pub fn run() {
 
     builder
         .invoke_handler(tauri::generate_handler![
-            // App metadata
             app_info::cmd_get_app_version,
             ollama::commands::cmd_ollama_chat,
             ollama::commands::cmd_ollama_abort_chat,
@@ -132,21 +122,17 @@ pub fn run() {
             ollama::models::cmd_ollama_verify_service,
             ollama::models::cmd_ollama_validate_model,
             ollama::title::cmd_ollama_generate_title,
-            // Logging commands
             logging::commands::cmd_logs_append,
             logging::commands::cmd_logs_request_clear_token,
             logging::commands::cmd_logs_clear,
-            // Trace domain commands
             logging::commands::cmd_trace_append,
             logging::commands::cmd_trace_start,
             logging::commands::cmd_trace_complete,
             logging::commands::cmd_trace_get_context,
-            // Migration commands
             migrations::cmd_run_migrations,
             migrations::cmd_rollback_migrations,
             migrations::cmd_get_migration_status,
             migrations::cmd_list_migrations,
-            // RAG commands
             rag::commands::cmd_rag_add_project,
             rag::commands::cmd_rag_remove_project,
             rag::commands::cmd_rag_update_project,
@@ -159,7 +145,6 @@ pub fn run() {
             rag::commands::cmd_rag_get_file_chunks,
             rag::commands::cmd_rag_set_embedding_model,
             rag::commands::cmd_rag_assemble_context,
-            // Conversation commands
             conversation::commands::cmd_conversations_list,
             conversation::commands::cmd_conversation_get,
             conversation::commands::cmd_conversation_create,
@@ -168,25 +153,18 @@ pub fn run() {
             conversation::commands::cmd_conversations_clear,
             conversation::commands::cmd_conversation_update,
             conversation::commands::cmd_conversation_search,
-            // Context menu command
             context_menu::cmd_context_menu_show,
-            // System tray command
             tray::cmd_tray_get_background_status,
-            // Menu bar command — rebuild native macOS menu with translated labels
             menu_bar::cmd_menu_rebuild,
-            // Dialog commands
             dialog::cmd_dialog_ask,
             dialog::cmd_dialog_open_file,
             dialog::cmd_dialog_save_file,
-            // Opener commands
             opener::cmd_opener_open_url,
-            // Store commands
             store_commands::cmd_store_load,
             store_commands::cmd_store_get,
             store_commands::cmd_store_set,
             store_commands::cmd_store_save,
             store_commands::cmd_store_delete,
-            // Filesystem commands
             fs_commands::cmd_fs_read_text_file,
             fs_commands::cmd_fs_read_file,
             fs_commands::cmd_fs_write_text_file,

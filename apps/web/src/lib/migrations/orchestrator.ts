@@ -136,7 +136,7 @@ export async function runMigrations<T>(
     return result;
   }
 
-  // Track migration path for debugging
+  // Track migration path
   const migrationPath: number[] = [];
   let currentData = data;
 

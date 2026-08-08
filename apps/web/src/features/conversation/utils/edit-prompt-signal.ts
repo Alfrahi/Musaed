@@ -1,6 +1,6 @@
 /**
- * One-shot cross-component signal for the "Edit prompt" / "Edit" actions
- * (Prompt 14). ChatWindow writes to the signal when the user clicks Edit on
+ * One-shot cross-component signal for the "Edit" actions.
+ * ChatWindow writes to the signal when the user clicks Edit on
  * a message bubble; useChatInput subscribes and populates the textarea.
  *
  * Replaces the former `chat-input-store` Zustand store — this is ephemeral

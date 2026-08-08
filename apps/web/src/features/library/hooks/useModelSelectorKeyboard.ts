@@ -102,7 +102,7 @@ function dispatchComboboxKey(
 /**
  * Encapsulates the keyboard + type-ahead handlers for the {@link ModelSelector}
  * WAI-ARIA combobox. Factored into a hook so the trigger component stays under
- * lint's max-lines-per-function budget without losing audit-F8 behaviour.
+ * lint's max-lines-per-function budget without losing behaviour.
  *
  * @param modelNames       the full list of option labels in display order
  * @param isOpen           current listbox visibility (read-only)

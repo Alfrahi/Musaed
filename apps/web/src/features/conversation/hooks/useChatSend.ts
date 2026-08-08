@@ -136,7 +136,7 @@ function buildChatPayload(
 }
 
 /**
- * Safety-net cleanup for orphaned `activeStreams` entries (audit bug 1.8).
+ * Safety-net cleanup for orphaned `activeStreams` entries.
  * If a stream entry is still registered for `conversationId` with the
  * given `requestId` at this point, no completion or error path cleaned it
  * up (e.g. `assembleChatRag` threw before the inner try/catch). Removes
@@ -218,7 +218,7 @@ async function executeChatSendAttempt(params: ChatSendAttemptParams): Promise<vo
 
 /**
  * Send pipeline for the chat feature. Extracted from the former God hook
- * (audit F4). Owns: validation → message creation → RAG context →
+ * Owns: validation → message creation → RAG context →
  * persist → chatApi.chat → persist assistant message → error handling.
  *
  * Composes `useChatRag` (RAG context assembly) and `useChatStream` (stream
@@ -284,7 +284,7 @@ export function useChatSend(): {
       const requestId = crypto.randomUUID();
       initiateStreaming(conversationId, requestId);
 
-      // Guard against unbounded `activeStreams` growth (audit bug 1.8):
+      // Guard against unbounded `activeStreams` growth:
       // if an error occurs after `initiateStreaming` registers the stream
       // in `activeStreams` but before `executeChatSendAttempt` (e.g.
       // `assembleChatRag` throws), no cleanup path runs and the entry leaks

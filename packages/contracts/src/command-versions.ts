@@ -95,7 +95,7 @@ export const COMMAND_VERSIONS = {
   cmd_list_migrations: true,
 
   // Context menu — native Tauri popup menu for right-click surfaces
-  // (audit F13, Prompt 12). Native menu building lives in the Rust
+  // Native menu building lives in the Rust
   // `context_menu` domain; this registry entry pairs with the typed
   // `cmd_context_menu_show` adapter declared in `apps/web/src/lib/ipc.ts`.
   cmd_context_menu_show: true,

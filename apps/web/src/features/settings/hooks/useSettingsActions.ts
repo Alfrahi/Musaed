@@ -32,7 +32,7 @@ export function useSettingsActions() {
 
   /**
    * Resets all global settings to their default values.
-   * Logs a warning for audit purposes.
+   * Logs a warning.
    */
   const resetGlobalSettings = useCallback(() => {
     logger.warn('Resetting global settings to default');

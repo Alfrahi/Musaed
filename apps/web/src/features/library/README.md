@@ -16,11 +16,21 @@ Manages the Ollama model library — browsing installed models, pulling new mode
 
 ### Hooks
 
-| Export                 | Source                          | Description                                             |
-| ---------------------- | ------------------------------- | ------------------------------------------------------- |
-| `useModelPulling`      | `hooks/useModelPulling.ts`      | Pull model progress tracking and cancellation           |
-| `useModelActions`      | `hooks/useModelActions.ts`      | Install, delete, and select models                      |
-| `useModelCapabilities` | `hooks/useModelCapabilities.ts` | Query model capabilities (context length, vision, etc.) |
+| Export                     | Source                              | Description                                             |
+| -------------------------- | ----------------------------------- | ------------------------------------------------------- |
+| `useModelPulling`          | `hooks/useModelPulling.ts`          | Pull model progress tracking and cancellation           |
+| `useModelActions`          | `hooks/useModelActions.ts`          | Install, delete, and select models                      |
+| `useModelCapabilities`     | `hooks/useModelCapabilities.ts`     | Query model capabilities (context length, vision, etc.) |
+| `useEmbeddingModels`       | `hooks/useEmbeddingModels.ts`       | Manage embedding models for RAG                         |
+| `useLibraryInitialization` | `hooks/useLibraryInitialization.ts` | Initialize library from Rust backend at boot            |
+| `useLibraryTauriEvents`    | `hooks/useLibraryTauriEvents.ts`    | Subscribe to Tauri events for library updates           |
+| `useModelContextWindow`    | `hooks/useModelContextWindow.ts`    | Get model context window information                    |
+
+### Types
+
+| Export                   | Source                           | Description                               |
+| ------------------------ | -------------------------------- | ----------------------------------------- |
+| `ModelContextWindowInfo` | `hooks/useModelContextWindow.ts` | Type for model context window information |
 
 ### Feature Manifest
 
@@ -30,10 +40,11 @@ Manages the Ollama model library — browsing installed models, pulling new mode
 
 ## Key Components (internal)
 
-| Component             | Description                                 |
-| --------------------- | ------------------------------------------- |
-| `InstalledModelCard`  | Card variant for an already-installed model |
-| `LibrarySearchHeader` | Search/filter header for the model library  |
+| Component             | Description                                                                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `InstalledModelCard`  | Card variant for an already-installed model                                                                                                                                    |
+| `LibrarySearchHeader` | Search/filter header for the model library                                                                                                                                     |
+| `ModelParamsPanel`    | Per-model sampling parameter sliders (temperature, top-p, context length, etc.). Now mounted inline inside the `ModelSelector` dropdown rather than the global settings modal. |
 
 ## IPC Endpoints
 
@@ -42,15 +53,14 @@ Manages the Ollama model library — browsing installed models, pulling new mode
 | `cmd_ollama_get_models`     | List installed Ollama models          |
 | `cmd_ollama_delete_model`   | Delete an installed model             |
 | `cmd_ollama_pull_model`     | Pull a new model from Ollama registry |
-| `cmd_ollama_check_health`   | Check Ollama service health           |
-| `cmd_ollama_verify_service` | Verify Ollama service connectivity    |
+| `cmd_ollama_abort_pull`     | Abort an active model pull            |
 | `cmd_ollama_validate_model` | Validate a model name                 |
 
 ## State Schemas
 
-| Store        | Version | Persistence Key           |
-| ------------ | ------- | ------------------------- |
-| `modelStore` | 1       | `musaed-model-storage-v1` |
+| Store        | Version | Persistence Key        |
+| ------------ | ------- | ---------------------- |
+| `modelStore` | 1       | `musaed-model-storage` |
 
 ## Dependencies
 
@@ -62,11 +72,11 @@ None — standalone feature. The `settings` feature depends on `library` via the
 import { ModelSelector, useModelActions } from '@/features/library';
 
 function ModelPicker() {
-  const { selectedModel, selectModel } = useModelActions();
-  return <ModelSelector value={selectedModel} onChange={selectModel} />;
+  const { fetchModels, isFetching } = useModelActions();
+  return <ModelSelector />;
 }
 ```
 
 ## Related Docs
 
-- [Migration Framework](../../../docs/migration-framework.md)
+- [Migration Framework](../../../../../docs/migration-framework.md)

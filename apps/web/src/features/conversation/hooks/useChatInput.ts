@@ -45,7 +45,7 @@ export const useChatInput = () => {
   }, [input, images, files, sendMessage, clearAttachments]);
 
   // Escape is intentionally NOT handled here. The Escape-to-stop contract is
-  // owned exclusively by useGlobalShortcuts (audit F6) so the global handler
+  // owned exclusively by useGlobalShortcuts so the global handler
   // and a textarea-local handler never both fire stopStreamForConversation. Enter/Cmd-Enter
   // remain the only keys this handler owns.
   const handleKeyDown = useCallback(
@@ -68,7 +68,7 @@ export const useChatInput = () => {
   );
 
   // Subscribe to "Edit prompt" / "Edit" signals from MessageBubble hover
-  // actions (Prompt 14). One-shot: populates the textarea then focuses it.
+  // actions. One-shot: populates the textarea then focuses it.
   useEffect(() => {
     return subscribeEditPrompt((prompt) => {
       setInput(prompt);

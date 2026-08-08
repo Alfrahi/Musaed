@@ -27,7 +27,7 @@ import { useStreamingStore } from '@/store/streaming-store';
  * - Cmd/Ctrl + K: Command palette
  * - Escape: if any modal is open, close modals; otherwise, if the active
  *   conversation is streaming, stop the stream. The two branches are mutually
- *   exclusive so Escape never double-fires (audit F6 — Escape-to-stop contract).
+ *   exclusive so Escape never double-fires (Escape-to-stop contract).
  */
 export function useGlobalShortcuts() {
   const { createNewConversation } = useConversationActions();
@@ -95,7 +95,7 @@ export function useGlobalShortcuts() {
           chatApi.abort(requestId);
           // Pass the requestId so stopStreamForConversation bails out if a
           // new stream has replaced the old one before this call runs
-          // (audit bug 2.3 — abort race).
+          // (abort race).
           stopStreamForConversation(conversationId, requestId);
         }
       }

@@ -22,7 +22,7 @@
  *   pnpm validate:contracts --fix      # not implemented (manual fix required)
  *
  * This is the automated contract validation tool required by the Musaed
- * engineering standards (STANDARDS.md §10) and the audit report (Quick Win #3).
+ * engineering standards (STANDARDS.md §10).
  *
  * NOTE: The `--strict` tier is opt-in because full schema-level validation
  * would require adopting `specta::serde_types!` on the Rust side. Until then,

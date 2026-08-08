@@ -65,7 +65,7 @@ const ItemActions = ({
   // reason: action buttons live *inside* the row, which has its own onClick
   // activating the conversation. Without stopPropagation, clicking Edit /
   // Export / Delete would also bubble to the row and activate it — the
-  // nested-interactive pitfall called out in audit F7.
+  // nested-interactive pitfall.
   const stop = (e: React.MouseEvent) => e.stopPropagation();
   return (
     <div

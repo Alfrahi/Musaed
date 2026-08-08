@@ -136,7 +136,7 @@ const manifest: FeatureManifest = {
   // `library` is a declared dependency because InputArea.tsx composes the
   // library feature's ModelSelector component into the chat input chrome.
   // `rag` is a declared dependency because MessageBubble renders RAG cite
-  // affordances (FileChunkViewer modals) — see UX-UI-AUDIT Prompt 10 (F11).
+  // affordances (FileChunkViewer modals).
   // dep-cruiser honors this list (see scripts/codegen-feature-deps.mjs).
   dependencies: ['library', 'rag'],
 } as const;

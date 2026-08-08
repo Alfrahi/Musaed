@@ -69,7 +69,7 @@ export const useConversationActions = () => {
       const requestId = useStreamingStore.getState().activeStreams[id];
       if (requestId) chatApi.abort(requestId);
       // Pass the requestId so stopStreamForConversation bails out if a new
-      // stream has replaced the old one before this call runs (audit bug 2.3).
+      // stream has replaced the old one before this call runs.
       stopStreamForConversation(id, requestId);
       const state = useConversationStore.getState();
       const { [id]: _removed, ...remainingConversations } = state.conversations;
@@ -114,7 +114,7 @@ export const useConversationActions = () => {
     Object.entries(activeStreams).forEach(([convId, requestId]) => {
       chatApi.abort(requestId);
       // Pass the requestId so stopStreamForConversation bails out if a new
-      // stream has replaced the old one before this call runs (audit bug 2.3).
+      // stream has replaced the old one before this call runs.
       stopStreamForConversation(convId, requestId);
     });
 

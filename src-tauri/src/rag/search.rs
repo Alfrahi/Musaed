@@ -50,7 +50,7 @@ impl RagSearchEngine {
         );
 
         // Embed the query via Ollama (no store lock held across this network
-        // call — see Maj-3, AUDIT-REPORT.md).
+        // call).
         let embedder = OllamaEmbedder::new(base_url, embedding_model);
         let query_embedding = embedder.embed_query(query).await?;
 

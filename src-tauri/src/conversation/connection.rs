@@ -107,7 +107,7 @@ pub(super) fn run_migrations(conn: &Connection) -> Result<(), String> {
     }
 
     // Migration 3: Add structured `error` column for assistant-message failure
-    // payloads (v3 — UX-UI-AUDIT Prompt 8). Existing rows store NULL, which
+    // payloads (v3). Existing rows store NULL, which
     // round-trips into the TypeScript `Message.error === undefined` shape.
     // Idempotent: checks column existence before ALTER to survive partial runs.
     if current_version < 3 {
@@ -133,10 +133,10 @@ pub(super) fn run_migrations(conn: &Connection) -> Result<(), String> {
     }
 
     // Migration 4: Add `prompt_eval_count` column for context-window
-    // visualization (UX-UI-AUDIT Prompt 14). Stores the prompt/input token
-    // count returned by Ollama's done message. Existing rows store NULL,
-    // which round-trips into the TypeScript `Message.promptEvalCount === undefined`
-    // shape. Idempotent: checks column existence before ALTER.
+    // visualization. Stores the prompt/input token count returned by
+    // Ollama's done message. Existing rows store NULL, which round-trips
+    // into the TypeScript `Message.promptEvalCount === undefined` shape.
+    // Idempotent: checks column existence before ALTER.
     if current_version < 4 {
         let has_prompt_eval_count_col: bool = conn
             .prepare("SELECT COUNT(*) FROM pragma_table_info('messages') WHERE name = 'prompt_eval_count'")

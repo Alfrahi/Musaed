@@ -198,7 +198,7 @@ type ReadyActionsProps = {
 
 /** Action buttons shown only for `status === 'ready'` projects. Extracted
  *  out of `ProjectActions` so that component stays under the project's
- *  `max-lines-per-function` lint gate (STANDARDS §11). Audit F10 — the
+ *  `max-lines-per-function` lint gate (STANDARDS §11).
  *  Browse Files + Settings buttons open `RagExplorer` / `ProjectSettings`
  *  in a `ModalLayout` mounted by the parent `ProjectCard`. The unconditional
  *  Remove button is rendered separately by `ProjectActions` (it applies to

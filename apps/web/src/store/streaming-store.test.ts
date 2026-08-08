@@ -123,7 +123,7 @@ describe('useStreamingStore', () => {
       expect(state.liveContent.conv1?.chunks).toEqual(['before']);
     });
 
-    it('should ignore tokens from a stale requestId (audit bug 2.1)', () => {
+    it('should ignore tokens from a stale requestId', () => {
       useStreamingStore.getState().startStream('conv1', 'req1');
       useStreamingStore.getState().appendToken('conv1', 'old', 'req1');
       // New stream replaces the old one
@@ -210,7 +210,7 @@ describe('useStreamingStore', () => {
     });
 
     it('should flush late-arriving tokens even when already flushed (no token loss)', () => {
-      // Reproduces audit bug 1.2: tokens arriving after the first flush
+      // Reproduces: tokens arriving after the first flush
       // but before clearStream must be flushed, not silently dropped.
       useStreamingStore.getState().startStream('conv1', 'req1');
       useStreamingStore.getState().appendToken('conv1', 'part1', 'req1');
@@ -482,7 +482,7 @@ describe('useStreamingStore', () => {
 
     it('does not trace appendToken for an inactive (no start) stream', () => {
       // No startStream — appendToken short-circuits inside set(); the trace
-      // helper itself still runs (counts the token) but the audit contract is
+      // helper itself still runs (counts the token) but the contract is
       // that we only care that flushToConversation still emits on proper flush.
       useStreamingStore.getState().appendToken('ghost-conv', 't', 'req-ghost');
       expect(

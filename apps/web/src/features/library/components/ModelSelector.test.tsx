@@ -70,7 +70,7 @@ const wrappedKeyDown = (el: HTMLElement, key: string, opts: Record<string, unkno
   });
 };
 
-describe('ModelSelector — ARIA combobox pattern (audit F8)', () => {
+describe('ModelSelector — ARIA combobox pattern', () => {
   beforeEach(() => {
     mockSelectedModel = '';
     mockModels = [{ name: 'llama3.1' }, { name: 'qwen2.5' }, { name: 'mistral' }];
@@ -250,7 +250,7 @@ describe('ModelSelector — ARIA combobox pattern (audit F8)', () => {
     });
   });
 
-  describe('Outside-click close (audit F8 task 4)', () => {
+  describe('Outside-click close', () => {
     it('clicking outside the dropdown closes the listbox', async () => {
       render(
         <div>
@@ -278,7 +278,7 @@ describe('ModelSelector — ARIA combobox pattern (audit F8)', () => {
     });
   });
 
-  describe('Loading state (audit UX-012 / S-7)', () => {
+  describe('Loading state', () => {
     it('shows loading indicator instead of empty state when isFetching and no models', () => {
       mockModels = [];
       mockIsFetching.value = true;

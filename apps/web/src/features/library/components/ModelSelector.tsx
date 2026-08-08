@@ -138,7 +138,7 @@ const EmptyModels = ({ message }: { message: string }) => (
   </div>
 );
 
-/** Loading state shown while models are being fetched (audit UX-012 / S-7). */
+/** Loading state shown while models are being fetched. */
 const LoadingModels = ({ message }: { message: string }) => (
   <div
     className="text-body flex items-center justify-center gap-2 py-6 ps-4 pe-4 text-zinc-500 dark:text-zinc-400"
@@ -386,7 +386,7 @@ const ModelSelector = () => {
     }
   }, [isOpen, modelNames, selectedModel, typeAheadRef]);
 
-  // Outside-click close (preserved from the previous behavior — audit F8 task 4).
+  // Outside-click close (preserved from the previous behavior).
   useOutsideClick(dropdownRef, isOpen, () => setIsOpen(false));
 
   const activeOptionId =

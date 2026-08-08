@@ -9,11 +9,6 @@ use tauri::{AppHandle, Runtime};
 
 use super::service::{OllamaChatRequest, OllamaChatService};
 
-// Service instance (could be made injectable if needed)
-// The service is instantiated per call to avoid static globals.
-// This keeps the command a thin adapter while allowing easy testing.
-// No state is stored in the service, so creating a new instance has negligible cost.
-
 // ==================== CHAT ====================
 
 #[tauri::command]
@@ -26,9 +21,7 @@ pub async fn cmd_ollama_chat<R: Runtime>(
     options: ChatOptions,
     request_id: String,
 ) -> ApiResponse<bool> {
-    // Instantiate the service locally; no shared mutable state.
     let service = OllamaChatService;
-    // Forward request to service, which now handles rate limiting.
     let req = OllamaChatRequest {
         app,
         window_label: window.label().to_string(),
@@ -56,7 +49,6 @@ pub async fn cmd_ollama_chat<R: Runtime>(
 
 #[tauri::command]
 pub async fn cmd_ollama_abort_chat(request_id: String) -> ApiResponse<()> {
-    // Thin adapter – delegate to domain service
     crate::ollama::abort_service::abort_chat(request_id).await
 }
 
@@ -64,6 +56,5 @@ pub async fn cmd_ollama_abort_chat(request_id: String) -> ApiResponse<()> {
 
 #[tauri::command]
 pub async fn cmd_ollama_check_health(base_url: String) -> ApiResponse<OllamaHealth> {
-    // Thin adapter – delegate to domain service
     crate::ollama::health_service::check_health(base_url).await
 }

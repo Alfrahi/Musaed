@@ -406,8 +406,8 @@ describe('Sidebar', () => {
     });
   });
 
-  // ── ARIA listbox semantics (audit F7) ────────────────────────────────
-  describe('Conversation listbox (audit F7)', () => {
+  // ── ARIA listbox semantics ────────────────────────────────
+  describe('Conversation listbox', () => {
     it('wraps the virtualized conversation list in a nav with aria-label', () => {
       render(<Sidebar />);
       const nav = document.querySelector('nav[aria-label="a11y.conversationList"]');

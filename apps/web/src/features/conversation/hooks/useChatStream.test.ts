@@ -68,7 +68,7 @@ describe('useChatStream', () => {
 
     // abortMessage reads the active requestId from the streaming store and
     // passes it to stopStreamForConversation so the abort race guard can
-    // bail out if the stream has been replaced (audit bug 2.3).
+    // bail out if the stream has been replaced.
     expect(mockUtils.coordination.stopStreamForConversation).toHaveBeenCalledWith(
       'conv1',
       'request1'

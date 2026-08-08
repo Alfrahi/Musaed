@@ -72,14 +72,14 @@ const ScrollButton = ({
 );
 
 /**
- * Hook: message bubble action callbacks for Prompt 14 (Continue, Edit prompt, Edit).
+ * Hook: message bubble action callbacks (Continue, Edit prompt, Edit).
  * Extracted to keep ChatWindow under the max-lines-per-function lint gate.
  */
 function useMessageBubbleActions(
   currentConversationId: string | null,
   messages: Message[],
   sendMessage: (input: string, images?: string[]) => void,
-  onEditPrompt: (prompt: string) => void
+  onEditPrompt: (value: string) => void
 ) {
   const handleRetry = useCallback(() => {
     if (!currentConversationId) return;
@@ -261,16 +261,16 @@ const ChatWindow = ({
   } = useVirtualizedMessages(currentConversationId, storedMessages, activeStreams);
 
   // Detect a structured `error` on the last assistant message — replaces the
-  // legacy `content.includes('[Error:')` substring heuristic (Prompt 8).
+  // legacy `content.includes('[Error:')` substring heuristic.
   const lastError = messages.length > 0 ? messages.findLast((m) => m.error)?.error : undefined;
   const hasError = Boolean(lastError);
 
   // Regenerate: find the last user message before the given assistant message
   // and re-invoke `sendMessage` with its content. Used by the context menu on
-  // assistant bubbles (audit F13, Prompt 12).
+  // assistant bubbles.
   const { regenerateMessage } = useRegenerateMessage(currentConversationId, messages, sendMessage);
 
-  // Continue / Edit prompt / Edit / Retry callbacks (Prompt 14).
+  // Continue / Edit prompt / Edit / Retry callbacks.
   const { handleRetry, handleContinue, handleEditPrompt, handleEdit } = useMessageBubbleActions(
     currentConversationId,
     messages,

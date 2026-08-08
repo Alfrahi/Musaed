@@ -91,7 +91,6 @@ pub async fn cmd_ollama_delete_model(base_url: String, name: String) -> ApiRespo
 // ==================== SERVICE VERIFICATION ====================
 
 /// Verifies that the given base URL actually points to an Ollama instance
-/// by requesting `/` and checking the `Server` response header.
 #[tauri::command]
 pub async fn cmd_ollama_verify_service(base_url: String) -> ApiResponse<String> {
     let service = ModelService;
@@ -111,8 +110,7 @@ pub async fn cmd_ollama_verify_service(base_url: String) -> ApiResponse<String> 
 
 // ==================== MODEL VALIDATION ====================
 
-/// Validates that a model exists on the Ollama server and returns its
-/// metadata, including the `context_length` parsed from `/api/show`.
+/// Validates that a model exists on the Ollama server and returns its metadata
 #[tauri::command]
 pub async fn cmd_ollama_validate_model(
     base_url: String,
