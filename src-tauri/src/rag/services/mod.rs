@@ -200,7 +200,10 @@ pub async fn start_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResp
                 return ApiResponse {
                     success: false,
                     data: None,
-                    error: Some(BackendError::new(error_codes::RAG_FETCH_ERROR, e)),
+                    error: Some(
+                        BackendError::new(error_codes::RAG_FETCH_ERROR, e)
+                            .with_context("Failed to load RAG project for indexing".to_string()),
+                    ),
                 }
             }
         }
@@ -314,14 +317,24 @@ pub async fn start_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResp
     }
 
     crate::shared::RAG_INDEX_ABORT_HANDLES.remove(&req.project_id);
-    let _ = req.app_handle.emit(
-        crate::shared::EVENT_RAG_INDEX_ERROR,
-        &BackendError::new(error_codes::RAG_INDEX_ERROR, last_error.clone()),
-    );
+    let index_err = BackendError::new(error_codes::RAG_INDEX_ERROR, last_error.clone())
+        .with_context("RAG indexing pipeline failed".to_string());
+    let _ = req
+        .app_handle
+        .emit(crate::shared::EVENT_RAG_INDEX_ERROR, &index_err);
+    // Surface retryability so the frontend (now receiving `isRetryable`
+    // via the preserved field) can offer a retry affordance for
+    // transient failures — connection/timeout/DB-lock categories that
+    // `is_transient_index_error` already classifies.
+    let index_err = if is_transient_index_error(&last_error) {
+        index_err.retryable()
+    } else {
+        index_err
+    };
     ApiResponse {
         success: false,
         data: None,
-        error: Some(BackendError::new(error_codes::RAG_INDEX_ERROR, last_error)),
+        error: Some(index_err),
     }
 }
 
@@ -348,7 +361,10 @@ pub async fn search<'a>(req: SearchRequest<'a>) -> ApiResponse<Vec<SearchResult>
                 return ApiResponse {
                     success: false,
                     data: None,
-                    error: Some(BackendError::new(error_codes::RAG_FETCH_ERROR, e)),
+                    error: Some(
+                        BackendError::new(error_codes::RAG_FETCH_ERROR, e)
+                            .with_context("Failed to load RAG project for search".to_string()),
+                    ),
                 }
             }
         }
@@ -379,7 +395,11 @@ pub async fn search<'a>(req: SearchRequest<'a>) -> ApiResponse<Vec<SearchResult>
         Err(e) => ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new(error_codes::RAG_SEARCH_ERROR, e)),
+            error: Some(
+                BackendError::new(error_codes::RAG_SEARCH_ERROR, e)
+                    .with_context("RAG vector search failed".to_string())
+                    .retryable(),
+            ),
         },
     }
 }
@@ -406,7 +426,10 @@ pub async fn get_file_chunks<'a>(req: GetFileChunksRequest<'a>) -> ApiResponse<V
             return ApiResponse {
                 success: false,
                 data: None,
-                error: Some(BackendError::new(error_codes::RAG_FETCH_ERROR, e)),
+                error: Some(
+                    BackendError::new(error_codes::RAG_FETCH_ERROR, e)
+                        .with_context("Failed to load RAG project for file chunks".to_string()),
+                ),
             }
         }
     };
@@ -432,7 +455,10 @@ pub async fn get_file_chunks<'a>(req: GetFileChunksRequest<'a>) -> ApiResponse<V
                     Err(e) => ApiResponse {
                         success: false,
                         data: None,
-                        error: Some(BackendError::new(error_codes::RAG_FETCH_ERROR, e)),
+                        error: Some(
+                            BackendError::new(error_codes::RAG_FETCH_ERROR, e)
+                                .with_context("Failed to load file chunks".to_string()),
+                        ),
                     },
                 }
             } else {
@@ -451,7 +477,10 @@ pub async fn get_file_chunks<'a>(req: GetFileChunksRequest<'a>) -> ApiResponse<V
         Err(e) => ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new(error_codes::RAG_FETCH_ERROR, e)),
+            error: Some(
+                BackendError::new(error_codes::RAG_FETCH_ERROR, e)
+                    .with_context("Failed to look up file in RAG store".to_string()),
+            ),
         },
     }
 }
@@ -472,7 +501,10 @@ pub async fn set_embedding_model<'a>(req: SetEmbeddingModelRequest<'a>) -> ApiRe
         return ApiResponse {
             success: false,
             data: None,
-            error: Some(BackendError::new(error_codes::RAG_UPDATE_ERROR, e)),
+            error: Some(
+                BackendError::new(error_codes::RAG_UPDATE_ERROR, e)
+                    .with_context("Failed to update RAG embedding model".to_string()),
+            ),
         };
     }
     ApiResponse {
@@ -513,7 +545,11 @@ pub async fn assemble_context<'a>(
                 return ApiResponse {
                     success: false,
                     data: None,
-                    error: Some(BackendError::new(error_codes::RAG_FETCH_ERROR, e)),
+                    error: Some(
+                        BackendError::new(error_codes::RAG_FETCH_ERROR, e).with_context(
+                            "Failed to load RAG project for context assembly".to_string(),
+                        ),
+                    ),
                 }
             }
         }
@@ -541,7 +577,11 @@ pub async fn assemble_context<'a>(
             return ApiResponse {
                 success: false,
                 data: None,
-                error: Some(BackendError::new(error_codes::RAG_SEARCH_ERROR, e)),
+                error: Some(
+                    BackendError::new(error_codes::RAG_SEARCH_ERROR, e)
+                        .with_context("RAG context assembly search failed".to_string())
+                        .retryable(),
+                ),
             }
         }
     };

@@ -6,6 +6,7 @@ import {
   DEFAULT_SETTINGS,
   sanitizeError,
   BackendErrorCode,
+  IpcError,
   stripThinkingBlocks,
   stripRedactedThinkingBlocks,
   findThinkingTags,
@@ -294,6 +295,118 @@ describe('Contracts: Error Handling', () => {
   it('normalizes whitespace in error messages', () => {
     const sanitized = sanitizeError({ message: 'Error with extra spaces' });
     expect(sanitized.message).toBe('Error with extra spaces');
+  });
+
+  // ── Context / retryability preservation ─────────────────────────────
+  // Previously sanitizeError hard-coded `context: null` and
+  // `isRetryable: false`, discarding structured fields even when the
+  // backend provided them. These tests pin the new behavior: fields
+  // present on the source error flow through to the sanitized output.
+
+  it('preserves context string from a structured backend error', () => {
+    const rawError = {
+      code: BackendErrorCode.RagSearchError,
+      message: 'Vector search failed',
+      context: 'RAG vector search failed',
+    };
+    const sanitized = sanitizeError(rawError);
+    expect(sanitized.code).toBe(BackendErrorCode.RagSearchError);
+    expect(sanitized.context).toBe('RAG vector search failed');
+  });
+
+  it('preserves isRetryable flag from a structured backend error', () => {
+    const rawError = {
+      code: BackendErrorCode.RagIndexError,
+      message: 'Ollama timeout during indexing',
+      isRetryable: true,
+    };
+    const sanitized = sanitizeError(rawError);
+    expect(sanitized.isRetryable).toBe(true);
+  });
+
+  it('defaults isRetryable to false when source does not provide it', () => {
+    // Mirrors the pre-fix default so callers can rely on a stable shape.
+    const sanitized = sanitizeError({ message: 'no retry info' });
+    expect(sanitized.isRetryable).toBe(false);
+    expect(sanitized.context).toBeUndefined();
+  });
+
+  it('preserves both context and isRetryable together', () => {
+    const rawError = {
+      code: BackendErrorCode.OllamaUnavailable,
+      message: 'Connection refused',
+      context: 'Failed to connect to Ollama server',
+      isRetryable: true,
+      requestId: 'req-abc-123',
+    };
+    const sanitized = sanitizeError(rawError);
+    expect(sanitized).toEqual({
+      code: BackendErrorCode.OllamaUnavailable,
+      message: 'Connection refused',
+      context: 'Failed to connect to Ollama server',
+      isRetryable: true,
+      requestId: 'req-abc-123',
+    });
+  });
+
+  it('redacts sensitive paths inside preserved context', () => {
+    // Context is sanitized through the same pipeline as the message so
+    // backend-provided context cannot leak paths that the message
+    // redaction would have caught.
+    const rawError = {
+      message: 'failed',
+      context: 'Failed to read /home/user/secret/file.txt',
+    };
+    const sanitized = sanitizeError(rawError);
+    expect(sanitized.context).toContain('[PATH REDACTED]');
+    expect(sanitized.context).not.toContain('/home/user');
+  });
+});
+
+describe('Contracts: IpcError', () => {
+  it('extends Error and carries structured backend fields', () => {
+    const err = new IpcError({
+      code: BackendErrorCode.RagSearchError,
+      message: 'Vector search failed',
+      context: 'RAG vector search failed',
+      isRetryable: true,
+      requestId: 'req-1',
+    });
+    expect(err).toBeInstanceOf(Error);
+    expect(err).toBeInstanceOf(IpcError);
+    expect(err.name).toBe('IpcError');
+    expect(err.message).toBe('Vector search failed');
+    expect(err.code).toBe(BackendErrorCode.RagSearchError);
+    expect(err.isRetryable).toBe(true);
+    expect(err.context).toBe('RAG vector search failed');
+    expect(err.requestId).toBe('req-1');
+  });
+
+  it('defaults optional fields to undefined when backend omits them', () => {
+    const err = new IpcError({
+      code: BackendErrorCode.Unknown,
+      message: 'something broke',
+      isRetryable: false,
+    });
+    expect(err.context).toBeUndefined();
+    expect(err.requestId).toBeUndefined();
+    expect(err.isRetryable).toBe(false);
+  });
+
+  it('can be caught with instanceof IpcError in a try/catch', () => {
+    try {
+      throw new IpcError({
+        code: BackendErrorCode.Timeout,
+        message: 'request timed out',
+        isRetryable: true,
+      });
+    } catch (e) {
+      expect(e).toBeInstanceOf(IpcError);
+      if (e instanceof IpcError) {
+        expect(e.isRetryable).toBe(true);
+        expect(e.code).toBe(BackendErrorCode.Timeout);
+      }
+    }
   });
 });
 
