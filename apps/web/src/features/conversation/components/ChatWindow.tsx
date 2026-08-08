@@ -17,9 +17,10 @@ import ChatWindowSkeleton from './ChatWindowSkeleton';
 import EmptyState, { type OnboardingState } from './EmptyState';
 import { useChatSend } from '../hooks/useChatSend';
 import { useRegenerateMessage } from '../hooks/useRegenerateMessage';
-import { fireEditPrompt } from '../utils/edit-prompt-signal';
 import { useTranslation, type TranslationKey } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { conversationApi } from '@/lib/ipc';
+import { logger } from '@/lib/logger';
 import { type Message } from '@musaed/contracts';
 
 interface MessageLabels {
@@ -72,14 +73,14 @@ const ScrollButton = ({
 );
 
 /**
- * Hook: message bubble action callbacks (Continue, Edit prompt, Edit).
+ * Hook: message bubble action callbacks (Continue, Edit message).
  * Extracted to keep ChatWindow under the max-lines-per-function lint gate.
  */
 function useMessageBubbleActions(
   currentConversationId: string | null,
   messages: Message[],
   sendMessage: (input: string, images?: string[]) => void,
-  onEditPrompt: (value: string) => void
+  editAndResend: (editedMessageId: string, newContent: string, images?: string[]) => Promise<void>
 ) {
   const handleRetry = useCallback(() => {
     if (!currentConversationId) return;
@@ -100,27 +101,28 @@ function useMessageBubbleActions(
     [currentConversationId, messages, sendMessage]
   );
 
-  const handleEditPrompt = useCallback(
-    (assistantMsgId: string) => {
-      const assistantIdx = messages.findIndex((m) => m.id === assistantMsgId);
-      if (assistantIdx === -1) return;
-      const lastUser = messages.slice(0, assistantIdx).findLast((m) => m.role === 'user');
-      if (!lastUser) return;
-      onEditPrompt(lastUser.content);
+  const handleEditMessage = useCallback(
+    (msgId: string, newContent: string) => {
+      if (!currentConversationId) return;
+      useUIStore.getState().setErrorMessage(null);
+      void editAndResend(msgId, newContent);
     },
-    [messages, onEditPrompt]
+    [currentConversationId, editAndResend]
   );
 
-  const handleEdit = useCallback(
-    (userMsgId: string) => {
-      const msg = messages.find((m) => m.id === userMsgId);
-      if (!msg || msg.role !== 'user') return;
-      onEditPrompt(msg.content);
+  const handleDeleteMessage = useCallback(
+    (msgId: string) => {
+      if (!currentConversationId) return;
+      useMessageStore.getState().removeMessage(currentConversationId, msgId);
+      conversationApi.deleteMessage(currentConversationId, msgId).catch((err) => {
+        logger.error('Failed to delete message from backend', { msgId, err });
+      });
+      useUIStore.getState().setErrorMessage(null);
     },
-    [messages, onEditPrompt]
+    [currentConversationId]
   );
 
-  return { handleRetry, handleContinue, handleEditPrompt, handleEdit };
+  return { handleRetry, handleContinue, handleEditMessage, handleDeleteMessage };
 }
 
 /**
@@ -246,7 +248,7 @@ const ChatWindow = ({
   const isOllamaConnected = useUIStore((s) => s.isOllamaConnected);
   const models = useModelStore((s) => s.models);
   const language = useSettingsStore((s) => s.globalSettings.language);
-  const { sendMessage } = useChatSend();
+  const { sendMessage, editAndResend } = useChatSend();
   const { t, formatNumber } = useTranslation(language);
   const messageLabels = useMessageLabels(t);
 
@@ -270,13 +272,9 @@ const ChatWindow = ({
   // assistant bubbles.
   const { regenerateMessage } = useRegenerateMessage(currentConversationId, messages, sendMessage);
 
-  // Continue / Edit prompt / Edit / Retry callbacks.
-  const { handleRetry, handleContinue, handleEditPrompt, handleEdit } = useMessageBubbleActions(
-    currentConversationId,
-    messages,
-    sendMessage,
-    fireEditPrompt
-  );
+  // Continue / Edit / Retry / Delete callbacks.
+  const { handleRetry, handleContinue, handleEditMessage, handleDeleteMessage } =
+    useMessageBubbleActions(currentConversationId, messages, sendMessage, editAndResend);
 
   const onboarding = getOnboardingState(
     currentConversation,
@@ -308,8 +306,8 @@ const ChatWindow = ({
               formatNumber={formatNumber}
               onRegenerate={regenerateMessage}
               onContinue={handleContinue}
-              onEditPrompt={handleEditPrompt}
-              onEdit={handleEdit}
+              onEditMessage={handleEditMessage}
+              onDeleteMessage={handleDeleteMessage}
             />
           </div>
         )}

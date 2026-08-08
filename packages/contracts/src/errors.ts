@@ -62,6 +62,7 @@ export enum BackendErrorCode {
   ConversationDeleteError = 'CONVERSATION_DELETE_ERROR',
   ConversationUpdateError = 'CONVERSATION_UPDATE_ERROR',
   MessageAppendError = 'MESSAGE_APPEND_ERROR',
+  MessageDeleteError = 'MESSAGE_DELETE_ERROR',
   ConversationLockError = 'CONVERSATION_LOCK_ERROR',
 
   // ── Dialog ────────────────────────────────────────────

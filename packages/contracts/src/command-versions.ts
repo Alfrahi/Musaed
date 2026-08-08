@@ -82,6 +82,7 @@ export const COMMAND_VERSIONS = {
   cmd_conversation_get: true,
   cmd_conversation_create: true,
   cmd_message_append: true,
+  cmd_message_delete: true,
   cmd_conversation_delete: true,
   cmd_conversations_clear: true,
   cmd_conversation_update: true,

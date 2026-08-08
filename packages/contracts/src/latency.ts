@@ -86,6 +86,7 @@ export const IPC_LATENCY_BUDGETS: Readonly<Record<string, LatencyBudgetMs>> = {
   cmd_conversation_update: 2000,
   cmd_conversation_search: 5000,
   cmd_message_append: 1000,
+  cmd_message_delete: 1000,
   /** Store persistence — lightweight key-value reads/writes */
   cmd_store_load: 1000,
   cmd_store_get: 500,

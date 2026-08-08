@@ -6,6 +6,7 @@ commands.allow = [
   "cmd_conversation_get",
   "cmd_conversation_create",
   "cmd_message_append",
+  "cmd_message_delete",
   "cmd_conversation_delete",
   "cmd_conversations_clear",
   "cmd_conversation_update",

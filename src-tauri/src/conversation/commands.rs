@@ -48,6 +48,15 @@ pub async fn cmd_conversation_delete(
 }
 
 #[tauri::command]
+pub async fn cmd_message_delete(
+    state: State<'_, Arc<Mutex<ConversationStore>>>,
+    conversation_id: String,
+    message_id: String,
+) -> Result<ApiResponse<()>, String> {
+    Ok(service::delete_message(state.inner().clone(), conversation_id, message_id).await)
+}
+
+#[tauri::command]
 pub async fn cmd_conversations_clear(
     state: State<'_, Arc<Mutex<ConversationStore>>>,
 ) -> Result<ApiResponse<()>, String> {

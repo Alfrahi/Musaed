@@ -141,6 +141,15 @@ impl ConversationStore {
         Ok(())
     }
 
+    pub async fn delete_message(&self, conversation_id: &str, message_id: &str) -> SqlResult<()> {
+        let conn = self.lock_conn().await;
+        conn.execute(
+            "DELETE FROM messages WHERE id = ?1 AND conversation_id = ?2",
+            params![message_id, conversation_id],
+        )?;
+        Ok(())
+    }
+
     pub async fn clear_all_conversations(&self) -> SqlResult<()> {
         let conn = self.lock_conn().await;
         conn.execute("DELETE FROM messages", params![])?;

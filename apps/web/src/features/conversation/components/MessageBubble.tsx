@@ -12,6 +12,9 @@ import {
   RefreshCw,
   Play,
   Pencil,
+  Trash2,
+  Cpu,
+  Zap,
 } from 'lucide-react';
 import { type Message } from '@musaed/contracts';
 import { cn } from '@/lib/utils';
@@ -19,7 +22,6 @@ import MessageContent from './MessageContent';
 import { attachmentImageSrc } from '../image-attachment';
 import { useMessageActions } from '@/features/conversation/hooks/useMessageActions';
 import { MessageAvatar } from './MessageAvatar';
-import { MessageStats } from './MessageStats';
 import { useSettingsStore } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 import { useContextMenu } from '@/hooks/useContextMenu';
@@ -27,6 +29,8 @@ import { FileChunkViewer } from '@/features/rag';
 import ModalLayout from '@/components/ui/ModalLayout';
 import AttachmentLightbox from './AttachmentLightbox';
 import { Button } from '@/components/ui/button';
+import { dialogApi } from '@/lib/ipc';
+import { logger } from '@/lib/logger';
 
 /** Max number of citation chips rendered before an overflow "Show N more…"
  *  affordance kicks in. Keeps the assistant bubble scannable when a single
@@ -48,13 +52,14 @@ interface MessageBubbleProps {
   onRegenerate?: (msgId: string) => void;
   /** Called when the user clicks "Continue" on a stopped message. */
   onContinue?: (msgId: string) => void;
-  /** Called when the user clicks "Edit prompt" — pulls the preceding user
-   *  message back into the input for editing. Receives the assistant
-   *  message id for stable callback identity. */
-  onEditPrompt?: (msgId: string) => void;
-  /** Called when the user clicks "Edit" on their own message. Receives the
-   *  user message id for stable callback identity. */
-  onEdit?: (msgId: string) => void;
+  /** Called when the user saves an inline edit on their own message.
+   *  Receives the message id and the new content. The parent is
+   *  responsible for updating the store and re-sending. */
+  onEditMessage?: (msgId: string, newContent: string) => void;
+  /** Called when the user confirms deletion of a message.
+   *  Receives the message id. The parent is responsible for
+   *  removing the message from the store and backend. */
+  onDeleteMessage?: (msgId: string) => void;
 }
 
 interface SourceReference {
@@ -213,8 +218,7 @@ interface HoverActionsProps {
   msgId: string;
   onRegenerate?: (msgId: string) => void;
   onContinue?: (msgId: string) => void;
-  onEditPrompt?: (msgId: string) => void;
-  onEdit?: (msgId: string) => void;
+  onStartEdit?: () => void;
   t: (key: string) => string;
 }
 
@@ -224,12 +228,10 @@ const HoverActions = ({
   msgId,
   onRegenerate,
   onContinue,
-  onEditPrompt,
-  onEdit,
+  onStartEdit,
   t,
 }: HoverActionsProps) => {
-  const hasActions =
-    (isUser && onEdit) || (!isUser && (onRegenerate || onContinue || onEditPrompt));
+  const hasActions = (isUser && onStartEdit) || (!isUser && (onRegenerate || onContinue));
   if (!hasActions) return null;
 
   return (
@@ -256,22 +258,11 @@ const HoverActions = ({
           <Play size={14} />
         </Button>
       )}
-      {!isUser && onEditPrompt && (
+      {isUser && onStartEdit && (
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => onEditPrompt(msgId)}
-          aria-label={t('chat.editPrompt')}
-          title={t('chat.editPrompt')}
-        >
-          <Pencil size={14} />
-        </Button>
-      )}
-      {isUser && onEdit && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onEdit(msgId)}
+          onClick={onStartEdit}
           aria-label={t('chat.editPrompt')}
           title={t('chat.editPrompt')}
         >
@@ -320,11 +311,13 @@ function useMessageContextMenu(
   handleCopy: () => void,
   msgId: string,
   onRegenerate: ((msgId: string) => void) | undefined,
+  onDelete: (() => void) | undefined,
   t: (key: string) => string
 ) {
   const { showContextMenu } = useContextMenu({
     onCopy: handleCopy,
     onRegenerate: onRegenerate ? () => onRegenerate(msgId) : undefined,
+    onDelete,
   });
   return useCallback(
     async (e: React.MouseEvent<HTMLDivElement>) => {
@@ -332,6 +325,7 @@ function useMessageContextMenu(
       showContextMenu('message', e.clientX, e.clientY, {
         copy: t('contextMenu.message.copy'),
         regenerate: t('contextMenu.message.regenerate'),
+        delete: t('contextMenu.message.delete'),
       });
     },
     [showContextMenu, t]
@@ -340,61 +334,108 @@ function useMessageContextMenu(
 
 interface MessageHeaderProps {
   isUser: boolean;
+  message: Message;
+  labels: { user: string; assistant: string };
+}
+
+const MessageHeader = ({ isUser, message, labels }: MessageHeaderProps) => (
+  <div className="flex items-center">
+    <span className="caption-md font-bold text-zinc-400 uppercase">
+      {isUser ? labels.user : labels.assistant}
+      {!isUser && message.model && <span className="ms-3 text-zinc-500">{message.model}</span>}
+    </span>
+  </div>
+);
+
+interface MessageFooterProps {
+  isUser: boolean;
   isStopped: boolean;
   msgId: string;
-  labels: { user: string; assistant: string; copy: string };
+  labels: { copy: string; tokens: string };
   message: Message;
+  tps: number;
+  formatNumber: (num: number, options?: Intl.NumberFormatOptions) => string;
   copied: boolean;
   handleCopy: () => void;
   onRegenerate?: (msgId: string) => void;
   onContinue?: (msgId: string) => void;
-  onEditPrompt?: (msgId: string) => void;
-  onEdit?: (msgId: string) => void;
+  onStartEdit?: () => void;
+  handleDelete?: (() => void) | undefined;
   t: (key: string) => string;
 }
 
-const MessageHeader = ({
+const MessageFooter = ({
   isUser,
   isStopped,
   msgId,
   labels,
   message,
+  tps,
+  formatNumber,
   copied,
   handleCopy,
   onRegenerate,
   onContinue,
-  onEditPrompt,
-  onEdit,
+  onStartEdit,
+  handleDelete,
   t,
-}: MessageHeaderProps) => (
-  <div className="flex items-center justify-between">
-    <span className="caption-md font-bold text-zinc-400 uppercase">
-      {isUser ? labels.user : labels.assistant}
-      {!isUser && message.model && <span className="ms-3 text-zinc-500">{message.model}</span>}
-    </span>
-    <div className="flex items-center gap-1">
-      <HoverActions
-        isUser={isUser}
-        isStopped={isStopped}
-        msgId={msgId}
-        onRegenerate={onRegenerate}
-        onContinue={onContinue}
-        onEditPrompt={onEditPrompt}
-        onEdit={onEdit}
-        t={t}
-      />
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={handleCopy}
-        className="hover:text-foreground cursor-pointer p-1 text-zinc-400"
-        aria-label={labels.copy}
-      >
-        {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-      </Button>
+}: MessageFooterProps) => {
+  const evalCount = message.evalCount;
+  const hasStats = !isUser && evalCount != null;
+
+  return (
+    <div className="pbs-4 border-bs border-sidebar-border/50 flex items-center gap-4">
+      {hasStats && evalCount != null && (
+        <div className="caption-xs flex items-center gap-4 font-bold text-zinc-400">
+          <span className="flex items-center gap-1.5">
+            <Cpu size={12} />
+            {formatNumber(evalCount)}
+            {labels.tokens}
+          </span>
+          {tps > 0 && (
+            <span className="text-primary flex items-center gap-1.5">
+              <Zap size={12} />
+              {formatNumber(tps, { maximumFractionDigits: 1 })} T/S
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="ms-auto flex items-center gap-1">
+        <HoverActions
+          isUser={isUser}
+          isStopped={isStopped}
+          msgId={msgId}
+          onRegenerate={onRegenerate}
+          onContinue={onContinue}
+          onStartEdit={onStartEdit}
+          t={t}
+        />
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleCopy}
+          className="hover:text-foreground cursor-pointer p-1 text-zinc-400"
+          aria-label={labels.copy}
+        >
+          {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+        </Button>
+        {handleDelete && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleDelete}
+            className="hover:text-foreground cursor-pointer p-1 text-zinc-400"
+            aria-label={t('common.delete')}
+            title={t('common.delete')}
+          >
+            <Trash2 size={14} />
+          </Button>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /**
  * Inline image gallery for user messages. Extracted to keep MessageBubble
@@ -439,6 +480,194 @@ const MessageImages = ({
 };
 
 /**
+ * Inline editor for user messages — replaces the message content with a
+ * textarea and Save/Cancel buttons when the user clicks Edit.
+ */
+interface InlineEditorProps {
+  initialContent: string;
+  onSave: (content: string) => void;
+  onCancel: () => void;
+  t: (key: string) => string;
+}
+
+const InlineEditor = ({ initialContent, onSave, onCancel, t }: InlineEditorProps) => {
+  const [draft, setDraft] = useState(initialContent);
+
+  return (
+    <div className="space-y-2">
+      <textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        className="border-sidebar-border focus-ring text-foreground text-body w-full resize-none rounded-md border p-3 leading-relaxed outline-none"
+        rows={3}
+        autoFocus
+        onKeyDown={(e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+            e.preventDefault();
+            onSave(draft.trim());
+          }
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            onCancel();
+          }
+        }}
+      />
+      <div className="flex items-center gap-2">
+        <Button size="sm" onClick={() => onSave(draft.trim())} disabled={!draft.trim()}>
+          {t('common.save')}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onCancel}>
+          {t('common.cancel')}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Inline editor state for a message bubble — toggled on by the Edit button.
+ * Extracted to keep MessageBubble under the max-lines-per-function lint gate.
+ */
+function useInlineEdit(msgId: string, onEditMessage?: (msgId: string, newContent: string) => void) {
+  const [isEditing, setIsEditing] = useState(false);
+
+  const startEdit = useCallback(() => setIsEditing(true), []);
+  const cancelEdit = useCallback(() => setIsEditing(false), []);
+  const saveEdit = useCallback(
+    (newContent: string) => {
+      setIsEditing(false);
+      onEditMessage?.(msgId, newContent);
+    },
+    [msgId, onEditMessage]
+  );
+
+  return { isEditing, startEdit, cancelEdit, saveEdit };
+}
+
+/**
+ * Delete handler with native confirmation dialog. Shows a blocking
+ * `dialogApi.ask` (rfd OkCancel) before calling the parent's
+ * `onDeleteMessage` callback.
+ */
+function useMessageDelete(
+  msgId: string,
+  onDeleteMessage: ((msgId: string) => void) | undefined,
+  t: (key: string) => string
+) {
+  return useCallback(async () => {
+    if (!onDeleteMessage) return;
+    const confirmed = await dialogApi.ask(
+      t('chat.deleteMessage'),
+      t('chat.confirmDeleteMessage'),
+      'warning'
+    );
+    if (confirmed) {
+      logger.info('Deleting message', { msgId });
+      onDeleteMessage(msgId);
+    }
+  }, [msgId, onDeleteMessage, t]);
+}
+
+/** Props for the inner message body (avatar + content + footer). */
+interface MessageBubbleBodyProps {
+  isUser: boolean;
+  isStopped: boolean;
+  isEditing: boolean;
+  message: Message;
+  labels: { user: string; assistant: string; copy: string; tokens: string };
+  sourceReferences: SourceReference[];
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+  onOpenSource: (source: SourceReference) => void;
+  onImageClick: (img: string) => void;
+  tps: number;
+  formatNumber: (num: number, options?: Intl.NumberFormatOptions) => string;
+  copied: boolean;
+  handleCopy: () => void;
+  onRegenerate?: (msgId: string) => void;
+  onContinue?: (msgId: string) => void;
+  onStartEdit?: () => void;
+  onSaveEdit: (newContent: string) => void;
+  onCancelEdit: () => void;
+  handleDelete: (() => void) | undefined;
+  t: (key: string, values?: Record<string, string | number | boolean>) => string;
+}
+
+/** Inner layout: avatar + content + footer. Extracted to keep
+ *  MessageBubble under the max-lines-per-function lint gate. */
+const MessageBubbleBody = ({
+  isUser,
+  isStopped,
+  isEditing,
+  message,
+  labels,
+  sourceReferences,
+  isExpanded,
+  onToggleExpand,
+  onOpenSource,
+  onImageClick,
+  tps,
+  formatNumber,
+  copied,
+  handleCopy,
+  onRegenerate,
+  onContinue,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
+  handleDelete,
+  t,
+}: MessageBubbleBodyProps) => (
+  <div className="group ms-auto me-auto flex max-w-4xl gap-6 py-6 ps-5 pe-5">
+    <MessageAvatar isUser={isUser} />
+    <div className="min-w-0 flex-1 space-y-4">
+      <MessageHeader isUser={isUser} message={message} labels={labels} />
+      {message.images && message.images.length > 0 && (
+        <MessageImages images={message.images} onImageClick={onImageClick} t={t} />
+      )}
+      {isEditing ? (
+        <InlineEditor
+          initialContent={message.content}
+          onSave={onSaveEdit}
+          onCancel={onCancelEdit}
+          t={t}
+        />
+      ) : (
+        <div className="text-foreground selection:bg-primary/20 text-body leading-relaxed antialiased">
+          <MessageContent message={message} isUser={isUser} />
+        </div>
+      )}
+      {sourceReferences.length > 0 && !isEditing && (
+        <RagSourceReferences
+          sources={sourceReferences}
+          isExpanded={isExpanded}
+          onToggleExpand={onToggleExpand}
+          onOpenSource={onOpenSource}
+          t={t}
+        />
+      )}
+      <StoppedStatusLine isStopped={isStopped} msgId={message.id} onContinue={onContinue} t={t} />
+      <MessageFooter
+        isUser={isUser}
+        isStopped={isStopped}
+        msgId={message.id}
+        labels={labels}
+        message={message}
+        tps={tps}
+        formatNumber={formatNumber}
+        copied={copied}
+        handleCopy={handleCopy}
+        onRegenerate={onRegenerate}
+        onContinue={onContinue}
+        onStartEdit={onStartEdit}
+        handleDelete={handleDelete}
+        t={t}
+      />
+    </div>
+  </div>
+);
+
+/**
  * Renders a single message bubble in the chat window.
  */
 const MessageBubble = ({
@@ -447,8 +676,8 @@ const MessageBubble = ({
   formatNumber,
   onRegenerate,
   onContinue,
-  onEditPrompt,
-  onEdit,
+  onEditMessage,
+  onDeleteMessage,
 }: MessageBubbleProps) => {
   const isUser = message.role === 'user';
   const { copied, handleCopy, tps } = useMessageActions(message);
@@ -456,10 +685,18 @@ const MessageBubble = ({
   const [isExpanded, setIsExpanded] = useState(sourceReferences.length > 0);
   const [openSource, setOpenSource] = useState<SourceReference | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const { isEditing, startEdit, cancelEdit, saveEdit } = useInlineEdit(message.id, onEditMessage);
   const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
   const titleId = 'rag-source-title';
-  const handleContextMenu = useMessageContextMenu(handleCopy, message.id, onRegenerate, t);
+  const handleDelete = useMessageDelete(message.id, onDeleteMessage, t);
+  const handleContextMenu = useMessageContextMenu(
+    handleCopy,
+    message.id,
+    onRegenerate,
+    handleDelete,
+    t
+  );
   const isStopped = message.stopped === true && message.role === 'assistant';
 
   return (
@@ -472,59 +709,29 @@ const MessageBubble = ({
           : 'border-s-2 border-blue-500/30 bg-zinc-50 dark:bg-zinc-900/30'
       )}
     >
-      <div className="group ms-auto me-auto flex max-w-4xl gap-6 py-6 ps-5 pe-5">
-        <MessageAvatar isUser={isUser} />
-
-        <div className="min-w-0 flex-1 space-y-4">
-          <MessageHeader
-            isUser={isUser}
-            isStopped={isStopped}
-            msgId={message.id}
-            labels={labels}
-            message={message}
-            copied={copied}
-            handleCopy={handleCopy}
-            onRegenerate={onRegenerate}
-            onContinue={onContinue}
-            onEditPrompt={onEditPrompt}
-            onEdit={onEdit}
-            t={t}
-          />
-
-          {message.images && message.images.length > 0 && (
-            <MessageImages images={message.images} onImageClick={setLightboxImage} t={t} />
-          )}
-
-          <div className="text-foreground selection:bg-primary/20 text-body leading-relaxed antialiased">
-            <MessageContent message={message} isUser={isUser} />
-          </div>
-
-          {sourceReferences.length > 0 && (
-            <RagSourceReferences
-              sources={sourceReferences}
-              isExpanded={isExpanded}
-              onToggleExpand={() => setIsExpanded(!isExpanded)}
-              onOpenSource={(source) => setOpenSource(source)}
-              t={t}
-            />
-          )}
-
-          <MessageStats
-            message={message}
-            tps={tps}
-            formatNumber={formatNumber}
-            tokensLabel={labels.tokens}
-          />
-
-          <StoppedStatusLine
-            isStopped={isStopped}
-            msgId={message.id}
-            onContinue={onContinue}
-            t={t}
-          />
-        </div>
-      </div>
-
+      <MessageBubbleBody
+        isUser={isUser}
+        isStopped={isStopped}
+        isEditing={isEditing}
+        message={message}
+        labels={labels}
+        sourceReferences={sourceReferences}
+        isExpanded={isExpanded}
+        onToggleExpand={() => setIsExpanded(!isExpanded)}
+        onOpenSource={(source) => setOpenSource(source)}
+        onImageClick={setLightboxImage}
+        tps={tps}
+        formatNumber={formatNumber}
+        copied={copied}
+        handleCopy={handleCopy}
+        onRegenerate={onRegenerate}
+        onContinue={onContinue}
+        onStartEdit={isUser && onEditMessage ? startEdit : undefined}
+        onSaveEdit={saveEdit}
+        onCancelEdit={cancelEdit}
+        handleDelete={onDeleteMessage ? handleDelete : undefined}
+        t={t}
+      />
       {openSource && (
         <SourceViewerModal
           source={openSource}
@@ -533,7 +740,6 @@ const MessageBubble = ({
           t={t}
         />
       )}
-
       {lightboxImage && (
         <AttachmentLightbox
           isOpen
