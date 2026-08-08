@@ -33,7 +33,7 @@ export const FONT_SIZE = {
   heading: '16px',
 } as const;
 
-// SHADOW was removed (audit UX-009). The CSS @theme block in globals.css is
+// SHADOW was removed. The CSS @theme block in globals.css is
 // the single source of truth for shadow tokens (`--shadow-native`,
 // `--shadow-raised`, `--shadow-pro`); no JS consumer of a SHADOW constant
 // exists in the codebase.

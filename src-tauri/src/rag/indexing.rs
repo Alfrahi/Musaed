@@ -432,13 +432,12 @@ async fn phase_embed(ctx: &PhaseContext<'_>, chunked: &ChunkOutput) -> Result<Em
 ///
 /// The write guard is acquired **per file** (not held across the entire
 /// phase) so other operations — index abort, project updates, searches,
-/// deletions — are not starved for the full duration of a large store phase
-/// (audit bug 1.5).  Progress events are emitted every 100 chunks.
+/// deletions — are not starved for the full duration of a large store phase.
+/// Progress events are emitted every 100 chunks.
 ///
 /// Cancellation is checked at the top of each file iteration **and** every
 /// 100 chunks inside the inner loop, so a very large file (e.g. 10 000+
-/// chunks) does not keep running for minutes after the user clicks cancel
-/// (audit bug 1.9).
+/// chunks) does not keep running for minutes after the user clicks cancel.
 async fn phase_store(
     ctx: &PhaseContext<'_>,
     discovered: &[crate::rag::ignore::DiscoveredFile],

@@ -30,7 +30,7 @@ import { Button } from '@/components/ui/button';
 
 /** Max number of citation chips rendered before an overflow "Show N more…"
  *  affordance kicks in. Keeps the assistant bubble scannable when a single
- *  answer cites many files. Audit F11 — UX-UI-AUDIT remediation Prompt 10. */
+ *  answer cites many files. */
 const SOURCE_OVERFLOW_CAP = 5;
 
 interface MessageBubbleProps {
@@ -44,16 +44,16 @@ interface MessageBubbleProps {
   formatNumber: (num: number, options?: Intl.NumberFormatOptions) => string;
   /** Called when the user selects "Regenerate" from the context menu.
    *  Receives the assistant message id so the caller can keep a stable
-   *  callback reference (audit UX-004 — React.memo defeat). */
+   *  callback reference (React.memo defeat). */
   onRegenerate?: (msgId: string) => void;
   /** Called when the user clicks "Continue" on a stopped message. */
   onContinue?: (msgId: string) => void;
   /** Called when the user clicks "Edit prompt" — pulls the preceding user
    *  message back into the input for editing. Receives the assistant
-   *  message id for stable callback identity (audit UX-004). */
+   *  message id for stable callback identity. */
   onEditPrompt?: (msgId: string) => void;
   /** Called when the user clicks "Edit" on their own message. Receives the
-   *  user message id for stable callback identity (audit UX-004). */
+   *  user message id for stable callback identity. */
   onEdit?: (msgId: string) => void;
 }
 
@@ -110,7 +110,7 @@ interface RagSourceReferencesProps {
   t: (key: string, values?: Record<string, string | number | boolean>) => string;
 }
 
-/** Renders the RAG source references section. Citations are buttons (audit F11)
+/** Renders the RAG source references section. Citations are buttons
  *  and the section is expanded by default when sources are present so the
  *  grounding is visible without an extra interaction. */
 const RagSourceReferences = ({
@@ -205,7 +205,7 @@ const SourceViewerModal = ({ source, titleId, onClose, t }: SourceViewerModalPro
 
 /**
  * Hover action buttons for message bubbles — discoverable via
- * group-focus-within so keyboard users can reach them (Prompt 14).
+ * group-focus-within so keyboard users can reach them.
  */
 interface HoverActionsProps {
   isUser: boolean;
@@ -284,7 +284,7 @@ const HoverActions = ({
 
 /**
  * Inline status line rendered below a stopped assistant message.
- * Shows "Stopped by user • Continue" (Prompt 14).
+ * Shows "Stopped by user • Continue".
  */
 interface StoppedStatusLineProps {
   isStopped: boolean;
@@ -314,7 +314,7 @@ const StoppedStatusLine = ({ isStopped, msgId, onContinue, t }: StoppedStatusLin
 
 /**
  * Context menu wiring for a message bubble. Extracted to keep MessageBubble
- * under the max-lines-per-function lint gate (Prompt 14).
+ * under the max-lines-per-function lint gate.
  */
 function useMessageContextMenu(
   handleCopy: () => void,

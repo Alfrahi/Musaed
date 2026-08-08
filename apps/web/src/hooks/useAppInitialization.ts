@@ -11,7 +11,7 @@
  * Each feature exports its own `initialize()` hook so the orchestrator stays
  * thin — it composes per-feature init sequences rather than owning the logic
  * for every domain. See the architecture decision recorded in
- * `apps/web/src/store/coordination.ts` and AUDIT.txt §3.3.
+ * `apps/web/src/store/coordination.ts`.
  *
  * `HomeClient.tsx` (the layout composition root) is the only consumer; it
  * invokes `initializeApp()` once on mount.

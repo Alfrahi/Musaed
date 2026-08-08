@@ -118,7 +118,7 @@ describe('triggerAutoTitle', () => {
     pendingAutoTitles.clear();
   });
 
-  it('does NOT treat a recycled id as the same pending request (audit bug 2.2)', async () => {
+  it('does NOT treat a recycled id as the same pending request', async () => {
     // Simulate: original conversation (createdAt T1) is pending; a new
     // conversation reuses the same id with createdAt T2. The two should be
     // treated as distinct pending entries so the new conversation can still
@@ -140,7 +140,7 @@ describe('triggerAutoTitle', () => {
     pendingAutoTitles.clear();
   });
 
-  it('discards generated title when conversation is replaced mid-flight (audit bug 2.2)', async () => {
+  it('discards generated title when conversation is replaced mid-flight', async () => {
     // Race scenario: lookup finds conversation A (createdAt T1); while the
     // title is being generated, conversation A is deleted and a new
     // conversation B reuses the id with createdAt T2. The title generated

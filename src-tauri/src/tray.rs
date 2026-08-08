@@ -1,4 +1,4 @@
-//! System tray domain (UX-UI-AUDIT Phase 2 Prompt 6, S-1).
+//! System tray domain.
 //!
 //! Builds the system tray icon and menu, intercepts the window close event
 //! to minimize-to-tray when background tasks are active, and exposes an IPC
@@ -309,7 +309,7 @@ pub fn handle_close_requested(window: &Window, api: &tauri::CloseRequestApi) {
         // User preference: always minimize to tray on close.
         true
     } else {
-        // Background-task-conditional fallback (the original audit S-1 behavior).
+        // Background-task-conditional fallback.
         has_active_background_tasks()
     };
 
@@ -438,7 +438,6 @@ mod tests {
     }
 
     // ── closeToTray setting parser tests ──────────────────────────────────
-    //
     // These cover the pure JSON parsing logic in `read_close_to_tray_from_object`.
     // The `read_close_to_tray_setting` wrapper that opens the tauri-plugin-store
     // is not testable without a real AppHandle, so we test the parser directly.

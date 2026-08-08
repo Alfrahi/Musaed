@@ -146,7 +146,7 @@ export const InputArea = () => {
       if (requestId) chatApi.abort(requestId);
       // Pass the requestId so stopStreamForConversation bails out if a
       // new stream has replaced the old one before this call runs
-      // (audit bug 2.3 — abort race).
+      // (abort race).
       stopStreamForConversation(currentConversationId, requestId);
     }
   }, [currentConversationId]);

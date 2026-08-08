@@ -112,7 +112,7 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
         // being appended to a newer stream (or after stop). If the
         // registered requestId for this conversation does not match the
         // one the caller provided, the token belongs to an old stream
-        // and must be dropped (audit bug 2.1).
+        // and must be dropped.
         if (state.activeStreams[conversationId] !== requestId) {
           return state;
         }

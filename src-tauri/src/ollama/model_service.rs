@@ -218,7 +218,6 @@ impl ModelService {
         &self,
         req: PullModelRequest<R>,
     ) -> Result<(), BackendError> {
-        // Rate limiting
         RATE_LIMITER.check_rate_limit(&req.window_label, "cmd_ollama_pull_model")?;
         tracing::info!("Starting model pull: {}", req.name);
 

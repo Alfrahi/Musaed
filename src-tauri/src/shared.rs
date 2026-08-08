@@ -12,8 +12,6 @@ use tokio::sync::Semaphore;
 use tokio_util::sync::CancellationToken;
 use tracing;
 
-// ====================== CONSTANTS ======================
-
 pub const MAX_TOTAL_IMAGE_SIZE_BYTES: usize = 10 * 1024 * 1024;
 pub const PULL_PROGRESS_THROTTLE_MS: u64 = 400;
 pub const MAX_CONCURRENT_CHATS: usize = 8;
@@ -39,23 +37,16 @@ pub const REQUEST_CACHE_EVICTION_INTERVAL_SECS: u64 = 120;
 /// during normal operation, but prevents unbounded growth if cleanup paths leak.
 pub const MAX_REQUEST_CACHE_SIZE: usize = MAX_CONCURRENT_REQUESTS * 4;
 
-// ====================== EVENT NAMES ======================
-
 pub const EVENT_OLLAMA_TOKEN: &str = "ollama-token";
 pub const EVENT_OLLAMA_ERROR: &str = "ollama-error";
 pub const EVENT_PULL_PROGRESS: &str = "pull-progress";
 pub const EVENT_PULL_ERROR: &str = "pull-error";
 
-// RAG event names
 pub const EVENT_RAG_INDEX_PROGRESS: &str = "rag-index-progress";
 pub const EVENT_RAG_INDEX_COMPLETE: &str = "rag-index-complete";
 pub const EVENT_RAG_INDEX_ERROR: &str = "rag-index-error";
 
-// Menu bar event name — emitted by the macOS menu bar handler for actions
-// that need to be handled by the frontend (e.g. zoom, about).
 pub const EVENT_MENU_ACTION: &str = "menu-action";
-
-// ====================== GLOBAL STATE ======================
 
 /// Map of request_id -> CancellationToken for aborting active chat streams.
 pub static ABORT_HANDLES: LazyLock<DashMap<String, Arc<CancellationToken>>> =
@@ -98,8 +89,6 @@ pub static FAST_HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
         .build()
         .expect("Failed to build fast HTTP client")
 });
-
-// ====================== RATE-LIMIT HELPERS ======================
 
 /// Acquires a permit from the global semaphore, returning a typed error on
 /// closure so callers can map it to an `ApiResponse` without panicking.

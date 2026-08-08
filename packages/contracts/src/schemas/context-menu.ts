@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { VALIDATION_LIMITS } from '../constants';
 
 /**
- * Context-menu contracts (UX-UI-AUDIT Prompt 12, F13).
+ * Context-menu contracts.
  *
  * The frontend fires `cmd_context_menu_show` on a `contextmenu` event with
  * the kind of surface it came from and the target id. The Rust backend builds
@@ -10,7 +10,7 @@ import { VALIDATION_LIMITS } from '../constants';
  * selected item id (or `null` if the user dismissed the menu).
  *
  * Why a backend-built native menu instead of an in-app HTML menu:
- * the audit (F13) and STANDARDS §22 explicitly demand a desktop-native feel;
+ * STANDARDS §22 explicitly demand a desktop-native feel;
  * Tauri 2 exposes native popup menus through the core `tauri::menu` API,
  * so no new plugin dependency is required (STANDARDS §21 — do not invent
  * dependencies).
@@ -23,7 +23,7 @@ import { VALIDATION_LIMITS } from '../constants';
 /**
  * Surfaces that can show a native context menu.
  *
- * Map onto the audit's three right-click targets:
+ * Map onto the three right-click targets:
  *  - `conversation` — sidebar conversation row
  *  - `message`      — chat message bubble
  *  - `codeBlock`    — fenced code block inside a message

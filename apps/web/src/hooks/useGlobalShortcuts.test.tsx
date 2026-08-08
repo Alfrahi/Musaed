@@ -88,7 +88,7 @@ describe('useGlobalShortcuts', () => {
     cleanup();
   });
 
-  describe('Escape-to-stop contract (audit F6)', () => {
+  describe('Escape-to-stop contract', () => {
     it('(a) Escape while streaming and no modal open → stopStreamForConversation called once', () => {
       useStreamingStore.setState({
         activeStreams: { 'conv-active': 'req-1' },
@@ -99,7 +99,7 @@ describe('useGlobalShortcuts', () => {
 
       expect(coordinationMock.stopStreamForConversation).toHaveBeenCalledTimes(1);
       // The requestId is passed so the abort race guard can bail out if the
-      // stream has been replaced before the stop runs (audit bug 2.3).
+      // stream has been replaced before the stop runs.
       expect(coordinationMock.stopStreamForConversation).toHaveBeenCalledWith(
         'conv-active',
         'req-1'

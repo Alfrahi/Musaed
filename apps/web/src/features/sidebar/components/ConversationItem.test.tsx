@@ -80,7 +80,7 @@ describe('ConversationItem', () => {
     mockHandleExport.mockClear();
   });
 
-  describe('ARIA listbox option semantics (audit F7)', () => {
+  describe('ARIA listbox option semantics', () => {
     it('renders a div with role="option" and a stable id', () => {
       render(<ConversationItem conversation={baseConversation} />);
       const option = screen.getByRole('option');
@@ -146,7 +146,7 @@ describe('ConversationItem', () => {
     });
   });
 
-  describe('Title/action overlap prevention (Prompt 24)', () => {
+  describe('Title/action overlap prevention', () => {
     it('reserves inline-end padding on the title so action buttons do not overlap text', () => {
       render(<ConversationItem conversation={baseConversation} />);
       const title = screen.getByText('Hello world');

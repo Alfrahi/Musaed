@@ -185,7 +185,7 @@ describe('MessageBubble - RAG citations (F11)', () => {
   });
 });
 
-describe('MessageBubble - stopped status line (Prompt 14)', () => {
+describe('MessageBubble - stopped status line', () => {
   const stoppedMessage: Message = {
     id: 'msg-stopped',
     role: 'assistant',
@@ -252,7 +252,7 @@ describe('MessageBubble - stopped status line (Prompt 14)', () => {
   });
 });
 
-describe('MessageBubble - hover actions (Prompt 14)', () => {
+describe('MessageBubble - hover actions', () => {
   it('renders Regenerate button on assistant messages when onRegenerate is provided', () => {
     const onRegenerate = vi.fn();
     const message: Message = {

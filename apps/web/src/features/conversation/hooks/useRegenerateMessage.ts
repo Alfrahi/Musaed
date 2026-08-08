@@ -7,7 +7,7 @@ import type { Message } from '@musaed/contracts';
 /**
  * Returns a `regenerateMessage` callback that finds the last user message
  * before the given assistant message and re-invokes `sendMessage` with its
- * content. Used by the context menu on assistant bubbles (audit F13, Prompt 12).
+ * content. Used by the context menu on assistant bubbles.
  */
 export function useRegenerateMessage(
   currentConversationId: string | null,

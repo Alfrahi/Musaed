@@ -1,21 +1,21 @@
 # validate-manifests.mjs
 
-This script validates the consistency between feature manifests (`feature.manifest.ts`) and their corresponding stores and barrel exports, addressing the critical issues **C1** and **C3** from the architecture audit report.
+This script validates the consistency between feature manifests (`feature.manifest.ts`) and their corresponding stores and barrel exports, addressing the critical issues from the architecture review.
 
 ## What it validates
 
 1. **stateSchemas consistency**: Ensures the version declared in the manifest matches the actual store version (`version:` literal or `*_VERSION` constant).
 2. **publicApi consistency**: Ensures hooks, components, and utils declared in the manifest are actually exported in `index.ts`. Supports both named and `default as` re-export patterns from `./components/*`, `./hooks/*`, `./utils/*`, and `@/store/*`.
 
-## Audit findings addressed
+## Findings addressed
 
-### Critical Issue C1: Feature manifest vs. store version drift
+### Critical Issue: Feature manifest vs. store version drift
 
 - **Problem**: Manifests declared `stateSchemas` versions that didn't match the actual store versions.
 - **Example (now fixed)**: `conversation/feature.manifest.ts` declared `conversationStore: 3` but `conversation-store.ts` has `version: 1`.
 - **Solution**: The validator parses `stateSchemas` from each manifest, reads the `version:` (or `*_VERSION` constant) from the matching store file, and fails on mismatch. The mismatches surfaced by the validator have been corrected in the manifests.
 
-### Critical Issue C3: persistenceSchemas manifest claimed non-existent store names
+### Critical Issue: persistenceSchemas manifest claimed non-existent store names
 
 - **Problem**: Manifests declared `persistenceSchemas` with versioned names that didn't match actual store names.
 - **Example (now fixed)**: `conversation/feature.manifest.ts` declared `'musaed-conversation-storage-v2'` but the store uses `'musaed-conversation-storage'`.

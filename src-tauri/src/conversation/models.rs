@@ -5,7 +5,7 @@ use tauri::AppHandle;
 /// Structured error payload attached to a `Message` when streaming or
 /// persistence fails. Mirrors `packages/contracts/src/schemas/conversation.ts`
 /// (`message.error`) so the frontend can render the banner without falling
-/// back to the legacy `[Error:` substring heuristic (UX-UI-AUDIT Prompt 8).
+/// back to the legacy `[Error:` substring heuristic.
 #[derive(Debug, Serialize, Deserialize, Clone, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct MessageError {
@@ -103,7 +103,7 @@ pub struct Message {
     pub rag_sources: Option<Vec<RagSource>>,
     /// Optional structured error attached when the assistant turn failed.
     /// Round-trips with the TypeScript `Message.error` field so the frontend
-    /// can render a stable banner (UX-UI-AUDIT Prompt 8).
+    /// can render a stable banner.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<MessageError>,
 }

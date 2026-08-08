@@ -11,11 +11,11 @@ import { logger } from '@/lib/logger';
 
 /**
  * Streaming lifecycle + stream-failure error handling for the chat send
- * pipeline. Extracted from the former God hook (audit F4).
+ * pipeline. Extracted from the former God hook.
  *
  * `handleStreamError` flushes buffered tokens, marks the assistant message
  * with the error, clears the stream (without setting `stopped: true` — this
- * is a failure, not a user-initiated stop, Prompt 14), and notifies the user.
+ * is a failure, not a user-initiated stop, and notifies the user.
  *
  * `abortMessage` calls `stopStreamForConversation` directly — the single
  * entry point that sends cmd_ollama_abort_chat, flushes buffered tokens,
@@ -44,7 +44,7 @@ export function useChatStream(): {
       const msg = err instanceof Error ? err.message : String(err);
       // Filter abort/cancellation errors so the user doesn't see a
       // "Stream failed" toast for a user-initiated or backend-canceled
-      // stop (audit bug 1.10). The backend may report "aborted",
+      // stop. The backend may report "aborted",
       // "cancelled", "canceled", "Stream cancelled", "Request
       // cancelled", etc.
       const lower = msg.toLowerCase();
@@ -64,7 +64,7 @@ export function useChatStream(): {
         false
       );
       // Clean up the streaming store without setting `stopped: true` — this is
-      // a stream failure, not a user-initiated stop (Prompt 14).
+      // a stream failure, not a user-initiated stop.
       useStreamingStore.getState().stopStream(conversationId);
       useStreamingStore.getState().clearStream(conversationId);
       const { activeStreams } = useStreamingStore.getState();
@@ -83,7 +83,7 @@ export function useChatStream(): {
       if (requestId) chatApi.abort(requestId);
       // Pass the requestId we read so stopStreamForConversation can bail out
       // if a new stream has already replaced the old one between the read
-      // above and this call (audit bug 2.3 — abort race).
+      // above and this call (abort race).
       stopStreamForConversation(conversationId, requestId);
     }
   }, []);

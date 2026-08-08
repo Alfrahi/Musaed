@@ -34,11 +34,11 @@ describe('Conversation Store Exports', () => {
 });
 
 // Round-trip legacy persisted shapes through the v2 migration introduced for
-// the structured `Message.error` field (UX-UI-AUDIT Prompt 8, STANDARDS §9).
+// the structured `Message.error` field (STANDARDS §9).
 // The conversation store persists `ConversationMetadata` only — messages live
 // in Rust SQLite — so the migration is a defensive identity pass-through that
 // must not invent or drop fields.
-describe('Conversation Store migrations (Prompt 8)', () => {
+describe('Conversation Store migrations', () => {
   let MIGRATIONS: any;
   let VERSION: number;
   beforeAll(async () => {

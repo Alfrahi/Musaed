@@ -716,7 +716,7 @@ async fn process_chat_stream_skips_empty_lines() {
 
 // ── bug 1.11: duplicate detection must run before permit acquisition ──
 
-/// Regression test for audit bug 1.11.
+/// Regression test for duplicate detection timing.
 ///
 /// `OllamaChatService::chat` used to call `request_cache_try_insert` *after*
 /// acquiring the global permit and the chat semaphore. If a first request was

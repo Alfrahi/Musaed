@@ -1,4 +1,4 @@
-//! Context-menu domain (UX-UI-AUDIT Prompt 12, F13).
+//! Context-menu domain.
 //!
 //! Builds native Tauri popup menus for right-click surfaces (conversation row,
 //! chat message bubble, code block) and reports the selected item id back to
@@ -53,7 +53,7 @@ pub struct ContextMenuResponse {
 /// The action ids (`rename`, `delete`, `export`, `copy`, `regenerate`) are the
 /// contract between the frontend consumers and the backend domain — they are
 /// string literals agreed upon by both layers and correspond to the action set
-/// enumerated in Prompt 12.
+/// enumerated.
 fn items_for_kind(kind: ContextMenuKind, labels: &ContextMenuLabels) -> Vec<MenuItemSpec> {
     match kind {
         ContextMenuKind::Conversation => vec![

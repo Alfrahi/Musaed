@@ -36,7 +36,7 @@ export const migrateSettingsToV2 = createIdempotentMigration<ChatSettings>((data
 
 /**
  * Migration v2 → v3 (2026-08-04)
- * Adds `showTokenIndicator` (UX-UI-AUDIT Prompt 14 — token/context-window
+ * Adds `showTokenIndicator` (token/context-window
  * visualization toggle) and aligns `closeToTray`/`sidebarWidth` (already in
  * the TS schema and DEFAULT_SETTINGS) onto the persisted state so the Rust
  * serde deserializer for `cmd_conversation_create` no longer rejects with
@@ -151,7 +151,6 @@ export const settingsBidirectionalMigrations = {
     migrate: migrateSettingsToV3,
     rollback: rollbackSettingsToV2,
     isRollbackable: true,
-    description:
-      'showTokenIndicator + closeToTray + sidebarWidth contract alignment (UX-UI-AUDIT Prompt 14)',
+    description: 'showTokenIndicator + closeToTray + sidebarWidth contract alignment',
   },
 };

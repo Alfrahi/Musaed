@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * Native macOS menu bar contracts (UX-UI-AUDIT Phase 5 Prompt 13, L-1).
+ * Native macOS menu bar contracts.
  *
  * The frontend calls `cmd_menu_rebuild` with translated labels so the Rust
  * backend can rebuild the native macOS menu bar when the user's locale

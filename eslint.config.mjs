@@ -70,23 +70,23 @@ const a11yFocusPlugin = {
 // `Button` from `@/components/ui/button` carries the focus-visible ring, default
 // `type="button"`, ref-forwarding, and the CVA variant contract. Allowing raw
 // `<button>` lets these affordances silently drift back out of the chat/compose
-// surface and modal footers (audit F4 — ~86 raw `<button>` elements at audit time).
+// surface and modal footers.
 // This rule warns (not errors) so the remaining sweep doesn't gate Phase 1; the
 // standard expects the lint warning to be live, not the migration to be complete.
 const buttonAdoptionPlugin = {
   rules: {
-    // reason: warns on raw `<button>` JSX in `.tsx` files that don't `import { Button } from '@/components/ui/button'`. Warning-level (not error) so the Phase 1 sweep is not blocked — see ImplementationPromptSequence Prompt 4.
+    // reason: warns on raw `<button>` JSX in `.tsx` files that don't `import { Button } from '@/components/ui/button'`. Warning-level (not error) so the Phase 1 sweep is not blocked.
     'prefer-button-primitive': {
       meta: {
         type: 'suggestion',
         docs: {
           description:
-            'Prefer importing `Button` from `@/components/ui/button` over using a raw `<button>` JSX element (audit F4 / STANDARDS.md §13/§17).',
+            'Prefer importing `Button` from `@/components/ui/button` over using a raw `<button>` JSX element (STANDARDS.md §13/§17).',
         },
         schema: [],
         messages: {
           preferPrimitive:
-            'Raw `<button>` detected. Import `Button` from `@/components/ui/button` and use the appropriate `variant` / `size` to inherit the focus-visible ring, default `type="button"`, and CVA variant contract (audit F4).',
+            'Raw `<button>` detected. Import `Button` from `@/components/ui/button` and use the appropriate `variant` / `size` to inherit the focus-visible ring, default `type="button"`, and CVA variant contract.',
         },
       },
       create(context) {
@@ -133,7 +133,7 @@ const buttonAdoptionPlugin = {
 // the shared `caption-xs` (12px) / `caption-md` (13px) utilities defined in
 // globals.css. Those utilities carry the zinc-600/700 · dark zinc-300/200 pair
 // that meets WCAG 1.4.3, so ad-hoc sub-12px sizes that would silently regress
-// the contrast at small typesizes are caught by CI (audit F9 / §D7).
+// the contrast at small typesizes are caught by CI.
 //
 // No file is exempted. The rule fires unconditionally across `apps/web/src`,
 // including `components/ui/button.tsx` (which now uses Tailwind's stock
@@ -148,12 +148,12 @@ const captionTypographyPlugin = {
         type: 'problem',
         docs: {
           description:
-            'Disallow `text-[<N>px]` Tailwind arbitrary font-size utilities with N ≤ 11 in JSX className strings — use `caption-xs` (12px) or `caption-md` (13px) instead (audit F9 / STANDARDS.md §13 — WCAG 1.4.3).',
+            'Disallow `text-[<N>px]` Tailwind arbitrary font-size utilities with N ≤ 11 in JSX className strings — use `caption-xs` (12px) or `caption-md` (13px) instead (STANDARDS.md §13 — WCAG 1.4.3).',
         },
         schema: [],
         messages: {
           tooSmall:
-            '`text-[{{value}}]` is below the 12px minimum body-readable typesize. Use the `caption-xs` (12px) or `caption-md` (13px) utility from `apps/web/src/app/globals.css` instead so the label inherits the WCAG-1.4.3-safe zinc shade (audit F9 / STANDARDS.md §13).',
+            '`text-[{{value}}]` is below the 12px minimum body-readable typesize. Use the `caption-xs` (12px) or `caption-md` (13px) utility from `apps/web/src/app/globals.css` instead so the label inherits the WCAG-1.4.3-safe zinc shade (STANDARDS.md §13).',
         },
       },
       create(context) {
@@ -349,7 +349,6 @@ export default tseslint.config(
         // like lib/ipc.ts and event handler modules). String literals, template
         // literals, and `x || 'literal'`-style fallbacks as the first argument are
         // forbidden — Arabic users would otherwise see raw English on the most
-        // visible error paths. See audit item M4.
         {
           selector:
             "CallExpression[callee.object.name='toast'][arguments.0.type='Literal']",
@@ -397,10 +396,10 @@ export default tseslint.config(
       // reason: flags `focus:outline-none` without adjacent `focus-visible:ring-*` (globals.css `:focus-visible` requires component suppression not to strip keyboard affordance)
       'musaed-a11y-focus/no-focus-outline-none-without-ring': 'error',
 
-      // reason: warns on raw `<button>` in `.tsx` files that don't import `Button` from `@/components/ui/button`. Warning-level so the Phase 1 sweep doesn't block; the contract is enforced as new code opts in. See ImplementationPromptSequence Prompt 4.
+      // reason: warns on raw `<button>` in `.tsx` files that don't import `Button` from `@/components/ui/button`. Warning-level so the Phase 1 sweep doesn't block; the contract is enforced as new code opts in.
       'musaed-buttons/prefer-button-primitive': 'warn',
 
-      // reason: errors on `text-[Npx]` Tailwind arbitrary font-sizes with N ≤ 11px in JSX className strings. Forces micro-labels onto the shared `caption-xs` (12px) / `caption-md` (13px) utilities from globals.css that carry WCAG-1.4.3-safe zinc shades. See ImplementationPromptSequence Prompt 7 (audit F9 / §D7). The rule fires unconditionally on every file ESLint parses under `apps/web/src` — including `button.tsx` (now migrated off `text-[10px]`) and tests — with no carve-outs at the rule level.
+      // reason: errors on `text-[Npx]` Tailwind arbitrary font-sizes with N ≤ 11px in JSX className strings. Forces micro-labels onto the shared `caption-xs` (12px) / `caption-md` (13px) utilities from globals.css that carry WCAG-1.4.3-safe zinc shades. The rule fires unconditionally on every file ESLint parses under `apps/web/src` — including `button.tsx` (now migrated off `text-[10px]`) and tests — with no carve-outs at the rule level.
       'musaed-typography/no-sub-12px-typography': 'error',
     },
   },
@@ -409,7 +408,7 @@ export default tseslint.config(
   // lib/ipc.ts and lib/tauri-storage.ts are the only files allowed to use the raw
   // @tauri-apps/* APIs and process.env — so `no-restricted-syntax` is narrowed here
   // to JUST the i18n toast-literal guard, rather than disabled entirely. This closes
-  // a trap (audit item M4): an unconstrained blanket `'off'` would let raw English
+  // a trap: an unconstrained blanket `'off'` would let raw English
   // toast strings drift back into the IPC bridge — exactly the area being targeted —
   // and the rule would never fire on the file it's most needed for.
   {

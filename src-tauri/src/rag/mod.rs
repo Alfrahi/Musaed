@@ -13,7 +13,7 @@
 //! - `embedder.rs`      — Ollama embedding client (batched)
 //! - `indexing.rs`      — Full indexing pipeline (discover → chunk → embed → store)
 //! - `search.rs`        — Vector search + hybrid reranking
-//! - `context_assembler.rs` — RAG context assembly (prompt formatting + token budget)
+//! - `context_assembler.rs` — RAG context assembly (formatting + token budget)
 //! - `bm25.rs`           — BM25 ranking for hybrid search
 //! - `commands.rs`      — All RAG Tauri IPC commands
 

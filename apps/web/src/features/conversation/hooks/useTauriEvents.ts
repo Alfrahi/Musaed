@@ -52,14 +52,14 @@ const handleToken = (payload: OllamaToken) => {
   // On stream completion, flush remaining content + metrics and clean up.
   // Uses completeStreamForConversation (not stopStreamForConversation) so the
   // assistant message is NOT marked stopped:true — that flag is reserved for
-  // user-initiated aborts. This also ensures promptEvalCount/evalCount metrics
+  // user-initiated aborts. This also ensures metrics
   // are flushed onto the message for TokenContextBar visualization.
   if (payload.done) {
     completeStreamForConversation(convId);
 
     // Persist the completed assistant message to Rust backend with retry logic.
     // Guard against the conversation being deleted between stream start and
-    // completion (audit bug 1.3): `messages[convId]` may be undefined if the
+    // completion: `messages[convId]` may be undefined if the
     // user deleted the conversation while the stream was still in flight.
     const msgs = useMessageStore.getState().messages[convId];
     const lastMsg = msgs?.[msgs.length - 1];
@@ -99,7 +99,7 @@ const handleError = (payload: BackendError) => {
     )?.[0];
     if (convId) {
       // Pass the requestId so stopStreamForConversation bails out if a new
-      // stream has replaced the old one before this call runs (audit bug 2.3).
+      // stream has replaced the old one before this call runs.
       stopStreamForConversation(convId, sanitized.requestId);
       toast.error(translate('error.backendError', lang, { message: sanitized.message }));
       return;

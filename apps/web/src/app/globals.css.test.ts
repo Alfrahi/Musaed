@@ -37,10 +37,10 @@ describe('globals.css focus-ring utility (STANDARDS.md §13)', () => {
   });
 });
 
-describe('globals.css typography utilities (audit §F9 / STANDARDS.md §13 — WCAG 1.4.3)', () => {
+describe('globals.css typography utilities (STANDARDS.md §13 — WCAG 1.4.3)', () => {
   const css = loadCss();
 
-  it('does not declare a global `letter-spacing: 0 !important` (audit §F9 + §D7)', () => {
+  it('does not declare a global `letter-spacing: 0 !important`', () => {
     // The previous suppression both globally stamped letter-spacing to 0 AND
     // neutered Tailwind's `tracking-{tighter,tight,normal,wide,wider,widest}`
     // utilities — the eyebrow micro-labels across the app leaned on those for

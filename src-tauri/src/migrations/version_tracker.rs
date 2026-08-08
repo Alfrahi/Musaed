@@ -3,7 +3,7 @@
 //! Manages the `_migrations` metadata table that tracks:
 //! - Current schema version
 //! - Migration history (which migrations were applied)
-//! - Application timestamps for audit trails
+//! - Application timestamps
 
 use crate::migrations::{MigrationResult, MigrationTarget};
 use rusqlite::{Connection, Transaction};
@@ -95,7 +95,7 @@ pub fn record_migration(
     Ok(())
 }
 
-/// Gets the migration history for audit/debugging
+/// Gets the migration history
 pub fn get_migration_history(
     conn: &Connection,
     target: MigrationTarget,

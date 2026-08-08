@@ -43,25 +43,40 @@ Renders the conversation sidebar — conversation list with grouping by time, se
 | ---------------- | --------------------- | ---------------------------------------------------------------- |
 | `SidebarFeature` | `feature.manifest.ts` | Feature manifest with public API, IPC endpoints, schema versions |
 
+## Key Components (internal)
+
+| Component             | Description                                        |
+| --------------------- | -------------------------------------------------- |
+| `SidebarResizeHandle` | Drag handle for resizing sidebar width (persisted) |
+
 ## IPC Endpoints
 
-| Command                            | Purpose                              |
-| ---------------------------------- | ------------------------------------ |
-| `cmd_dialog_ask`                   | Confirmation dialogs (delete, clear) |
-| `cmd_conversation_export_markdown` | Export conversation to Markdown file |
+| Command                  | Purpose                                       |
+| ------------------------ | --------------------------------------------- |
+| `cmd_dialog_ask`         | Confirmation dialogs for delete/clear actions |
+| `cmd_dialog_save_file`   | File save dialog for Markdown export          |
+| `cmd_fs_write_text_file` | Write the exported Markdown file to disk      |
+
+> **Note:** `cmd_dialog_ask` is consumed via `dialogApi.ask` in `hooks/useSidebarActions.ts` but was inadvertently omitted from `feature.manifest.ts`. The other two are declared in the manifest and used by `utils/export.ts`.
 
 ## State Schemas
 
-| Store               | Version | Persistence Key                  |
-| ------------------- | ------- | -------------------------------- |
-| `conversationStore` | 3       | `musaed-conversation-storage-v2` |
-| `messageStore`      | 1       | `musaed-message-storage-v1`      |
+The sidebar feature does not own any stores. It reads from global stores owned by the `conversation` feature and persisted by the Rust backend.
 
-> **Note:** The sidebar feature does not own these stores — it reads from the `conversation` feature's stores via coordination hooks (`useCurrentConversationId`, `useFilteredConversations`, etc.).
+| Store               | Version | Persistence                                                    |
+| ------------------- | ------- | -------------------------------------------------------------- |
+| `conversationStore` | 3       | Persisted by the Rust backend (SQLite). No zustand persist.    |
+| `messageStore`      | 0       | In-memory cache only — messages persisted by the Rust backend. |
+
+> **Note:** These stores live in `@/store/` (not inside the conversation feature folder). The sidebar reads them via selector hooks (`useCurrentConversationId`, `useFilteredConversations`, `useSearchQuery`, etc.) declared in `@/store/conversation-store.ts`.
 
 ## Dependencies
 
-None — no direct feature imports. Uses coordination hooks from `lib/` to communicate with shared stores.
+- `conversation` — reads conversation list and metadata via store selector hooks; uses `useConversationActions` for CRUD
+- `rag` — accesses RAG functionality for the Projects tab in the sidebar
+- `settings` — reads theme and i18n settings via `useSettingsStore` (global store, not a feature import)
+
+> **Note:** The sidebar is the conversation-list composition layer. The manifest declares `dependencies: ['conversation', 'rag']`; explicit settings-store access is global and not counted as a feature import for dep-cruiser purposes.
 
 ## Example Usage
 
@@ -80,4 +95,4 @@ function AppLayout() {
 
 ## Related Docs
 
-- [Migration Framework](../../../docs/migration-framework.md)
+- [Migration Framework](../../../../../docs/migration-framework.md)

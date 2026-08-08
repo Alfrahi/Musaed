@@ -8,7 +8,7 @@ use crate::payloads::ApiResponse;
 use super::title_service::{GenerateTitleRequest, TitleService};
 
 /// Generates a short conversation title by sending the first user message to
-/// Ollama with `stream: false`. Uses a system prompt that instructs the model
+/// Ollama with `stream: false`. Uses a system instruction that instructs the model
 /// to return only a concise title.
 #[tauri::command]
 pub async fn cmd_ollama_generate_title(

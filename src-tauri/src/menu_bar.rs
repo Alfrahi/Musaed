@@ -1,9 +1,9 @@
-//! Native macOS menu bar domain (UX-UI-AUDIT Phase 5 Prompt 13, L-1).
+//! Native macOS menu bar domain.
 //!
 //! Builds the native macOS app menu bar with standard App, Edit, View, and
 //! Window submenus using Tauri 2's `tauri::menu` core API. On Windows and
 //! Linux the module compiles to a no-op so the menu bar is macOS-only as
-//! required by the audit.
+//! required.
 //!
 //! Architecture (STANDARDS §6):
 //! - `cmd_menu_rebuild` — thin IPC adapter only, delegates to

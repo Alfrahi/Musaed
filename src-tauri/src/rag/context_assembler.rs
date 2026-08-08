@@ -7,9 +7,9 @@
 use crate::generated_validation::MAX_RAG_CONTEXT_CHARS;
 use crate::rag::types::{AssembledContext, Citation, SearchResult};
 
-/// Build a RAG system prompt context string from search results.
+/// Build a RAG system context string from search results.
 ///
-/// This is injected before the main system prompt in chat messages.
+/// This is injected before the main system instruction in chat messages.
 /// Results are appended in order until the character budget is exceeded.
 pub fn build_rag_system_context(
     results: &[SearchResult],

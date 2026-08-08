@@ -68,7 +68,7 @@ impl OllamaChatService {
         let url = ollama_endpoint(&req.base_url, "api/chat")
             .map_err(|msg| BackendError::new(error_codes::INVALID_URL, msg))?;
 
-        // Bug 1.11: Duplicate detection MUST run before acquiring any permits.
+        // Duplicate detection MUST run before acquiring any permits.
         // If the cache check happened after the global permit / semaphore, a
         // duplicate arriving while the first request was still waiting on a
         // permit would be rejected even though the first request had not yet
@@ -229,8 +229,6 @@ impl OllamaChatService {
         }
     }
 }
-
-// ====================== EXTRACTED HELPERS ======================
 
 /// Validate all chat inputs: model name, request ID, message count, message
 /// content, options, and total image size.

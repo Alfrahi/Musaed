@@ -137,7 +137,7 @@ pub(super) fn open_connection(db_path: &Path) -> Result<Connection, String> {
 /// already applied; this connection only needs the same pragmas.
 ///
 /// Used to populate the read pool in [`super::RagStore::open`] so concurrent
-/// readers can run in parallel (Maj-3, AUDIT-REPORT.md).
+/// readers can run in parallel.
 pub(super) fn open_read_connection(db_path: &Path) -> Result<Connection, String> {
     let conn =
         Connection::open(db_path).map_err(|e| format!("Failed to open RAG database: {}", e))?;

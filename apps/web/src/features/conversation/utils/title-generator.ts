@@ -46,7 +46,7 @@ export async function generateConversationTitle(
   if (!userMessage?.content || !assistantMessage?.content) return null;
 
   // Strip thinking blocks from the assistant message before sending it
-  // so the model doesn't see reasoning content in the prompt.
+  // so the model doesn't see reasoning content.
   const cleanAssistantContent = stripThinkingBlocks(assistantMessage.content);
 
   try {

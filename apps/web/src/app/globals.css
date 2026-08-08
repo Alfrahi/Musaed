@@ -103,7 +103,7 @@
   --shadow-native: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
   --shadow-pro: 0 8px 30px rgba(0, 0, 0, 0.12);
 
-  /* Elevation scale — see /docs/ui-ux-audit.md.
+  /* Elevation scale — see /docs/ui-ux.md.
      Two levels: `--shadow-raised` lifts content slightly above its surface
      (cards, input areas); `--shadow-pro` lifts above the page (modals,
      dropdowns) and is the existing `--shadow-overlay` value. */
@@ -111,7 +111,7 @@
 
   /* Caption font-sizes — see @utility caption-xs / caption-md below.
      These are kept as theme variables so the utilities compose with the
-     existing token vocabulary (audit §F9). No new color tokens. */
+     existing token vocabulary. No new color tokens. */
   --text-caption-xs: 12px;
   --text-caption-md: 13px;
 
@@ -133,7 +133,7 @@ body {
 }
 
 /*
- * Caption utilities (audit §F9 / STANDARDS.md §13 — WCAG 1.4.3 contrast).
+ * Caption utilities (STANDARDS.md §13 — WCAG 1.4.3 contrast).
  * `caption-xs` is the minimum body-readable typesize in the app (12px) and is
  * used for dense metadata rows (timestamps, response-time badges, counts).
  * `caption-md` is the eyebrow / section-label typesize (13px) and is used for
@@ -187,7 +187,7 @@ body {
 }
 
 /*
- * Focus-ring utility (audit §F3 accessibility).
+ * Focus-ring utility (accessibility).
  * Shared focus-visible ring for all interactive elements — buttons, inputs,
  * sidebar items, tab buttons, model cards, toggle buttons, the resize handle,
  * and the scroll-to-bottom button — instead of inlining the five

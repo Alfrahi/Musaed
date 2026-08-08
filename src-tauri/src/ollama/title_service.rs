@@ -32,7 +32,7 @@ const MAX_TITLE_WORDS: usize = 5;
 
 /// Prefixes that indicate the model started reasoning instead of generating a
 /// title. These are common chain-of-thought sentence starters produced when a
-/// model ignores the title-generation prompt and continues the conversation.
+/// model ignores the title-generation and continues the conversation.
 const REASONING_STARTERS: &[&str] = &[
     "okay",
     "alright",
@@ -57,8 +57,6 @@ const REASONING_STARTERS: &[&str] = &[
     "here is",
 ];
 
-// ==================== REQUEST STRUCT ====================
-
 /// Parameters for a title generation request.
 pub struct GenerateTitleRequest {
     pub window_label: String,
@@ -69,16 +67,13 @@ pub struct GenerateTitleRequest {
     pub language: String,
 }
 
-// ==================== SERVICE ====================
-
 pub struct TitleService;
 
 impl TitleService {
     /// Generates a short conversation title by sending the first user message
-    /// to Ollama with `stream: false`. Uses a system prompt that instructs the
+    /// to Ollama with `stream: false`. Uses a system instruction that instructs the
     /// model to return only a concise title.
     pub async fn generate_title(&self, req: GenerateTitleRequest) -> ApiResponse<String> {
-        // ---- rate-limit gate -------------------------------------------------
         if let Err(e) =
             RATE_LIMITER.check_rate_limit(&req.window_label, "cmd_ollama_generate_title")
         {
@@ -90,7 +85,6 @@ impl TitleService {
         }
         tracing::info!("Generating title with model: {}", req.model);
 
-        // ---- input validation -------------------------------------------------
         if !is_valid_model_name(&req.model) {
             return validation_error(
                 "INVALID_INPUT",
@@ -127,7 +121,6 @@ impl TitleService {
             );
         }
 
-        // ---- semaphore acquisition --------------------------------------------
         let _global_permit = match acquire_global_permit().await {
             Ok(p) => p,
             Err(msg) => {
@@ -139,20 +132,18 @@ impl TitleService {
             }
         };
 
-        // ---- URL construction -------------------------------------------------
         let url = match ollama_endpoint(&req.base_url, "api/chat") {
             Ok(u) => u,
             Err(msg) => return invalid_ollama_base(msg),
         };
 
-        // ---- prompt assembly --------------------------------------------------
         let lang_instruction = if req.language == "ar" {
             "Respond in Arabic only."
         } else {
             "Respond in English only."
         };
 
-        let system_prompt = format!(
+        let system_instruction = format!(
             "You are a title generator. Given a question and answer below, produce a very short \
              descriptive title (5 words max). The title must be a label, not a sentence. \
              Examples: \"Python Loops\", \"Pasta Carbonara Recipe\", \"Climate Change Effects\". \
@@ -161,7 +152,6 @@ impl TitleService {
             lang_instruction
         );
 
-        // Truncate messages to avoid sending excessively long content
         let truncated_user: String = req.user_message.chars().take(500).collect();
         let truncated_assistant: String = req.assistant_message.chars().take(500).collect();
 
@@ -173,7 +163,7 @@ impl TitleService {
         let payload = json!({
             "model": req.model,
             "messages": [
-                { "role": "system", "content": system_prompt },
+                { "role": "system", "content": system_instruction },
                 { "role": "user", "content": user_content }
             ],
             "stream": false,
@@ -183,7 +173,6 @@ impl TitleService {
             }
         });
 
-        // ---- HTTP call --------------------------------------------------------
         match FAST_HTTP_CLIENT
             .post(&url)
             .json(&payload)
@@ -281,8 +270,6 @@ impl TitleService {
     }
 }
 
-// ==================== PURE HELPERS ====================
-
 /// Returns `true` if `text` looks like a reasoning/sentence output rather than
 /// a concise title label. Checked case-insensitively against known starters.
 fn looks_like_reasoning(text: &str) -> bool {
@@ -294,13 +281,11 @@ fn looks_like_reasoning(text: &str) -> bool {
 
 /// Enforces the word-count limit on a generated title.
 ///
-/// When a model ignores the prompt and produces a sentence instead of a label,
+/// When a model ignores the instruction and produces a sentence instead of a label,
 /// blindly taking the first N words yields poor results (e.g. "ChatGPT: Large
 /// Language Model from"). Instead, we look for natural separators (colon, dash)
 /// and prefer the concise portion before the separator.
 fn truncate_title_words(title: &str, max_words: usize) -> String {
-    // Titles like "ChatGPT: Large Language Model from OpenAI" — the part
-    // before the colon is the concise label.
     if let Some(colon_pos) = title.find(':') {
         let before = title[..colon_pos].trim();
         let before_words: Vec<&str> = before.split_whitespace().collect();
@@ -309,7 +294,6 @@ fn truncate_title_words(title: &str, max_words: usize) -> String {
         }
     }
 
-    // Titles like "ChatGPT - Large Language Model" — same idea with dashes.
     if let Some(dash_pos) = title.find(" - ") {
         let before = title[..dash_pos].trim();
         let before_words: Vec<&str> = before.split_whitespace().collect();
@@ -323,7 +307,6 @@ fn truncate_title_words(title: &str, max_words: usize) -> String {
         return title.to_string();
     }
 
-    // Fallback: take first N words (better than returning an overly long title).
     words[..max_words].join(" ")
 }
 
@@ -336,7 +319,6 @@ fn truncate_title_words(title: &str, max_words: usize) -> String {
 pub(crate) fn strip_think_blocks(content: &str) -> String {
     let mut result = content.to_string();
 
-    // Strip <redacted-thinking>...</redacted-thinking> blocks
     while let Some(start) = result.find("<redacted-thinking>") {
         if let Some(end) =
             result[start + "<redacted-thinking>".len()..].find("</redacted-thinking>")
@@ -352,7 +334,6 @@ pub(crate) fn strip_think_blocks(content: &str) -> String {
         }
     }
 
-    // Strip  thinking... response blocks (DeepSeek-R1 reasoning format)
     while let Some(start) = result.find(" thinking") {
         if let Some(end) = result[start + " thinking".len()..].find(" response") {
             result = format!(
@@ -366,7 +347,6 @@ pub(crate) fn strip_think_blocks(content: &str) -> String {
         }
     }
 
-    // Strip <thoughts>...</thoughts> blocks
     while let Some(start) = result.find("<thoughts>") {
         if let Some(end) = result[start + "<thoughts>".len()..].find("</thoughts>") {
             result = format!(
@@ -380,7 +360,6 @@ pub(crate) fn strip_think_blocks(content: &str) -> String {
         }
     }
 
-    // Strip <reasoning>...</reasoning> blocks
     while let Some(start) = result.find("<reasoning>") {
         if let Some(end) = result[start + "<reasoning>".len()..].find("</reasoning>") {
             result = format!(
@@ -394,7 +373,6 @@ pub(crate) fn strip_think_blocks(content: &str) -> String {
         }
     }
 
-    // Strip <initial_thoughts>...</initial_thoughts> blocks
     while let Some(start) = result.find("<initial_thoughts>") {
         if let Some(end) = result[start + "<initial_thoughts>".len()..].find("</initial_thoughts>")
         {
@@ -409,7 +387,6 @@ pub(crate) fn strip_think_blocks(content: &str) -> String {
         }
     }
 
-    // Strip <lemma>...</lemma> blocks
     while let Some(start) = result.find("<lemma>") {
         if let Some(end) = result[start + "<lemma>".len()..].find("</lemma>") {
             result = format!(
@@ -435,13 +412,9 @@ pub(crate) fn strip_think_blocks(content: &str) -> String {
     lines.last().map(|l| l.to_string()).unwrap_or(result)
 }
 
-// ==================== TESTS ====================
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // -- truncate_title_words --
 
     #[test]
     fn truncate_short_title_unchanged() {
@@ -474,8 +447,6 @@ mod tests {
             "one two three four five"
         );
     }
-
-    // -- looks_like_reasoning --
 
     #[test]
     fn reasoning_detected_for_starter() {
