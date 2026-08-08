@@ -30,6 +30,9 @@ const manifest: FeatureManifest = {
     // `dialogApi`/`fsApi` namespaces. Feature-scoped, not shared.
     'cmd_dialog_save_file',
     'cmd_fs_write_text_file',
+    // `hooks/useSidebarActions.ts` uses `dialogApi.ask` for confirmation
+    // dialogs (delete, clear all). Feature-scoped, not shared.
+    'cmd_dialog_ask',
   ],
   stateSchemas: {
     // Both `conversationStore` and `messageStore` are owned by the
@@ -50,6 +53,11 @@ const manifest: FeatureManifest = {
     cmd_fs_write_text_file: {
       fallback: 'Show error toast; export file not written',
       retry: 'once',
+      messageKey: 'error.genericError',
+    },
+    cmd_dialog_ask: {
+      fallback: 'Silently ignore — confirmation dialogs are user-initiated',
+      retry: 'none',
       messageKey: 'error.genericError',
     },
   },
