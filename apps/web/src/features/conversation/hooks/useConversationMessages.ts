@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useConversationStore } from '@/store/conversation-store';
+import { useCurrentConversationId } from '@/store/conversation-store';
 import { useMessageStore } from '@/store/message-store';
 import { conversationApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
@@ -12,16 +12,17 @@ import { logger } from '@/lib/logger';
  * cached in the message store.
  */
 export function useConversationMessages() {
+  const currentConversationId = useCurrentConversationId();
   const loadedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    const currentConversationId = useConversationStore.getState().currentConversationId;
     if (!currentConversationId) return;
 
     // Skip if already loaded in this session
     if (loadedRef.current.has(currentConversationId)) return;
 
     // Skip if messages are already cached (e.g. from current session activity)
+    // getState() is correct here: we want a fresh read at effect-run time, not a reactive subscription
     const existingMessages = useMessageStore.getState().messages[currentConversationId];
     if (existingMessages && existingMessages.length > 0) return;
 
@@ -47,5 +48,5 @@ export function useConversationMessages() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [currentConversationId]);
 }
