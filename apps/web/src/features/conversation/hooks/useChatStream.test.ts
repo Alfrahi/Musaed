@@ -59,6 +59,34 @@ describe('useChatStream', () => {
     expect(updateLastMessage).not.toHaveBeenCalled();
   });
 
+  it('bails out without appending error text when the stream was already resolved', () => {
+    // Reproduces the race where the backend `ollama-error` event path
+    // (useTauriEvents.handleError → stopStream('error')) wins and clears
+    // activeStreams before the chatApi.chat promise-rejection path fires
+    // handleStreamError. Without the resolved-stream guard, the late
+    // handleStreamError would append a duplicate [Error: ...] prefix and
+    // fire a second toast even though stopStream itself would bail.
+    const { result } = renderHook(() => useChatStream());
+    const updateLastMessage = vi.fn();
+    const t = (key: string) => key;
+
+    // Simulate the prior stopStream('error') having already cleared the stream
+    const previous = mockStores.streamingStore.activeStreams;
+    mockStores.streamingStore.activeStreams = {};
+
+    act(() => {
+      result.current.handleStreamError(new Error('boom'), 'conv1', 'req1', updateLastMessage, t);
+    });
+
+    expect(mockUtils.coordination.flushAndStop).not.toHaveBeenCalled();
+    expect(updateLastMessage).not.toHaveBeenCalled();
+    expect(mockUtils.coordination.stopStream).not.toHaveBeenCalled();
+    expect(mockStores.uiStore.setErrorMessage).not.toHaveBeenCalled();
+
+    // Restore for subsequent tests that expect `conv1` to be active
+    mockStores.streamingStore.activeStreams = previous;
+  });
+
   it('abortMessage delegates to stopStream for the given conversation', () => {
     const { result } = renderHook(() => useChatStream());
 
