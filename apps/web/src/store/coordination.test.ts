@@ -402,6 +402,31 @@ describe('stopStream — double-stop resolution guard', () => {
     expect(lastMsg.stopped).not.toBe(true);
     expect(lastMsg.done).toBe(true);
   });
+
+  it('error-then-error: first error wins, second call is a no-op', () => {
+    // Reproduces the bug race where both error paths fire for the same
+    // failure (e.g. Ollama crashes mid-stream): the backend `ollama-error`
+    // event triggers handleError → stopStream('error', reqId), and the
+    // chatApi.chat promise rejection triggers handleStreamError →
+    // stopStream('error'). The resolution guard must make the second call
+    // a no-op so buffered tokens flushed by the first call are not
+    // double-applied and `stopped` is never set.
+    stopStream('conv-1', 'error', 'req-1');
+    expect(useStreamingStore.getState().activeStreams['conv-1']).toBeUndefined();
+
+    // Late error from the second path — should bail entirely
+    stopStream('conv-1', 'error');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    expect(messages.length).toBe(2); // no duplicate message
+    const lastMsg = messages[messages.length - 1];
+    // Content flushed exactly once by the first call
+    expect(lastMsg.content).toBe('partialhello');
+    expect(lastMsg.done).toBe(true);
+    // 'error' never sets stopped:true
+    expect(lastMsg.stopped).not.toBe(true);
+    expect(useUIStore.getState().isStreaming).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

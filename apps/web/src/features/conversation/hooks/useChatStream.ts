@@ -21,6 +21,16 @@ import { logger } from '@/lib/logger';
  * single coordination entry point. It deliberately does NOT set the
  * `stopped: true` marker — this is a failure, not a user-initiated stop.
  *
+ * **Resolved-stream guard**: Bails out (after the abort-filter) when the
+ * conversation is no longer in `activeStreams` — a prior `stopStream` call
+ * (e.g. the backend `ollama-error` event path in `useTauriEvents.handleError`
+ * winning the race) already flushed buffered tokens and tore down the stream.
+ * Without this guard, a late `handleStreamError` firing from the
+ * `chatApi.chat` promise-rejection path would append a duplicate error
+ * prefix and fire a second toast, even though `stopStream` itself would
+ * correctly bail via the resolution guard. This mirrors the first-writer-wins
+ * semantic already established in `stopStream` so both error paths agree.
+ *
  * `abortMessage` routes through `stopStream('abort')` — the single entry
  * point that flushes buffered tokens, marks the message `stopped: true`,
  * and cleans up streaming state. Callers must call `chatApi.abort(requestId)`
@@ -56,6 +66,16 @@ export function useChatStream(): {
       if (['aborted', 'cancelled', 'canceled', 'cancel'].some((term) => lower.includes(term))) {
         return;
       }
+      // Resolved-stream guard: if the conversation is no longer in
+      // `activeStreams`, a prior `stopStream` call already resolved this
+      // stream (e.g. the backend `ollama-error` event path in
+      // `useTauriEvents.handleError` won the race and flushed + cleared
+      // the stream). Bail out instead of appending a duplicate error prefix
+      // and firing a second toast — `stopStream`'s own resolution guard
+      // would make the trailing `stopStream` call a no-op anyway, but the
+      // `updateLastMessage` + `toast.error` calls below run before it and
+      // are not guarded there. Mirrors the first-writer-wins semantic.
+      if (!(conversationId in useStreamingStore.getState().activeStreams)) return;
       logger.error('Chat error', { error: msg, requestId });
       // Flush any buffered tokens before appending the error message —
       // this mutates the assistant message in-place so the error prefix
