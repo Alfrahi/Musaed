@@ -34,6 +34,8 @@ Provides Retrieval-Augmented Generation (RAG) capabilities — project managemen
 | `fileNameFromPath`    | `utils/project-helpers.ts` | Extract filename from a full path         |
 | `truncateFilePath`    | `utils/project-helpers.ts` | Truncate long file paths with ellipsis    |
 | `getRelativeFilePath` | `utils/project-helpers.ts` | Convert absolute path to project-relative |
+| `deriveProjectStatus` | `utils/project-helpers.ts` | Derive display status from indexing state |
+| `ProjectStatusPatch`  | `utils/project-helpers.ts` | Type for project status patch operations  |
 
 ### Feature Manifest
 
@@ -71,6 +73,7 @@ The components below live in `components/` but are **not** re-exported from `ind
 | `cmd_rag_search`              | Hybrid BM25 + vector search                   |
 | `cmd_rag_assemble_context`    | Assemble search results into a context string |
 | `cmd_rag_get_file_chunks`     | Get chunks for a specific file                |
+| `cmd_rag_list_files`          | List indexed files in a project               |
 | `cmd_rag_set_embedding_model` | Set the embedding model for a project         |
 | `cmd_dialog_open_file`        | Open file dialog for project selection        |
 
@@ -79,6 +82,10 @@ The components below live in `components/` but are **not** re-exported from `ind
 | Store      | Version | Persistence Key |
 | ---------- | ------- | --------------- |
 | `ragStore` | 3       | `rag-state`     |
+
+## Dependencies
+
+- `library` — accesses model management for embedding model selection via the `library` feature barrel.
 
 ## Example Usage
 
