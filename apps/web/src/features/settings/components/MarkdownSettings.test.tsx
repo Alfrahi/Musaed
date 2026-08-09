@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type * as SettingsStoreModule from '@/store/settings-store';
 import MarkdownSettings from './MarkdownSettings';
@@ -36,26 +36,10 @@ vi.mock('@/lib/i18n', () => ({
 }));
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-// Each toggle row is a flex container holding a label `<p>` and the switch
-// `<button role="switch">`. The switch has no `aria-labelledby`, so its
-// accessible name is empty and ` getByRole('switch', { name }) ` cannot
-// locate it. Instead, we find the row by its visible label text and scope
-// the switch query to that row.
-const getRowByLabel = (labelKey: string): HTMLElement => {
-  const labelEl = screen.getByText(labelKey);
-  // The label <p> sits in the flex row whose direct ancestor is the row
-  // div that also holds the switch <button>. Walk up to that row. A `<div>`
-  // is always an HTMLElement, but `Element.closest` is typed to the broader
-  // `Element | null`, so we narrow to `HTMLElement` here.
-  const row = labelEl.closest('div.flex');
-  if (!row) throw new Error(`toggle row not found for label ${labelKey}`);
-  return row as HTMLElement;
-};
-
-const getSwitchButton = (labelKey: string) => {
-  const row = getRowByLabel(labelKey);
-  return within(row).getByRole('switch');
-};
+// The Toggle primitive wires aria-labelledby to the visible label, so each
+// switch is now locatable by its accessible name via getByRole('switch',
+// { name }) — no row-walking helper needed.
+const getSwitchButton = (labelKey: string) => screen.getByRole('switch', { name: labelKey });
 
 const getThumb = (switchBtn: HTMLElement): HTMLElement => {
   const thumb = switchBtn.querySelector('div');
@@ -121,5 +105,17 @@ describe('MarkdownSettings toggle thumb position (RTL/LTR)', () => {
     const sw = getSwitchButton('settings.markdown.enableLatex');
     expect(sw).toHaveAttribute('aria-checked', 'true');
     expect(sw.tagName).toBe('BUTTON');
+  });
+
+  it('associates each label with its switch via aria-labelledby', () => {
+    render(<MarkdownSettings />);
+    for (const labelKey of ['settings.markdown.enableLatex', 'settings.markdown.enableMermaid']) {
+      const sw = getSwitchButton(labelKey);
+      const labelledBy = sw.getAttribute('aria-labelledby');
+      expect(labelledBy).toBeTruthy();
+      const labelEl = document.getElementById(labelledBy!);
+      expect(labelEl).not.toBeNull();
+      expect(labelEl!.textContent).toBe(labelKey);
+    }
   });
 });
