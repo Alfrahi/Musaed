@@ -38,10 +38,10 @@ export const SearchResults = () => {
   if (isSearching) {
     return (
       <div className="space-y-2" data-testid="search-results-loading">
-        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-4 w-32 rounded-sm" />
         <div className="space-y-1.5">
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full rounded-md" />
+          <Skeleton className="h-20 w-full rounded-md" />
         </div>
       </div>
     );
