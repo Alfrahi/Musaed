@@ -10,6 +10,7 @@ import { Sliders, Library } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/i18n';
 import { useGlobalShortcuts } from '@/hooks/useGlobalShortcuts';
+import { useAutoCollapseSidebar } from '@/hooks/useAutoCollapseSidebar';
 import { cn } from '@/lib/utils';
 import { isMac as detectIsMac, isWindows as detectIsWindows } from '@/lib/platform';
 import { checkIsTauri } from '@/lib/ipc';
@@ -147,6 +148,7 @@ const HomeClient = () => {
   useTauriEvents();
   useLibraryTauriEvents();
   useGlobalShortcuts();
+  useAutoCollapseSidebar();
   useConversationMessages();
 
   useEffect(() => {

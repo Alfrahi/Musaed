@@ -66,6 +66,10 @@ vi.mock('@/hooks/useGlobalShortcuts', () => ({
   useGlobalShortcuts: vi.fn(),
 }));
 
+vi.mock('@/hooks/useAutoCollapseSidebar', () => ({
+  useAutoCollapseSidebar: vi.fn(),
+}));
+
 vi.mock('@/hooks/useAppInitialization', () => ({
   useAppInitialization: () => ({ initializeApp: vi.fn() }),
 }));

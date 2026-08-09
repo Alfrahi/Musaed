@@ -619,7 +619,7 @@ const MessageBubbleBody = ({
   handleDelete,
   t,
 }: MessageBubbleBodyProps) => (
-  <div className="group ms-auto me-auto flex max-w-4xl gap-6 py-6 ps-5 pe-5">
+  <div className="group ms-auto me-auto flex max-w-4xl gap-6 py-6 ps-5 pe-5 max-md:gap-4 max-md:ps-3 max-md:pe-3">
     <MessageAvatar isUser={isUser} />
     <div className="min-w-0 flex-1 space-y-4">
       <MessageHeader isUser={isUser} message={message} labels={labels} />
