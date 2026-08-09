@@ -131,13 +131,24 @@ impl ConversationStore {
         Ok(conv)
     }
 
+    /// Delete a conversation and all of its messages.
+    ///
+    /// The two DELETEs are wrapped in a single transaction so that a crash
+    /// between statements cannot leave the database in an inconsistent state
+    /// (e.g. messages gone but the conversation row remaining as an orphan
+    /// shell). Although the schema declares `ON DELETE CASCADE`, manual
+    /// DELETEs bypass the cascade and statements are applied independently;
+    /// the transaction makes the operation atomic. Mirrors the pattern used
+    /// by `rag::store::files::delete_file`.
     pub async fn delete_conversation(&self, id: &str) -> SqlResult<()> {
         let conn = self.lock_conn().await;
-        conn.execute(
+        let tx = conn.unchecked_transaction()?;
+        tx.execute(
             "DELETE FROM messages WHERE conversation_id = ?1",
             params![id],
         )?;
-        conn.execute("DELETE FROM conversations WHERE id = ?1", params![id])?;
+        tx.execute("DELETE FROM conversations WHERE id = ?1", params![id])?;
+        tx.commit()?;
         Ok(())
     }
 
@@ -150,10 +161,17 @@ impl ConversationStore {
         Ok(())
     }
 
+    /// Delete every conversation and message in the database.
+    ///
+    /// Wrapped in a transaction for the same reason as `delete_conversation`:
+    /// a crash between the two DELETEs would otherwise leave the DB in a
+    /// partial state (e.g. all messages gone but conversations remaining).
     pub async fn clear_all_conversations(&self) -> SqlResult<()> {
         let conn = self.lock_conn().await;
-        conn.execute("DELETE FROM messages", params![])?;
-        conn.execute("DELETE FROM conversations", params![])?;
+        let tx = conn.unchecked_transaction()?;
+        tx.execute("DELETE FROM messages", params![])?;
+        tx.execute("DELETE FROM conversations", params![])?;
+        tx.commit()?;
         Ok(())
     }
 
@@ -512,5 +530,71 @@ mod tests {
         let results = store.search_messages("C:\\Users", 50).await.unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].message.id, "msg-1");
+    }
+
+    /// `delete_conversation` must remove both the conversation row and all
+    /// of its messages in a single atomic operation. After the call, neither
+    /// the conversation nor any message referencing it may remain.
+    #[tokio::test]
+    async fn test_delete_conversation_removes_conversation_and_messages() {
+        let store = make_store().await;
+        seed_message(
+            &store,
+            "conv-1",
+            "To Delete",
+            "msg-1",
+            "user",
+            "hello",
+            1000,
+        )
+        .await;
+        seed_message(&store, "conv-2", "Kept", "msg-2", "assistant", "hi", 2000).await;
+
+        store.delete_conversation("conv-1").await.unwrap();
+
+        // The deleted conversation's row must be gone.
+        assert!(store.get_conversation("conv-1").await.is_err());
+
+        // Its messages must be gone — search by an ID-only probe. We verify
+        // via search_messages using a common substring: only conv-2's message
+        // should remain.
+        let remaining = store.search_messages("hi", 50).await.unwrap();
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].conversation_id, "conv-2");
+
+        // The surviving conversation must still be fetched with its message.
+        let conv2 = store
+            .get_conversation_with_messages("conv-2")
+            .await
+            .unwrap();
+        assert_eq!(conv2.messages.len(), 1);
+        assert_eq!(conv2.messages[0].id, "msg-2");
+    }
+
+    /// `clear_all_conversations` must remove every conversation and every
+    /// message. Both deletions must succeed atomically; after the call,
+    /// listing conversations returns an empty vector and message search
+    /// finds nothing.
+    #[tokio::test]
+    async fn test_clear_all_conversations_empties_database() {
+        let store = make_store().await;
+        seed_message(&store, "conv-1", "First", "msg-1", "user", "alpha", 1000).await;
+        seed_message(
+            &store,
+            "conv-2",
+            "Second",
+            "msg-2",
+            "assistant",
+            "beta alpha",
+            2000,
+        )
+        .await;
+
+        store.clear_all_conversations().await.unwrap();
+
+        assert!(store.list_conversations().await.unwrap().is_empty());
+        // Any leftover messages would still match a substring search.
+        assert!(store.search_messages("alpha", 50).await.unwrap().is_empty());
+        assert!(store.search_messages("beta", 50).await.unwrap().is_empty());
     }
 }
