@@ -43,6 +43,21 @@ export function coordinateStartStream(conversationId: string, requestId: string)
  * This ensures buffered tokens are persisted before abort/stop so no content
  * is silently discarded.
  *
+ * **Append-mode contract**: `updateLastMessage` is called WITHOUT
+ * `replace: true`, so `result.content` is APPENDED to the last message,
+ * not replacing it. This is load-bearing, not an oversight:
+ * `flushToConversation` (streaming-store.ts) clears `liveContent` on every
+ * call and returns only the DELTA accumulated since the prior flush —
+ * late tokens that arrived via `appendToken` after a prior flush but
+ * before `clearStream` ran. The message store's last assistant message
+ * is the accumulator; each `flushAndStop` call appends the next delta.
+ * Switching to `replace: true` here would drop the first batch of tokens
+ * the second time `flushAndStop` runs (e.g. when `handleStreamError` calls
+ * `flushAndStop` and then `stopStream('error')` flushes again, or when any
+ * user-stop path races a `done: true` token). The "should flush
+ * late-arriving tokens even when already flushed" test in
+ * `streaming-store.test.ts` pins this contract at the store level.
+ *
  * **Abort race guard**: When `expectedRequestId` is provided,
  * the function first checks whether the stream currently registered for
  * `conversationId` still matches that requestId. If a new stream has already
