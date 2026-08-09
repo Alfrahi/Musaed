@@ -15,8 +15,8 @@ const SidebarSkeleton = () => {
       <div className="pbs-4 space-y-3">
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <div key={i} className="flex items-center gap-3 py-2 ps-3 pe-3">
-            <Skeleton className="h-4 w-4 rounded" />
-            <Skeleton className="h-4 flex-1 rounded" />
+            <Skeleton className="h-4 w-4 rounded-md" />
+            <Skeleton className="h-4 flex-1 rounded-sm" />
           </div>
         ))}
       </div>

@@ -217,6 +217,47 @@ body {
   @apply focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none;
 }
 
+/*
+ * Shimmer utility (loading skeletons — STANDARDS.md §13).
+ * Overlays a sweeping gradient highlight on top of an element's base
+ * background-color, replacing the hard `animate-pulse` opacity flicker with a
+ * softer sweep. The gradient is painted via `background-image` so the
+ * element's own `background-color` (e.g. `bg-zinc-200` / `dark:bg-zinc-800`
+ * on the Skeleton primitive) shows through the transparent stops and provides
+ * the resting tint in both themes.
+ *
+ * The sweep is gated behind `prefers-reduced-motion: no-preference` (WAI-WCAG
+ * 2.3.3): users who request reduced motion see a static skeleton — the
+ * `background-image` stays applied but the `animation` is left at `none`.
+ */
+@utility shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--foreground) 4%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  background-position: 200% 0;
+  animation: none;
+}
+
+@keyframes shimmer-sweep {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .shimmer {
+    animation: shimmer-sweep 1.5s ease-in-out infinite;
+  }
+}
+
 /* Focus and Selection styles — the global :focus-visible outline was
  * removed because it fired on programmatic .focus() calls (e.g. the active
  * conversation row on launch), causing a blue outline flash. Focus styling
