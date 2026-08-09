@@ -304,6 +304,107 @@ describe('stopStream — complete', () => {
 });
 
 // ---------------------------------------------------------------------------
+// stopStream — double-stop resolution guard (first-writer-wins)
+// ---------------------------------------------------------------------------
+// When a late duplicate event arrives after the stream was already resolved
+// by a prior `stopStream` call (e.g. a `done: true` token arriving after the
+// user already clicked Stop, or vice-versa), the second call must NOT
+// overwrite the `stopped` marker set by the first. This makes resolution
+// first-writer-wins: whichever path resolves the stream first owns the final
+// `stopped` state — independent of event-loop ordering.
+describe('stopStream — double-stop resolution guard', () => {
+  beforeEach(() => {
+    useStreamingStore.setState({
+      liveContent: { 'conv-1': { chunks: ['hello'] } },
+      pendingMetrics: {},
+      activeStreams: { 'conv-1': 'req-1' },
+      flushedStreams: new Set<string>(),
+    });
+    useMessageStore.setState({
+      messages: {
+        'conv-1': [
+          { id: 'msg-1', role: 'user', content: 'hi', timestamp: 1 },
+          { id: 'msg-2', role: 'assistant', content: 'partial', timestamp: 2, done: false },
+        ],
+      },
+    });
+    useUIStore.setState({ isStreaming: true });
+  });
+
+  it('abort-then-complete: abort wins, stopped:true survives late complete', () => {
+    // Simulates: user clicks Stop → stopStream('abort', 'req-1') fires.
+    // Then a late `done: true` token arrives → handleToken calls
+    // stopStream('complete') (no expectedRequestId). The resolution guard
+    // must bail out the complete call so it does not overwrite
+    // stopped:true with stopped:false.
+    stopStream('conv-1', 'abort', 'req-1');
+    // After abort runs, the stream is cleared from activeStreams
+    expect(useStreamingStore.getState().activeStreams['conv-1']).toBeUndefined();
+
+    // Late complete — should bail out entirely
+    stopStream('conv-1', 'complete');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    const lastMsg = messages[messages.length - 1];
+    expect(lastMsg.stopped).toBe(true);
+    expect(lastMsg.done).toBe(true);
+    expect(lastMsg.content).toBe('partialhello');
+  });
+
+  it('complete-then-abort: complete wins, stopped:false survives late abort', () => {
+    // Simulates: backend sends `done: true` → handleToken calls
+    // stopStream('complete'). Then the user's click-Stop handler runs
+    // handleAbort → reads activeStreams[convId] → undefined (already
+    // cleared) → calls stopStream('abort', undefined). The resolution
+    // guard must bail out the abort call so it does not overwrite
+    // stopped:false with stopped:true.
+    stopStream('conv-1', 'complete');
+    expect(useStreamingStore.getState().activeStreams['conv-1']).toBeUndefined();
+
+    // Late abort — expectedRequestId is undefined (stream already cleared)
+    stopStream('conv-1', 'abort', undefined);
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    const lastMsg = messages[messages.length - 1];
+    expect(lastMsg.stopped).toBe(false);
+    expect(lastMsg.done).toBe(true);
+    expect(lastMsg.content).toBe('partialhello');
+  });
+
+  it('complete-then-abort-with-stale-requestId: abort bails via requestId guard', () => {
+    // Simulates: handleAbort reads req-1 BEFORE the complete path clears
+    // the stream. Then stopStream('complete') runs and clears
+    // activeStreams. Then handleAbort calls stopStream('abort', 'req-1').
+    // Both guards apply: expectedRequestId check sees activeStreams[convId]
+    // is undefined !== 'req-1' → bails out. stopped stays false.
+    stopStream('conv-1', 'complete');
+
+    // Late abort with the stale requestId that was read before complete ran
+    stopStream('conv-1', 'abort', 'req-1');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    const lastMsg = messages[messages.length - 1];
+    expect(lastMsg.stopped).toBe(false);
+  });
+
+  it('error-then-complete: error wins, stopped flag untouched by late complete', () => {
+    // Simulates: backend error → stopStream('error'). Then a late
+    // done:true token → stopStream('complete'). The resolution guard
+    // must bail out the complete call — it must not set stopped:false
+    // (which would overwrite a stopped:false anyway, but more importantly
+    // must not run any marker mutation on an already-resolved stream).
+    stopStream('conv-1', 'error');
+    stopStream('conv-1', 'complete');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    const lastMsg = messages[messages.length - 1];
+    // 'error' does not set stopped; 'complete' should have bailed entirely
+    expect(lastMsg.stopped).not.toBe(true);
+    expect(lastMsg.done).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // stopStream — error
 // ---------------------------------------------------------------------------
 // `stopStream(convId, 'error')` flushes buffered content (so partial tokens
