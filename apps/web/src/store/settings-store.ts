@@ -133,6 +133,7 @@ export const useSettingsStore = createWithEqualityFn<SettingsState>()(
 export const useOllamaUrl = () => useSettingsStore((state) => state.globalSettings.ollamaUrl);
 export const useGlobalSettings = () => useSettingsStore((state) => state.globalSettings);
 export const useLanguage = () => useSettingsStore((state) => state.globalSettings.language);
+export const useEnterToSend = () => useSettingsStore((state) => state.globalSettings.enterToSend);
 export const useChatRetentionDays = () =>
   useSettingsStore((state) => state.globalSettings.chatRetentionDays);
 export const useSetGlobalSettings = () => useSettingsStore((state) => state.setGlobalSettings);
