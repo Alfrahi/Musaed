@@ -123,16 +123,25 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
 
   const isActive = currentConversationId === conversation.id;
 
-  // Roving tabindex + programmatic focus: when this row becomes the active
-  // conversation it receives `tabIndex=0` and is programmatically focused, so
-  // keyboard users land on the active conversation directly when Tabbing into
-  // the listbox. Manual focus management, not `aria-activedescendant`, because
-  // the parent listbox is `react-virtuoso` virtualized (out-of-viewport options
+  // Roving tabindex + programmatic focus: when a *different* conversation
+  // becomes active, that row receives `tabIndex=0` and is programmatically
+  // focused so keyboard users land on it directly when Tabbing into the
+  // listbox. Manual focus management, not `aria-activedescendant`, because the
+  // parent listbox is `react-virtuoso` virtualized (out-of-viewport options
   // are unmounted and their DOM ids disappear, violating `aria-activedescendant`).
+  //
+  // We only programmatically focus on a `false → true` transition of
+  // `isActive`. The row that is active on initial mount (or after a Virtuoso
+  // remount while it stays active) is NOT focused programmatically: browsers
+  // classify a programmatic `.focus()` with no prior user interaction as
+  // `:focus-visible`, which would flash the focus ring on the first
+  // conversation before the user touches the keyboard.
+  const prevActiveRef = useRef<boolean>(isActive);
   useEffect(() => {
-    if (isActive && rowRef.current && editingId !== conversation.id) {
+    if (isActive && !prevActiveRef.current && rowRef.current && editingId !== conversation.id) {
       rowRef.current.focus();
     }
+    prevActiveRef.current = isActive;
   }, [isActive, editingId, conversation.id]);
 
   const handleSubmitRename = (e: React.FormEvent) => {
@@ -176,12 +185,7 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
       onKeyDown={handleKeyDown}
       onContextMenu={handleContextMenu}
       className={cn(
-        'group text-label duration-fast relative flex cursor-pointer items-center gap-3 border-s-2 border-transparent px-4 py-2.5 transition-all',
-        // Suppress the browser's default :focus outline — the programmatic
-        // .focus() call on launch triggers it, causing a flash before the user
-        // clicks anywhere. The active row's border-primary + bg-zinc-200/50 is
-        // the sole visual indicator for both active and focused states.
-        'outline-none',
+        'group text-label focus-ring duration-fast relative flex cursor-pointer items-center gap-3 border-s-2 border-transparent px-4 py-2.5 transition-all',
         isActive
           ? 'border-primary text-foreground rounded-md bg-zinc-200/50 font-semibold dark:bg-zinc-800/50'
           : 'text-zinc-500 hover:border-zinc-300 hover:bg-zinc-100/70 dark:hover:bg-zinc-800/50'

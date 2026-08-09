@@ -146,6 +146,55 @@ describe('ConversationItem', () => {
     });
   });
 
+  describe('Focus-visible ring (WCAG 2.4.7 Focus Visible)', () => {
+    it('applies the focus-ring utility so keyboard focus is visually distinct from the active state', () => {
+      // The active row uses border-primary + bg-zinc-200/50. Without a
+      // focus-visible ring, a keyboard user cannot tell which row is focused
+      // vs. merely active. The `.focus-ring` utility (globals.css) applies
+      // `focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2`
+      // — only on keyboard navigation, not programmatic .focus(), so the
+      // launch-focus flash stays suppressed.
+      render(<ConversationItem conversation={baseConversation} />);
+      const option = screen.getByRole('option');
+      expect(option.className).toMatch(/\bfocus-ring\b/);
+    });
+
+    it('does not apply a blanket outline-none that would suppress all focus indicators', () => {
+      render(<ConversationItem conversation={baseConversation} />);
+      const option = screen.getByRole('option');
+      // outline-none without the focus-visible: prefix was the old bug — it
+      // removed focus styling entirely. focus-ring uses focus-visible:outline-none.
+      expect(option.className).not.toMatch(/(^|\s)outline-none(\s|$)/);
+    });
+
+    it('does not programmatically focus the row on initial mount when already active', () => {
+      // On app launch the first conversation is active. The old code called
+      // rowRef.focus() in a useEffect, which browsers classify as
+      // :focus-visible when there's no prior user interaction — flashing the
+      // ring before the user touches the keyboard. The fix skips the
+      // programmatic .focus() when the row is active on its initial mount.
+      mockCurrentId = 'conv-1';
+      render(<ConversationItem conversation={baseConversation} />);
+      const option = screen.getByRole('option');
+      expect(option).not.toHaveFocus();
+    });
+
+    it('programmatically focuses the row when a different conversation becomes active', () => {
+      // Roving tabindex: when the active conversation changes to this row
+      // (not on initial mount), it should receive programmatic focus so
+      // keyboard users land on it when Tabbing into the listbox.
+      mockCurrentId = 'other-conv';
+      const { rerender } = render(<ConversationItem conversation={baseConversation} />);
+      // Not active yet — no focus.
+      expect(screen.getByRole('option')).not.toHaveFocus();
+
+      // Now this conversation becomes active — should be focused.
+      mockCurrentId = 'conv-1';
+      rerender(<ConversationItem conversation={baseConversation} />);
+      expect(screen.getByRole('option')).toHaveFocus();
+    });
+  });
+
   describe('Title/action overlap prevention', () => {
     it('reserves inline-end padding on the title so action buttons do not overlap text', () => {
       render(<ConversationItem conversation={baseConversation} />);
