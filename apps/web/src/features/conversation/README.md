@@ -89,7 +89,14 @@ Components are **not** exported via `index.ts` (per DDD rules). They are used in
 | `messageStore`      | 0       | In-memory cache only — messages persisted by the Rust backend. |
 | `streamingStore`    | —       | Fully in-memory, not persisted.                                |
 
-> **Note:** Persistence for conversation and message stores has migrated to the Rust backend (SQLite). The state schema version `3` is enforced by both the frontend store and the Rust migration system (see `src-tauri/src/conversation/connection.rs`).
+> **Note:** Persistence for conversation and message stores has migrated to the Rust backend (SQLite). The state schema version `3` is enforced by both the frontend store and the Rust migration system (see `src-tauri/src/conversation/connection.rs`). `streamingStore` is intentionally absent from the manifest's `stateSchemas` — it became fully in-memory after persist middleware was removed, and versioning an unpersisted buffer would be misleading (see STANDARDS.md §9).
+
+## Dependencies
+
+- `library` — `InputArea` composes the library feature's `ModelSelector` component into the chat input chrome.
+- `rag` — `MessageBubble` renders RAG cite affordances (`FileChunkViewer` modals) for grounded responses.
+
+Both dependencies are declared in `feature.manifest.ts` and enforced by dep-cruiser via `generated-feature-deps.json`.
 
 ## Example Usage
 

@@ -57,7 +57,7 @@ Renders the conversation sidebar — conversation list with grouping by time, se
 | `cmd_dialog_save_file`   | File save dialog for Markdown export          |
 | `cmd_fs_write_text_file` | Write the exported Markdown file to disk      |
 
-> **Note:** `cmd_dialog_ask` is consumed via `dialogApi.ask` in `hooks/useSidebarActions.ts` but was inadvertently omitted from `feature.manifest.ts`. The other two are declared in the manifest and used by `utils/export.ts`.
+All three IPC endpoints are declared in `feature.manifest.ts`. `cmd_dialog_ask` is consumed via `dialogApi.ask` in `hooks/useSidebarActions.ts`; the other two are used by `utils/export.ts`.
 
 ## State Schemas
 
