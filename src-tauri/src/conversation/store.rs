@@ -197,7 +197,10 @@ impl ConversationStore {
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
              ON CONFLICT(id) DO UPDATE SET
                  content = excluded.content,
+                 model = excluded.model,
                  done = excluded.done,
+                 request_id = excluded.request_id,
+                 images = excluded.images,
                  eval_count = excluded.eval_count,
                  prompt_eval_count = excluded.prompt_eval_count,
                  total_duration = excluded.total_duration,
