@@ -71,12 +71,7 @@ export const logger = {
 
     if (checkIsTauri()) {
       try {
-        const { storeApi, logApi } = await import('@/lib/ipc');
-        await storeApi.load('logs.json');
-        const logs = (await storeApi.get('logs.json', 'entries')) as string[] | null;
-        const updatedLogs = [...(logs || []), logString].slice(-1000);
-        await storeApi.set('logs.json', 'entries', updatedLogs);
-        await storeApi.save('logs.json');
+        const { logApi } = await import('@/lib/ipc');
         await logApi.append(logString);
       } catch (err) {
         if (!config.isProd) {
@@ -88,16 +83,12 @@ export const logger = {
     }
   },
 
-  info: (message: string, context?: Record<string, unknown>) => {
-    logger.log('info', message, context);
-  },
-  warn: (message: string, context?: Record<string, unknown>) => {
-    logger.log('warn', message, context);
-  },
-  error: (message: string, context?: Record<string, unknown>) => {
-    logger.log('error', message, context);
-  },
-  debug: (message: string, context?: Record<string, unknown>) => {
-    logger.log('debug', message, context);
-  },
+  info: (message: string, context?: Record<string, unknown>) =>
+    logger.log('info', message, context),
+  warn: (message: string, context?: Record<string, unknown>) =>
+    logger.log('warn', message, context),
+  error: (message: string, context?: Record<string, unknown>) =>
+    logger.log('error', message, context),
+  debug: (message: string, context?: Record<string, unknown>) =>
+    logger.log('debug', message, context),
 };

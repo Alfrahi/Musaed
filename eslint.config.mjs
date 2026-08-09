@@ -415,7 +415,6 @@ export default tseslint.config(
     files: [
       'apps/web/src/lib/ipc.ts',
       'apps/web/src/lib/tauri-storage.ts',
-      'apps/web/src/lib/tauri-plugins.ts',
     ],
     rules: {
       'no-restricted-syntax': [
