@@ -45,7 +45,7 @@ export const useChatInput = () => {
 
   // Escape is intentionally NOT handled here. The Escape-to-stop contract is
   // owned exclusively by useGlobalShortcuts so the global handler
-  // and a textarea-local handler never both fire stopStreamForConversation. Enter/Cmd-Enter
+  // and a textarea-local handler never both fire stopStream. Enter/Cmd-Enter
   // remain the only keys this handler owns.
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

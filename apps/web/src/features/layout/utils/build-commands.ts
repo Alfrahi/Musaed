@@ -55,12 +55,9 @@ export const CATEGORY_ORDER: CommandCategory[] = [
 /** Callbacks passed to command builders. */
 export interface CommandCallbacks {
   createNewConversation: () => void;
-  setLibraryOpen: (v: boolean) => void;
-  setSettingsOpen: (v: boolean) => void;
-  setInfoOpen: (v: boolean) => void;
-  setCheatsheetOpen: (v: boolean) => void;
-  setCommandPaletteOpen: (v: boolean) => void;
-  setSearchOpen: (v: boolean) => void;
+  openModal: (
+    kind: 'settings' | 'library' | 'info' | 'cheatsheet' | 'commandPalette' | 'search'
+  ) => void;
   setCurrentConversationId: (id: string) => void;
   setSelectedModel: (model: string) => void;
   updateGlobalSettings: (update: Record<string, unknown>) => void;
@@ -96,7 +93,7 @@ function buildNavCommands(
       icon: Settings,
       category: nav,
       action: () => {
-        cb.setSettingsOpen(true);
+        cb.openModal('settings');
         onClose();
       },
     },
@@ -107,7 +104,7 @@ function buildNavCommands(
       icon: Library,
       category: nav,
       action: () => {
-        cb.setLibraryOpen(true);
+        cb.openModal('library');
         onClose();
       },
     },
@@ -118,7 +115,7 @@ function buildNavCommands(
       icon: Info,
       category: nav,
       action: () => {
-        cb.setInfoOpen(true);
+        cb.openModal('info');
         onClose();
       },
     },
@@ -129,10 +126,10 @@ function buildNavCommands(
       icon: Search,
       category: nav,
       action: () => {
-        // Close the palette first so the search modal can take focus without
-        // the palette's escape handler racing against it.
-        cb.setCommandPaletteOpen(false);
-        cb.setSearchOpen(true);
+        // Opening the search modal implicitly closes the palette — the
+        // single active kind replaces both the `setCommandPaletteOpen(false)`
+        // and `setSearchOpen(true)` calls.
+        cb.openModal('search');
       },
     },
   ];
@@ -270,7 +267,7 @@ function buildHelpCommands(
       icon: Keyboard,
       category: help,
       action: () => {
-        cb.setCheatsheetOpen(true);
+        cb.openModal('cheatsheet');
         onClose();
       },
     },

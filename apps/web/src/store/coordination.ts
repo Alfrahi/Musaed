@@ -24,6 +24,9 @@ export type { ConversationMetadata } from './conversation-store';
  * backend, coordination only manages the streaming lifecycle.
  */
 
+/** Reason a stream is being stopped. Determines flush/marker behavior. */
+export type StopReason = 'complete' | 'abort' | 'error' | 'batch-end';
+
 /**
  * Starts streaming for a conversation — marks the UI as streaming
  * and registers the stream in the streaming store.
@@ -95,37 +98,82 @@ export function flushAndStop(conversationId: string, expectedRequestId?: string)
 }
 
 /**
- * Stops streaming for a conversation — flushes any remaining content,
- * clears the stream, and updates the UI flag if no other streams are active.
- * Also marks the last assistant message as `stopped: true` so the UI can
- * render the "Stopped by user • Continue" affordance.
+ * The single entry point for stopping a conversation's stream.
  *
- * **Abort race guard**: When `expectedRequestId` is provided,
- * the function first checks whether the stream currently registered for
- * `conversationId` still matches that requestId. If a new stream has already
- * replaced the old one, the stop is skipped entirely — the new stream is
- * left untouched. Without this guard, a user-initiated stop on an old stream
- * would clean up a newer stream that happened to reuse the same conversation,
- * causing the new message to be incorrectly marked `stopped: true` and its
- * content to be lost.
+ * Consolidates the previously scattered stop paths (`stopStreamForConversation`,
+ * `completeStreamForConversation`, and two inline bypasses in feature hooks)
+ * that diverged on whether they flushed buffered tokens, set the `stopped`
+ * marker on the assistant message, and cleared the global `isStreaming` flag.
+ * Each {@link StopReason reason} pins down those three decisions so the
+ * behavior is uniform and discoverable:
+ *
+ * | reason       | flushes | `stopped` on last msg | clears `isStreaming` |
+ * | ------------ | :----: | :---------------------: | :------------------: |
+ * | `'complete'` |   ✓    |       `false`           |         ✓            |
+ * | `'abort'`    |   ✓    |       `true`            |         ✓            |
+ * | `'error'`    |   ✓    |       (untouched)       |         ✓            |
+ * | `'batch-end'`|   ✗    |       (untouched)       |         ✓            |
+ *
+ * **Flush + race guard**: For `'complete'`, `'abort'`, and `'error'`, the
+ * function first calls {@link flushAndStop} so buffered tokens are persisted
+ * to the message store before the stream is torn down. When
+ * `expectedRequestId` is provided, both the flush and the cleanup bail out
+ * if the active stream for `conversationId` no longer matches — a newer
+ * stream has replaced it in the gap between the caller reading
+ * `activeStreams[conversationId]` and this call. The new stream is left
+ * untouched. `'batch-end'` skips the flush entirely (buffered content is
+ * deliberately discarded — used by the orphan-cleanup path when a stream
+ * failed before any tokens were emitted).
+ *
+ * **`isStreaming` invariant**: The global `isStreaming` flag is cleared if
+ * and only if no active streams remain after this conversation is removed.
+ * This keeps the flag truthful when multiple conversations stream concurrently.
+ *
+ * **Backend abort**: Callers that need to abort the backend stream MUST call
+ * `chatApi.abort(requestId)` BEFORE calling this function. The store layer
+ * does not initiate IPC.
+ *
+ * Idempotent: safe to call multiple times for the same conversation.
  */
-export function coordinateStopStream(conversationId: string, expectedRequestId?: string): void {
-  // Abort race guard: bail out when the active stream has
-  // already been replaced by a newer one, so a user-initiated stop on an old
-  // stream does not destroy the content/state of the new stream.
+export function stopStream(
+  conversationId: string,
+  reason: StopReason,
+  expectedRequestId?: string
+): void {
+  // Abort race guard: bail out before doing any work if the caller thought it
+  // was stopping one stream but a newer stream has already replaced it. This
+  // prevents the new stream's buffered content from being flushed onto the
+  // previous (now-stale) assistant message and the new message from being
+  // incorrectly marked `stopped`.
   if (expectedRequestId !== undefined) {
     const activeRequestId = useStreamingStore.getState().activeStreams[conversationId];
     if (activeRequestId !== expectedRequestId) return;
   }
 
+  const shouldFlush = reason !== 'batch-end';
+  if (shouldFlush) {
+    flushAndStop(conversationId, expectedRequestId);
+  }
+
   useStreamingStore.getState().stopStream(conversationId);
   useStreamingStore.getState().clearStream(conversationId);
 
-  // Mark the last assistant message as user-stopped so the UI can render
-  // the "Stopped by user • Continue" inline status line.
-  useMessageStore.getState().updateLastMessage(conversationId, { stopped: true });
+  // Reason-specific assistant-message marker. Only `complete` and `abort`
+  // touch `stopped`; `error` and `batch-end` leave whatever the caller
+  // already set in place.
+  if (reason === 'abort') {
+    // Mark the last assistant message as user-stopped so the UI can render
+    // the "Stopped by user • Continue" inline status line.
+    useMessageStore.getState().updateLastMessage(conversationId, { stopped: true });
+  } else if (reason === 'complete') {
+    // Explicitly clear the user-stopped flag on natural completion. Without
+    // this, a previously-stopped message in this conversation would retain
+    // `stopped: true` and the UI would show "Stopped by user" on a message
+    // that completed naturally.
+    useMessageStore.getState().updateLastMessage(conversationId, { stopped: false });
+  }
 
-  // Only clear global streaming flag when no streams remain active
+  // Only clear the global streaming flag when no streams remain active.
   const { activeStreams } = useStreamingStore.getState();
   if (Object.keys(activeStreams).length === 0) {
     useUIStore.getState().setStreaming(false);
@@ -133,75 +181,16 @@ export function coordinateStopStream(conversationId: string, expectedRequestId?:
 
   traceStoreMutation({
     feature: 'streaming',
-    action: 'coordinateStopStream',
+    action: 'stopStream',
     level: 'INFO',
-    message: `coordinateStopStream for ${conversationId}`,
+    message: `stopStream(${reason}) for ${conversationId}`,
     context: {
       conversationId,
+      reason,
       streamsRemaining: Object.keys(activeStreams).length,
     },
     throttleMs: 0,
   });
-}
-
-/**
- * Single entry point for stopping a conversation's stream — flushes buffered
- * tokens to the message store and cleans up streaming state. This replaces the
- * three previously scattered stop paths (abortStreaming, stopStreaming,
- * coordinateStopStream) that diverged on whether they sent cmd_ollama_abort_chat.
- *
- * Callers that need to abort the backend stream MUST call chatApi.abort(requestId)
- * BEFORE calling this function. The store layer does not initiate IPC.
- *
- * **Abort race guard**: Pass the `expectedRequestId` that was
- * read from `activeStreams[conversationId]` before calling `chatApi.abort`.
- * When provided, both `flushAndStop` and `coordinateStopStream` verify the
- * active stream still matches before proceeding. If a new stream has replaced
- * the old one between the caller's read and this call, the stop is a no-op
- * and the new stream is left untouched.
- *
- * Idempotent: safe to call multiple times for the same conversation.
- */
-export function stopStreamForConversation(
-  conversationId: string,
-  expectedRequestId?: string
-): void {
-  flushAndStop(conversationId, expectedRequestId);
-  coordinateStopStream(conversationId, expectedRequestId);
-}
-
-/**
- * Natural-completion counterpart to `stopStreamForConversation`. Flushes
- * buffered content + pending metrics to the message store and cleans up
- * streaming state — but does NOT set `stopped: true` on the assistant
- * message, since the stream finished on its own rather than being
- * aborted by the user.
- *
- * Called from `useTauriEvents.handleToken` when `payload.done === true`.
- */
-export function completeStreamForConversation(conversationId: string): void {
-  flushAndStop(conversationId);
-  useStreamingStore.getState().stopStream(conversationId);
-  useStreamingStore.getState().clearStream(conversationId);
-  // Explicitly clear the user-stopped flag on natural completion. Without
-  // this, a previously-stopped message in this conversation would retain
-  // `stopped: true` and the UI would show "Stopped by user" on a message
-  // that completed naturally.
-  useMessageStore.getState().updateLastMessage(conversationId, { stopped: false });
-  const { activeStreams } = useStreamingStore.getState();
-  if (Object.keys(activeStreams).length === 0) {
-    useUIStore.getState().setStreaming(false);
-  }
-}
-
-/**
- * Stops batching for a conversation without flushing.
- * Used when aborting a stream where buffered content should be discarded.
- * Clears the liveContent and pendingMetrics buffers to prevent memory leaks.
- */
-export function stopBatching(conversationId: string): void {
-  useStreamingStore.getState().stopStream(conversationId);
-  useStreamingStore.getState().clearStream(conversationId);
 }
 
 type PersistedStore = {

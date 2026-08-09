@@ -1,14 +1,14 @@
 'use client';
 
 import { Info } from 'lucide-react';
-import { useSetInfoOpen } from '@/store/hooks';
+import { useOpenModal } from '@/store/hooks';
 import { useLanguage } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { useAppVersion } from '@/hooks';
 
 const SidebarInfo = () => {
-  const setInfoOpen = useSetInfoOpen();
+  const openModal = useOpenModal();
   const language = useLanguage();
   const { t } = useTranslation(language);
   const { version } = useAppVersion();
@@ -17,7 +17,7 @@ const SidebarInfo = () => {
     <div className="border-bs border-sidebar-border duration-fast shrink-0 bg-zinc-50/50 transition-colors dark:bg-zinc-900/20">
       <Button
         variant="ghost"
-        onClick={() => setInfoOpen(true)}
+        onClick={() => openModal('info')}
         className="group flex w-full cursor-pointer items-center justify-between p-4 text-start hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
         aria-label={t('info.openInfo')}
       >

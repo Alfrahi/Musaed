@@ -7,28 +7,23 @@ export {
   useIsHydrated,
   useIsOllamaConnected,
   useUIError,
+  useActiveModal,
+  useOpenModal,
+  useCloseModal,
   useIsSettingsOpen,
   useIsLibraryOpen,
   useIsInfoOpen,
-  useSetStreaming,
   useSetInitialized,
   useSetHydrated,
   useSetOllamaConnected,
   useSetUIError,
-  useSetSettingsOpen,
-  useSetLibraryOpen,
-  useSetInfoOpen,
-  useSetCheatsheetOpen,
-  useSetCommandPaletteOpen,
-  useSetSearchOpen,
 } from '@/store/ui-store';
 
 // Coordination hooks - re-export from coordination module
 // These are store-agnostic streaming lifecycle functions
 export {
   coordinateStartStream,
-  stopStreamForConversation,
-  completeStreamForConversation,
+  stopStream,
   flushAndStop,
-  stopBatching,
+  type StopReason,
 } from '@/store/coordination';

@@ -12,7 +12,7 @@ import { useStreamingStore } from '@/store/streaming-store';
 import { useModelStore } from '@/store/model-store';
 import { useSettingsStore, useLanguage } from '@/store/settings-store';
 import { conversationApi, chatApi } from '@/lib/ipc';
-import { coordinateStartStream, stopStreamForConversation } from '@/store/coordination';
+import { coordinateStartStream, stopStream } from '@/store/coordination';
 import { useTranslation } from '@/lib/i18n';
 import type { ConversationMetadata, ConversationState } from '@/store/conversation-store';
 import { logger } from '@/lib/logger';
@@ -68,9 +68,9 @@ export const useConversationActions = () => {
     (id: string) => {
       const requestId = useStreamingStore.getState().activeStreams[id];
       if (requestId) chatApi.abort(requestId);
-      // Pass the requestId so stopStreamForConversation bails out if a new
-      // stream has replaced the old one before this call runs.
-      stopStreamForConversation(id, requestId);
+      // Pass the requestId so stopStream bails out if a new stream has
+      // replaced the old one before this call runs.
+      stopStream(id, 'abort', requestId);
       const state = useConversationStore.getState();
       const { [id]: _removed, ...remainingConversations } = state.conversations;
       const remainingIds = state.conversationIds.filter((cid) => cid !== id);
@@ -113,9 +113,9 @@ export const useConversationActions = () => {
     const activeStreams = useStreamingStore.getState().activeStreams;
     Object.entries(activeStreams).forEach(([convId, requestId]) => {
       chatApi.abort(requestId);
-      // Pass the requestId so stopStreamForConversation bails out if a new
-      // stream has replaced the old one before this call runs.
-      stopStreamForConversation(convId, requestId);
+      // Pass the requestId so stopStream bails out if a new stream has
+      // replaced the old one before this call runs.
+      stopStream(convId, 'abort', requestId);
     });
 
     // Persist clearing via Rust backend
@@ -147,6 +147,5 @@ export const useConversationActions = () => {
     updateConversationTitle,
     clearAllConversations,
     initiateStreaming,
-    stopStreamForConversation,
   };
 };

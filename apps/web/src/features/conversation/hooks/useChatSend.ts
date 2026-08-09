@@ -20,8 +20,7 @@ import { useCurrentConversationId, useConversations } from '@/store/conversation
 import { useSettingsStore, type SettingsState } from '@/store/settings-store';
 import { useModelStore } from '@/store/model-store';
 import { selectResolvedParams } from '@/store/model-params-store';
-import { useStreamingStore } from '@/store/streaming-store';
-import { useUIStore } from '@/store/ui-store';
+import { stopStream } from '@/store/coordination';
 import { useModelContextWindow } from '@/features/library';
 import { persistUserMessage } from '@/features/conversation/utils/message-persistence';
 import { conversationApi } from '@/lib/ipc';
@@ -135,23 +134,6 @@ function buildChatPayload(
     model: selectedModel,
     requestId,
   };
-}
-
-/**
- * Safety-net cleanup for orphaned `activeStreams` entries.
- * If a stream entry is still registered for `conversationId` with the
- * given `requestId` at this point, no completion or error path cleaned it
- * up (e.g. `assembleChatRag` threw before the inner try/catch). Removes
- * the entry to prevent a memory leak and orphaned streaming state.
- */
-function cleanupOrphanedStream(conversationId: string, requestId: string): void {
-  const { activeStreams } = useStreamingStore.getState();
-  if (activeStreams[conversationId] !== requestId) return;
-  useStreamingStore.getState().stopStream(conversationId);
-  useStreamingStore.getState().clearStream(conversationId);
-  if (Object.keys(useStreamingStore.getState().activeStreams).length === 0) {
-    useUIStore.getState().setStreaming(false);
-  }
 }
 
 /** Resolve the Ollama base URL from global settings, with a safe default. */
@@ -334,7 +316,12 @@ async function executeEditAndResend(params: EditAndResendParams): Promise<void> 
       t,
     });
   } catch (err) {
-    cleanupOrphanedStream(conversationId, requestId);
+    // Safety-net cleanup: a pre-stream error (e.g. `assembleChatRag`
+    // threw after `initiateStreaming` registered the stream) means no
+    // completion or error path ran. Route through `stopStream('batch-end')`
+    // so the streaming store entry is cleared and `isStreaming` decrements
+    // when no streams remain. Buffered content is discarded.
+    stopStream(conversationId, 'batch-end', requestId);
     logger.error('Edit and resend failed before stream start', {
       error: err instanceof Error ? err.message : String(err),
       conversationId,
@@ -415,7 +402,7 @@ function useSendMessageCallback(
       //
       // We deliberately do NOT use `finally` here — the normal streaming
       // completion path is handled asynchronously by `handleToken` /
-      // `completeStreamForConversation` in useTauriEvents, which runs
+      // `stopStream('complete')` in useTauriEvents, which runs
       // AFTER `chatApi.chat` resolves. A `finally` would clear the
       // stream entry before the tokens arrive, killing the response.
       try {
@@ -451,8 +438,10 @@ function useSendMessageCallback(
         // `executeChatSendAttempt` has its own catch that calls
         // `handleStreamError` — if we get here the error happened before
         // that inner try (e.g. `assembleChatRag` threw). Clean up the
-        // orphaned stream entry to prevent a memory leak.
-        cleanupOrphanedStream(conversationId, requestId);
+        // orphaned stream entry via `stopStream('batch-end')` so the
+        // coordination layer owns the cleanup; buffered content is
+        // discarded.
+        stopStream(conversationId, 'batch-end', requestId);
         logger.error('Chat send failed before stream start', {
           error: err instanceof Error ? err.message : String(err),
           conversationId,

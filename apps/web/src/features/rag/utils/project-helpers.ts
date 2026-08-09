@@ -1,4 +1,5 @@
 import { fileNameFromPath } from '@/lib/utils';
+export { deriveProjectStatus, type ProjectStatusPatch } from '@/lib/rag-status';
 
 export { fileNameFromPath };
 

@@ -3,9 +3,9 @@
 import { useCallback } from 'react';
 import { type Message } from '@musaed/contracts';
 import toast from 'react-hot-toast';
-import { flushAndStop, stopStreamForConversation } from '@/store/coordination';
+import { stopStream, flushAndStop } from '@/store/coordination';
 import { useStreamingStore } from '@/store/streaming-store';
-import { useUIStore, useSetUIError } from '@/store/ui-store';
+import { useSetUIError } from '@/store/ui-store';
 import { chatApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
 
@@ -13,13 +13,18 @@ import { logger } from '@/lib/logger';
  * Streaming lifecycle + stream-failure error handling for the chat send
  * pipeline. Extracted from the former God hook.
  *
- * `handleStreamError` flushes buffered tokens, marks the assistant message
- * with the error, clears the stream (without setting `stopped: true` — this
- * is a failure, not a user-initiated stop, and notifies the user.
+ * `handleStreamError` flushes buffered tokens (via `flushAndStop` so the
+ * error-prefix content can be appended to whatever partial tokens are
+ * already on the assistant message), marks the assistant message with the
+ * error, then routes the stream shutdown through `stopStream('error')` so
+ * the streaming store + global `isStreaming` flag are cleaned up by the
+ * single coordination entry point. It deliberately does NOT set the
+ * `stopped: true` marker — this is a failure, not a user-initiated stop.
  *
- * `abortMessage` calls `stopStreamForConversation` directly — the single
- * entry point that sends cmd_ollama_abort_chat, flushes buffered tokens,
- * and cleans up streaming state.
+ * `abortMessage` routes through `stopStream('abort')` — the single entry
+ * point that flushes buffered tokens, marks the message `stopped: true`,
+ * and cleans up streaming state. Callers must call `chatApi.abort(requestId)`
+ * before invoking it — `stopStream` does not initiate IPC.
  */
 export function useChatStream(): {
   handleStreamError: (
@@ -52,7 +57,9 @@ export function useChatStream(): {
         return;
       }
       logger.error('Chat error', { error: msg, requestId });
-      // Flush any buffered tokens before appending the error message
+      // Flush any buffered tokens before appending the error message —
+      // this mutates the assistant message in-place so the error prefix
+      // can be appended to whatever partial tokens are already showing.
       flushAndStop(conversationId);
       updateLastMessage(
         conversationId,
@@ -63,14 +70,11 @@ export function useChatStream(): {
         },
         false
       );
-      // Clean up the streaming store without setting `stopped: true` — this is
-      // a stream failure, not a user-initiated stop.
-      useStreamingStore.getState().stopStream(conversationId);
-      useStreamingStore.getState().clearStream(conversationId);
-      const { activeStreams } = useStreamingStore.getState();
-      if (Object.keys(activeStreams).length === 0) {
-        useUIStore.getState().setStreaming(false);
-      }
+      // Route the cleanup through the single coordination entry point with
+      // reason 'error' — no `stopped: true` marker (this is a failure, not
+      // a user-initiated stop). `stopStream` clears the streaming store
+      // and decrements `isStreaming` if no other streams remain.
+      stopStream(conversationId, 'error');
       setErrorMessage(msg);
       toast.error(msg);
     },
@@ -81,10 +85,10 @@ export function useChatStream(): {
     if (conversationId) {
       const requestId = useStreamingStore.getState().activeStreams[conversationId];
       if (requestId) chatApi.abort(requestId);
-      // Pass the requestId we read so stopStreamForConversation can bail out
-      // if a new stream has already replaced the old one between the read
-      // above and this call (abort race).
-      stopStreamForConversation(conversationId, requestId);
+      // Pass the requestId we read so stopStream can bail out if a new
+      // stream has already replaced the old one between the read above
+      // and this call (abort race).
+      stopStream(conversationId, 'abort', requestId);
     }
   }, []);
 

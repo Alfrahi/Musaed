@@ -11,23 +11,15 @@ vi.mock('@/store/settings-store', () => ({
 
 vi.mock('@/store/hooks', () => ({
   useIsHydrated: () => true,
-  useIsLibraryOpen: () => false,
-  useIsSettingsOpen: () => false,
-  useIsInfoOpen: () => false,
-  useSetLibraryOpen: () => vi.fn(),
-  useSetSettingsOpen: () => vi.fn(),
-  useSetInfoOpen: () => vi.fn(),
-  useSetCheatsheetOpen: () => vi.fn(),
-  useSetCommandPaletteOpen: () => vi.fn(),
-  useSetSearchOpen: () => vi.fn(),
+  useActiveModal: () => null,
+  useOpenModal: () => vi.fn(),
+  useCloseModal: () => vi.fn(),
 }));
 
 vi.mock('@/store/ui-store', () => ({
   useUIStore: vi.fn((selector) =>
     selector({
-      isCheatsheetOpen: false,
-      isCommandPaletteOpen: false,
-      isSearchOpen: false,
+      activeModal: null,
     })
   ),
 }));
