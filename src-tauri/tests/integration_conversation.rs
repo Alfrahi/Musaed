@@ -333,6 +333,99 @@ async fn test_upsert_message_updates_existing_row() {
     assert_eq!(m.eval_duration, Some(50));
 }
 
+/// Regression test for the images/request_id/model silent-drop bug.
+///
+/// The ON CONFLICT(id) DO UPDATE clause previously omitted `images`,
+/// `request_id`, and `model`. When the same message id was re-asserted
+/// (e.g. `editAndResend` updates a user message's images, or the streaming
+/// assistant placeholder is re-persisted with a different model), those
+/// fields were silently dropped because the UPDATE path kept the original
+/// row's values. The clause must now include every mutable field so that
+/// the caller's latest values always win on conflict.
+#[tokio::test]
+async fn test_upsert_preserves_images_request_id_model_on_update() {
+    let store = get_test_store();
+    let conv = Conversation {
+        id: "upsert-fields".into(),
+        title: "Upsert Fields".into(),
+        model: "m".into(),
+        settings: ChatSettings::default(),
+        created_at: 0,
+        updated_at: 0,
+        messages: vec![],
+    };
+    store.create_conversation(&conv).await.unwrap();
+
+    // 1) Initial insert — user message with images and a request_id.
+    let initial = Message {
+        id: "msg-fields".into(),
+        role: "user".into(),
+        content: "hello".into(),
+        images: Some(vec!["img1.png".into()]),
+        timestamp: 1,
+        model: None,
+        done: None,
+        request_id: Some("req-A".into()),
+        eval_count: None,
+        prompt_eval_count: None,
+        total_duration: None,
+        eval_duration: None,
+        rag_sources: None,
+        error: None,
+    };
+    store
+        .add_message(&conv.id, &initial)
+        .await
+        .expect("initial insert");
+
+    // 2) Re-assert same id with updated images, request_id, and model —
+    //    mimics editAndResend changing the message content + attachments.
+    let updated = Message {
+        id: "msg-fields".into(),
+        role: "user".into(),
+        content: "hello EDITED".into(),
+        images: Some(vec!["img2.png".into(), "img3.png".into()]),
+        timestamp: 1,
+        model: Some("llama3.2".into()),
+        done: Some(true),
+        request_id: Some("req-B".into()),
+        eval_count: None,
+        prompt_eval_count: None,
+        total_duration: None,
+        eval_duration: None,
+        rag_sources: None,
+        error: None,
+    };
+    store
+        .add_message(&conv.id, &updated)
+        .await
+        .expect("upsert should not error");
+
+    // 3) Verify the persisted row carries the UPDATED values.
+    let fetched = store
+        .get_conversation_with_messages(&conv.id)
+        .await
+        .expect("fetch");
+    assert_eq!(fetched.messages.len(), 1, "should be one row, not two");
+    let m = &fetched.messages[0];
+    assert_eq!(m.content, "hello EDITED");
+    assert_eq!(
+        m.request_id,
+        Some("req-B".to_string()),
+        "request_id must update on conflict"
+    );
+    assert_eq!(
+        m.model,
+        Some("llama3.2".to_string()),
+        "model must update on conflict"
+    );
+    assert_eq!(
+        m.images,
+        Some(vec!["img2.png".to_string(), "img3.png".to_string()]),
+        "images must update on conflict",
+    );
+}
+
 #[tokio::test]
 async fn test_service_layer_list() {
     let store = get_test_store_arc();
