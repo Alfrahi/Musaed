@@ -24,7 +24,8 @@ impl ConversationStore {
     pub async fn list_conversations(&self) -> SqlResult<Vec<Conversation>> {
         let conn = self.lock_conn().await;
         let mut stmt = conn.prepare(
-            "SELECT id, title, model, settings, created_at, updated_at FROM conversations",
+            "SELECT id, title, model, settings, created_at, updated_at FROM conversations \
+             ORDER BY updated_at DESC",
         )?;
         let conversations = stmt
             .query_map([], |row| {

@@ -134,6 +134,90 @@ async fn test_list_conversations() {
 }
 
 #[tokio::test]
+async fn test_list_conversations_orders_by_updated_at_desc() {
+    // The frontend (useConversationInitialization) selects the conversation at
+    // index [0] as the active one on app launch. list_conversations MUST
+    // return rows ordered by updated_at DESC so the most-recently-used
+    // conversation is first — otherwise the active conversation on launch
+    // would be an old one (insertion order), not the latest-used one.
+    let store = get_test_store();
+
+    let older = Conversation {
+        id: "older".into(),
+        title: "Older".into(),
+        model: "m".into(),
+        settings: ChatSettings::default(),
+        created_at: 1000,
+        updated_at: 1000,
+        messages: vec![],
+    };
+    let newer = Conversation {
+        id: "newer".into(),
+        title: "Newer".into(),
+        model: "m".into(),
+        settings: ChatSettings::default(),
+        created_at: 2000,
+        updated_at: 2000,
+        messages: vec![],
+    };
+    // Insert older first; newer second. updated_at differs (newer > older).
+    // Without ORDER BY, SQLite would return them in rowid/insertion order
+    // (older, newer) and the frontend would pick `older` as active.
+    store.create_conversation(&older).await.unwrap();
+    store.create_conversation(&newer).await.unwrap();
+
+    let list = store.list_conversations().await.expect("List failed");
+    assert_eq!(list.len(), 2);
+    // Most recently updated first.
+    assert_eq!(list[0].id, "newer");
+    assert_eq!(list[1].id, "older");
+}
+
+#[tokio::test]
+async fn test_list_conversations_orders_by_updated_at_desc_after_update() {
+    // Updating an older conversation bumps its updated_at; it must move to
+    // the front of list_conversations. This pins the "pick latest used on
+    // app launch" contract that follows a user working across many old
+    // conversations.
+    let store = get_test_store();
+
+    let first = Conversation {
+        id: "first".into(),
+        title: "First".into(),
+        model: "m".into(),
+        settings: ChatSettings::default(),
+        created_at: 1000,
+        updated_at: 1000,
+        messages: vec![],
+    };
+    let second = Conversation {
+        id: "second".into(),
+        title: "Second".into(),
+        model: "m".into(),
+        settings: ChatSettings::default(),
+        created_at: 2000,
+        updated_at: 2000,
+        messages: vec![],
+    };
+    store.create_conversation(&first).await.unwrap();
+    store.create_conversation(&second).await.unwrap();
+
+    // Before update — second is the most recently updated.
+    let list = store.list_conversations().await.unwrap();
+    assert_eq!(list[0].id, "second");
+
+    // Update first to have the newest updated_at.
+    store
+        .update_conversation(&first.id, "First bumped", 3000)
+        .await
+        .unwrap();
+
+    let list = store.list_conversations().await.unwrap();
+    assert_eq!(list[0].id, "first");
+    assert_eq!(list[1].id, "second");
+}
+
+#[tokio::test]
 async fn test_update_conversation() {
     let store = get_test_store();
     let conv = Conversation {
