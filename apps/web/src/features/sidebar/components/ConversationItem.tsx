@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { MessageSquare, Trash2, Download, Edit2 } from 'lucide-react';
 import { useCurrentConversationId, useSetCurrentConversationId } from '@/store/conversation-store';
 import { useLanguage } from '@/store';
@@ -103,6 +104,70 @@ const ItemActions = ({
   );
 };
 
+/**
+ * Renders the conversation row's outer element, applying the framer-motion
+ * entrance animation on the first mount only. Reduced-motion and already-
+ * animated rows render as a plain div so react-virtuoso remounts (scroll-back
+ * recycling) don't replay the entrance flicker.
+ */
+interface ConversationRowProps {
+  shouldAnimate: boolean;
+  rowRef: React.RefObject<HTMLDivElement | null>;
+  isActive: boolean;
+  conversationId: string;
+  onClick: () => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
+  onContextMenu: (e: React.MouseEvent<HTMLDivElement>) => void;
+  children: React.ReactNode;
+}
+
+const rowClassName = (isActive: boolean) =>
+  cn(
+    'group text-label focus-ring duration-fast relative flex cursor-pointer items-center gap-3 border-s-2 border-transparent px-4 py-2.5 transition-all',
+    isActive
+      ? 'border-primary text-foreground rounded-md bg-zinc-200/50 font-semibold dark:bg-zinc-800/50'
+      : 'text-zinc-500 hover:border-zinc-300 hover:bg-zinc-100/70 dark:hover:bg-zinc-800/50'
+  );
+
+const ConversationRow = ({
+  shouldAnimate,
+  rowRef,
+  isActive,
+  conversationId,
+  onClick,
+  onKeyDown,
+  onContextMenu,
+  children,
+}: ConversationRowProps) => {
+  const sharedProps = {
+    ref: rowRef,
+    role: 'option' as const,
+    'aria-current': isActive ? ('page' as const) : undefined,
+    'aria-selected': isActive || undefined,
+    tabIndex: isActive ? 0 : -1,
+    id: `conversation-option-${conversationId}`,
+    onClick,
+    onKeyDown,
+    onContextMenu,
+    className: rowClassName(isActive),
+  };
+
+  if (shouldAnimate) {
+    return (
+      <motion.div
+        {...sharedProps}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.15, ease: 'easeOut' }}
+      >
+        {children}
+      </motion.div>
+    );
+  }
+
+  return <div {...sharedProps}>{children}</div>;
+};
+
 const ConversationItem = ({ conversation }: ConversationItemProps) => {
   const currentConversationId = useCurrentConversationId();
   const setCurrentConversationId = useSetCurrentConversationId();
@@ -110,6 +175,13 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const { handleDeleteConversation, handleRenameConversation, handleExport } = useSidebarActions();
+  const shouldReduceMotion = useReducedMotion() ?? false;
+  // react-virtuoso recycles rows when scrolling back into view — a row that
+  // scrolled out and back in remounts, which would replay the enter animation
+  // as a visible flicker. Only animate the very first mount of this instance;
+  // virtualization-driven remounts render as a plain div (initial/animate
+  // omitted) so they snap into place with no motion.
+  const hasAnimatedRef = useRef(false);
   const { showContextMenu } = useContextMenu({
     onRename: () => {
       setEditingId(conversation.id);
@@ -173,23 +245,22 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
     [showContextMenu, t]
   );
 
+  // Animate only the first mount of this instance — once a row has played
+  // its enter animation we render as a plain motion.div (no `initial`), so
+  // react-virtuoso recycling the row on scroll-back snaps it into place
+  // without a replay flicker.
+  const shouldAnimate = !shouldReduceMotion && !hasAnimatedRef.current;
+  if (shouldAnimate) hasAnimatedRef.current = true;
+
   return (
-    <div
-      ref={rowRef}
-      role="option"
-      aria-current={isActive ? 'page' : undefined}
-      aria-selected={isActive || undefined}
-      tabIndex={isActive ? 0 : -1}
-      id={`conversation-option-${conversation.id}`}
+    <ConversationRow
+      shouldAnimate={shouldAnimate}
+      rowRef={rowRef}
+      isActive={isActive}
+      conversationId={conversation.id}
       onClick={() => setCurrentConversationId(conversation.id)}
       onKeyDown={handleKeyDown}
       onContextMenu={handleContextMenu}
-      className={cn(
-        'group text-label focus-ring duration-fast relative flex cursor-pointer items-center gap-3 border-s-2 border-transparent px-4 py-2.5 transition-all',
-        isActive
-          ? 'border-primary text-foreground rounded-md bg-zinc-200/50 font-semibold dark:bg-zinc-800/50'
-          : 'text-zinc-500 hover:border-zinc-300 hover:bg-zinc-100/70 dark:hover:bg-zinc-800/50'
-      )}
     >
       <MessageSquare
         size={14}
@@ -221,7 +292,7 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
         exportTitle={t('sidebar.exportMarkdown')}
         deleteTitle={t('sidebar.deleteChat')}
       />
-    </div>
+    </ConversationRow>
   );
 };
 

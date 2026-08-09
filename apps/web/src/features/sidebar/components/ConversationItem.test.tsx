@@ -11,6 +11,13 @@ const mockHandleDeleteConversation = vi.fn();
 const mockHandleRenameConversation = vi.fn();
 const mockHandleExport = vi.fn();
 
+// framer-motion is mocked so the entrance animation is a no-op in tests
+// (motion.div renders as a plain div, preserving role/aria/tabIndex queries).
+vi.mock('framer-motion', () => ({
+  motion: { div: 'div' },
+  useReducedMotion: () => false,
+}));
+
 vi.mock('@/lib/i18n', async () => {
   const actual = await vi.importActual('@/lib/i18n');
   return {

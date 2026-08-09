@@ -20,6 +20,13 @@ vi.mock('@/features/rag', () => ({
   ),
 }));
 
+// framer-motion is mocked so the entrance animation is a no-op in tests
+// (motion.div renders as a plain div, preserving role/aria/query semantics).
+vi.mock('framer-motion', () => ({
+  motion: { div: 'div' },
+  useReducedMotion: () => false,
+}));
+
 vi.mock('@/features/conversation/hooks/useMessageActions', () => ({
   useMessageActions: () => ({ copied: false, handleCopy: vi.fn(), tps: null }),
 }));

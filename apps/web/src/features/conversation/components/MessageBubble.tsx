@@ -16,6 +16,7 @@ import {
   Cpu,
   Zap,
 } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { type Message } from '@musaed/contracts';
 import { cn } from '@/lib/utils';
 import MessageContent from './MessageContent';
@@ -698,40 +699,41 @@ const MessageBubble = ({
     t
   );
   const isStopped = message.stopped === true && message.role === 'assistant';
+  const shouldReduceMotion = useReducedMotion() ?? false;
 
-  return (
-    <div
-      onContextMenu={handleContextMenu}
-      className={cn(
-        'border-be border-sidebar-border w-full transition-colors',
-        isUser
-          ? 'bg-blue-50/50 dark:bg-blue-950/20'
-          : 'border-s-2 border-blue-500/30 bg-zinc-50 dark:bg-zinc-900/30'
-      )}
-    >
-      <MessageBubbleBody
-        isUser={isUser}
-        isStopped={isStopped}
-        isEditing={isEditing}
-        message={message}
-        labels={labels}
-        sourceReferences={sourceReferences}
-        isExpanded={isExpanded}
-        onToggleExpand={() => setIsExpanded(!isExpanded)}
-        onOpenSource={(source) => setOpenSource(source)}
-        onImageClick={setLightboxImage}
-        tps={tps}
-        formatNumber={formatNumber}
-        copied={copied}
-        handleCopy={handleCopy}
-        onRegenerate={onRegenerate}
-        onContinue={onContinue}
-        onStartEdit={isUser && onEditMessage ? startEdit : undefined}
-        onSaveEdit={saveEdit}
-        onCancelEdit={cancelEdit}
-        handleDelete={onDeleteMessage ? handleDelete : undefined}
-        t={t}
-      />
+  const bubbleClassName = cn(
+    'border-be border-sidebar-border w-full transition-colors',
+    isUser
+      ? 'bg-blue-50/50 dark:bg-blue-950/20'
+      : 'border-s-2 border-blue-500/30 bg-zinc-50 dark:bg-zinc-900/30'
+  );
+
+  const bodyProps = {
+    isUser,
+    isStopped,
+    isEditing,
+    message,
+    labels,
+    sourceReferences,
+    isExpanded,
+    onToggleExpand: () => setIsExpanded(!isExpanded),
+    onOpenSource: (source: SourceReference) => setOpenSource(source),
+    onImageClick: setLightboxImage,
+    tps,
+    formatNumber,
+    copied,
+    handleCopy,
+    onRegenerate,
+    onContinue,
+    onStartEdit: isUser && onEditMessage ? startEdit : undefined,
+    onSaveEdit: saveEdit,
+    onCancelEdit: cancelEdit,
+    handleDelete: onDeleteMessage ? handleDelete : undefined,
+    t,
+  };
+
+  const overlays = (
+    <>
       {openSource && (
         <SourceViewerModal
           source={openSource}
@@ -747,7 +749,25 @@ const MessageBubble = ({
           imageSrc={lightboxImage}
         />
       )}
+    </>
+  );
+
+  return shouldReduceMotion ? (
+    <div onContextMenu={handleContextMenu} className={bubbleClassName}>
+      <MessageBubbleBody {...bodyProps} />
+      {overlays}
     </div>
+  ) : (
+    <motion.div
+      onContextMenu={handleContextMenu}
+      className={bubbleClassName}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+    >
+      <MessageBubbleBody {...bodyProps} />
+      {overlays}
+    </motion.div>
   );
 };
 
