@@ -388,8 +388,8 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
       isOpen={isOpen}
       onClose={onClose}
       titleId={titleId}
-      maxWidth="max-w-3xl"
-      className="h-[min(85vh,640px)]"
+      maxWidth="max-w-3xl max-[640px]:max-w-full"
+      className="h-[min(85vh,640px)] max-[640px]:h-full max-[640px]:rounded-none"
     >
       <RenderModalHeader
         t={t}
