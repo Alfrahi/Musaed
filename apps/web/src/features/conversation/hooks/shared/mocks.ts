@@ -34,6 +34,7 @@ const mockSettingsState = {
     language: 'en',
     ollamaUrl: 'http://localhost:11434',
     numCtx: 4096,
+    enterToSend: true,
   },
   getState: () => mockSettingsState,
 };
@@ -154,6 +155,7 @@ export const mockStores = {
     globalSettings: {
       language: 'en',
       ollamaUrl: 'http://localhost:11434',
+      enterToSend: true,
     },
     getState: vi.fn().mockImplementation(() => mockStores.settingsStore),
   },
@@ -174,12 +176,9 @@ const mockStoreHooks = {
     addMessages: mockStores.messageStore.addMessages,
     updateLastMessage: mockStores.messageStore.updateLastMessage,
   }),
-  useStreamingStore: Object.assign(
-    vi.fn(() => mockStores.streamingStore),
-    {
-      getState: () => mockStores.streamingStore,
-    }
-  ),
+  useStreamingStore: Object.assign(selectorAware(mockStores.streamingStore), {
+    getState: () => mockStores.streamingStore,
+  }),
   useModelStore: vi.fn(() => ({
     ...mockStores.modelStore,
     selectedModel: mockStores.modelStore.selectedModel,
@@ -259,6 +258,9 @@ vi.mock('@/store/message-store', () => ({
 
 vi.mock('@/store/streaming-store', () => ({
   useStreamingStore: mockStoreHooks.useStreamingStore,
+  selectIsLiveStreaming:
+    (conversationId: string) => (state: { activeStreams: Record<string, string> }) =>
+      conversationId in state.activeStreams,
 }));
 
 vi.mock('@/store/model-store', () => ({
@@ -282,6 +284,7 @@ vi.mock('@/store/settings-store', () => ({
   useSettingsStore: mockStoreHooks.useSettingsStore,
   useLanguage: vi.fn(() => 'en'),
   useOllamaUrl: vi.fn(() => 'http://localhost:11434'),
+  useEnterToSend: () => mockStores.settingsStore.globalSettings.enterToSend,
   // Direct store access
   globalSettings: { ...mockStores.settingsStore.globalSettings, numCtx: 4096 },
 }));

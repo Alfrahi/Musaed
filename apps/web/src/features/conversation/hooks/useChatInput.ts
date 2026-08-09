@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useConversationStore } from '@/store/conversation-store';
-import { useSettingsStore } from '@/store/settings-store';
-import { useModelStore } from '@/store/model-store';
-import { useStreamingStore } from '@/store/streaming-store';
+import { useConversationStore, useCurrentConversationId } from '@/store/conversation-store';
+import { useSettingsStore, useEnterToSend } from '@/store/settings-store';
+import { useSelectedModel } from '@/store/model-store';
+import { useStreamingStore, selectIsLiveStreaming } from '@/store/streaming-store';
 import { useChatSend } from './useChatSend';
 import { useAttachmentManager } from './useAttachmentManager';
 import { useTranslation } from '@/lib/i18n';
@@ -66,12 +66,12 @@ export const useChatInput = () => {
     [onSend]
   );
 
-  const currentConversationId = useConversationStore.getState().currentConversationId;
-  const isStreaming = currentConversationId
-    ? useStreamingStore.getState().activeStreams[currentConversationId] != null
-    : false;
-  const selectedModel = useModelStore.getState().selectedModel;
-  const enterToSend = useSettingsStore.getState().globalSettings.enterToSend;
+  const currentConversationId = useCurrentConversationId();
+  const isStreaming = useStreamingStore(
+    currentConversationId ? selectIsLiveStreaming(currentConversationId) : () => false
+  );
+  const selectedModel = useSelectedModel();
+  const enterToSend = useEnterToSend();
 
   return {
     input,
