@@ -35,7 +35,9 @@ vi.mock('@/lib/i18n', () => ({
 }));
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-const getSwitchButton = () => screen.getByRole('switch');
+// The Toggle primitive wires aria-labelledby to the visible label, so the
+// switch is now locatable by its accessible name — no row-walking needed.
+const getSwitchButton = () => screen.getByRole('switch', { name: 'settings.enterToSend' });
 
 const getThumb = (switchBtn: HTMLElement): HTMLElement => {
   const thumb = switchBtn.querySelector('div');
@@ -100,5 +102,15 @@ describe('InputSettings toggle thumb position (RTL/LTR)', () => {
     const sw = getSwitchButton();
     expect(sw).toHaveAttribute('aria-checked', 'true');
     expect(sw.tagName).toBe('BUTTON');
+  });
+
+  it('associates the label with the switch via aria-labelledby', () => {
+    render(<InputSettings />);
+    const sw = getSwitchButton();
+    const labelledBy = sw.getAttribute('aria-labelledby');
+    expect(labelledBy).toBeTruthy();
+    const labelEl = document.getElementById(labelledBy!);
+    expect(labelEl).not.toBeNull();
+    expect(labelEl!.textContent).toBe('settings.enterToSend');
   });
 });

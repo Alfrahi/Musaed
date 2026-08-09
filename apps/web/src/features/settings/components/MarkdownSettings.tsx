@@ -4,6 +4,7 @@ import { FileText, Cpu, Layout, type LucideIcon } from 'lucide-react';
 import { useGlobalSettings, useLanguage } from '@/store/settings-store';
 import { useSettingsActions } from '@/features/settings/hooks/useSettingsActions';
 import { useTranslation, type TranslationKey } from '@/lib/i18n';
+import { Toggle } from '@/components/ui/toggle';
 import { type ChatSettings } from '@musaed/contracts';
 
 interface MarkdownToggle {
@@ -23,35 +24,24 @@ const ToggleRow = ({
   isEnabled: boolean;
   onToggle: () => void;
 }) => {
-  const { t } = useTranslation(useLanguage());
+  const language = useLanguage();
+  const { t } = useTranslation(language);
   const Icon = toggle.icon;
 
   return (
-    <div className="flex items-start gap-4 rounded-md border border-zinc-100 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
-      <div className="shadow-native rounded-md bg-white p-2 dark:bg-zinc-700">
-        <Icon size={16} className="text-zinc-500" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-caption font-bold dark:text-zinc-200">{t(toggle.label)}</p>
-        <p className="caption-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-          {t(toggle.description)}
-        </p>
-      </div>
-      {/* eslint-disable-next-line musaed-buttons/prefer-button-primitive -- role="switch" toggle, not an action button */}
-      <button
-        onClick={onToggle}
-        className={`focus-ring duration-normal h-6 w-10 shrink-0 rounded-full p-1 transition-colors ease-in-out ${
-          isEnabled ? 'bg-blue-600' : 'bg-zinc-300 dark:bg-zinc-600'
-        }`}
-        role="switch"
-        aria-checked={isEnabled}
-      >
-        <div
-          className={`shadow-native duration-normal h-4 w-4 transform rounded-full bg-white transition-transform ease-in-out ${
-            isEnabled ? 'ltr:translate-x-4 rtl:-translate-x-4' : 'translate-x-0'
-          }`}
+    <div className="rounded-md border border-zinc-100 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
+      <div className="flex items-start gap-4">
+        <div className="shadow-native rounded-md bg-white p-2 dark:bg-zinc-700">
+          <Icon size={16} className="text-zinc-500" />
+        </div>
+        <Toggle
+          checked={isEnabled}
+          onChange={onToggle}
+          label={t(toggle.label)}
+          description={t(toggle.description)}
+          className="min-w-0 flex-1"
         />
-      </button>
+      </div>
     </div>
   );
 };
@@ -81,7 +71,7 @@ const MarkdownSettings = () => {
     <div className="flex flex-col gap-4">
       <div className="text-body flex items-center gap-2 font-medium">
         <FileText size={14} className="text-zinc-400" />
-        <label>{t('settings.markdown.title')}</label>
+        <span>{t('settings.markdown.title')}</span>
       </div>
       <div className="flex flex-col gap-3">
         {TOGGLES.map((toggle) => (
