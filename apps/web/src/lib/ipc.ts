@@ -20,6 +20,7 @@ import {
   RagProjectSchema,
   SearchResultSchema,
   ChunkRecordSchema,
+  FileRecordSchema,
   RAG_VALIDATION_LIMITS,
   MAX_FILE_PATH_LEN,
   sanitizeError,
@@ -69,6 +70,7 @@ import type {
   RagProject,
   SearchResult,
   ChunkRecord,
+  FileRecord,
   AssembledContext,
   FileFilter,
 } from '@musaed/contracts';
@@ -319,6 +321,7 @@ export interface CommandMap {
     return: SearchResult[];
   };
   cmd_rag_get_file_chunks: { args: { projectId: string; filePath: string }; return: ChunkRecord[] };
+  cmd_rag_list_files: { args: { projectId: string }; return: FileRecord[] };
   cmd_rag_set_embedding_model: { args: { projectId: string; modelName: string }; return: boolean };
   cmd_rag_assemble_context: {
     args: {
@@ -573,6 +576,9 @@ const CommandInputSchemas: {
     projectId: z.string().min(1),
     filePath: z.string().min(1).max(MAX_FILE_PATH_LEN),
   }),
+  cmd_rag_list_files: z.object({
+    projectId: z.string().min(1),
+  }),
   cmd_rag_set_embedding_model: z.object({
     projectId: z.string().min(1),
     modelName: ModelNameSchema,
@@ -713,6 +719,7 @@ const CommandReturnSchemas: {
   cmd_rag_retry_index_project: z.boolean(),
   cmd_rag_search: z.array(SearchResultSchema),
   cmd_rag_get_file_chunks: z.array(ChunkRecordSchema),
+  cmd_rag_list_files: z.array(FileRecordSchema),
   cmd_rag_set_embedding_model: z.boolean(),
   cmd_rag_assemble_context: AssembledContextSchema,
   cmd_conversations_list: z.array(ConversationSchema),
@@ -1278,6 +1285,12 @@ export const ragApi = {
    */
   getFileChunks: (projectId: string, filePath: string) =>
     callInternal('cmd_rag_get_file_chunks', { projectId, filePath }),
+  /**
+   * Lists all indexed files for a project.
+   * @param projectId - The project identifier
+   * @returns Array of FileRecord objects with file paths and metadata
+   */
+  listFiles: (projectId: string) => callInternal('cmd_rag_list_files', { projectId }),
   /**
    * Changes the embedding model used by a project.
    * @param projectId - The project identifier

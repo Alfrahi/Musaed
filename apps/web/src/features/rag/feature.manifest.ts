@@ -38,6 +38,7 @@ const manifest: FeatureManifest = {
     'cmd_rag_search',
     'cmd_rag_assemble_context',
     'cmd_rag_get_file_chunks',
+    'cmd_rag_list_files',
     'cmd_rag_set_embedding_model',
     // `components/AddProjectDialog.tsx` opens a native directory picker via
     // the IPC-layer `dialogApi` namespace. Feature-scoped, not shared.
@@ -50,7 +51,7 @@ const manifest: FeatureManifest = {
    * @see STANDARDS.md §15 Performance Rules — IPC latency budgets per feature
    */
   latencyProfiles: {
-    interactive: ['cmd_rag_list_projects'],
+    interactive: ['cmd_rag_list_projects', 'cmd_rag_list_files'],
     heavy: [
       'cmd_rag_index_project',
       'cmd_rag_reindex_project',
@@ -119,6 +120,11 @@ const manifest: FeatureManifest = {
     },
     cmd_rag_get_file_chunks: {
       fallback: 'Show empty chunk list in FileChunkViewer',
+      retry: 'once',
+      messageKey: 'error.genericError',
+    },
+    cmd_rag_list_files: {
+      fallback: 'Show empty file list in FileBrowser',
       retry: 'once',
       messageKey: 'error.genericError',
     },

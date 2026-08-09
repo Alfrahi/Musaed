@@ -17,7 +17,7 @@ use crate::rag::error::RagError;
 use crate::rag::indexing::{self, IndexOptions};
 use crate::rag::search::RagSearchEngine;
 use crate::rag::store::RagStore;
-use crate::rag::types::{AssembledContext, ChunkRecord, SearchResult};
+use crate::rag::types::{AssembledContext, ChunkRecord, FileRecord, IndexError, SearchResult};
 use crate::rag::validation::{
     rag_validation_error, validate_assemble_context, validate_project_id, validate_search,
 };
@@ -105,6 +105,11 @@ pub struct SearchRequest<'a> {
 pub struct GetFileChunksRequest<'a> {
     pub project_id: String,
     pub file_path: String,
+    pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
+}
+
+pub struct ListFilesRequest<'a> {
+    pub project_id: String,
     pub state: tauri::State<'a, Arc<RwLock<RagStore>>>,
 }
 
@@ -302,11 +307,15 @@ pub async fn start_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResp
     }
 
     crate::shared::RAG_INDEX_ABORT_HANDLES.remove(&req.project_id);
-    let index_err = BackendError::new(error_codes::RAG_INDEX_ERROR, last_error.clone())
-        .with_context("RAG indexing pipeline failed".to_string());
+    let index_event = IndexError {
+        project_id: req.project_id.clone(),
+        message: last_error.clone(),
+    };
     let _ = req
         .app_handle
-        .emit(crate::shared::EVENT_RAG_INDEX_ERROR, &index_err);
+        .emit(crate::shared::EVENT_RAG_INDEX_ERROR, &index_event);
+    let index_err = BackendError::new(error_codes::RAG_INDEX_ERROR, last_error)
+        .with_context("RAG indexing pipeline failed".to_string());
     // Surface retryability so the frontend (now receiving `isRetryable`
     // via the preserved field) can offer a retry affordance for
     // transient failures — connection/timeout/DB-lock categories that
@@ -465,6 +474,29 @@ pub async fn get_file_chunks<'a>(req: GetFileChunksRequest<'a>) -> ApiResponse<V
             error: Some(
                 BackendError::new(error_codes::RAG_FETCH_ERROR, e.to_string())
                     .with_context("Failed to look up file in RAG store".to_string()),
+            ),
+        },
+    }
+}
+
+pub async fn list_files<'a>(req: ListFilesRequest<'a>) -> ApiResponse<Vec<FileRecord>> {
+    if let Err(e) = validate_project_id(&req.project_id) {
+        return rag_validation_error(e);
+    }
+    let store = req.state.inner();
+    let s = store.read().await;
+    match s.get_project_files(&req.project_id).await {
+        Ok(files) => ApiResponse {
+            success: true,
+            data: Some(files),
+            error: None,
+        },
+        Err(e) => ApiResponse {
+            success: false,
+            data: None,
+            error: Some(
+                BackendError::new(error_codes::RAG_FETCH_ERROR, e.to_string())
+                    .with_context("Failed to list indexed files".to_string()),
             ),
         },
     }
