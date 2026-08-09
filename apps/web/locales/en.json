@@ -392,7 +392,12 @@
     "commandPalette": "Command palette",
     "searchMessages": "Search messages in chats",
     "shortcutCheatsheet": "Keyboard shortcuts",
-    "closePreview": "Close image preview"
+    "closePreview": "Close image preview",
+    "resizeSidebar": "Resize sidebar",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar",
+    "toggleSidebar": "Toggle sidebar",
+    "newConversationCollapsed": "Start a new chat"
   },
   "contextMenu": {
     "conversation": {

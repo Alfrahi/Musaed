@@ -153,7 +153,12 @@ vi.mock('./SidebarSkeleton', async () => {
 
 vi.mock('./SidebarInfo', async () => {
   return {
-    default: () => <div data-testid="sidebar-info">SidebarInfo</div>,
+    default: ({ trailing }: any) => (
+      <div data-testid="sidebar-info">
+        SidebarInfo
+        {trailing}
+      </div>
+    ),
   };
 });
 
@@ -241,6 +246,7 @@ describe('Sidebar', () => {
         enableMermaid: true,
         density: 1.0,
         sidebarWidth: 260,
+        sidebarCollapsed: false,
         closeToTray: true,
         showTokenIndicator: true,
       },
@@ -339,6 +345,25 @@ describe('Sidebar', () => {
     });
   });
 
+  describe('Collapse from expanded sidebar', () => {
+    it('renders a collapse button next to the sidebar info', () => {
+      render(<Sidebar />);
+
+      expect(screen.getByRole('button', { name: 'a11y.collapseSidebar' })).toBeInTheDocument();
+    });
+
+    it('collapses the sidebar when the collapse button is clicked', () => {
+      render(<Sidebar />);
+
+      expect(useSettingsStore.getState().globalSettings.sidebarCollapsed).toBe(false);
+
+      const collapseBtn = screen.getByRole('button', { name: 'a11y.collapseSidebar' });
+      fireEvent.click(collapseBtn);
+
+      expect(useSettingsStore.getState().globalSettings.sidebarCollapsed).toBe(true);
+    });
+  });
+
   describe('Projects tab', () => {
     it('renders ProjectList when projects tab is active', async () => {
       render(<Sidebar />);
@@ -393,6 +418,7 @@ describe('Sidebar', () => {
           enableMermaid: true,
           density: 1.0,
           sidebarWidth: 260,
+          sidebarCollapsed: false,
           closeToTray: true,
           showTokenIndicator: true,
         },
@@ -475,6 +501,105 @@ describe('Sidebar', () => {
       // A non-arrow/non-Home-End key should leave lastSetCurrentId untouched.
       fireEvent.keyDown(listbox, { key: 'a' });
       expect(lastSetCurrentId.value).toBeNull();
+    });
+  });
+
+  // ── Collapse state ───────────────────────────────────────
+  describe('Collapsed state', () => {
+    it('renders thin icon-rail with new-chat button, conversation icons, and expand button when sidebarCollapsed is true', () => {
+      useSettingsStore.setState((s) => ({
+        globalSettings: { ...s.globalSettings, sidebarCollapsed: true },
+      }));
+
+      render(<Sidebar />);
+
+      // New-conversation button should be present
+      const newChatBtn = screen.getByRole('button', { name: 'a11y.newConversationCollapsed' });
+      expect(newChatBtn).toBeInTheDocument();
+
+      // Expand button should be present
+      const expandBtn = screen.getByRole('button', { name: 'a11y.expandSidebar' });
+      expect(expandBtn).toBeInTheDocument();
+      expect(expandBtn).toHaveAttribute('aria-expanded', 'false');
+
+      // Conversation letter icons should be present (one per mocked conversation)
+      const conv1Btn = screen.getByRole('button', { name: 'Test Chat 1' });
+      const conv2Btn = screen.getByRole('button', { name: 'Test Chat 2' });
+      expect(conv1Btn).toBeInTheDocument();
+      expect(conv2Btn).toBeInTheDocument();
+      expect(conv1Btn).toHaveTextContent('T');
+      expect(conv2Btn).toHaveTextContent('T');
+
+      // The normal sidebar content should NOT be present
+      expect(screen.queryByTestId('sidebar-header')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('sidebar-info')).not.toBeInTheDocument();
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    });
+
+    it('expands the sidebar when the expand button is clicked', () => {
+      useSettingsStore.setState((s) => ({
+        globalSettings: { ...s.globalSettings, sidebarCollapsed: true },
+      }));
+
+      render(<Sidebar />);
+
+      const expandBtn = screen.getByRole('button', { name: 'a11y.expandSidebar' });
+      fireEvent.click(expandBtn);
+
+      // After clicking, the store should have sidebarCollapsed: false
+      expect(useSettingsStore.getState().globalSettings.sidebarCollapsed).toBe(false);
+    });
+
+    it('calls createNewConversation when the new-chat button is clicked', () => {
+      useSettingsStore.setState((s) => ({
+        globalSettings: { ...s.globalSettings, sidebarCollapsed: true },
+      }));
+
+      render(<Sidebar />);
+
+      const newChatBtn = screen.getByRole('button', { name: 'a11y.newConversationCollapsed' });
+      fireEvent.click(newChatBtn);
+
+      expect(mockActions.createNewConversation).toHaveBeenCalledTimes(1);
+    });
+
+    it('sets the active conversation when a conversation icon is clicked', () => {
+      useSettingsStore.setState((s) => ({
+        globalSettings: { ...s.globalSettings, sidebarCollapsed: true },
+      }));
+
+      render(<Sidebar />);
+
+      const conv2Btn = screen.getByRole('button', { name: 'Test Chat 2' });
+      fireEvent.click(conv2Btn);
+
+      expect(lastSetCurrentId.value).toBe('conv-2');
+      expect(currentConversationIdRef.value).toBe('conv-2');
+    });
+
+    it('marks the active conversation icon with aria-current', () => {
+      useSettingsStore.setState((s) => ({
+        globalSettings: { ...s.globalSettings, sidebarCollapsed: true },
+      }));
+      currentConversationIdRef.value = 'conv-1';
+
+      render(<Sidebar />);
+
+      const conv1Btn = screen.getByRole('button', { name: 'Test Chat 1' });
+      const conv2Btn = screen.getByRole('button', { name: 'Test Chat 2' });
+      expect(conv1Btn).toHaveAttribute('aria-current', 'true');
+      expect(conv2Btn).not.toHaveAttribute('aria-current');
+    });
+
+    it('has id="sidebar" on the collapsed rail for aria-controls', () => {
+      useSettingsStore.setState((s) => ({
+        globalSettings: { ...s.globalSettings, sidebarCollapsed: true },
+      }));
+
+      render(<Sidebar />);
+
+      const sidebar = document.getElementById('sidebar');
+      expect(sidebar).not.toBeNull();
     });
   });
 });

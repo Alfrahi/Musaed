@@ -1,11 +1,19 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import { Eraser, MessageSquare, Briefcase } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Eraser,
+  MessageSquare,
+  Briefcase,
+  PanelLeftOpen,
+  PanelLeftClose,
+  Plus,
+} from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import { useIsHydrated } from '@/store/hooks';
 import { useSettingsStore } from '@/store';
 import { useSidebarTab, useSetSidebarTab } from '@/store';
+import { useSidebarCollapsed, useSetGlobalSettings } from '@/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 import { ProjectList, AddProjectDialog } from '@/features/rag';
 import {
@@ -235,6 +243,253 @@ const ChatsTabContent = ({
   );
 };
 
+/** Single circular conversation icon used in the collapsed rail. */
+const ConversationIcon = ({
+  conversation,
+  isActive,
+  onSelect,
+}: {
+  conversation: ConversationMetadata;
+  isActive: boolean;
+  onSelect: (id: string) => void;
+}) => (
+  <button
+    type="button"
+    onClick={() => onSelect(conversation.id)}
+    title={conversation.title}
+    aria-label={conversation.title}
+    aria-current={isActive ? 'true' : undefined}
+    className={`caption-sm focus-ring mbe-1.5 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full font-bold uppercase transition-colors ${
+      isActive
+        ? 'bg-primary text-primary-fg'
+        : 'bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'
+    }`}
+  >
+    {conversation.title.charAt(0) || '?'}
+  </button>
+);
+
+/** Scrollable vertical list of conversation letter-icons. */
+const CollapsedConversationList = ({
+  conversations,
+  currentConversationId,
+  setCurrentConversationId,
+  ariaLabel,
+}: {
+  conversations: ConversationMetadata[];
+  currentConversationId: string | null;
+  setCurrentConversationId: (id: string) => void;
+  ariaLabel: string;
+}) => (
+  <nav
+    aria-label={ariaLabel}
+    className="flex w-full flex-1 flex-col items-center overflow-y-auto px-0 pb-2"
+  >
+    {conversations.map((conversation) => (
+      <ConversationIcon
+        key={conversation.id}
+        conversation={conversation}
+        isActive={conversation.id === currentConversationId}
+        onSelect={setCurrentConversationId}
+      />
+    ))}
+  </nav>
+);
+
+/** New-chat icon button for the collapsed rail. */
+const CollapsedNewChatButton = ({
+  onCreateNew,
+  label,
+}: {
+  onCreateNew: () => void;
+  label: string;
+}) => (
+  <Button
+    variant="ghost"
+    size="icon"
+    onClick={onCreateNew}
+    className="hover:border-sidebar-border mbs-3 h-8 w-8 shrink-0 rounded-md border border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+    title={label}
+    aria-label={label}
+  >
+    <Plus size={16} />
+  </Button>
+);
+
+/** Expand-sidebar icon button for the collapsed rail. */
+const CollapsedExpandButton = ({ onExpand, label }: { onExpand: () => void; label: string }) => (
+  <Button
+    variant="ghost"
+    size="icon"
+    onClick={onExpand}
+    className="hover:border-sidebar-border mbe-3 h-8 w-8 shrink-0 rounded-md border border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+    title={label}
+    aria-label={label}
+    aria-expanded={false}
+  >
+    <PanelLeftOpen size={16} />
+  </Button>
+);
+
+/** Collapse-sidebar icon button shown in the expanded sidebar footer. */
+const CollapseSidebarButton = ({
+  onCollapse,
+  label,
+}: {
+  onCollapse: () => void;
+  label: string;
+}) => (
+  <Button
+    variant="ghost"
+    size="icon"
+    onClick={onCollapse}
+    className="caption-md pointer-events-auto h-8 w-8 shrink-0 cursor-pointer rounded-md text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
+    title={label}
+    aria-label={label}
+  >
+    <PanelLeftClose size={16} />
+  </Button>
+);
+
+/**
+ * Thin icon-rail rendered when the sidebar is collapsed. Provides a
+ * new-conversation button, a scrollable list of conversation letter-icons,
+ * and an expand button at the bottom.
+ */
+const CollapsedRail = ({
+  onExpand,
+  onCreateNew,
+  conversations,
+  currentConversationId,
+  setCurrentConversationId,
+  expandLabel,
+  newChatLabel,
+}: {
+  onExpand: () => void;
+  onCreateNew: () => void;
+  conversations: ConversationMetadata[];
+  currentConversationId: string | null;
+  setCurrentConversationId: (id: string) => void;
+  expandLabel: string;
+  newChatLabel: string;
+}) => (
+  <div
+    id="sidebar"
+    data-testid="sidebar"
+    className="border-sidebar-border bg-sidebar flex h-full w-12 flex-col items-center border-e select-none"
+  >
+    <CollapsedNewChatButton onCreateNew={onCreateNew} label={newChatLabel} />
+    <div className="mbe-2 h-px w-6 shrink-0 bg-zinc-200 dark:bg-zinc-800" />
+    <CollapsedConversationList
+      conversations={conversations}
+      currentConversationId={currentConversationId}
+      setCurrentConversationId={setCurrentConversationId}
+      ariaLabel={expandLabel}
+    />
+    <CollapsedExpandButton onExpand={onExpand} label={expandLabel} />
+  </div>
+);
+
+/** Conditionally renders the AddProjectDialog. */
+const AddProjectSlot = ({ show, onClose }: { show: boolean; onClose: () => void }) =>
+  show ? <AddProjectDialog onClose={onClose} onAdded={onClose} /> : null;
+
+/** Renders the active tab content (chats list or projects). */
+const TabContent = ({
+  activeTab,
+  searchQuery,
+  filteredConversations,
+  virtualItems,
+  loadMore,
+  handleListboxKeyDown,
+  handleClearAll,
+  t,
+}: {
+  activeTab: 'chats' | 'projects';
+  searchQuery: string;
+  filteredConversations: ConversationMetadata[];
+  virtualItems: SidebarItem[];
+  loadMore: () => void;
+  handleListboxKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
+  handleClearAll: () => void;
+  t: (key: string) => string;
+}) =>
+  activeTab === 'chats' ? (
+    <ChatsTabContent
+      searchQuery={searchQuery}
+      filteredConversations={filteredConversations}
+      virtualItems={virtualItems}
+      loadMore={loadMore}
+      handleListboxKeyDown={handleListboxKeyDown}
+      handleClearAll={handleClearAll}
+      t={t}
+    />
+  ) : (
+    <div className="flex-1 px-2">
+      <ProjectList hideHeaderAction />
+    </div>
+  );
+
+/** Full expanded sidebar content (tabs, list, projects, info, resize). */
+const ExpandedSidebar = ({
+  activeTab,
+  setActiveTab,
+  showAddProject,
+  setShowAddProject,
+  sidebarWidth,
+  searchQuery,
+  filteredConversations,
+  virtualItems,
+  loadMore,
+  handleListboxKeyDown,
+  handleCreateNew,
+  handleClearAll,
+  onCollapse,
+  collapseLabel,
+  t,
+}: {
+  activeTab: 'chats' | 'projects';
+  setActiveTab: (tab: 'chats' | 'projects') => void;
+  showAddProject: boolean;
+  setShowAddProject: (show: boolean) => void;
+  sidebarWidth: number;
+  searchQuery: string;
+  filteredConversations: ConversationMetadata[];
+  virtualItems: SidebarItem[];
+  loadMore: () => void;
+  handleListboxKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
+  handleCreateNew: () => void;
+  handleClearAll: () => void;
+  onCollapse: () => void;
+  collapseLabel: string;
+  t: (key: string) => string;
+}) => (
+  <div
+    id="sidebar"
+    data-testid="sidebar"
+    className="border-sidebar-border bg-sidebar flex h-full flex-col border-e select-none"
+    style={{ width: sidebarWidth }}
+  >
+    <SidebarHeader activeTab={activeTab} onCreateNew={handleCreateNew} />
+    <TabButtons activeTab={activeTab} setActiveTab={setActiveTab} t={t} />
+    <TabContent
+      activeTab={activeTab}
+      searchQuery={searchQuery}
+      filteredConversations={filteredConversations}
+      virtualItems={virtualItems}
+      loadMore={loadMore}
+      handleListboxKeyDown={handleListboxKeyDown}
+      handleClearAll={handleClearAll}
+      t={t}
+    />
+    <AddProjectSlot show={showAddProject} onClose={() => setShowAddProject(false)} />
+    <SidebarInfo
+      trailing={<CollapseSidebarButton onCollapse={onCollapse} label={collapseLabel} />}
+    />
+    <SidebarResizeHandle />
+  </div>
+);
+
 const Sidebar = () => {
   const activeTab = useSidebarTab();
   const setActiveTab = useSetSidebarTab();
@@ -247,6 +502,14 @@ const Sidebar = () => {
   const setCurrentConversationId = useSetCurrentConversationId();
   const language = useSettingsStore((s) => s.globalSettings.language);
   const sidebarWidth = useSettingsStore((s) => s.globalSettings.sidebarWidth);
+  const isCollapsed = useSidebarCollapsed();
+  const setGlobalSettings = useSetGlobalSettings();
+  // Keep a ref to the latest global settings so expandSidebar can spread
+  // them without calling getState() (mirrors SidebarResizeHandle pattern).
+  const settingsRef = useRef(useSettingsStore.getState().globalSettings);
+  useEffect(() => {
+    settingsRef.current = useSettingsStore.getState().globalSettings;
+  });
   const isHydrated = useIsHydrated();
   const { t } = useTranslation(language);
   const { handleClearAll } = useSidebarActions();
@@ -275,6 +538,13 @@ const Sidebar = () => {
     [filteredConversations, currentConversationId, setCurrentConversationId]
   );
 
+  const setSidebarCollapsed = useCallback(
+    (collapsed: boolean) => {
+      setGlobalSettings({ ...settingsRef.current, sidebarCollapsed: collapsed });
+    },
+    [setGlobalSettings]
+  );
+
   if (!isHydrated) {
     return (
       <div
@@ -283,6 +553,20 @@ const Sidebar = () => {
       >
         <SidebarSkeleton />
       </div>
+    );
+  }
+
+  if (isCollapsed) {
+    return (
+      <CollapsedRail
+        onExpand={() => setSidebarCollapsed(false)}
+        onCreateNew={createNewConversation}
+        conversations={filteredConversations}
+        currentConversationId={currentConversationId}
+        setCurrentConversationId={setCurrentConversationId}
+        expandLabel={t('a11y.expandSidebar')}
+        newChatLabel={t('a11y.newConversationCollapsed')}
+      />
     );
   }
 
@@ -295,41 +579,23 @@ const Sidebar = () => {
   };
 
   return (
-    <div
-      data-testid="sidebar"
-      className="border-sidebar-border bg-sidebar flex h-full flex-col border-e select-none"
-      style={{ width: sidebarWidth }}
-    >
-      <SidebarHeader activeTab={activeTab} onCreateNew={handleCreateNew} />
-
-      <TabButtons activeTab={activeTab} setActiveTab={setActiveTab} t={t} />
-
-      {activeTab === 'chats' ? (
-        <ChatsTabContent
-          searchQuery={searchQuery}
-          filteredConversations={filteredConversations}
-          virtualItems={virtualItems}
-          loadMore={loadMore}
-          handleListboxKeyDown={handleListboxKeyDown}
-          handleClearAll={handleClearAll}
-          t={t}
-        />
-      ) : (
-        <div className="flex-1 px-2">
-          <ProjectList hideHeaderAction />
-        </div>
-      )}
-
-      {showAddProject && (
-        <AddProjectDialog
-          onClose={() => setShowAddProject(false)}
-          onAdded={() => setShowAddProject(false)}
-        />
-      )}
-
-      <SidebarInfo />
-      <SidebarResizeHandle />
-    </div>
+    <ExpandedSidebar
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
+      showAddProject={showAddProject}
+      setShowAddProject={setShowAddProject}
+      sidebarWidth={sidebarWidth}
+      searchQuery={searchQuery}
+      filteredConversations={filteredConversations}
+      virtualItems={virtualItems}
+      loadMore={loadMore}
+      handleListboxKeyDown={handleListboxKeyDown}
+      handleCreateNew={handleCreateNew}
+      handleClearAll={handleClearAll}
+      onCollapse={() => setSidebarCollapsed(true)}
+      collapseLabel={t('a11y.collapseSidebar')}
+      t={t}
+    />
   );
 };
 

@@ -90,19 +90,21 @@ export const AppHeader = ({
       isTauri && isWindows && (isRtl ? 'ps-28' : 'pe-28')
     )}
   >
-    <div className="pointer-events-none flex items-center gap-3">
-      <Image
-        src="/favicon.ico"
-        loading="eager"
-        alt={appName}
-        width={28}
-        height={28}
-        unoptimized
-        className="h-7 w-7 object-contain"
-      />
-      <div className="bg-sidebar-border h-3 w-[1px]" />
-      <div className="pointer-events-auto">
-        <OllamaConnectionStatus />
+    <div className="flex items-center gap-3">
+      <div className="pointer-events-none flex items-center gap-3">
+        <Image
+          src="/favicon.ico"
+          loading="eager"
+          alt={appName}
+          width={28}
+          height={28}
+          unoptimized
+          className="h-7 w-7 object-contain"
+        />
+        <div className="bg-sidebar-border h-3 w-[1px]" />
+        <div className="pointer-events-auto">
+          <OllamaConnectionStatus />
+        </div>
       </div>
     </div>
     <div className="flex items-center gap-2">

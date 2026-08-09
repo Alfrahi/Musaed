@@ -33,6 +33,17 @@ vi.mock('@/store/settings-store', () => ({
   useSettingsStore: mockUseSettingsStore,
 }));
 
+vi.mock('@/store', () => ({
+  useLanguage: () => 'en',
+}));
+
+vi.mock('@/lib/i18n', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    isRtl: false,
+  }),
+}));
+
 import SidebarResizeHandle from './SidebarResizeHandle';
 
 describe('SidebarResizeHandle', () => {

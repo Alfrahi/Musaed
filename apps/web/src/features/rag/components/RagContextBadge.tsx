@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { FolderOpen, Plus, X } from 'lucide-react';
 import { useActiveRagProject, useSetActiveRagProjectId } from '@/store/rag-store';
-import { useSetSidebarTab, useSettingsStore } from '@/store';
+import { useSetSidebarTab, useSettingsStore, useSetGlobalSettings } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 import { RagExplorer } from './RagExplorer';
 import ModalLayout from '@/components/ui/ModalLayout';
@@ -27,16 +27,23 @@ export const RagContextBadge = () => {
   const activeProject = useActiveRagProject();
   const setActiveProjectId = useSetActiveRagProjectId();
   const setSidebarTab = useSetSidebarTab();
+  const setGlobalSettings = useSetGlobalSettings();
   const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
   const [isExplorerOpen, setIsExplorerOpen] = useState(false);
+
+  const handleAddProject = () => {
+    setSidebarTab('projects');
+    const { globalSettings } = useSettingsStore.getState();
+    setGlobalSettings({ ...globalSettings, sidebarCollapsed: false });
+  };
 
   if (!activeProject) {
     return (
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => setSidebarTab('projects')}
+        onClick={handleAddProject}
         className="text-muted-foreground hover:text-foreground text-caption h-auto gap-1 rounded-md px-2 py-0.5"
         aria-label={t('rag.addProject')}
       >

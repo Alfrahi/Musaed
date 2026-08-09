@@ -39,6 +39,26 @@ vi.mock('@/store/coordination', () => ({
   stopStream: (...args: unknown[]) => coordinationMock.stopStream(...args),
 }));
 
+// Mock settings store for the Cmd+B sidebar toggle handler.
+const settingsState = {
+  globalSettings: {
+    sidebarCollapsed: false,
+    language: 'en',
+  },
+  setGlobalSettings: vi.fn((next: typeof settingsState) => {
+    settingsState.globalSettings = next.globalSettings ?? next;
+  }),
+};
+vi.mock('@/store/settings-store', () => ({
+  useSettingsStore: Object.assign(
+    (selector?: (s: typeof settingsState) => unknown) => {
+      if (typeof selector === 'function') return selector(settingsState);
+      return settingsState;
+    },
+    { getState: () => settingsState }
+  ),
+}));
+
 // Test harness: a tiny component that mounts the hook. The hook subscribes to
 // a window keydown listener; rendering it inside a component lets us exercise
 // the listener in a realistic React lifecycle.
@@ -56,6 +76,7 @@ describe('useGlobalShortcuts', () => {
     clearMocks();
     mockActions.createNewConversation.mockClear();
     coordinationMock.stopStream.mockClear();
+    settingsState.setGlobalSettings.mockClear?.();
 
     // Default: no modal open, an active conversation, not streaming.
     useUIStore.setState({
@@ -148,6 +169,42 @@ describe('useGlobalShortcuts', () => {
 
       expect(coordinationMock.stopStream).not.toHaveBeenCalled();
       expect(useUIStore.getState().activeModal).toBe(null);
+    });
+  });
+
+  describe('Cmd/Ctrl+B sidebar toggle', () => {
+    const dispatchToggleSidebar = (metaKey = true) => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', ctrlKey: metaKey, metaKey }));
+    };
+
+    beforeEach(() => {
+      settingsState.globalSettings.sidebarCollapsed = false;
+      settingsState.setGlobalSettings = vi.fn((next: typeof settingsState) => {
+        settingsState.globalSettings = next.globalSettings ?? next;
+      });
+    });
+
+    it('toggles sidebarCollapsed from false to true on Cmd+B', () => {
+      render(<Harness />);
+      dispatchToggleSidebar();
+
+      expect(settingsState.setGlobalSettings).toHaveBeenCalledTimes(1);
+      expect(settingsState.globalSettings.sidebarCollapsed).toBe(true);
+    });
+
+    it('toggles sidebarCollapsed from true to false on Cmd+B', () => {
+      settingsState.globalSettings.sidebarCollapsed = true;
+      render(<Harness />);
+      dispatchToggleSidebar();
+
+      expect(settingsState.globalSettings.sidebarCollapsed).toBe(false);
+    });
+
+    it('ignores B without Ctrl/Meta', () => {
+      render(<Harness />);
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b' }));
+
+      expect(settingsState.setGlobalSettings).not.toHaveBeenCalled();
     });
   });
 });

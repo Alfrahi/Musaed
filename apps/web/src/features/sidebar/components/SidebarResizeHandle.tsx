@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { useSettingsStore } from '@/store/settings-store';
+import { useLanguage } from '@/store';
+import { useTranslation } from '@/lib/i18n';
 
 /**
  * Draggable resize handle for the sidebar.
@@ -13,6 +15,8 @@ import { useSettingsStore } from '@/store/settings-store';
 const SidebarResizeHandle = () => {
   const sidebarWidth = useSettingsStore((s) => s.globalSettings.sidebarWidth);
   const setGlobalSettings = useSettingsStore((s) => s.setGlobalSettings);
+  const language = useLanguage();
+  const { t } = useTranslation(language);
   const isDragging = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(0);
@@ -71,7 +75,7 @@ const SidebarResizeHandle = () => {
       aria-valuemin={200}
       aria-valuemax={400}
       aria-valuenow={sidebarWidth}
-      aria-label="Resize sidebar"
+      aria-label={t('a11y.resizeSidebar')}
       tabIndex={0}
       onMouseDown={onMouseDown}
       onKeyDown={(e) => {

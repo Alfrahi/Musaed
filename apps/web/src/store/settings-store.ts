@@ -18,6 +18,8 @@ import { logger } from '@/lib/logger';
  *            from DEFAULT_SETTINGS so persisted state at v2 does not trip
  *            Rust serde on `cmd_conversation_create`
  *            contract alignment, STANDARDS §9 schema-change migration rule).
+ * Version 4: Backfill `sidebarCollapsed` (boolean) from DEFAULT_SETTINGS
+ *            for persisted stores at v3. Idempotent, type-tolerant.
  */
 const SETTINGS_MIGRATIONS: Record<number, (data: unknown) => Partial<ChatSettings>> = {
   1: (data: unknown) => {
@@ -71,6 +73,16 @@ const SETTINGS_MIGRATIONS: Record<number, (data: unknown) => Partial<ChatSetting
     if (typeof merged.sidebarWidth !== 'number') merged.sidebarWidth = 260;
     return merged;
   },
+  4: (data: unknown) => {
+    // Backfill sidebarCollapsed for persisted stores at v3. Merging with
+    // DEFAULT_SETTINGS already sets the default, but an explicit guard
+    // catches any stray non-boolean value in legacy data.
+    const persisted =
+      typeof data === 'object' && data !== null ? (data as Partial<ChatSettings>) : {};
+    const merged: ChatSettings = { ...DEFAULT_SETTINGS, ...persisted };
+    if (typeof merged.sidebarCollapsed !== 'boolean') merged.sidebarCollapsed = false;
+    return merged;
+  },
 };
 
 export interface SettingsState {
@@ -93,9 +105,9 @@ export const useSettingsStore = createWithEqualityFn<SettingsState>()(
     {
       name: 'musaed-settings-storage',
       storage: createJSONStorage(() =>
-        createTauriStorage('settings-state.json', 3, SETTINGS_MIGRATIONS)
+        createTauriStorage('settings-state.json', 4, SETTINGS_MIGRATIONS)
       ),
-      version: 3,
+      version: 4,
       migrate: (_persistedState: unknown, _version: number) => {
         // Migrations are handled by createTauriStorage (canonical path).
         // This is a safety-net default-state merge only.
@@ -136,4 +148,6 @@ export const useLanguage = () => useSettingsStore((state) => state.globalSetting
 export const useEnterToSend = () => useSettingsStore((state) => state.globalSettings.enterToSend);
 export const useChatRetentionDays = () =>
   useSettingsStore((state) => state.globalSettings.chatRetentionDays);
+export const useSidebarCollapsed = () =>
+  useSettingsStore((state) => state.globalSettings.sidebarCollapsed);
 export const useSetGlobalSettings = () => useSettingsStore((state) => state.setGlobalSettings);
