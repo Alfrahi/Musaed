@@ -3,12 +3,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { MessageSquare, Trash2, Download, Edit2 } from 'lucide-react';
-import type { Language } from '@musaed/contracts';
 import { useCurrentConversationId, useSetCurrentConversationId } from '@/store/conversation-store';
 import { useLanguage } from '@/store';
 import { cn } from '@/lib/utils';
 import { useSidebarActions } from '@/features/sidebar/hooks/useSidebarActions';
-import { useTranslation, formatRelativeTime } from '@/lib/i18n';
+import { useTranslation } from '@/lib/i18n';
 import { useContextMenu } from '@/hooks/useContextMenu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -169,24 +168,10 @@ const ConversationRow = ({
   return <div {...sharedProps}>{children}</div>;
 };
 
-/** Title + relative-timestamp display for a non-editing conversation row. */
-const ConversationTitle = ({
-  conversation,
-  language,
-  lastUpdatedLabel,
-}: {
-  conversation: ConversationMetadata;
-  language: Language;
-  lastUpdatedLabel: string;
-}) => (
+/** Title display for a non-editing conversation row. */
+const ConversationTitle = ({ conversation }: { conversation: ConversationMetadata }) => (
   <div className="flex min-w-0 flex-1 items-baseline gap-2 pe-14">
     <span className="truncate py-0.5 tracking-tight">{conversation.title}</span>
-    <span
-      className="caption-xs shrink-0 text-zinc-400 tabular-nums dark:text-zinc-500"
-      aria-label={lastUpdatedLabel}
-    >
-      {formatRelativeTime(conversation.updatedAt, language)}
-    </span>
   </div>
 );
 
@@ -300,11 +285,7 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
           onSubmit={handleSubmitRename}
         />
       ) : (
-        <ConversationTitle
-          conversation={conversation}
-          language={language}
-          lastUpdatedLabel={t('a11y.conversationLastUpdated')}
-        />
+        <ConversationTitle conversation={conversation} />
       )}
 
       <ItemActions

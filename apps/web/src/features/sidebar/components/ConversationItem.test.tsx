@@ -219,39 +219,6 @@ describe('ConversationItem', () => {
     });
   });
 
-  describe('Relative timestamp metadata', () => {
-    it('renders a relative-timestamp span labelled with the last-updated a11y key', () => {
-      // Use a fresh "now" so the just-now threshold (< 60s) is deterministic.
-      const fresh = { ...baseConversation, updatedAt: Date.now() };
-      render(<ConversationItem conversation={fresh} />);
-      const ts = screen.getByLabelText('a11y.conversationLastUpdated');
-      expect(ts).toBeInTheDocument();
-      // formatRelativeTime routes through the real translate() (only
-      // useTranslation is mocked), so the English "just now" string is
-      // returned, not the raw key.
-      expect(ts.textContent).toBe('Just now');
-    });
-
-    it('gracefully renders an older timestamp as a short date', () => {
-      const oldConversation = {
-        ...baseConversation,
-        updatedAt: Date.now() - 30 * 86_400_000,
-      };
-      render(<ConversationItem conversation={oldConversation} />);
-      const ts = screen.getByLabelText('a11y.conversationLastUpdated');
-      // 30 days ago → "Mon D" short date format (e.g. "Jul 10").
-      expect(/^[A-Z][a-z]{2} \d+$/.test(ts.textContent ?? ''), `got: ${ts.textContent}`).toBe(true);
-    });
-
-    it('omits the timestamp while the row is in rename-edit mode', () => {
-      render(<ConversationItem conversation={baseConversation} />);
-      fireEvent.click(screen.getByTitle('sidebar.renameChat'));
-      // Rename input replaces the title+timestamp wrapper; the labelled
-      // timestamp span should no longer be in the document.
-      expect(screen.queryByLabelText('a11y.conversationLastUpdated')).toBeNull();
-    });
-  });
-
   describe('Hover-only action buttons reachable on focus (Phase 2 item 21)', () => {
     it('renders edit action buttons and they remain in the DOM when row is focused', () => {
       render(<ConversationItem conversation={baseConversation} />);
