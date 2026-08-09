@@ -2,7 +2,7 @@ use crate::payloads::ApiResponse;
 use crate::rag::services::projects;
 use crate::rag::services::*;
 use crate::rag::store::RagStore;
-use crate::rag::types::{AssembledContext, ChunkRecord, RagProject, SearchResult};
+use crate::rag::types::{AssembledContext, ChunkRecord, FileRecord, RagProject, SearchResult};
 use std::sync::Arc;
 use tauri::State;
 use tauri::{AppHandle, Runtime};
@@ -168,6 +168,17 @@ pub async fn cmd_rag_get_file_chunks(
         state,
     };
     Ok(get_file_chunks(req).await)
+}
+
+// ====================== FILE LISTING COMMANDS ======================
+
+#[tauri::command]
+pub async fn cmd_rag_list_files(
+    project_id: String,
+    state: State<'_, Arc<RwLock<RagStore>>>,
+) -> Result<ApiResponse<Vec<FileRecord>>, String> {
+    let req = ListFilesRequest { project_id, state };
+    Ok(list_files(req).await)
 }
 
 // ====================== EMBEDDING MODEL COMMANDS ======================

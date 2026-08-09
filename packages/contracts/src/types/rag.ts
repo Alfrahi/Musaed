@@ -7,6 +7,7 @@ import {
   type SearchResultSchema,
   type ProjectStatsSchema,
   type ChunkRecordSchema,
+  type FileRecordSchema,
   type IndexCompleteSchema,
   type IndexErrorSchema,
   type IndexStatusSchema,
@@ -22,6 +23,7 @@ export type IndexProgress = z.infer<typeof IndexProgressSchema>;
 export type SearchResult = z.infer<typeof SearchResultSchema>;
 export type ProjectStats = z.infer<typeof ProjectStatsSchema>;
 export type ChunkRecord = z.infer<typeof ChunkRecordSchema>;
+export type FileRecord = z.infer<typeof FileRecordSchema>;
 export type IndexComplete = z.infer<typeof IndexCompleteSchema>;
 export type IndexError = z.infer<typeof IndexErrorSchema>;
 export type IndexStatus = z.infer<typeof IndexStatusSchema>;

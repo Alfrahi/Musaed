@@ -65,6 +65,15 @@ export const ChunkRecordSchema = z.object({
   endLine: z.number(),
   metadata: z.record(z.string(), z.unknown()),
 });
+export const FileRecordSchema = z.object({
+  id: z.number().nullable(),
+  projectId: z.string(),
+  relativePath: z.string(),
+  fileHash: z.string(),
+  fileSize: z.number(),
+  modifiedAt: z.string(),
+  chunkCount: z.number(),
+});
 export const IndexCompleteSchema = z.object({
   projectId: z.string(),
   indexedAt: z.string(),

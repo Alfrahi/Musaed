@@ -143,6 +143,7 @@ pub fn run() {
             rag::commands::cmd_rag_retry_index_project,
             rag::commands::cmd_rag_search,
             rag::commands::cmd_rag_get_file_chunks,
+            rag::commands::cmd_rag_list_files,
             rag::commands::cmd_rag_set_embedding_model,
             rag::commands::cmd_rag_assemble_context,
             conversation::commands::cmd_conversations_list,

@@ -188,7 +188,8 @@ pub struct AssembledContext {
 // ====================== INTERNAL DB TYPES ======================
 
 /// Internal row representation for the `files` table.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FileRecord {
     pub id: Option<i64>,
     pub project_id: String,

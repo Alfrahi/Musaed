@@ -75,6 +75,7 @@ export const IPC_LATENCY_BUDGETS: Readonly<Record<string, LatencyBudgetMs>> = {
   cmd_rag_retry_index_project: 5000,
   cmd_rag_search: 15000,
   cmd_rag_get_file_chunks: 5000,
+  cmd_rag_list_files: 3000,
   cmd_rag_set_embedding_model: 3000,
   cmd_rag_assemble_context: 20000,
   /** Conversation management — lightweight persistence */

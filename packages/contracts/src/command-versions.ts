@@ -54,6 +54,7 @@ export const COMMAND_VERSIONS = {
   cmd_rag_retry_index_project: true,
   cmd_rag_search: true,
   cmd_rag_get_file_chunks: true,
+  cmd_rag_list_files: true,
   cmd_rag_set_embedding_model: true,
   cmd_rag_assemble_context: true,
 
