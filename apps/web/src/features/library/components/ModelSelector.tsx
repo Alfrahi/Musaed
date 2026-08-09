@@ -214,7 +214,7 @@ const ParamsCollapsible = ({
   const [paramsOpen, setParamsOpen] = useState(false);
   if (!selectedModel) return null;
   return (
-    <div className="border-sidebar-border border-t">
+    <div className="border-sidebar-border border-bs">
       <button
         type="button"
         onClick={() => setParamsOpen((v) => !v)}
@@ -290,7 +290,7 @@ const ModelDropdown = ({
       <div className="border-be border-sidebar-border mbe-1 py-2.5 ps-4 pe-4">
         <span className="caption-md font-bold text-zinc-400 uppercase">{headerLabel}</span>
       </div>
-      <div className="border-be border-sidebar-border px-3 pb-2">
+      <div className="border-be border-sidebar-border pbe-2 px-3">
         <Input
           type="text"
           value={searchQuery}

@@ -36,7 +36,7 @@ const ShortcutCheatsheet = ({ isOpen, onClose }: ShortcutCheatsheetProps) => {
   return (
     <ModalLayout isOpen={isOpen} onClose={onClose} titleId={titleId} maxWidth="max-w-sm">
       <div className="flex flex-col">
-        <div className="border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
+        <div className="border-be border-zinc-100 px-4 py-3 dark:border-zinc-800">
           <h2 id={titleId} className="text-body font-semibold">
             {t('a11y.shortcutCheatsheet')}
           </h2>

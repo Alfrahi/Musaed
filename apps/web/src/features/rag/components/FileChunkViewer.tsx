@@ -24,7 +24,7 @@ const ChunkMetadata = ({ metadata }: { metadata: Record<string, unknown> }) => {
   if (entries.length === 0) return null;
 
   return (
-    <div className="text-muted-foreground text-caption mt-2 border-t pt-2">
+    <div className="text-muted-foreground text-caption mbs-2 border-bs pbs-2">
       <p className="font-medium">Metadata:</p>
       {metadata.enclosingEntity != null && (
         <p>
@@ -53,7 +53,7 @@ const ChunkCard = ({
   chunkRef?: (el: HTMLDivElement | null) => void;
 }) => (
   <div ref={chunkRef} className="rounded-md border p-3">
-    <div className="mb-2 flex items-center justify-between">
+    <div className="mbe-2 flex items-center justify-between">
       <span className="text-muted-foreground text-caption font-mono">
         Lines {chunk.startLine}–{chunk.endLine}
         {chunk.metadata?.enclosingEntity != null && (
@@ -127,7 +127,7 @@ const FileChunkViewer = ({ filePath, targetStartLine }: FileChunkViewerProps) =>
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b p-2">
+      <div className="border-be flex items-center justify-between p-2">
         <h3 className="text-body truncate font-medium">
           {t('rag.chunksForFile')} {filePath}
         </h3>

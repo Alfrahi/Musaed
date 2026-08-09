@@ -154,7 +154,7 @@ const PanelHeader = ({ modelName, label }: { modelName: string; label: string })
   <div className="border-be border-sidebar-border mbe-2 py-2.5 ps-4 pe-4">
     <div className="caption-md font-bold text-zinc-400 uppercase">{label}</div>
     {modelName && (
-      <div className="text-caption mt-0.5 truncate text-zinc-500" title={modelName}>
+      <div className="text-caption mbs-0.5 truncate text-zinc-500" title={modelName}>
         {modelName}
       </div>
     )}

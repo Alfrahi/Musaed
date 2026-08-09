@@ -44,7 +44,7 @@ const MermaidLoading = ({ className, label }: { className: string; label: string
     className={`flex items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 p-8 dark:border-zinc-800 dark:bg-zinc-900 ${className}`}
   >
     <div className="text-body flex items-center gap-3 text-zinc-500 dark:text-zinc-400">
-      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+      <div className="border-bs-transparent h-4 w-4 animate-spin rounded-full border-2 border-current" />
       {label}
     </div>
   </div>
@@ -69,7 +69,7 @@ const MermaidError = ({
   <div
     className={`text-body rounded-xl border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-950/50 ${className}`}
   >
-    <div className="mb-3 flex items-start justify-between">
+    <div className="mbe-3 flex items-start justify-between">
       <div className="font-semibold text-red-700 dark:text-red-400">{errorTitle}</div>
       <Button
         variant="outline"
@@ -84,7 +84,7 @@ const MermaidError = ({
       {error}
     </pre>
     <p
-      className="text-caption mt-3 text-red-500/80"
+      className="text-caption mbs-3 text-red-500/80"
       // Sanitize requirement note (i18n string) before injection
       dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(requirementNote) }}
     />

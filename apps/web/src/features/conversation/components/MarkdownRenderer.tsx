@@ -20,7 +20,7 @@ const MermaidRenderer = dynamic(() => import('./MermaidRenderer'), {
   ssr: false,
   loading: () => (
     <div className="animate-pulse rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
-      <div className="mb-2 h-4 w-1/3 rounded bg-zinc-200 dark:bg-zinc-700" />
+      <div className="mbe-2 h-4 w-1/3 rounded bg-zinc-200 dark:bg-zinc-700" />
       <div className="h-4 w-2/3 rounded bg-zinc-200 dark:bg-zinc-700" />
     </div>
   ),

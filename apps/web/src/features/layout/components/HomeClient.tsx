@@ -33,7 +33,7 @@ const ChatWindowDynamic = dynamic(() => import('@/features/conversation/componen
   ssr: false,
   loading: () => (
     <div className="flex flex-1 items-center justify-center bg-zinc-50/30 dark:bg-zinc-950">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+      <div className="border-bs-transparent h-8 w-8 animate-spin rounded-full border-4 border-blue-600" />
     </div>
   ),
 });
@@ -41,7 +41,7 @@ const ChatWindowDynamic = dynamic(() => import('@/features/conversation/componen
 const InputAreaDynamic = dynamic(() => import('@/features/conversation/components/InputArea'), {
   ssr: false,
   loading: () => (
-    <div className="border-sidebar-border bg-background animate-pulse border-t p-4">
+    <div className="border-sidebar-border bg-background border-bs animate-pulse p-4">
       <div className="h-12 rounded-md bg-zinc-100 dark:bg-zinc-800" />
     </div>
   ),
@@ -85,7 +85,7 @@ export const AppHeader = ({
   <header
     data-tauri-drag-region={isTauri ? 'true' : undefined}
     className={cn(
-      'border-sidebar-border bg-background/50 z-20 flex h-12 shrink-0 items-center justify-between border-b px-3 backdrop-blur-md select-none',
+      'border-sidebar-border bg-background/50 border-be z-20 flex h-12 shrink-0 items-center justify-between px-3 backdrop-blur-md select-none',
       isTauri && isMac && (isRtl ? 'pe-20' : 'ps-20'),
       isTauri && isWindows && (isRtl ? 'ps-28' : 'pe-28')
     )}

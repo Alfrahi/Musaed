@@ -120,7 +120,7 @@ export const AddProjectDialog = ({ onClose, onAdded }: AddProjectDialogProps) =>
 
   return (
     <ModalLayout isOpen onClose={onClose} titleId={titleId} maxWidth="max-w-md">
-      <div className="bg-background border-border space-y-4 border-b p-6">
+      <div className="bg-background border-border border-be space-y-4 p-6">
         <div className="flex items-center justify-between">
           <h2 id={titleId} className="text-lg font-semibold">
             {t('rag.addProject')}
@@ -229,7 +229,7 @@ const AddProjectFormFields = ({
 
     {form.errorMessage && <p className="text-body text-red-500">{form.errorMessage}</p>}
 
-    <div className="flex justify-end gap-2 pt-2">
+    <div className="pbs-2 flex justify-end gap-2">
       <Button variant="outline" onClick={onClose} className="text-body">
         {t('common.cancel')}
       </Button>
@@ -297,7 +297,7 @@ const EmbeddingModelSelect = ({
       )}
 
       {!isInstalled && value.trim() && (
-        <div className="flex items-center gap-2 pt-1">
+        <div className="pbs-1 flex items-center gap-2">
           <p className="text-caption text-amber-600 dark:text-amber-400">
             {t('rag.modelMissing', { model: value })}
           </p>

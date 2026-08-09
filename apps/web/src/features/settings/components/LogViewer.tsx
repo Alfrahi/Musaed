@@ -37,7 +37,7 @@ const renderParsedLog = (
 
   return (
     <div
-      className="caption-xs flex gap-3 border-b border-zinc-100 py-3 ps-6 pe-6 font-mono dark:border-zinc-800/50"
+      className="caption-xs border-be flex gap-3 border-zinc-100 py-3 ps-6 pe-6 font-mono dark:border-zinc-800/50"
       role="listitem"
     >
       <span className="shrink-0 text-zinc-400 dark:text-zinc-600">
@@ -74,7 +74,7 @@ const renderParsedLog = (
 
 const renderRawLog = (log: string) => (
   <div
-    className="caption-xs border-b border-zinc-100 py-3 ps-6 pe-6 font-mono text-zinc-500 dark:border-zinc-800/50"
+    className="caption-xs border-be border-zinc-100 py-3 ps-6 pe-6 font-mono text-zinc-500 dark:border-zinc-800/50"
     role="listitem"
   >
     {log}
@@ -110,7 +110,7 @@ const LogViewerHeader = ({
   clearLogs,
   onClose,
 }: LogViewerHeaderProps) => (
-  <div className="pbs-6 pbe-6 flex shrink-0 items-center justify-between border-b border-zinc-100 ps-6 pe-6 dark:border-zinc-800">
+  <div className="pbs-6 pbe-6 border-be flex shrink-0 items-center justify-between border-zinc-100 ps-6 pe-6 dark:border-zinc-800">
     <div className="flex items-center gap-4">
       <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
         <Terminal size={18} aria-hidden="true" />
@@ -164,7 +164,7 @@ interface LogViewerFooterProps {
 }
 
 const LogViewerFooter = ({ t, onClose }: LogViewerFooterProps) => (
-  <div className="flex shrink-0 items-center justify-between border-t border-zinc-100 bg-zinc-50/50 py-4 ps-6 pe-6 dark:border-zinc-800 dark:bg-zinc-900/80">
+  <div className="border-bs flex shrink-0 items-center justify-between border-zinc-100 bg-zinc-50/50 py-4 ps-6 pe-6 dark:border-zinc-800 dark:bg-zinc-900/80">
     <span className="caption-md font-medium text-zinc-400">{t('logs.logStorageInfo')}</span>
     <Button
       variant="secondary"
@@ -222,7 +222,7 @@ const IpcViolationsList = ({ t, formatDate }: IpcViolationsListProps) => {
 
   return (
     <section
-      className="shrink-0 border-b border-zinc-100 dark:border-zinc-800"
+      className="border-be shrink-0 border-zinc-100 dark:border-zinc-800"
       aria-label={t('logs.ipcViolations.title')}
     >
       <div className="flex items-center gap-2 bg-yellow-50/60 px-6 py-2 dark:bg-yellow-400/5">
@@ -248,7 +248,7 @@ const IpcViolationsList = ({ t, formatDate }: IpcViolationsListProps) => {
             <li
               key={entry.traceId}
               role="listitem"
-              className="caption-xs flex gap-3 border-b border-zinc-50 py-2 ps-6 pe-6 font-mono last:border-b-0 dark:border-zinc-800/50"
+              className="caption-xs border-be last:border-be-0 flex gap-3 border-zinc-50 py-2 ps-6 pe-6 font-mono dark:border-zinc-800/50"
             >
               <span className="shrink-0 text-zinc-400 dark:text-zinc-600">
                 [

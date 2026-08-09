@@ -101,7 +101,7 @@ export const ErrorFallback = ({
         {displayDescription && (
           <p
             className={cn(
-              'mt-1 text-zinc-600 dark:text-zinc-400',
+              'mbs-1 text-zinc-600 dark:text-zinc-400',
               compact ? 'text-caption' : 'text-body'
             )}
           >

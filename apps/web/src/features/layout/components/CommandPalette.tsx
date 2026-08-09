@@ -72,7 +72,7 @@ const PaletteSearch = ({
   placeholder: string;
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) => (
-  <div className="flex items-center gap-3 border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
+  <div className="border-be flex items-center gap-3 border-zinc-100 px-4 py-3 dark:border-zinc-800">
     <Search size={18} className="shrink-0 text-zinc-400" />
     <input
       ref={inputRef}
@@ -92,7 +92,7 @@ const PaletteSearch = ({
 
 /** Category section header inside the listbox. */
 const CategoryHeader = ({ label }: { label: string }) => (
-  <div className="caption-xs px-4 pt-3 pb-1 font-semibold tracking-normal text-zinc-400">
+  <div className="caption-xs pbs-3 pbe-1 px-4 font-semibold tracking-normal text-zinc-400">
     {label}
   </div>
 );

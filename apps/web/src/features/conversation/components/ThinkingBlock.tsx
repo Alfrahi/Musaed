@@ -67,7 +67,7 @@ const ThinkingBlock = ({
 
       {!isCollapsed && (
         <div
-          className="pbe-4 pbs-3 text-caption border-t border-zinc-100 ps-4 pe-4 font-serif leading-relaxed whitespace-pre-wrap text-zinc-500 italic dark:border-zinc-800/50 dark:text-zinc-400"
+          className="pbe-4 pbs-3 text-caption border-bs border-zinc-100 ps-4 pe-4 font-serif leading-relaxed whitespace-pre-wrap text-zinc-500 italic dark:border-zinc-800/50 dark:text-zinc-400"
           dir="auto"
           role="status"
           aria-live={isStreaming ? 'polite' : 'off'}
