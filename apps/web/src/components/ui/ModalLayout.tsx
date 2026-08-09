@@ -1,6 +1,6 @@
 'use client';
 
-import React, { type ReactNode, useCallback, useEffect, useId, useRef } from 'react';
+import React, { forwardRef, type ReactNode, useCallback, useEffect, useId, useRef } from 'react';
 import FocusTrap from 'focus-trap-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -32,6 +32,94 @@ interface ModalLayoutProps {
   className?: string;
   zIndex?: string;
 }
+
+const ModalSurface = forwardRef<
+  HTMLDivElement,
+  {
+    shouldReduceMotion: boolean;
+    panelRef: React.RefObject<HTMLDivElement | null>;
+    titleId: string;
+    describedById?: string;
+    maxWidth: string;
+    className?: string;
+    zIndex: string;
+    onBackdropPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
+    children: ReactNode;
+  }
+>(
+  (
+    {
+      shouldReduceMotion,
+      panelRef,
+      titleId,
+      describedById,
+      maxWidth,
+      className,
+      zIndex,
+      onBackdropPointerDown,
+      children,
+    },
+    forwardedRef
+  ) => {
+    const backdropClassName = cn(
+      'bg-background/80 fixed inset-0 flex items-center justify-center p-6 backdrop-blur-sm',
+      zIndex
+    );
+    const panelClassName = cn(
+      'border-sidebar-border shadow-pro flex w-full flex-col overflow-hidden border bg-white outline-none dark:bg-zinc-950',
+      maxWidth,
+      className
+    );
+
+    if (shouldReduceMotion) {
+      return (
+        <div ref={forwardedRef} className={backdropClassName} onPointerDown={onBackdropPointerDown}>
+          <div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            aria-describedby={describedById}
+            tabIndex={-1}
+            className={panelClassName}
+          >
+            {children}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <motion.div
+        ref={forwardedRef}
+        className={backdropClassName}
+        onPointerDown={onBackdropPointerDown}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+      >
+        <motion.div
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          aria-describedby={describedById}
+          tabIndex={-1}
+          initial={{ opacity: 0, scale: 0.99 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.98 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
+          className={panelClassName}
+        >
+          {children}
+        </motion.div>
+      </motion.div>
+    );
+  }
+);
+
+ModalSurface.displayName = 'ModalSurface';
 
 const ModalLayout = ({
   isOpen,
@@ -108,49 +196,18 @@ const ModalLayout = ({
         allowOutsideClick: true,
       }}
     >
-      <div
-        className={cn(
-          'bg-background/80 fixed inset-0 flex items-center justify-center p-6 backdrop-blur-sm',
-          zIndex
-        )}
-        onPointerDown={handleBackdropPointerDown}
+      <ModalSurface
+        shouldReduceMotion={shouldReduceMotion}
+        panelRef={panelRef}
+        titleId={titleId}
+        describedById={describedById}
+        maxWidth={maxWidth}
+        className={className}
+        zIndex={zIndex}
+        onBackdropPointerDown={handleBackdropPointerDown}
       >
-        {shouldReduceMotion ? (
-          <div
-            ref={panelRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={titleId}
-            aria-describedby={describedById}
-            tabIndex={-1}
-            className={cn(
-              'border-sidebar-border shadow-pro flex w-full flex-col overflow-hidden border bg-white outline-none dark:bg-zinc-950',
-              maxWidth,
-              className
-            )}
-          >
-            {children}
-          </div>
-        ) : (
-          <motion.div
-            ref={panelRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={titleId}
-            aria-describedby={describedById}
-            tabIndex={-1}
-            initial={{ opacity: 0, scale: 0.99 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className={cn(
-              'border-sidebar-border shadow-pro flex w-full flex-col overflow-hidden border bg-white outline-none dark:bg-zinc-950',
-              maxWidth,
-              className
-            )}
-          >
-            {children}
-          </motion.div>
-        )}
-      </div>
+        {children}
+      </ModalSurface>
     </FocusTrap>
   );
 };

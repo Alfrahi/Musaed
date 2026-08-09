@@ -120,19 +120,19 @@ class ErrorBoundary extends Component<Props, State> {
             </div>
 
             <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
                 {errorUI.title}
               </h2>
-              <p className="text-body text-gray-600 dark:text-gray-400">{errorUI.description}</p>
+              <p className="text-body text-zinc-600 dark:text-zinc-400">{errorUI.description}</p>
             </div>
 
             {this.state.errorType === 'general' && this.state.error && config.isDev && (
               <details className="text-start">
-                <summary className="caption-md duration-fast cursor-pointer font-bold tracking-widest text-gray-500 uppercase transition-colors hover:text-gray-700">
+                <summary className="caption-md duration-fast cursor-pointer font-bold tracking-widest text-zinc-500 uppercase transition-colors hover:text-zinc-700">
                   <HelpCircle size={14} className="me-1 inline" />
                   {t('error.details')}
                 </summary>
-                <pre className="caption-xs mbs-2 max-h-24 overflow-auto rounded bg-gray-100 p-2 text-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                <pre className="caption-xs mbs-2 max-h-24 overflow-auto rounded bg-zinc-100 p-2 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
                   {sanitizeError(this.state.error).message}
                 </pre>
               </details>

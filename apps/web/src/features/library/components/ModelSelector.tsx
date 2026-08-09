@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Settings2, RefreshCw, ChevronDown, Check, Loader2, SlidersHorizontal } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useUIStore } from '@/store/ui-store';
 import { useModelStore, useSettingsStore } from '@/store';
 import { cn } from '@/lib/utils';
@@ -281,11 +282,15 @@ const ModelDropdown = ({
     : models;
 
   return (
-    <div
+    <motion.div
       id={listboxId}
-      className="inset-be-full mbe-2 border-sidebar-border shadow-pro animate-in fade-in slide-in-from-bottom-2 duration-normal absolute start-0 z-50 min-w-[280px] border bg-white py-1 transition-all dark:bg-zinc-900"
+      className="inset-be-full mbe-2 border-sidebar-border shadow-pro absolute start-0 z-50 min-w-[280px] border bg-white py-1 transition-all dark:bg-zinc-900"
       role="listbox"
       aria-labelledby={triggerId}
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.15 }}
     >
       <div className="border-be border-sidebar-border mbe-1 py-2.5 ps-4 pe-4">
         <span className="caption-md font-bold text-zinc-400 uppercase">{headerLabel}</span>
@@ -315,7 +320,7 @@ const ModelDropdown = ({
       </div>
 
       <ParamsCollapsible selectedModel={selectedModel} parametersLabel={parametersLabel} />
-    </div>
+    </motion.div>
   );
 };
 
@@ -423,26 +428,29 @@ const ModelSelector = () => {
         />
       </div>
 
-      {isOpen && (
-        <ModelDropdown
-          listboxId={listboxId}
-          triggerId={triggerId}
-          models={models}
-          selectedModel={selectedModel}
-          activeIndex={activeIndex}
-          optionIdPrefix={optionIdPrefix}
-          onSelect={handleSelect}
-          onOptionHover={setActiveIndex}
-          headerLabel={t('a11y.selectModel')}
-          emptyLabel={t('library.noModelsFound')}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          searchPlaceholder={t('a11y.searchModels')}
-          isFetching={isFetching}
-          loadingLabel={t('library.loadingModels')}
-          parametersLabel={t('library.modelParameters')}
-        />
-      )}
+      <AnimatePresence>
+        {isOpen && (
+          <ModelDropdown
+            key="model-dropdown"
+            listboxId={listboxId}
+            triggerId={triggerId}
+            models={models}
+            selectedModel={selectedModel}
+            activeIndex={activeIndex}
+            optionIdPrefix={optionIdPrefix}
+            onSelect={handleSelect}
+            onOptionHover={setActiveIndex}
+            headerLabel={t('a11y.selectModel')}
+            emptyLabel={t('library.noModelsFound')}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder={t('a11y.searchModels')}
+            isFetching={isFetching}
+            loadingLabel={t('library.loadingModels')}
+            parametersLabel={t('library.modelParameters')}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
