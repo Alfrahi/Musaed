@@ -2,16 +2,9 @@
 
 import { useEffect } from 'react';
 import { useConversationActions } from '@/features/conversation';
-import { stopStreamForConversation } from '@/store/coordination';
+import { stopStream } from '@/store/coordination';
 import { chatApi } from '@/lib/ipc';
-import {
-  useSetSettingsOpen,
-  useSetLibraryOpen,
-  useSetInfoOpen,
-  useSetCheatsheetOpen,
-  useSetCommandPaletteOpen,
-  useSetSearchOpen,
-} from '@/store/hooks';
+import { useOpenModal, useCloseModal } from '@/store/hooks';
 import { selectIsAnyModalOpen, useUIStore } from '@/store/ui-store';
 import { useConversationStore } from '@/store/conversation-store';
 import { useStreamingStore } from '@/store/streaming-store';
@@ -25,18 +18,15 @@ import { useStreamingStore } from '@/store/streaming-store';
  * - Cmd/Ctrl + L: Model Library
  * - Cmd/Ctrl + /: Keyboard shortcuts cheatsheet
  * - Cmd/Ctrl + K: Command palette
- * - Escape: if any modal is open, close modals; otherwise, if the active
+ * - Cmd/Ctrl + F: Search
+ * - Escape: if any modal is open, close it; otherwise, if the active
  *   conversation is streaming, stop the stream. The two branches are mutually
  *   exclusive so Escape never double-fires (Escape-to-stop contract).
  */
 export function useGlobalShortcuts() {
   const { createNewConversation } = useConversationActions();
-  const setSettingsOpen = useSetSettingsOpen();
-  const setLibraryOpen = useSetLibraryOpen();
-  const setInfoOpen = useSetInfoOpen();
-  const setCheatsheetOpen = useSetCheatsheetOpen();
-  const setCommandPaletteOpen = useSetCommandPaletteOpen();
-  const setSearchOpen = useSetSearchOpen();
+  const openModal = useOpenModal();
+  const closeModal = useCloseModal();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -47,27 +37,27 @@ export function useGlobalShortcuts() {
 
       if ((e.ctrlKey || e.metaKey) && e.key === ',') {
         e.preventDefault();
-        setSettingsOpen(true);
+        openModal('settings');
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
         e.preventDefault();
-        setLibraryOpen(true);
+        openModal('library');
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key === '/') {
         e.preventDefault();
-        setCheatsheetOpen(true);
+        openModal('cheatsheet');
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        setCommandPaletteOpen(true);
+        openModal('commandPalette');
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         e.preventDefault();
-        setSearchOpen(true);
+        openModal('search');
       }
 
       if (e.key === 'Escape') {
@@ -75,12 +65,7 @@ export function useGlobalShortcuts() {
         // routing stays current without re-running this effect on every toggle.
         const anyModalOpen = selectIsAnyModalOpen(useUIStore.getState());
         if (anyModalOpen) {
-          setSettingsOpen(false);
-          setLibraryOpen(false);
-          setInfoOpen(false);
-          setCheatsheetOpen(false);
-          setCommandPaletteOpen(false);
-          setSearchOpen(false);
+          closeModal();
           return;
         }
 
@@ -93,23 +78,15 @@ export function useGlobalShortcuts() {
         if (conversationId in activeStreams) {
           const requestId = activeStreams[conversationId];
           chatApi.abort(requestId);
-          // Pass the requestId so stopStreamForConversation bails out if a
+          // Pass the requestId so stopStream bails out if a
           // new stream has replaced the old one before this call runs
           // (abort race).
-          stopStreamForConversation(conversationId, requestId);
+          stopStream(conversationId, 'abort', requestId);
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [
-    createNewConversation,
-    setSettingsOpen,
-    setLibraryOpen,
-    setInfoOpen,
-    setCheatsheetOpen,
-    setCommandPaletteOpen,
-    setSearchOpen,
-  ]);
+  }, [createNewConversation, openModal, closeModal]);
 }

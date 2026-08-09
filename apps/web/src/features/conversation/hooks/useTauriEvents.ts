@@ -7,7 +7,7 @@ import { useSettingsStore } from '@/store/settings-store';
 import { useStreamingStore } from '@/store/streaming-store';
 import { listen } from '@/lib/ipc';
 import { translate } from '@/lib/i18n';
-import { stopStreamForConversation, completeStreamForConversation } from '@/store/coordination';
+import { stopStream } from '@/store/coordination';
 import { useMessageStore } from '@/store/message-store';
 import { triggerAutoTitle } from './useAutoTitle';
 import { persistMessage } from '@/features/conversation/utils/message-persistence';
@@ -50,12 +50,12 @@ const handleToken = (payload: OllamaToken) => {
   }
 
   // On stream completion, flush remaining content + metrics and clean up.
-  // Uses completeStreamForConversation (not stopStreamForConversation) so the
-  // assistant message is NOT marked stopped:true — that flag is reserved for
-  // user-initiated aborts. This also ensures metrics
-  // are flushed onto the message for TokenContextBar visualization.
+  // Uses reason 'complete' (not 'abort') so the assistant message is NOT
+  // marked `stopped:true` — that flag is reserved for user-initiated aborts.
+  // This also ensures metrics are flushed onto the message for
+  // TokenContextBar visualization.
   if (payload.done) {
-    completeStreamForConversation(convId);
+    stopStream(convId, 'complete');
 
     // Persist the completed assistant message to Rust backend with retry logic.
     // Guard against the conversation being deleted between stream start and
@@ -98,9 +98,13 @@ const handleError = (payload: BackendError) => {
       ([_, id]) => id === sanitized.requestId
     )?.[0];
     if (convId) {
-      // Pass the requestId so stopStreamForConversation bails out if a new
-      // stream has replaced the old one before this call runs.
-      stopStreamForConversation(convId, sanitized.requestId);
+      // Pass the requestId so stopStream bails out if a new stream has
+      // replaced the old one before this call runs. Reason 'error' flushes
+      // buffered tokens but does NOT mark the assistant message
+      // `stopped: true` — that flag is reserved for user-initiated aborts
+      // and would render a spurious "Stopped by user" marker on a message
+      // that actually failed due to a backend error.
+      stopStream(convId, 'error', sanitized.requestId);
       toast.error(translate('error.backendError', lang, { message: sanitized.message }));
       return;
     }
@@ -108,9 +112,11 @@ const handleError = (payload: BackendError) => {
 
   toast.error(translate('error.backendError', lang, { message: sanitized.message }));
 
-  // Flush all active streams on unattributed errors
+  // Flush all active streams on unattributed errors. Use 'error' (not
+  // 'abort') so the `stopped: true` marker stays reserved for
+  // user-initiated stops.
   Object.keys(streamingStore.activeStreams).forEach((id) => {
-    stopStreamForConversation(id);
+    stopStream(id, 'error');
   });
 };
 

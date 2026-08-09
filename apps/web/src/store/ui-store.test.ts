@@ -12,7 +12,9 @@ import {
   useIsSettingsOpen,
   useIsLibraryOpen,
   useIsInfoOpen,
-  useSetStreaming,
+  useActiveModal,
+  useOpenModal,
+  useCloseModal,
   useSetUIError,
 } from './ui-store';
 
@@ -30,9 +32,7 @@ describe('UI Store Complete', () => {
       isHydrated: false,
       isOllamaConnected: false,
       errorMessage: null,
-      isSettingsOpen: false,
-      isLibraryOpen: false,
-      isInfoOpen: false,
+      activeModal: null,
       _pendingRehydrations: 0,
     });
   });
@@ -45,9 +45,7 @@ describe('UI Store Complete', () => {
       expect(state.isHydrated).toBe(false);
       expect(state.isOllamaConnected).toBe(false);
       expect(state.errorMessage).toBeNull();
-      expect(state.isSettingsOpen).toBe(false);
-      expect(state.isLibraryOpen).toBe(false);
-      expect(state.isInfoOpen).toBe(false);
+      expect(state.activeModal).toBeNull();
       expect(state._pendingRehydrations).toBe(0);
     });
   });
@@ -130,55 +128,49 @@ describe('UI Store Complete', () => {
     });
   });
 
-  describe('modal states', () => {
-    it('should set settings modal open', () => {
+  describe('modal state', () => {
+    const MODAL_KINDS = [
+      'settings',
+      'library',
+      'info',
+      'cheatsheet',
+      'commandPalette',
+      'search',
+    ] as const;
+
+    it.each(MODAL_KINDS)('openModal(%s) sets activeModal to that kind', (kind) => {
       act(() => {
-        useUIStore.getState().setSettingsOpen(true);
+        useUIStore.getState().openModal(kind);
       });
-      expect(useUIStore.getState().isSettingsOpen).toBe(true);
+      expect(useUIStore.getState().activeModal).toBe(kind);
     });
 
-    it('should set library panel open', () => {
+    it('closeModal sets activeModal to null', () => {
       act(() => {
-        useUIStore.getState().setLibraryOpen(true);
+        useUIStore.getState().openModal('settings');
+        useUIStore.getState().closeModal();
       });
-      expect(useUIStore.getState().isLibraryOpen).toBe(true);
+      expect(useUIStore.getState().activeModal).toBeNull();
     });
 
-    it('should set info panel open', () => {
+    it('openModal replaces the previous modal', () => {
       act(() => {
-        useUIStore.getState().setInfoOpen(true);
+        useUIStore.getState().openModal('library');
+        useUIStore.getState().openModal('settings');
       });
-      expect(useUIStore.getState().isInfoOpen).toBe(true);
+      expect(useUIStore.getState().activeModal).toBe('settings');
     });
   });
 
   describe('selectors', () => {
     it('selectIsAnyModalOpen should return true when any modal is open', () => {
       act(() => {
-        useUIStore.getState().setSettingsOpen(true);
-      });
-      expect(selectIsAnyModalOpen(useUIStore.getState())).toBe(true);
-
-      act(() => {
-        useUIStore.getState().setSettingsOpen(false);
-        useUIStore.getState().setLibraryOpen(true);
-      });
-      expect(selectIsAnyModalOpen(useUIStore.getState())).toBe(true);
-
-      act(() => {
-        useUIStore.getState().setLibraryOpen(false);
-        useUIStore.getState().setInfoOpen(true);
+        useUIStore.getState().openModal('settings');
       });
       expect(selectIsAnyModalOpen(useUIStore.getState())).toBe(true);
     });
 
     it('selectIsAnyModalOpen should return false when all modals closed', () => {
-      act(() => {
-        useUIStore.getState().setSettingsOpen(false);
-        useUIStore.getState().setLibraryOpen(false);
-        useUIStore.getState().setInfoOpen(false);
-      });
       expect(selectIsAnyModalOpen(useUIStore.getState())).toBe(false);
     });
 
@@ -238,40 +230,57 @@ describe('UI Store Complete', () => {
       expect(result.current).toBe('Test error');
     });
 
-    it('useIsSettingsOpen should return settings open state', () => {
+    it('useIsSettingsOpen should return true when settings modal is active', () => {
       const { result } = renderHook(() => useIsSettingsOpen());
       act(() => {
-        useUIStore.getState().setSettingsOpen(true);
+        useUIStore.getState().openModal('settings');
       });
       expect(result.current).toBe(true);
     });
 
-    it('useIsLibraryOpen should return library open state', () => {
+    it('useIsLibraryOpen should return true when library modal is active', () => {
       const { result } = renderHook(() => useIsLibraryOpen());
       act(() => {
-        useUIStore.getState().setLibraryOpen(true);
+        useUIStore.getState().openModal('library');
       });
       expect(result.current).toBe(true);
     });
 
-    it('useIsInfoOpen should return info open state', () => {
+    it('useIsInfoOpen should return true when info modal is active', () => {
       const { result } = renderHook(() => useIsInfoOpen());
       act(() => {
-        useUIStore.getState().setInfoOpen(true);
+        useUIStore.getState().openModal('info');
       });
       expect(result.current).toBe(true);
+    });
+
+    it('useActiveModal should return the active modal kind', () => {
+      const { result } = renderHook(() => useActiveModal());
+      act(() => {
+        useUIStore.getState().openModal('cheatsheet');
+      });
+      expect(result.current).toBe('cheatsheet');
+    });
+
+    it('useOpenModal should return the openModal function', () => {
+      const { result } = renderHook(() => useOpenModal());
+      act(() => {
+        result.current('search');
+      });
+      expect(useUIStore.getState().activeModal).toBe('search');
+    });
+
+    it('useCloseModal should return the closeModal function', () => {
+      const { result } = renderHook(() => useCloseModal());
+      act(() => {
+        useUIStore.getState().openModal('settings');
+        result.current();
+      });
+      expect(useUIStore.getState().activeModal).toBeNull();
     });
   });
 
   describe('setter hooks', () => {
-    it('useSetStreaming should return setter function', () => {
-      const { result } = renderHook(() => useSetStreaming());
-      act(() => {
-        result.current(true);
-      });
-      expect(useUIStore.getState().isStreaming).toBe(true);
-    });
-
     it('useSetUIError should return setter function', () => {
       const { result } = renderHook(() => useSetUIError());
       act(() => {

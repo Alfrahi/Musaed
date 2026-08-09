@@ -5,14 +5,7 @@ import { useMessageStore } from '@/store/message-store';
 import { useSettingsStore, useModelStore, useConversationStore } from '@/store';
 import { useSetGlobalSettings } from '@/store/settings-store';
 import { useConversationActions } from '@/features/conversation';
-import {
-  useSetLibraryOpen,
-  useSetSettingsOpen,
-  useSetInfoOpen,
-  useSetCheatsheetOpen,
-  useSetCommandPaletteOpen,
-  useSetSearchOpen,
-} from '@/store/hooks';
+import { useOpenModal } from '@/store/hooks';
 import { exportToMarkdown } from '@/features/sidebar';
 import { useTranslation } from '@/lib/i18n';
 import { buildCommands, type Command, type CommandCallbacks } from '../utils/build-commands';
@@ -28,12 +21,7 @@ export function useCommands(onClose: () => void): Command[] {
   const globalSettings = useSettingsStore((s) => s.globalSettings);
   const { t, formatDate, formatNumber } = useTranslation(globalSettings.language);
   const { createNewConversation, clearAllConversations } = useConversationActions();
-  const setLibraryOpen = useSetLibraryOpen();
-  const setSettingsOpen = useSetSettingsOpen();
-  const setInfoOpen = useSetInfoOpen();
-  const setCheatsheetOpen = useSetCheatsheetOpen();
-  const setCommandPaletteOpen = useSetCommandPaletteOpen();
-  const setSearchOpen = useSetSearchOpen();
+  const openModal = useOpenModal();
   const setGlobalSettings = useSetGlobalSettings();
   const models = useModelStore((s) => s.models);
   const conversations = useConversationStore((s) => s.conversations);
@@ -61,12 +49,7 @@ export function useCommands(onClose: () => void): Command[] {
         t,
         {
           createNewConversation,
-          setLibraryOpen,
-          setSettingsOpen,
-          setInfoOpen,
-          setCheatsheetOpen,
-          setCommandPaletteOpen,
-          setSearchOpen,
+          openModal,
           setCurrentConversationId: useConversationStore.getState().setCurrentConversationId,
           setSelectedModel: useModelStore.getState().setSelectedModel,
           updateGlobalSettings,
@@ -83,12 +66,7 @@ export function useCommands(onClose: () => void): Command[] {
     [
       t,
       createNewConversation,
-      setLibraryOpen,
-      setSettingsOpen,
-      setInfoOpen,
-      setCheatsheetOpen,
-      setCommandPaletteOpen,
-      setSearchOpen,
+      openModal,
       updateGlobalSettings,
       clearAllConversations,
       exportCurrentChat,

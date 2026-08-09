@@ -10,18 +10,17 @@ import { shallow } from 'zustand/shallow';
  *  rules forbid `components/ui` from reaching into the sidebar barrel. */
 export type SidebarTab = 'chats' | 'projects';
 
+/** Which modal is currently open, or `null` when none is open. */
+export type ModalKind =
+  'settings' | 'library' | 'info' | 'cheatsheet' | 'commandPalette' | 'search';
+
 interface UIState {
   isStreaming: boolean;
   isInitialized: boolean;
   isHydrated: boolean;
   isOllamaConnected: boolean;
   errorMessage: string | null;
-  isSettingsOpen: boolean;
-  isLibraryOpen: boolean;
-  isInfoOpen: boolean;
-  isCheatsheetOpen: boolean;
-  isCommandPaletteOpen: boolean;
-  isSearchOpen: boolean;
+  activeModal: ModalKind | null;
   sidebarTab: SidebarTab;
   /** Counter for pending store rehydrations. Decremented by each store's onRehydrateStorage callback. */
   _pendingRehydrations: number;
@@ -30,12 +29,8 @@ interface UIState {
   setHydrated: (isHydrated: boolean) => void;
   setOllamaConnected: (isConnected: boolean) => void;
   setErrorMessage: (errorMessage: string | null) => void;
-  setSettingsOpen: (isSettingsOpen: boolean) => void;
-  setLibraryOpen: (isLibraryOpen: boolean) => void;
-  setInfoOpen: (isInfoOpen: boolean) => void;
-  setCheatsheetOpen: (isCheatsheetOpen: boolean) => void;
-  setCommandPaletteOpen: (isCommandPaletteOpen: boolean) => void;
-  setSearchOpen: (isSearchOpen: boolean) => void;
+  openModal: (kind: ModalKind) => void;
+  closeModal: () => void;
   setSidebarTab: (tab: SidebarTab) => void;
   /** Called before rehydration starts. Increments the pending counter by `count`. */
   setPendingRehydrations: (count: number) => void;
@@ -44,13 +39,7 @@ interface UIState {
 }
 
 // Selectors for the UI store
-export const selectIsAnyModalOpen = (state: UIState) =>
-  state.isSettingsOpen ||
-  state.isLibraryOpen ||
-  state.isInfoOpen ||
-  state.isCheatsheetOpen ||
-  state.isCommandPaletteOpen ||
-  state.isSearchOpen;
+export const selectIsAnyModalOpen = (state: UIState) => state.activeModal !== null;
 
 export const selectHasError = (state: UIState) => !!state.errorMessage;
 
@@ -61,12 +50,7 @@ export const useUIStore = createWithEqualityFn<UIState>()(
     isHydrated: false,
     isOllamaConnected: false,
     errorMessage: null,
-    isSettingsOpen: false,
-    isLibraryOpen: false,
-    isInfoOpen: false,
-    isCheatsheetOpen: false,
-    isCommandPaletteOpen: false,
-    isSearchOpen: false,
+    activeModal: null,
     sidebarTab: 'chats',
     _pendingRehydrations: 0,
     setStreaming: (isStreaming) => set({ isStreaming }),
@@ -74,12 +58,8 @@ export const useUIStore = createWithEqualityFn<UIState>()(
     setHydrated: (isHydrated) => set({ isHydrated }),
     setOllamaConnected: (isOllamaConnected) => set({ isOllamaConnected }),
     setErrorMessage: (errorMessage) => set({ errorMessage }),
-    setSettingsOpen: (isSettingsOpen) => set({ isSettingsOpen }),
-    setLibraryOpen: (isLibraryOpen) => set({ isLibraryOpen }),
-    setInfoOpen: (isInfoOpen) => set({ isInfoOpen }),
-    setCheatsheetOpen: (isCheatsheetOpen) => set({ isCheatsheetOpen }),
-    setCommandPaletteOpen: (isCommandPaletteOpen) => set({ isCommandPaletteOpen }),
-    setSearchOpen: (isSearchOpen) => set({ isSearchOpen }),
+    openModal: (kind) => set({ activeModal: kind }),
+    closeModal: () => set({ activeModal: null }),
     setSidebarTab: (sidebarTab) => set({ sidebarTab }),
     setPendingRehydrations: (count) => set({ _pendingRehydrations: count }),
     onStoreRehydrated: () =>
@@ -100,20 +80,22 @@ export const useIsInitialized = () => useUIStore((s) => s.isInitialized);
 export const useIsHydrated = () => useUIStore((s) => s.isHydrated);
 export const useIsOllamaConnected = () => useUIStore((s) => s.isOllamaConnected);
 export const useUIError = () => useUIStore((s) => s.errorMessage);
-export const useIsSettingsOpen = () => useUIStore((s) => s.isSettingsOpen);
-export const useIsLibraryOpen = () => useUIStore((s) => s.isLibraryOpen);
-export const useIsInfoOpen = () => useUIStore((s) => s.isInfoOpen);
+export const useActiveModal = () => useUIStore((s) => s.activeModal);
+export const useOpenModal = () => useUIStore((s) => s.openModal);
+export const useCloseModal = () => useUIStore((s) => s.closeModal);
 
-export const useSetStreaming = () => useUIStore((s) => s.setStreaming);
+// Backward-compat hooks: check activeModal against a specific kind.
+export const useIsSettingsOpen = () => useUIStore((s) => s.activeModal === 'settings');
+export const useIsLibraryOpen = () => useUIStore((s) => s.activeModal === 'library');
+export const useIsInfoOpen = () => useUIStore((s) => s.activeModal === 'info');
+
+// `setStreaming` is intentionally NOT exposed as a public hook. It is a
+// private action called only from `store/coordination.ts` so that the
+// `isStreaming` invariant is enforced in exactly one place
+// (see STANDARDS.md §9 — stream orchestration).
 export const useSetInitialized = () => useUIStore((s) => s.setInitialized);
 export const useSetHydrated = () => useUIStore((s) => s.setHydrated);
 export const useSetOllamaConnected = () => useUIStore((s) => s.setOllamaConnected);
 export const useSetUIError = () => useUIStore((s) => s.setErrorMessage);
-export const useSetSettingsOpen = () => useUIStore((s) => s.setSettingsOpen);
-export const useSetLibraryOpen = () => useUIStore((s) => s.setLibraryOpen);
-export const useSetInfoOpen = () => useUIStore((s) => s.setInfoOpen);
-export const useSetCheatsheetOpen = () => useUIStore((s) => s.setCheatsheetOpen);
-export const useSetCommandPaletteOpen = () => useUIStore((s) => s.setCommandPaletteOpen);
-export const useSetSearchOpen = () => useUIStore((s) => s.setSearchOpen);
 export const useSidebarTab = () => useUIStore((s) => s.sidebarTab);
 export const useSetSidebarTab = () => useUIStore((s) => s.setSidebarTab);

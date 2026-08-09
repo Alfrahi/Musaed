@@ -3,7 +3,7 @@
 import { useCallback } from 'react';
 import { Send, Square, ImageIcon, Paperclip } from 'lucide-react';
 import { useChatInput } from '@/features/conversation/hooks/useChatInput';
-import { stopStreamForConversation } from '@/store/coordination';
+import { stopStream } from '@/store/coordination';
 import { chatApi } from '@/lib/ipc';
 import { useStreamingStore } from '@/store/streaming-store';
 import { useDropZone } from '@/features/conversation/hooks/useDropZone';
@@ -144,10 +144,10 @@ export const InputArea = () => {
     if (currentConversationId) {
       const requestId = useStreamingStore.getState().activeStreams[currentConversationId];
       if (requestId) chatApi.abort(requestId);
-      // Pass the requestId so stopStreamForConversation bails out if a
+      // Pass the requestId so stopStream bails out if a
       // new stream has replaced the old one before this call runs
       // (abort race).
-      stopStreamForConversation(currentConversationId, requestId);
+      stopStream(currentConversationId, 'abort', requestId);
     }
   }, [currentConversationId]);
 

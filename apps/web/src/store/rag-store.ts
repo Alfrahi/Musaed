@@ -8,6 +8,7 @@ import { createTauriStorage } from '@/lib/tauri-storage';
 import { useUIStore } from '@/store/ui-store';
 import { ragMigrations, validateRag } from '@/lib/migrations';
 import { logger } from '@/lib/logger';
+import { deriveProjectStatus } from '@/lib/rag-status';
 
 const RAG_STORE_VERSION = 3;
 
@@ -100,32 +101,14 @@ export const useRagStore = createWithEqualityFn<RagState>()(
           const existing = state.projects[projectId];
           if (!existing) return state;
 
-          // Reset retryAttempts when starting a new indexing operation
-          const retryAttempts =
-            progress?.phase === 'discoveringFiles' && progress.current > 0 && progress.total === 3
-              ? progress.current // This indicates a retry attempt
-              : progress?.phase === 'discoveringFiles'
-                ? 0 // New indexing operation
-                : (existing.retryAttempts ?? 0);
-
-          // Capture last error when phase is failed
-          const lastError =
-            progress?.phase === 'failed' && progress.message
-              ? progress.message
-              : (existing.lastError ?? null);
+          const { status, retryAttempts, lastError } = deriveProjectStatus(progress, existing);
 
           return {
             projects: {
               ...state.projects,
               [projectId]: {
                 ...existing,
-                status: progress
-                  ? progress.phase === 'completed'
-                    ? 'ready'
-                    : progress.phase === 'failed'
-                      ? 'error'
-                      : 'indexing'
-                  : existing.status,
+                status,
                 retryAttempts,
                 lastError,
               },

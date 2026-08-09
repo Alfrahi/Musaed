@@ -3,19 +3,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
-import {
-  useIsHydrated,
-  useIsLibraryOpen,
-  useIsSettingsOpen,
-  useIsInfoOpen,
-  useSetLibraryOpen,
-  useSetSettingsOpen,
-  useSetInfoOpen,
-  useSetCheatsheetOpen,
-  useSetCommandPaletteOpen,
-  useSetSearchOpen,
-} from '@/store/hooks';
-import { useUIStore } from '@/store/ui-store';
+import { useIsHydrated, useActiveModal, useOpenModal, useCloseModal } from '@/store/hooks';
 import { useGlobalSettings } from '@/store/settings-store';
 import { registerHydrationCoordination } from '@/store/coordination';
 import { Sliders, Library } from 'lucide-react';
@@ -146,18 +134,9 @@ export const AppHeader = ({
 const HomeClient = () => {
   const globalSettings = useGlobalSettings();
   const isHydrated = useIsHydrated();
-  const isLibraryOpen = useIsLibraryOpen();
-  const isSettingsOpen = useIsSettingsOpen();
-  const isInfoOpen = useIsInfoOpen();
-  const setLibraryOpen = useSetLibraryOpen();
-  const setSettingsOpen = useSetSettingsOpen();
-  const setInfoOpen = useSetInfoOpen();
-  const setCheatsheetOpen = useSetCheatsheetOpen();
-  const setCommandPaletteOpen = useSetCommandPaletteOpen();
-  const setSearchOpen = useSetSearchOpen();
-  const isCheatsheetOpen = useUIStore((s) => s.isCheatsheetOpen);
-  const isCommandPaletteOpen = useUIStore((s) => s.isCommandPaletteOpen);
-  const isSearchOpen = useUIStore((s) => s.isSearchOpen);
+  const activeModal = useActiveModal();
+  const openModal = useOpenModal();
+  const closeModal = useCloseModal();
   const { initializeApp } = useAppInitialization();
   const { reconnect } = useOllamaConnection();
   const [mounted, setMounted] = useState(false);
@@ -193,39 +172,26 @@ const HomeClient = () => {
           isMac={isMac}
           isWindows={isWindows}
           isRtl={isRtl}
-          onLibraryOpen={() => setLibraryOpen(true)}
-          onSettingsOpen={() => setSettingsOpen(true)}
+          onLibraryOpen={() => openModal('library')}
+          onSettingsOpen={() => openModal('settings')}
           appName={t('common.appName')}
           t={t}
         />
         <div className="relative flex min-h-0 flex-1 flex-col">
           <ChatWindowDynamic
-            onInstallModel={() => setLibraryOpen(true)}
+            onInstallModel={() => openModal('library')}
             onStartOllama={() => void reconnect()}
           />
           <InputAreaDynamic />
         </div>
       </div>
       <AnimatePresence>
-        {isSettingsOpen && (
-          <SettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
-        )}
-        {isLibraryOpen && (
-          <ModelLibrary isOpen={isLibraryOpen} onClose={() => setLibraryOpen(false)} />
-        )}
-        {isInfoOpen && <InfoModal isOpen={isInfoOpen} onClose={() => setInfoOpen(false)} />}
-        {isSearchOpen && (
-          <SearchModalDynamic isOpen={isSearchOpen} onClose={() => setSearchOpen(false)} />
-        )}
-        {isCheatsheetOpen && (
-          <ShortcutCheatsheet isOpen={isCheatsheetOpen} onClose={() => setCheatsheetOpen(false)} />
-        )}
-        {isCommandPaletteOpen && (
-          <CommandPalette
-            isOpen={isCommandPaletteOpen}
-            onClose={() => setCommandPaletteOpen(false)}
-          />
-        )}
+        {activeModal === 'settings' && <SettingsModal isOpen={true} onClose={closeModal} />}
+        {activeModal === 'library' && <ModelLibrary isOpen={true} onClose={closeModal} />}
+        {activeModal === 'info' && <InfoModal isOpen={true} onClose={closeModal} />}
+        {activeModal === 'search' && <SearchModalDynamic isOpen={true} onClose={closeModal} />}
+        {activeModal === 'cheatsheet' && <ShortcutCheatsheet isOpen={true} onClose={closeModal} />}
+        {activeModal === 'commandPalette' && <CommandPalette isOpen={true} onClose={closeModal} />}
       </AnimatePresence>
     </main>
   );

@@ -89,12 +89,7 @@ vi.mock('@/store', () => ({
 
 // Mock the UI store hooks used by useCommands.
 vi.mock('@/store/hooks', () => ({
-  useSetLibraryOpen: () => vi.fn(),
-  useSetSettingsOpen: () => vi.fn(),
-  useSetInfoOpen: () => vi.fn(),
-  useSetCheatsheetOpen: () => vi.fn(),
-  useSetCommandPaletteOpen: () => vi.fn(),
-  useSetSearchOpen: () => vi.fn(),
+  useOpenModal: () => vi.fn(),
 }));
 
 // Mock conversation actions.
@@ -267,7 +262,7 @@ describe('CommandPalette', () => {
     fireEvent.keyDown(input, { key: 'ArrowDown' });
     fireEvent.keyDown(input, { key: 'Enter' });
     // The second command in the flat list is "Go to Settings" — activating it
-    // calls the mocked setSettingsOpen from @/store/hooks. We assert the
+    // calls the mocked openModal('settings') from @/store/hooks. We assert the
     // new-conversation action was NOT called (proving a different command ran).
     expect(mockCreateNewConversation).not.toHaveBeenCalled();
   });

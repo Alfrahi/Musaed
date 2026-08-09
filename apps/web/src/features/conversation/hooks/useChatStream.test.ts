@@ -39,9 +39,9 @@ describe('useChatStream', () => {
       },
       false
     );
-    // Cleans up the streaming store (failure, not user-stop — no `stopped: true`)
-    expect(mockStores.streamingStore.stopStream).toHaveBeenCalledWith('conv1');
-    expect(mockStores.streamingStore.clearStream).toHaveBeenCalledWith('conv1');
+    // Cleans up the streaming store and decrements isStreaming via the
+    // single coordination entry point.
+    expect(mockUtils.coordination.stopStream).toHaveBeenCalledWith('conv1', 'error');
     // Notifies the user
     expect(mockStores.uiStore.setErrorMessage).toHaveBeenCalledWith('boom');
   });
@@ -59,7 +59,7 @@ describe('useChatStream', () => {
     expect(updateLastMessage).not.toHaveBeenCalled();
   });
 
-  it('abortMessage delegates to stopStreamForConversation for the given conversation', () => {
+  it('abortMessage delegates to stopStream for the given conversation', () => {
     const { result } = renderHook(() => useChatStream());
 
     act(() => {
@@ -67,12 +67,9 @@ describe('useChatStream', () => {
     });
 
     // abortMessage reads the active requestId from the streaming store and
-    // passes it to stopStreamForConversation so the abort race guard can
+    // passes it to stopStream so the abort race guard can
     // bail out if the stream has been replaced.
-    expect(mockUtils.coordination.stopStreamForConversation).toHaveBeenCalledWith(
-      'conv1',
-      'request1'
-    );
+    expect(mockUtils.coordination.stopStream).toHaveBeenCalledWith('conv1', 'abort', 'request1');
   });
 
   it('abortMessage is a no-op when conversationId is null', () => {
@@ -82,6 +79,6 @@ describe('useChatStream', () => {
       result.current.abortMessage(null);
     });
 
-    expect(mockUtils.coordination.stopStreamForConversation).not.toHaveBeenCalled();
+    expect(mockUtils.coordination.stopStream).not.toHaveBeenCalled();
   });
 });

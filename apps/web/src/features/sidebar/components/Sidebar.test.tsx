@@ -218,9 +218,7 @@ describe('Sidebar', () => {
       isInitialized: false,
       isOllamaConnected: false,
       errorMessage: null,
-      isSettingsOpen: false,
-      isLibraryOpen: false,
-      isInfoOpen: false,
+      activeModal: null,
       sidebarTab: 'chats',
       _pendingRehydrations: 0,
     });

@@ -7,12 +7,7 @@ import { useModelStore } from '@/store/model-store';
 import { useModelParamsStore } from '@/store/model-params-store';
 import { useStreamingStore } from '@/store/streaming-store';
 import { useMessageStore } from '@/store/message-store';
-import {
-  registerHydrationCoordination,
-  coordinateStopStream,
-  stopStreamForConversation,
-  completeStreamForConversation,
-} from './coordination';
+import { registerHydrationCoordination, stopStream } from './coordination';
 
 beforeEach(() => {
   (window as any).__TAURI_INTERNALS__ = {};
@@ -22,9 +17,7 @@ beforeEach(() => {
     isHydrated: false,
     isOllamaConnected: false,
     errorMessage: null,
-    isSettingsOpen: false,
-    isLibraryOpen: false,
-    isInfoOpen: false,
+    activeModal: null,
     _pendingRehydrations: 0,
   });
 });
@@ -86,50 +79,13 @@ describe('registerHydrationCoordination', () => {
   });
 });
 
-describe('coordinateStopStream', () => {
-  beforeEach(() => {
-    useStreamingStore.setState({
-      liveContent: {},
-      pendingMetrics: {},
-      activeStreams: { 'conv-1': 'req-1' },
-      flushedStreams: new Set<string>(),
-    });
-    useMessageStore.setState({
-      messages: {
-        'conv-1': [
-          { id: 'msg-1', role: 'user', content: 'hello', timestamp: 1 },
-          { id: 'msg-2', role: 'assistant', content: 'hi', timestamp: 2, done: true },
-        ],
-      },
-    });
-    useUIStore.setState({ isStreaming: true });
-  });
-
-  it('sets stopped: true on the last assistant message', () => {
-    coordinateStopStream('conv-1');
-
-    const messages = useMessageStore.getState().messages['conv-1'];
-    expect(messages[messages.length - 1].stopped).toBe(true);
-  });
-
-  it('clears the global streaming flag when no streams remain', () => {
-    coordinateStopStream('conv-1');
-
-    expect(useUIStore.getState().isStreaming).toBe(false);
-  });
-
-  it('does not clear the global streaming flag when other streams are active', () => {
-    useStreamingStore.setState({
-      activeStreams: { 'conv-1': 'req-1', 'conv-2': 'req-2' },
-    });
-
-    coordinateStopStream('conv-1');
-
-    expect(useUIStore.getState().isStreaming).toBe(true);
-  });
-});
-
-describe('stopStreamForConversation', () => {
+// ---------------------------------------------------------------------------
+// stopStream — abort
+// ---------------------------------------------------------------------------
+// `stopStream(convId, 'abort')` flushes buffered content, marks the last
+// assistant message `stopped: true`, removes the stream from the streaming
+// store, and clears `isStreaming` when no streams remain.
+describe('stopStream — abort', () => {
   beforeEach(() => {
     useStreamingStore.setState({
       liveContent: { 'conv-1': { chunks: ['hello'] } },
@@ -149,7 +105,7 @@ describe('stopStreamForConversation', () => {
   });
 
   it('flushes buffered content, marks stopped, and clears the stream', () => {
-    stopStreamForConversation('conv-1');
+    stopStream('conv-1', 'abort');
 
     const messages = useMessageStore.getState().messages['conv-1'];
     const lastMsg = messages[messages.length - 1];
@@ -161,8 +117,8 @@ describe('stopStreamForConversation', () => {
   });
 
   it('is idempotent — calling twice does not double-flush', () => {
-    stopStreamForConversation('conv-1');
-    stopStreamForConversation('conv-1');
+    stopStream('conv-1', 'abort');
+    stopStream('conv-1', 'abort');
 
     const messages = useMessageStore.getState().messages['conv-1'];
     expect(messages.length).toBe(2); // no duplicate message appended
@@ -173,7 +129,7 @@ describe('stopStreamForConversation', () => {
       activeStreams: { 'conv-1': 'req-1', 'conv-2': 'req-2' },
     });
 
-    stopStreamForConversation('conv-1');
+    stopStream('conv-1', 'abort');
 
     expect(useUIStore.getState().isStreaming).toBe(true);
   });
@@ -183,11 +139,11 @@ describe('stopStreamForConversation', () => {
 // Abort race guard
 // ---------------------------------------------------------------------------
 // When a caller reads `activeStreams[convId]` to abort a request and then
-// calls `stopStreamForConversation(convId, expectedRequestId)`, a new stream
+// calls `stopStream(convId, 'abort', expectedRequestId)`, a new stream
 // may have already replaced the old one. The guard ensures the new stream is
 // left untouched — its buffered content is not flushed, its state is not
 // cleared, and the last message is not marked `stopped: true`.
-describe('stopStreamForConversation — abort race guard', () => {
+describe('stopStream — abort race guard', () => {
   beforeEach(() => {
     useStreamingStore.setState({
       liveContent: { 'conv-1': { chunks: ['new-stream-content'] } },
@@ -208,7 +164,7 @@ describe('stopStreamForConversation — abort race guard', () => {
 
   it('bails out when expectedRequestId does not match the active stream', () => {
     // The caller read req-1 (the old stream), but the active stream is now req-2.
-    stopStreamForConversation('conv-1', 'req-1');
+    stopStream('conv-1', 'abort', 'req-1');
 
     const messages = useMessageStore.getState().messages['conv-1'];
     const lastMsg = messages[messages.length - 1];
@@ -226,7 +182,7 @@ describe('stopStreamForConversation — abort race guard', () => {
   });
 
   it('proceeds normally when expectedRequestId matches the active stream', () => {
-    stopStreamForConversation('conv-1', 'req-2');
+    stopStream('conv-1', 'abort', 'req-2');
 
     const messages = useMessageStore.getState().messages['conv-1'];
     const lastMsg = messages[messages.length - 1];
@@ -238,7 +194,7 @@ describe('stopStreamForConversation — abort race guard', () => {
   });
 
   it('proceeds normally when expectedRequestId is omitted (backward compat)', () => {
-    stopStreamForConversation('conv-1');
+    stopStream('conv-1', 'abort');
 
     const messages = useMessageStore.getState().messages['conv-1'];
     const lastMsg = messages[messages.length - 1];
@@ -248,7 +204,13 @@ describe('stopStreamForConversation — abort race guard', () => {
   });
 });
 
-describe('completeStreamForConversation', () => {
+// ---------------------------------------------------------------------------
+// stopStream — complete
+// ---------------------------------------------------------------------------
+// `stopStream(convId, 'complete')` flushes buffered content + metrics,
+// clears the `stopped` flag on the last assistant message, removes the
+// stream, and clears `isStreaming` when no streams remain.
+describe('stopStream — complete', () => {
   beforeEach(() => {
     useStreamingStore.setState({
       liveContent: { 'conv-1': { chunks: ['hello'] } },
@@ -268,7 +230,7 @@ describe('completeStreamForConversation', () => {
   });
 
   it('flushes buffered content + metrics and marks done, and clears stopped', () => {
-    completeStreamForConversation('conv-1');
+    stopStream('conv-1', 'complete');
 
     const messages = useMessageStore.getState().messages['conv-1'];
     const lastMsg = messages[messages.length - 1];
@@ -301,7 +263,7 @@ describe('completeStreamForConversation', () => {
       },
     });
 
-    completeStreamForConversation('conv-1');
+    stopStream('conv-1', 'complete');
 
     const messages = useMessageStore.getState().messages['conv-1'];
     const lastMsg = messages[messages.length - 1];
@@ -315,7 +277,7 @@ describe('completeStreamForConversation', () => {
       pendingMetrics: {},
     });
 
-    completeStreamForConversation('conv-1');
+    stopStream('conv-1', 'complete');
 
     const messages = useMessageStore.getState().messages['conv-1'];
     const lastMsg = messages[messages.length - 1];
@@ -323,8 +285,8 @@ describe('completeStreamForConversation', () => {
   });
 
   it('is idempotent — calling twice does not double-flush', () => {
-    completeStreamForConversation('conv-1');
-    completeStreamForConversation('conv-1');
+    stopStream('conv-1', 'complete');
+    stopStream('conv-1', 'complete');
 
     const messages = useMessageStore.getState().messages['conv-1'];
     expect(messages.length).toBe(2);
@@ -335,8 +297,179 @@ describe('completeStreamForConversation', () => {
       activeStreams: { 'conv-1': 'req-1', 'conv-2': 'req-2' },
     });
 
-    completeStreamForConversation('conv-1');
+    stopStream('conv-1', 'complete');
 
     expect(useUIStore.getState().isStreaming).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// stopStream — error
+// ---------------------------------------------------------------------------
+// `stopStream(convId, 'error')` flushes buffered content (so partial tokens
+// are not lost), does NOT set `stopped: true` (that flag is reserved for
+// user-initiated aborts — a backend error is not a user stop), removes the
+// stream, and clears `isStreaming` when no streams remain. The error
+// prefix / `error` marker on the message is the caller's responsibility
+// (see useChatStream.handleStreamError), which is why `stopStream` only
+// touches `done` via the flush and leaves `stopped` untouched.
+describe('stopStream — error', () => {
+  beforeEach(() => {
+    useStreamingStore.setState({
+      liveContent: { 'conv-1': { chunks: ['hello'] } },
+      pendingMetrics: { 'conv-1': { promptEvalCount: 42, evalCount: 10 } },
+      activeStreams: { 'conv-1': 'req-1' },
+      flushedStreams: new Set<string>(),
+    });
+    useMessageStore.setState({
+      messages: {
+        'conv-1': [
+          { id: 'msg-1', role: 'user', content: 'hi', timestamp: 1 },
+          { id: 'msg-2', role: 'assistant', content: 'partial', timestamp: 2, done: false },
+        ],
+      },
+    });
+    useUIStore.setState({ isStreaming: true });
+  });
+
+  it('flushes buffered content + metrics and marks done', () => {
+    stopStream('conv-1', 'error');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    const lastMsg = messages[messages.length - 1];
+    expect(lastMsg.content).toBe('partialhello');
+    expect(lastMsg.done).toBe(true);
+    expect(lastMsg.promptEvalCount).toBe(42);
+    expect(lastMsg.evalCount).toBe(10);
+  });
+
+  it('does NOT set stopped:true — that flag is reserved for user aborts', () => {
+    stopStream('conv-1', 'error');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    const lastMsg = messages[messages.length - 1];
+    expect(lastMsg.stopped).not.toBe(true);
+  });
+
+  it('does not clear a previously-set stopped:true flag (unlike complete)', () => {
+    // A previously user-stopped message that then hits a backend error
+    // should NOT have its `stopped` flag cleared — `stopStream('error')`
+    // leaves `stopped` untouched. (Only 'complete' explicitly clears it.)
+    useMessageStore.setState({
+      messages: {
+        'conv-1': [
+          { id: 'msg-1', role: 'user', content: 'hi', timestamp: 1 },
+          {
+            id: 'msg-2',
+            role: 'assistant',
+            content: 'partial',
+            timestamp: 2,
+            done: false,
+            stopped: true,
+          },
+        ],
+      },
+    });
+
+    stopStream('conv-1', 'error');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    const lastMsg = messages[messages.length - 1];
+    expect(lastMsg.stopped).toBe(true);
+  });
+
+  it('clears the stream and isStreaming when no streams remain', () => {
+    stopStream('conv-1', 'error');
+
+    expect(useStreamingStore.getState().activeStreams['conv-1']).toBeUndefined();
+    expect(useUIStore.getState().isStreaming).toBe(false);
+  });
+
+  it('does not clear isStreaming when other streams are active', () => {
+    useStreamingStore.setState({
+      activeStreams: { 'conv-1': 'req-1', 'conv-2': 'req-2' },
+    });
+
+    stopStream('conv-1', 'error');
+
+    expect(useUIStore.getState().isStreaming).toBe(true);
+  });
+
+  it('is idempotent — calling twice does not double-flush', () => {
+    stopStream('conv-1', 'error');
+    stopStream('conv-1', 'error');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    expect(messages.length).toBe(2);
+  });
+
+  it('respects the abort race guard — bails out when expectedRequestId mismatches', () => {
+    useStreamingStore.setState({
+      activeStreams: { 'conv-1': 'req-2' },
+      liveContent: { 'conv-1': { chunks: ['new-stream-content'] } },
+    });
+
+    // Caller read req-1 (the old stream), but the active stream is now req-2.
+    stopStream('conv-1', 'error', 'req-1');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    const lastMsg = messages[messages.length - 1];
+    // The new stream's buffered content must NOT be flushed onto the message
+    expect(lastMsg.content).toBe('partial');
+    expect(lastMsg.done).toBe(false);
+    // `stopped` must not be set to true by the guard bail-out
+    expect(lastMsg.stopped).not.toBe(true);
+    // The active stream must remain untouched
+    expect(useStreamingStore.getState().activeStreams['conv-1']).toBe('req-2');
+    expect(useUIStore.getState().isStreaming).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// stopStream — batch-end (no flush, no message marker)
+// ---------------------------------------------------------------------------
+// `stopStream(convId, 'batch-end')` skips flushing entirely — buffered
+// content is discarded. It removes the stream from the store and clears
+// `isStreaming` when no streams remain. No `stopped` marker is set.
+describe('stopStream — batch-end', () => {
+  beforeEach(() => {
+    useStreamingStore.setState({
+      liveContent: { 'conv-1': { chunks: ['discard-me'] } },
+      pendingMetrics: {},
+      activeStreams: { 'conv-1': 'req-1' },
+      flushedStreams: new Set<string>(),
+    });
+    useMessageStore.setState({
+      messages: {
+        'conv-1': [
+          { id: 'msg-1', role: 'user', content: 'hi', timestamp: 1 },
+          { id: 'msg-2', role: 'assistant', content: 'partial', timestamp: 2, done: false },
+        ],
+      },
+    });
+    useUIStore.setState({ isStreaming: true });
+  });
+
+  it('does not flush buffered content onto the message', () => {
+    stopStream('conv-1', 'batch-end');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    const lastMsg = messages[messages.length - 1];
+    expect(lastMsg.content).toBe('partial');
+  });
+
+  it('does not set stopped on the message', () => {
+    stopStream('conv-1', 'batch-end');
+
+    const messages = useMessageStore.getState().messages['conv-1'];
+    const lastMsg = messages[messages.length - 1];
+    expect(lastMsg.stopped).not.toBe(true);
+  });
+
+  it('clears the stream and isStreaming', () => {
+    stopStream('conv-1', 'batch-end');
+
+    expect(useStreamingStore.getState().activeStreams['conv-1']).toBeUndefined();
+    expect(useUIStore.getState().isStreaming).toBe(false);
   });
 });
