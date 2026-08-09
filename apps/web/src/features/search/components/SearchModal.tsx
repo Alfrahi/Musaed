@@ -5,7 +5,7 @@ import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/store';
 import { useSetCurrentConversationId } from '@/store/conversation-store';
-import { ModalLayout } from '@/components/ui';
+import { ModalLayout, InlineError } from '@/components/ui';
 import { Button } from '@/components/ui/button';
 import { useMessageSearch } from '../hooks/useMessageSearch';
 import type { MessageSearchResult } from '@musaed/contracts';
@@ -209,9 +209,9 @@ const SearchResultsList = memo(function SearchResultsList({
         </div>
       )}
 
-      {showError && (
-        <div className="px-4 py-8 text-center">
-          <p className="text-sm text-red-500">{error}</p>
+      {showError && error && (
+        <div className="px-4 py-8">
+          <InlineError message={error} />
         </div>
       )}
 
