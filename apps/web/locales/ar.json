@@ -21,6 +21,7 @@
     "code": "كود",
     "text": "نص",
     "comingSoon": "قريباً",
+    "justNow": "الآن",
     "units": {
       "b": "بايت",
       "kb": "ك.ب",
@@ -367,6 +368,7 @@
     "stopResponse": "إيقاف توليد الرد",
     "attachImage": "إرفاق صورة من الجهاز",
     "conversationList": "قائمة المحادثات",
+    "conversationLastUpdated": "آخر تحديث",
     "chatInput": "حقل إدخال الرسالة",
     "selectModel": "اختر نموذج الذكاء الاصطناعي",
     "userMessage": "رسالة منك",
