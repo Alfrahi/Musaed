@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useTranslation, translate } from '@/lib/i18n';
+import { useTranslation, translate, formatRelativeTime } from '@/lib/i18n';
 
 describe('Internationalization Utility', () => {
   it('resolves nested keys correctly in English', () => {
@@ -56,5 +56,57 @@ describe('translate (non-hook API)', () => {
     // 'apples' is not in ar.json — should fall back to en.json value
     // and ultimately to the key itself when the key is wholly unknown.
     expect(translate('nonexistent.key', 'en')).toBe('nonexistent.key');
+  });
+});
+
+describe('formatRelativeTime', () => {
+  const NOW = new Date('2026-08-09T12:00:00Z').getTime();
+  let originalNow: () => number;
+
+  beforeEach(() => {
+    originalNow = Date.now;
+    Date.now = () => NOW;
+  });
+
+  afterEach(() => {
+    Date.now = originalNow;
+  });
+
+  it('returns "just now" for timestamps less than 60 seconds old', () => {
+    expect(formatRelativeTime(NOW - 30_000, 'en')).toBe('Just now');
+    expect(formatRelativeTime(NOW - 30_000, 'ar')).toBe('الآن');
+  });
+
+  it('returns a localized "Nm ago" for sub-hour deltas (English)', () => {
+    const s = formatRelativeTime(NOW - 5 * 60_000, 'en');
+    expect(s).toMatch(/5/);
+    expect(s.toLowerCase()).toMatch(/minute/);
+  });
+
+  it('returns a localized "Nh ago" for sub-day deltas (English)', () => {
+    const s = formatRelativeTime(NOW - 3 * 3_600_000, 'en');
+    expect(s).toMatch(/3/);
+    expect(s.toLowerCase()).toMatch(/hour/);
+  });
+
+  it('returns "Yesterday" for a 1-day-old timestamp in English (numeric:auto)', () => {
+    const s = formatRelativeTime(NOW - 24 * 3_600_000, 'en');
+    // Intl.RelativeTimeFormat with numeric:'auto' yields "yesterday" for -1 day.
+    expect(s.toLowerCase()).toBe('yesterday');
+  });
+
+  it('returns "أمس" for a 1-day-old timestamp in Arabic (numeric:auto)', () => {
+    const s = formatRelativeTime(NOW - 24 * 3_600_000, 'ar');
+    expect(s).toBe('أمس');
+  });
+
+  it('returns a short date for timestamps older than 7 days (English)', () => {
+    // 30 days ago → should be a "Mon D" short date, not "days ago".
+    const s = formatRelativeTime(NOW - 30 * 86_400_000, 'en');
+    expect(/^[A-Z][a-z]{2} \d+$/.test(s), `unexpected short date format: ${s}`).toBe(true);
+  });
+
+  it('handles future timestamps (just-now tolerance still applies)', () => {
+    expect(formatRelativeTime(NOW + 10_000, 'en')).toBe('Just now');
   });
 });

@@ -204,10 +204,51 @@ describe('ConversationItem', () => {
   });
 
   describe('Title/action overlap prevention', () => {
-    it('reserves inline-end padding on the title so action buttons do not overlap text', () => {
+    it('reserves inline-end padding on the title wrapper so action buttons do not overlap text', () => {
       render(<ConversationItem conversation={baseConversation} />);
       const title = screen.getByText('Hello world');
-      expect(title.className).toMatch(/\bpe-14\b/);
+      // The wrapper that carries `pe-14` is the parent of the title span
+      // (the reservation moved from the title span to a flex wrapper that
+      // also bears the relative timestamp — both children stay clear of
+      // the absolutely-positioned hover-action buttons at `end-2`).
+      const wrapper = title.parentElement;
+      expect(wrapper?.className).toMatch(/\bpe-14\b/);
+      // The title span itself still truncates so long titles clip before
+      // overlapping the timestamp / action zone.
+      expect(title.className).toMatch(/\btruncate\b/);
+    });
+  });
+
+  describe('Relative timestamp metadata', () => {
+    it('renders a relative-timestamp span labelled with the last-updated a11y key', () => {
+      // Use a fresh "now" so the just-now threshold (< 60s) is deterministic.
+      const fresh = { ...baseConversation, updatedAt: Date.now() };
+      render(<ConversationItem conversation={fresh} />);
+      const ts = screen.getByLabelText('a11y.conversationLastUpdated');
+      expect(ts).toBeInTheDocument();
+      // formatRelativeTime routes through the real translate() (only
+      // useTranslation is mocked), so the English "just now" string is
+      // returned, not the raw key.
+      expect(ts.textContent).toBe('Just now');
+    });
+
+    it('gracefully renders an older timestamp as a short date', () => {
+      const oldConversation = {
+        ...baseConversation,
+        updatedAt: Date.now() - 30 * 86_400_000,
+      };
+      render(<ConversationItem conversation={oldConversation} />);
+      const ts = screen.getByLabelText('a11y.conversationLastUpdated');
+      // 30 days ago → "Mon D" short date format (e.g. "Jul 10").
+      expect(/^[A-Z][a-z]{2} \d+$/.test(ts.textContent ?? ''), `got: ${ts.textContent}`).toBe(true);
+    });
+
+    it('omits the timestamp while the row is in rename-edit mode', () => {
+      render(<ConversationItem conversation={baseConversation} />);
+      fireEvent.click(screen.getByTitle('sidebar.renameChat'));
+      // Rename input replaces the title+timestamp wrapper; the labelled
+      // timestamp span should no longer be in the document.
+      expect(screen.queryByLabelText('a11y.conversationLastUpdated')).toBeNull();
     });
   });
 

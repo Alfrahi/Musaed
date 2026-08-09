@@ -21,6 +21,7 @@
     "code": "Code",
     "text": "Text",
     "comingSoon": "Coming soon",
+    "justNow": "Just now",
     "units": {
       "b": "B",
       "kb": "KB",
@@ -367,6 +368,7 @@
     "stopResponse": "Stop generating response",
     "attachImage": "Attach image from computer",
     "conversationList": "Conversation list",
+    "conversationLastUpdated": "Last updated",
     "chatInput": "Chat message input",
     "selectModel": "Select AI model",
     "userMessage": "Message from you",

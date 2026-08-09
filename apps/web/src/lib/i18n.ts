@@ -101,6 +101,56 @@ export const getSystemLanguage = (): Language => {
   return navigator.language.startsWith('ar') ? 'ar' : 'en';
 };
 
+const relativeTimeFormatters = new Map<string, Intl.RelativeTimeFormat>();
+const shortDateFormatters = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * Formats a timestamp as a locale-aware relative-time string for sidebar rows
+ * and similar dense metadata surfaces ("just now", "3m ago", "5h ago",
+ * "Yesterday", "3 days ago", "Mar 5"). Uses {@link Intl.RelativeTimeFormat}
+ * with `numeric: 'auto'` so unit phrases ("yesterday" vs. "1 day ago") and
+ * Arabic forms are localized by the runtime, not by app locale files.
+ *
+ * Thresholds match the sidebar grouping
+ * ({@link useSidebarGrouping}): < 1 min → "just now"; < 1 hr → minutes;
+ * < 24 hr → hours; < 7 days → days (`auto` yields "Yesterday" / "أمس" at -1);
+ * ≥ 7 days → a short date via the same calendar convention as
+ * {@link useTranslation}`.formatDate` (`ar-YE-u-ca-islamic` for Arabic).
+ *
+ * @param timestamp Epoch-ms timestamp (e.g. `ConversationMetadata.updatedAt`).
+ * @param lang Active UI language — selects locale and dictionary for "just now".
+ */
+export const formatRelativeTime = (timestamp: number, lang: Language): string => {
+  const now = Date.now();
+  const diffMs = timestamp - now;
+  const diffSec = Math.round(diffMs / 1000);
+  const diffMin = Math.round(diffSec / 60);
+  const diffHr = Math.round(diffMin / 60);
+  const diffDay = Math.round(diffHr / 24);
+
+  if (Math.abs(diffSec) < 60) return translate('common.justNow', lang);
+
+  const locale = lang === 'ar' ? 'ar-YE' : 'en-US';
+  const rtfKey = `${locale}:auto`;
+  let rtf = relativeTimeFormatters.get(rtfKey);
+  if (!rtf) {
+    rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+    relativeTimeFormatters.set(rtfKey, rtf);
+  }
+
+  if (Math.abs(diffMin) < 60) return rtf.format(diffMin, 'minute');
+  if (Math.abs(diffHr) < 24) return rtf.format(diffHr, 'hour');
+  if (Math.abs(diffDay) < 7) return rtf.format(diffDay, 'day');
+
+  const shortDateLocale = lang === 'ar' ? 'ar-YE-u-ca-islamic' : 'en-US';
+  let shortDate = shortDateFormatters.get(shortDateLocale);
+  if (!shortDate) {
+    shortDate = new Intl.DateTimeFormat(shortDateLocale, { month: 'short', day: 'numeric' });
+    shortDateFormatters.set(shortDateLocale, shortDate);
+  }
+  return shortDate.format(timestamp);
+};
+
 /**
  * Hook for using translation and formatting utilities.
  *
