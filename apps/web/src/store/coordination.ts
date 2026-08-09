@@ -125,6 +125,18 @@ export function flushAndStop(conversationId: string, expectedRequestId?: string)
  * deliberately discarded — used by the orphan-cleanup path when a stream
  * failed before any tokens were emitted).
  *
+ * **Resolution guard (double-stop prevention)**: Bails out entirely when
+ * `conversationId` is no longer registered in `activeStreams` at call time.
+ * This makes stream resolution **first-writer-wins**: once any `stopStream`
+ * call has torn down the stream, a late duplicate event from a different
+ * path (e.g. a `done: true` token arriving after the user already clicked
+ * Stop, or vice-versa) cannot overwrite the `stopped` marker set by the
+ * first call. Without this guard, a `stopStream('abort')` arriving after
+ * `stopStream('complete')` would set `stopped: true` on a message that
+ * completed naturally (and the reverse would clear `stopped` on a message
+ * the user explicitly stopped), producing inconsistent UI state depending
+ * on event-loop ordering.
+ *
  * **`isStreaming` invariant**: The global `isStreaming` flag is cleared if
  * and only if no active streams remain after this conversation is removed.
  * This keeps the flag truthful when multiple conversations stream concurrently.
@@ -133,7 +145,9 @@ export function flushAndStop(conversationId: string, expectedRequestId?: string)
  * `chatApi.abort(requestId)` BEFORE calling this function. The store layer
  * does not initiate IPC.
  *
- * Idempotent: safe to call multiple times for the same conversation.
+ * Idempotent: safe to call multiple times for the same conversation —
+ * duplicate calls after resolution are silently ignored (see resolution
+ * guard above).
  */
 export function stopStream(
   conversationId: string,
@@ -149,6 +163,21 @@ export function stopStream(
     const activeRequestId = useStreamingStore.getState().activeStreams[conversationId];
     if (activeRequestId !== expectedRequestId) return;
   }
+
+  // Resolution guard: bail out when the conversation is no longer in
+  // `activeStreams`. A prior `stopStream` call already tore down the stream
+  // (stopStream + clearStream below remove the entry), so this is a late
+  // duplicate event. Letting it proceed would overwrite the `stopped` marker
+  // set by the first call — e.g. a late `done: true` token after a user
+  // abort would set `stopped: false`, or a late abort after natural
+  // completion would set `stopped: true`. First-writer-wins is the correct
+  // semantic: whichever path resolves the stream first owns the final state.
+  // The `expectedRequestId` guard above handles callers that pass a stale
+  // requestId; this guard covers callers that omit it (e.g. `handleToken`
+  // calling `stopStream('complete')` after the abort path already cleared
+  // the stream, or `handleAbort` calling `stopStream('abort', undefined)`
+  // after `complete` already ran).
+  if (!(conversationId in useStreamingStore.getState().activeStreams)) return;
 
   const shouldFlush = reason !== 'batch-end';
   if (shouldFlush) {
