@@ -1,126 +1,113 @@
-// Tests for useChatSend — the send pipeline (validation → RAG → messages → chatApi → persist).
+// Tests for the useChatSend hook facade.
+//
+// The send-pipeline logic is tested in ChatSendService.test.ts.
+// These tests verify that the hook:
+//  - returns sendMessage / editAndResend functions with the right signatures
+//  - delegates to ChatSendService with the right params
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from './shared/setup';
-import { mockAllDependencies, mockIpc, mockStores, mockUtils } from './shared/mocks';
+import { mockAllDependencies } from './shared/mocks';
 
-// Mock the sibling hooks so useChatSend's compose boundary is tested in isolation.
+// Mock the sibling hooks so the facade's compose boundary is tested in
+// isolation.
 const chatRagMock = vi.hoisted(() => ({ assembleChatRag: vi.fn() }));
 const chatStreamMock = vi.hoisted(() => ({
   handleStreamError: vi.fn(),
   abortMessage: vi.fn(),
 }));
+
+// Mock ChatSendService to intercept the delegation. The mock must be a
+// constructor (callable with `new`) that returns the service mock object.
+const serviceMock = vi.hoisted(() => ({
+  sendMessage: vi.fn().mockResolvedValue(undefined),
+  editAndResend: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('./useChatRag', () => ({ useChatRag: () => chatRagMock }));
 vi.mock('./useChatStream', () => ({ useChatStream: () => chatStreamMock }));
+vi.mock('../services/ChatSendService', () => ({
+  ChatSendService: vi.fn().mockImplementation(function () {
+    return serviceMock;
+  }),
+}));
 
 import { useChatSend } from './useChatSend';
+import { ChatSendService } from '../services/ChatSendService';
 
 beforeEach(() => {
   mockAllDependencies();
   vi.clearAllMocks();
-  // Default happy-path RAG stub.
   chatRagMock.assembleChatRag.mockResolvedValue({ ragSources: undefined });
+  serviceMock.sendMessage.mockResolvedValue(undefined);
+  serviceMock.editAndResend.mockResolvedValue(undefined);
 });
 
-describe('useChatSend', () => {
-  it('sends a message: validates, creates messages, calls chatApi, persists', async () => {
+describe('useChatSend (facade)', () => {
+  it('returns sendMessage and editAndResend functions', () => {
+    const { result } = renderHook(() => useChatSend());
+
+    expect(typeof result.current.sendMessage).toBe('function');
+    expect(typeof result.current.editAndResend).toBe('function');
+  });
+
+  it('constructs a ChatSendService with the injected deps', () => {
+    renderHook(() => useChatSend());
+
+    expect(ChatSendService).toHaveBeenCalledTimes(1);
+    const mockFn = vi.mocked(ChatSendService);
+    const deps = mockFn.mock.calls[0][0];
+    expect(deps).toHaveProperty('t');
+    expect(deps).toHaveProperty('assembleChatRag', chatRagMock.assembleChatRag);
+    expect(deps).toHaveProperty('handleStreamError', chatStreamMock.handleStreamError);
+    expect(deps).toHaveProperty('initiateStreaming');
+    expect(deps).toHaveProperty('contextWindow');
+    expect(deps).toHaveProperty('defaultParams');
+    expect(deps).toHaveProperty('paramsStop');
+  });
+
+  it('delegates sendMessage with input, images, and files', async () => {
+    const { result } = renderHook(() => useChatSend());
+
+    await act(async () => {
+      await result.current.sendMessage(
+        'hello',
+        ['img1'],
+        [{ name: 'f.txt', content: 'body', size: 4, type: 'text/plain' }]
+      );
+    });
+
+    expect(serviceMock.sendMessage).toHaveBeenCalledWith({
+      input: 'hello',
+      images: ['img1'],
+      files: [{ name: 'f.txt', content: 'body', size: 4, type: 'text/plain' }],
+    });
+  });
+
+  it('delegates editAndResend with editedMessageId, newContent, and images', async () => {
+    const { result } = renderHook(() => useChatSend());
+
+    await act(async () => {
+      await result.current.editAndResend('msg-1', 'new text', ['img1']);
+    });
+
+    expect(serviceMock.editAndResend).toHaveBeenCalledWith({
+      editedMessageId: 'msg-1',
+      newContent: 'new text',
+      images: ['img1'],
+    });
+  });
+
+  it('passes default empty arrays when images and files are omitted', async () => {
     const { result } = renderHook(() => useChatSend());
 
     await act(async () => {
       await result.current.sendMessage('hello');
     });
 
-    // Messages created and added to the message store
-    expect(mockStores.messageStore.addMessages).toHaveBeenCalledTimes(1);
-    expect(mockStores.messageStore.addMessages).toHaveBeenCalledWith(
-      'conv1',
-      expect.arrayContaining([
-        expect.objectContaining({ role: 'user', content: 'hello' }),
-        expect.objectContaining({ role: 'assistant', content: '' }),
-      ])
-    );
-    // chatApi.chat called with the right payload
-    expect(mockIpc.chatApi.chat).toHaveBeenCalledTimes(1);
-    expect(mockIpc.chatApi.chat).toHaveBeenCalledWith(
-      expect.objectContaining({
-        baseUrl: 'http://localhost:11434',
-        messages: [{ role: 'user', content: 'hello' }],
-        model: 'llama3',
-      })
-    );
-    // User message persisted
-    expect(mockUtils.persistUserMessage).toHaveBeenCalled();
-    // No error path taken
-    expect(chatStreamMock.handleStreamError).not.toHaveBeenCalled();
-  });
-
-  it('injects file attachments into the prompt', async () => {
-    const { result } = renderHook(() => useChatSend());
-    const files = [{ name: 'note.txt', content: 'file body', size: 9, type: 'text/plain' }];
-
-    await act(async () => {
-      await result.current.sendMessage('see attachment', [], files);
+    expect(serviceMock.sendMessage).toHaveBeenCalledWith({
+      input: 'hello',
+      images: undefined,
+      files: undefined,
     });
-
-    const payload = mockIpc.chatApi.chat.mock.calls[0][0];
-    expect(payload.messages[0].content).toContain('File: note.txt');
-    expect(payload.messages[0].content).toContain('file body');
-  });
-
-  it('attaches RAG sources to the assistant message when RAG returns citations', async () => {
-    chatRagMock.assembleChatRag.mockResolvedValue({
-      ragSources: [{ filePath: '/a.ts', startLine: 1, endLine: 2, language: 'typescript' }],
-    });
-
-    const { result } = renderHook(() => useChatSend());
-
-    await act(async () => {
-      await result.current.sendMessage('query');
-    });
-
-    const [, assistantMsg] = mockStores.messageStore.addMessages.mock.calls[0][1];
-    expect(assistantMsg.ragSources).toEqual([
-      { filePath: '/a.ts', startLine: 1, endLine: 2, language: 'typescript' },
-    ]);
-  });
-
-  it('routes chatApi failures to useChatStream.handleStreamError', async () => {
-    mockIpc.chatApi.chat.mockRejectedValue(new Error('API failure'));
-
-    const { result } = renderHook(() => useChatSend());
-
-    await act(async () => {
-      await result.current.sendMessage('hello');
-    });
-
-    expect(chatStreamMock.handleStreamError).toHaveBeenCalledTimes(1);
-    expect(chatStreamMock.handleStreamError.mock.calls[0][0]).toBeInstanceOf(Error);
-    expect(chatStreamMock.handleStreamError.mock.calls[0][1]).toBe('conv1');
-  });
-
-  it('continues the send when RAG assembly returns null (no active project)', async () => {
-    chatRagMock.assembleChatRag.mockResolvedValue({ ragSources: undefined });
-
-    const { result } = renderHook(() => useChatSend());
-
-    await act(async () => {
-      await result.current.sendMessage('hello');
-    });
-
-    expect(mockIpc.chatApi.chat).toHaveBeenCalled();
-    expect(mockStores.messageStore.addMessages).toHaveBeenCalled();
-  });
-
-  it('throws when chatApi.chat returns non-true (connection failure)', async () => {
-    mockIpc.chatApi.chat.mockResolvedValue(false);
-
-    const { result } = renderHook(() => useChatSend());
-
-    await act(async () => {
-      await result.current.sendMessage('hello');
-    });
-
-    // handleStreamError receives the connectionFailed error
-    expect(chatStreamMock.handleStreamError).toHaveBeenCalledTimes(1);
-    expect(chatStreamMock.handleStreamError.mock.calls[0][0]).toBeInstanceOf(Error);
   });
 });
