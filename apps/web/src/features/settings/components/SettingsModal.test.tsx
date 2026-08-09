@@ -194,4 +194,132 @@ describe('SettingsModal', () => {
     const newSearchInput = screen.getByPlaceholderText('settings.searchPlaceholder');
     expect(newSearchInput).toHaveValue('');
   });
+
+  describe('tablist ARIA semantics', () => {
+    it('renders the tab nav as a role=tablist and each tab with role=tab', () => {
+      render(<SettingsModal isOpen onClose={vi.fn()} />);
+      const tablist = screen.getByRole('tablist');
+      expect(tablist).toHaveAttribute('aria-orientation', 'vertical');
+      const tabs = screen.getAllByRole('tab');
+      expect(tabs).toHaveLength(5);
+      for (const tab of tabs) {
+        expect(tab.tagName).toBe('BUTTON');
+        expect(tab).toHaveAttribute('aria-selected');
+        expect(tab).toHaveAttribute('aria-controls');
+        expect(tab).toHaveAttribute('id');
+      }
+    });
+
+    it('marks only the active tab as aria-selected=true', () => {
+      render(<SettingsModal isOpen onClose={vi.fn()} />);
+      const tabs = screen.getAllByRole('tab');
+      const selected = tabs.filter((t) => t.getAttribute('aria-selected') === 'true');
+      expect(selected).toHaveLength(1);
+      // Default active tab is "general".
+      expect(selected[0]).toHaveTextContent('settings.tabs.general');
+    });
+
+    it('uses a roving tabindex (active=0, inactive=-1)', () => {
+      render(<SettingsModal isOpen onClose={vi.fn()} />);
+      const tabs = screen.getAllByRole('tab');
+      const active = tabs.find((t) => t.getAttribute('aria-selected') === 'true')!;
+      const inactive = tabs.filter((t) => t.getAttribute('aria-selected') !== 'true');
+      expect(active).toHaveAttribute('tabindex', '0');
+      for (const t of inactive) expect(t).toHaveAttribute('tabindex', '-1');
+    });
+
+    it('resolves aria-controls on each tab to a real tabpanel element', () => {
+      render(<SettingsModal isOpen onClose={vi.fn()} />);
+      const tabs = screen.getAllByRole('tab');
+      const activeTab = tabs.find((t) => t.getAttribute('aria-selected') === 'true')!;
+      const panelId = activeTab.getAttribute('aria-controls');
+      expect(panelId).toBeTruthy();
+      const panel = document.getElementById(panelId!);
+      expect(panel).not.toBeNull();
+      expect(panel).toHaveAttribute('role', 'tabpanel');
+      // Bidirectional link: tabpanel aria-labelledby points back at the tab button id.
+      expect(panel?.getAttribute('aria-labelledby')).toBe(activeTab.getAttribute('id'));
+    });
+
+    it('keeps a single tabpanel mounted for the active tab', () => {
+      render(<SettingsModal isOpen onClose={vi.fn()} />);
+      const panels = screen.getAllByRole('tabpanel', { hidden: true });
+      expect(panels).toHaveLength(1);
+    });
+  });
+
+  describe('tab roving keyboard navigation', () => {
+    it('ArrowDown moves focus to the next tab (wrapping last→first)', () => {
+      render(<SettingsModal isOpen onClose={vi.fn()} />);
+      const tabs = screen.getAllByRole('tab');
+      // Start on the active "general" tab.
+      tabs[0].focus();
+      expect(document.activeElement).toBe(tabs[0]);
+      fireEvent.keyDown(screen.getByRole('tablist'), { key: 'ArrowDown' });
+      expect(document.activeElement).toBe(tabs[1]);
+      // Follow-focus also updates the active tab.
+      expect(tabs[1]).toHaveAttribute('aria-selected', 'true');
+      // Wrap from last back to first.
+      tabs[tabs.length - 1].focus();
+      fireEvent.keyDown(screen.getByRole('tablist'), { key: 'ArrowDown' });
+      expect(document.activeElement).toBe(tabs[0]);
+    });
+
+    it('ArrowUp moves focus to the previous tab (wrapping first→last)', () => {
+      render(<SettingsModal isOpen onClose={vi.fn()} />);
+      const tabs = screen.getAllByRole('tab');
+      tabs[0].focus();
+      fireEvent.keyDown(screen.getByRole('tablist'), { key: 'ArrowUp' });
+      expect(document.activeElement).toBe(tabs[tabs.length - 1]);
+      expect(tabs[tabs.length - 1]).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('Home focuses the first tab and End the last tab', () => {
+      render(<SettingsModal isOpen onClose={vi.fn()} />);
+      const tabs = screen.getAllByRole('tab');
+      tabs[2].focus();
+      fireEvent.keyDown(screen.getByRole('tablist'), { key: 'Home' });
+      expect(document.activeElement).toBe(tabs[0]);
+      fireEvent.keyDown(screen.getByRole('tablist'), { key: 'End' });
+      expect(document.activeElement).toBe(tabs[tabs.length - 1]);
+    });
+
+    it('ArrowRight/ArrowLeft swap direction in RTL mode', async () => {
+      // Re-import with an RTL locale to exercise the isRtl branch without
+      // weakening the shared hoisted mock that the other tests rely on.
+      // vi.doMock overrides the hoisted vi.mock for the next dynamic import;
+      // vi.resetModules() guarantees a fresh module graph picks it up.
+      vi.resetModules();
+      vi.doMock('@/lib/i18n', () => ({
+        useTranslation: () => ({
+          t: (key: string) => key,
+          formatNumber: (n: number) => String(n),
+          formatDate: (d: number | Date) => String(d),
+          isRtl: true,
+          formatFileSize: (b: number) => `${b} B`,
+        }),
+      }));
+      const SettingsModalRtl = (await import('./SettingsModal')).default;
+      render(<SettingsModalRtl isOpen onClose={vi.fn()} />);
+      const tabs = screen.getAllByRole('tab');
+      // In RTL: ArrowRight moves backward (general[0] → advanced[4], wrapping).
+      tabs[0].focus();
+      fireEvent.keyDown(screen.getByRole('tablist'), { key: 'ArrowRight' });
+      expect(document.activeElement).toBe(tabs[tabs.length - 1]);
+      // In RTL: ArrowLeft moves forward (advanced[4] → general[0], wrapping).
+      fireEvent.keyDown(screen.getByRole('tablist'), { key: 'ArrowLeft' });
+      expect(document.activeElement).toBe(tabs[0]);
+      // Restore the hoisted LTR mock for subsequent tests.
+      vi.resetModules();
+      vi.doUnmock('@/lib/i18n');
+    });
+
+    it('focus activates the tab (follow-focus) without a click', () => {
+      render(<SettingsModal isOpen onClose={vi.fn()} />);
+      const tabs = screen.getAllByRole('tab');
+      fireEvent.focus(tabs[2]);
+      expect(tabs[2]).toHaveAttribute('aria-selected', 'true');
+      expect(tabs[0]).toHaveAttribute('aria-selected', 'false');
+    });
+  });
 });

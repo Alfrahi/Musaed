@@ -27,7 +27,7 @@ interface SettingsModalProps {
 type SettingsTab = 'general' | 'appearance' | 'ai' | 'storage' | 'advanced';
 
 const renderGeneralTab = () => (
-  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-6">
+  <>
     <SettingsCard>
       <LanguageSettings />
     </SettingsCard>
@@ -37,34 +37,34 @@ const renderGeneralTab = () => (
     <SettingsCard>
       <WindowSettings />
     </SettingsCard>
-  </div>
+  </>
 );
 
 const renderAppearanceTab = () => (
-  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-6">
+  <>
     <SettingsCard>
       <ThemeSettings />
     </SettingsCard>
     <SettingsCard>
       <MarkdownSettings />
     </SettingsCard>
-  </div>
+  </>
 );
 
 const renderAITab = () => (
-  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-6">
+  <>
     <SettingsCard>
       <OllamaSettings />
     </SettingsCard>
-  </div>
+  </>
 );
 
 const renderStorageTab = () => (
-  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-6">
+  <>
     <SettingsCard>
       <StorageSettings />
     </SettingsCard>
-  </div>
+  </>
 );
 
 interface RenderAdvancedTabProps {
@@ -73,7 +73,7 @@ interface RenderAdvancedTabProps {
 }
 
 const RenderAdvancedTab = ({ t, handleReset }: RenderAdvancedTabProps) => (
-  <div className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-6">
+  <>
     <SettingsCard>
       <DiagnosticsSettings />
     </SettingsCard>
@@ -87,31 +87,43 @@ const RenderAdvancedTab = ({ t, handleReset }: RenderAdvancedTabProps) => (
         <RotateCcw size={14} aria-hidden="true" /> {t('settings.resetPreferences')}
       </Button>
     </div>
-  </div>
+  </>
 );
 
 interface RenderContentProps {
   activeTab: SettingsTab;
   t: (key: string) => string;
   handleReset: () => Promise<void>;
+  panelId: string;
+  tabButtonId: string;
 }
 
-const RenderContent = ({ activeTab, t, handleReset }: RenderContentProps) => {
-  switch (activeTab) {
-    case 'general':
-      return renderGeneralTab();
-    case 'appearance':
-      return renderAppearanceTab();
-    case 'ai':
-      return renderAITab();
-    case 'storage':
-      return renderStorageTab();
-    case 'advanced':
-      return <RenderAdvancedTab t={t} handleReset={handleReset} />;
-    default:
-      return null;
-  }
-};
+const RenderContent = ({ activeTab, t, handleReset, panelId, tabButtonId }: RenderContentProps) => (
+  <div
+    id={panelId}
+    role="tabpanel"
+    aria-labelledby={tabButtonId}
+    tabIndex={0}
+    className="animate-in fade-in slide-in-from-bottom-2 duration-normal space-y-6"
+  >
+    {(() => {
+      switch (activeTab) {
+        case 'general':
+          return renderGeneralTab();
+        case 'appearance':
+          return renderAppearanceTab();
+        case 'ai':
+          return renderAITab();
+        case 'storage':
+          return renderStorageTab();
+        case 'advanced':
+          return <RenderAdvancedTab t={t} handleReset={handleReset} />;
+        default:
+          return null;
+      }
+    })()}
+  </div>
+);
 
 interface RenderModalHeaderProps {
   t: (key: string) => string;
@@ -172,33 +184,122 @@ interface RenderTabNavigationProps {
   tabs: { id: SettingsTab; label: string; icon: React.ComponentType<{ size: number }> }[];
   activeTab: SettingsTab;
   setActiveTab: (tab: SettingsTab) => void;
+  idPrefix: string;
+  isRtl: boolean;
 }
 
-const RenderTabNavigation = ({ tabs, activeTab, setActiveTab }: RenderTabNavigationProps) => (
-  <aside className="border-ie w-48 shrink-0 overflow-y-auto border-zinc-100 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-900/20">
-    <nav className="space-y-1 p-2">
-      {tabs.map((tab) => {
-        const Icon = tab.icon;
-        const isActive = activeTab === tab.id;
-        return (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              'caption-md focus-ring duration-normal flex w-full cursor-pointer items-center gap-3 rounded-md border-s-2 px-3 py-2.5 font-bold tracking-widest uppercase transition-all',
-              isActive
-                ? 'shadow-native border-blue-500 bg-white text-blue-600 dark:bg-zinc-800 dark:text-blue-400'
-                : 'border-transparent text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100'
-            )}
-          >
-            <Icon size={16} />
-            <span>{tab.label}</span>
-          </button>
-        );
-      })}
-    </nav>
-  </aside>
-);
+const RenderTabNavigation = ({
+  tabs,
+  activeTab,
+  setActiveTab,
+  idPrefix,
+  isRtl,
+}: RenderTabNavigationProps) => {
+  const tablistRef = useRef<HTMLDivElement>(null);
+
+  const getTabButtons = () =>
+    tablistRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]') ?? null;
+
+  const focusTabAt = (index: number) => {
+    const buttons = getTabButtons();
+    if (!buttons || buttons.length === 0) return;
+    const wrapped = (index + buttons.length) % buttons.length;
+    buttons[wrapped].focus();
+  };
+
+  // Resolve the anchor index for arrow navigation from the DOM rather than
+  // the `activeTab` prop: under the WAI-ARIA "follow-focus" pattern the
+  // focused tab *is* the active tab, and reading from the DOM sidesteps
+  // stale-closure and React-flush ordering between onFocus→setActiveTab and
+  // the subsequent keydown. Falls back to the aria-selected tab when nothing
+  // is focused (e.g. the very first Home/End press).
+  const currentTabIndex = () => {
+    const buttons = getTabButtons();
+    if (!buttons || buttons.length === 0) return 0;
+    const focusedEl = document.activeElement as HTMLButtonElement | null;
+    const focusedIndex = focusedEl ? Array.from(buttons).indexOf(focusedEl) : -1;
+    if (focusedIndex >= 0) return focusedIndex;
+    for (let i = 0; i < buttons.length; i++) {
+      if (buttons[i].getAttribute('aria-selected') === 'true') return i;
+    }
+    return 0;
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (tabs.length === 0) return;
+    const currentIndex = currentTabIndex();
+
+    let handled = false;
+    switch (e.key) {
+      case 'ArrowRight':
+      case 'ArrowDown': {
+        // In RTL, ArrowRight moves backward (towards the visual start).
+        const step = isRtl && e.key === 'ArrowRight' ? -1 : 1;
+        focusTabAt(currentIndex + step);
+        handled = true;
+        break;
+      }
+      case 'ArrowLeft':
+      case 'ArrowUp': {
+        const step = isRtl && e.key === 'ArrowLeft' ? 1 : -1;
+        focusTabAt(currentIndex + step);
+        handled = true;
+        break;
+      }
+      case 'Home':
+        focusTabAt(0);
+        handled = true;
+        break;
+      case 'End':
+        focusTabAt(tabs.length - 1);
+        handled = true;
+        break;
+      default:
+        break;
+    }
+    if (handled) e.preventDefault();
+  };
+
+  return (
+    <aside className="border-ie w-48 shrink-0 overflow-y-auto border-zinc-100 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-900/20">
+      <div
+        ref={tablistRef}
+        role="tablist"
+        aria-orientation="vertical"
+        onKeyDown={handleKeyDown}
+        className="space-y-1 p-2"
+      >
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          const tabButtonId = `${idPrefix}-tab-${tab.id}`;
+          const tabPanelId = `${idPrefix}-panel-${tab.id}`;
+          return (
+            <button
+              key={tab.id}
+              id={tabButtonId}
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={tabPanelId}
+              tabIndex={isActive ? 0 : -1}
+              onClick={() => setActiveTab(tab.id)}
+              onFocus={() => setActiveTab(tab.id)}
+              className={cn(
+                'caption-md focus-ring duration-fast flex w-full cursor-pointer items-center gap-3 rounded-md border-s-2 px-3 py-2.5 font-bold tracking-widest uppercase transition-all',
+                isActive
+                  ? 'shadow-native border-blue-500 bg-white text-blue-600 dark:bg-zinc-800 dark:text-blue-400'
+                  : 'border-transparent text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100'
+              )}
+            >
+              <Icon size={16} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </aside>
+  );
+};
 
 interface RenderModalFooterProps {
   t: (key: string) => string;
@@ -218,9 +319,10 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const titleId = useId();
+  const tabIdPrefix = useId();
   const globalSettings = useGlobalSettings();
   const { resetGlobalSettings } = useSettingsActions();
-  const { t } = useTranslation(globalSettings.language);
+  const { t, isRtl } = useTranslation(globalSettings.language);
 
   // Reset search when modal opens
   useEffect(() => {
@@ -304,13 +406,21 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
           tabs={filteredTabs}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          idPrefix={tabIdPrefix}
+          isRtl={isRtl}
         />
 
         <ScrollShadow
           className="flex-1 overflow-y-auto bg-white dark:bg-zinc-950/20"
           contentClassName="p-8"
         >
-          <RenderContent activeTab={activeTab} t={t} handleReset={handleReset} />
+          <RenderContent
+            activeTab={activeTab}
+            t={t}
+            handleReset={handleReset}
+            panelId={`${tabIdPrefix}-panel-${activeTab}`}
+            tabButtonId={`${tabIdPrefix}-tab-${activeTab}`}
+          />
         </ScrollShadow>
       </div>
 
