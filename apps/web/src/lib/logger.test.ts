@@ -3,12 +3,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // Mock dependencies
 vi.mock('@/lib/ipc', () => ({
   checkIsTauri: vi.fn(),
-  storeApi: {
-    load: vi.fn(),
-    get: vi.fn(),
-    set: vi.fn(),
-    save: vi.fn(),
-  },
   logApi: {
     append: vi.fn(),
   },
@@ -21,17 +15,14 @@ vi.mock('@/lib/config', () => ({
 }));
 
 import { logger } from './logger';
-import { checkIsTauri, storeApi, logApi } from '@/lib/ipc';
+import { checkIsTauri, logApi } from '@/lib/ipc';
 import { config } from '@/lib/config';
 
 describe('Logger', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(checkIsTauri).mockReturnValue(false);
-    vi.mocked(storeApi.load).mockResolvedValue(true);
-    vi.mocked(storeApi.get).mockResolvedValue([]);
-    vi.mocked(storeApi.set).mockResolvedValue(true);
-    vi.mocked(storeApi.save).mockResolvedValue(true);
+    vi.mocked(logApi.append).mockResolvedValue(null);
     delete (window as any).__TAURI_INTERNALS__;
 
     // Mock console methods
@@ -48,13 +39,13 @@ describe('Logger', () => {
     it('should skip debug logs in production', async () => {
       vi.mocked(config).isProd = true;
       await logger.log('debug', 'test message');
-      expect(storeApi.load).not.toHaveBeenCalled();
+      expect(logApi.append).not.toHaveBeenCalled();
       vi.mocked(config).isProd = false;
     });
 
     it('should log info message with context in dev mode', async () => {
       // Info level doesn't log to console per lint rules - only persists
-      expect(storeApi.load).not.toHaveBeenCalled(); // Not Tauri env yet
+      expect(logApi.append).not.toHaveBeenCalled(); // Not Tauri env yet
     });
 
     it('should log warn message to console in dev mode', async () => {
@@ -79,24 +70,19 @@ describe('Logger', () => {
       );
     });
 
-    it('should persist to Tauri store when in Tauri environment', async () => {
+    it('should persist via logApi.append when in Tauri environment', async () => {
       (window as any).__TAURI_INTERNALS__ = {};
       vi.mocked(checkIsTauri).mockReturnValue(true);
-      vi.mocked(storeApi.get).mockResolvedValue([]);
 
       await logger.log('info', 'test message');
 
-      expect(storeApi.load).toHaveBeenCalledWith('logs.json');
-      expect(storeApi.get).toHaveBeenCalledWith('logs.json', 'entries');
-      expect(storeApi.set).toHaveBeenCalledWith('logs.json', 'entries', expect.any(Array));
-      expect(storeApi.save).toHaveBeenCalledWith('logs.json');
-      expect(logApi.append).toHaveBeenCalled();
+      expect(logApi.append).toHaveBeenCalledWith(expect.stringContaining('"level":"info"'));
     });
 
-    it('should handle store persistence errors gracefully', async () => {
+    it('should handle logApi.append errors gracefully', async () => {
       (window as any).__TAURI_INTERNALS__ = {};
       vi.mocked(checkIsTauri).mockReturnValue(true);
-      vi.mocked(storeApi.load).mockRejectedValue(new Error('Store error'));
+      vi.mocked(logApi.append).mockRejectedValue(new Error('IPC error'));
 
       await expect(logger.log('info', 'test message')).resolves.not.toThrow();
     });

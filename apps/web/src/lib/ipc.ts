@@ -748,6 +748,33 @@ const CommandReturnSchemas: {
 // URL Security — delegated to url-allowlist.ts (Finding 12)
 // ============================================================================
 
+const IPC_TIMEOUT_MULTIPLIER = 3;
+const IPC_DEFAULT_TIMEOUT_MS = 30_000;
+
+/**
+ * Creates a timeout promise for an IPC call using a 3× latency budget cushion.
+ * The budget measures *expected* latency (violations are observability); the
+ * timeout catches *hung* calls (reliability). Commands without an explicit
+ * budget get a generous default so they can't hang forever but aren't killed
+ * eagerly.
+ */
+function createIpcTimeout(command: string, budgetMs: number): Promise<never> {
+  const timeoutMs = budgetMs > 0 ? budgetMs * IPC_TIMEOUT_MULTIPLIER : IPC_DEFAULT_TIMEOUT_MS;
+  return new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      reject(
+        new IpcError({
+          code: BackendErrorCode.Timeout,
+          message: `IPC call "${command}" timed out after ${timeoutMs}ms`,
+          requestId: undefined,
+          context: undefined,
+          isRetryable: true,
+        })
+      );
+    }, timeoutMs);
+  });
+}
+
 /**
  * Internal helper to perform typed IPC calls via Tauri.
  * Handles input/output validation, URL security checks, and error sanitization.
@@ -807,7 +834,8 @@ async function callInternal<K extends keyof CommandMap>(
 
   try {
     const { invoke: tauriInvoke } = await import('@tauri-apps/api/core');
-    const response = await tauriInvoke<ApiResponse<CommandMap[K]['return']>>(command, args);
+    const invokePromise = tauriInvoke<ApiResponse<CommandMap[K]['return']>>(command, args);
+    const response = await Promise.race([invokePromise, createIpcTimeout(command, budgetMs)]);
 
     const schema = CommandReturnSchemas[command];
     const latencyMs = Math.round(performance.now() - callStart);
