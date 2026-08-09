@@ -109,6 +109,7 @@ describe('ChatWindow', () => {
         enableMermaid: true,
         density: 1.0,
         sidebarWidth: 260,
+        sidebarCollapsed: false,
         closeToTray: true,
         showTokenIndicator: true,
       },

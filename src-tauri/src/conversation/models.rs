@@ -46,6 +46,7 @@ pub struct ChatSettings {
     pub enable_mermaid: bool,
     pub density: f64,
     pub sidebar_width: u32,
+    pub sidebar_collapsed: bool,
     pub show_token_indicator: bool,
     pub close_to_tray: bool,
 }
@@ -70,6 +71,7 @@ impl Default for ChatSettings {
             enable_mermaid: true,
             density: 1.0,
             sidebar_width: 260,
+            sidebar_collapsed: false,
             show_token_indicator: true,
             close_to_tray: true,
         }

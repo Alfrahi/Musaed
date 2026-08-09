@@ -392,7 +392,12 @@
     "commandPalette": "لوحة الأوامر",
     "searchMessages": "البحث في رسائل المحادثات",
     "shortcutCheatsheet": "اختصارات لوحة المفاتيح",
-    "closePreview": "إغلاق معاينة الصورة"
+    "closePreview": "إغلاق معاينة الصورة",
+    "resizeSidebar": "تغيير حجم الشريط الجانبي",
+    "collapseSidebar": "طي الشريط الجانبي",
+    "expandSidebar": "توسيع الشريط الجانبي",
+    "toggleSidebar": "تبديل الشريط الجانبي",
+    "newConversationCollapsed": "ابدأ محادثة جديدة"
   },
   "contextMenu": {
     "conversation": {

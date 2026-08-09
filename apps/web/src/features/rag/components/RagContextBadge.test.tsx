@@ -65,6 +65,7 @@ describe('RagContextBadge', () => {
         enableMermaid: true,
         density: 1.0,
         sidebarWidth: 260,
+        sidebarCollapsed: false,
         closeToTray: true,
         showTokenIndicator: true,
       },
@@ -92,6 +93,16 @@ describe('RagContextBadge', () => {
       expect(useUIStore.getState().sidebarTab).toBe('chats');
       fireEvent.click(screen.getByRole('button', { name: 'rag.addProject' }));
       expect(useUIStore.getState().sidebarTab).toBe('projects');
+    });
+
+    it('expands the sidebar when clicked if it was collapsed', () => {
+      useSettingsStore.setState((s) => ({
+        globalSettings: { ...s.globalSettings, sidebarCollapsed: true },
+      }));
+      render(<RagContextBadge />);
+      expect(useSettingsStore.getState().globalSettings.sidebarCollapsed).toBe(true);
+      fireEvent.click(screen.getByRole('button', { name: 'rag.addProject' }));
+      expect(useSettingsStore.getState().globalSettings.sidebarCollapsed).toBe(false);
     });
   });
 

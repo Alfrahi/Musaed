@@ -8,12 +8,14 @@ import { useOpenModal, useCloseModal } from '@/store/hooks';
 import { selectIsAnyModalOpen, useUIStore } from '@/store/ui-store';
 import { useConversationStore } from '@/store/conversation-store';
 import { useStreamingStore } from '@/store/streaming-store';
+import { useSettingsStore } from '@/store/settings-store';
 
 /**
  * Hook to register global keyboard shortcuts for primary application actions.
  *
  * Actions:
  * - Cmd/Ctrl + N: New Chat
+ * - Cmd/Ctrl + B: Toggle sidebar (collapse/expand)
  * - Cmd/Ctrl + ,: Settings
  * - Cmd/Ctrl + L: Model Library
  * - Cmd/Ctrl + /: Keyboard shortcuts cheatsheet
@@ -33,6 +35,18 @@ export function useGlobalShortcuts() {
       if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
         e.preventDefault();
         createNewConversation();
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        // Toggle the sidebar's collapsed state. Read the latest store
+        // snapshot directly (matches the Escape→stopStream fresh-state read
+        // pattern used elsewhere in this hook).
+        const { globalSettings, setGlobalSettings } = useSettingsStore.getState();
+        setGlobalSettings({
+          ...globalSettings,
+          sidebarCollapsed: !globalSettings.sidebarCollapsed,
+        });
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key === ',') {

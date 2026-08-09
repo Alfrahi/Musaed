@@ -2,12 +2,27 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { AppHeader, default as HomeClient } from './HomeClient';
 
-vi.mock('@/store/settings-store', () => ({
-  useSettingsStore: vi.fn((selector) =>
-    selector({ globalSettings: { language: 'en', theme: 'light' as const } })
-  ),
-  useGlobalSettings: () => ({ language: 'en', theme: 'light' as const }),
-}));
+vi.mock('@/store/settings-store', () => {
+  const state = {
+    globalSettings: {
+      language: 'en',
+      theme: 'light' as const,
+      sidebarCollapsed: false,
+    },
+  };
+  const useSettingsStore = Object.assign(
+    vi.fn((selector: (s: typeof state) => unknown) => selector(state)),
+    {
+      getState: () => state,
+    }
+  );
+  return {
+    useSettingsStore,
+    useGlobalSettings: () => state.globalSettings,
+    useSidebarCollapsed: () => state.globalSettings.sidebarCollapsed,
+    useSetGlobalSettings: () => vi.fn(),
+  };
+});
 
 vi.mock('@/store/hooks', () => ({
   useIsHydrated: () => true,

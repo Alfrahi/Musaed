@@ -25,6 +25,7 @@ const ShortcutCheatsheet = ({ isOpen, onClose }: ShortcutCheatsheetProps) => {
 
   const shortcuts: ShortcutEntry[] = [
     { keys: [mod, 'N'], description: t('chat.newChat') },
+    { keys: [mod, 'B'], description: t('a11y.toggleSidebar') },
     { keys: [mod, 'F'], description: t('a11y.searchMessages') },
     { keys: [mod, ','], description: t('settings.title') },
     { keys: [mod, 'L'], description: t('common.library') },
