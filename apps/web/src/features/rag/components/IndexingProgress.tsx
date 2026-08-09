@@ -34,7 +34,7 @@ export const IndexingProgress = ({ progress, onAbort, onRetry }: IndexingProgres
     : label;
 
   return (
-    <div className="mt-1 space-y-1">
+    <div className="mbs-1 space-y-1">
       <div className="flex items-center justify-between">
         <span className="text-muted-foreground text-caption">
           {retryLabel}

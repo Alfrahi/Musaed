@@ -70,7 +70,7 @@ const ProjectSettingsActions = ({
   isSaving: boolean;
   t: (key: string) => string;
 }) => (
-  <div className="flex justify-end gap-2 border-t pt-2">
+  <div className="border-bs pbs-2 flex justify-end gap-2">
     <Button variant="outline" className="text-body" onClick={onClose}>
       {t('common.cancel')}
     </Button>

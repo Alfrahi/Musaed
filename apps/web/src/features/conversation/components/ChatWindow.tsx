@@ -318,7 +318,7 @@ const ChatWindow = ({
         <ScrollButton onClick={scrollToBottom} label={t('common.done')} unreadCount={unreadCount} />
       )}
       {hasError && (
-        <div className="absolute inset-x-0 bottom-0 border-t border-zinc-200 bg-white/95 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-950/95">
+        <div className="border-bs absolute inset-x-0 bottom-0 border-zinc-200 bg-white/95 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-950/95">
           <ErrorFallback
             type="ollama"
             compact

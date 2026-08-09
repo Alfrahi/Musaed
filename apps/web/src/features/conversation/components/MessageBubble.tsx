@@ -91,7 +91,7 @@ const CitationChip = ({ source, onOpen, t }: CitationChipProps) => {
       title={ariaLabel}
       className="bg-secondary/50 hover:bg-secondary text-foreground inline-flex cursor-pointer items-start gap-2 rounded-md p-2 text-start transition-colors"
     >
-      <FileText className="text-muted-foreground mt-0.5 h-3 w-3 shrink-0" />
+      <FileText className="text-muted-foreground mbs-0.5 h-3 w-3 shrink-0" />
       <span className="min-w-0">
         <span className="block truncate font-medium">
           {source.filePath}
@@ -134,7 +134,7 @@ const RagSourceReferences = ({
     if (!isExpanded) return null;
     const list = showAll ? sources : visibleSources;
     return (
-      <div className="text-caption mt-2 space-y-2">
+      <div className="text-caption mbs-2 space-y-2">
         {list.map((source, index) => (
           <CitationChip key={index} source={source} onOpen={onOpenSource} t={t} />
         ))}
@@ -161,7 +161,7 @@ const RagSourceReferences = ({
   };
 
   return (
-    <div className="mt-4 border-t pt-4">
+    <div className="mbs-4 border-bs pbs-4">
       <button
         type="button"
         className="text-muted-foreground hover:text-foreground text-caption flex cursor-pointer items-center gap-2 font-medium"
@@ -193,7 +193,7 @@ interface SourceViewerModalProps {
 const SourceViewerModal = ({ source, titleId, onClose, t }: SourceViewerModalProps) => (
   <ModalLayout isOpen onClose={onClose} titleId={titleId} maxWidth="max-w-3xl" className="h-[80vh]">
     <div className="flex h-full flex-col">
-      <div className="border-sidebar-border flex items-center justify-between border-b px-4 py-3">
+      <div className="border-sidebar-border border-be flex items-center justify-between px-4 py-3">
         <h2 id={titleId} className="text-body truncate font-medium">
           {source.filePath}:{source.startLine}–{source.endLine}
         </h2>

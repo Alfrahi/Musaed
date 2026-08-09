@@ -67,7 +67,7 @@ const CodeBlock = ({ language, value }: CodeBlockProps) => {
       role="region"
       aria-label={t('a11y.codeBlock', { language: displayLanguage })}
     >
-      <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900 px-4 py-2">
+      <div className="border-be flex items-center justify-between border-zinc-800 bg-zinc-900 px-4 py-2">
         <div className="flex items-center gap-3">
           <span className="caption-md font-mono font-medium text-zinc-500">{displayLanguage}</span>
         </div>

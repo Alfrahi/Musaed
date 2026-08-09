@@ -47,7 +47,7 @@ const InfoHeader = ({
   version: string | null;
   onClose: () => void;
 }) => (
-  <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 p-6 dark:border-zinc-800">
+  <div className="border-be flex shrink-0 items-center justify-between border-zinc-100 p-6 dark:border-zinc-800">
     <div className="flex items-center gap-4">
       <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
         <Info size={20} />
@@ -113,7 +113,7 @@ const InfoModal = ({ isOpen, onClose }: InfoModalProps) => {
         </Button>
       </div>
 
-      <div className="flex shrink-0 justify-center border-t border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
+      <div className="border-bs flex shrink-0 justify-center border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
         <span className="caption-md font-bold tracking-widest text-zinc-400 uppercase">
           © {new Date().getFullYear()} Musaed
         </span>

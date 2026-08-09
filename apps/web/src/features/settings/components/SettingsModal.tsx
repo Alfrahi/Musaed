@@ -77,7 +77,7 @@ const RenderAdvancedTab = ({ t, handleReset }: RenderAdvancedTabProps) => (
     <SettingsCard>
       <DiagnosticsSettings />
     </SettingsCard>
-    <div className="pb-4">
+    <div className="pbe-4">
       <Button
         variant="danger"
         size="md"
@@ -132,7 +132,7 @@ const RenderModalHeader = ({
   onSearchKeyDown,
   searchInputRef,
 }: RenderModalHeaderProps) => (
-  <div className="flex shrink-0 flex-col gap-3 border-b border-zinc-100 p-4 dark:border-zinc-800">
+  <div className="border-be flex shrink-0 flex-col gap-3 border-zinc-100 p-4 dark:border-zinc-800">
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2 font-semibold">
         <Settings2 size={18} className="text-blue-500" aria-hidden="true" />
@@ -206,7 +206,7 @@ interface RenderModalFooterProps {
 }
 
 const RenderModalFooter = ({ t, onClose }: RenderModalFooterProps) => (
-  <div className="flex shrink-0 justify-end border-t border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
+  <div className="border-bs flex shrink-0 justify-end border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
     <Button variant="secondary" size="md" onClick={onClose} className="tracking-normal">
       {t('common.done')}
     </Button>

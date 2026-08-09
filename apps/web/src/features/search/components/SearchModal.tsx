@@ -46,7 +46,7 @@ const SearchResultItem = memo(function SearchResultItem({
       onClick={() => onSelect(result)}
       onMouseEnter={() => onHover(index)}
       className={cn(
-        'h-auto w-full justify-start rounded-none px-4 py-3 text-left',
+        'h-auto w-full justify-start rounded-none px-4 py-3 text-start',
         isActive ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-50 dark:hover:bg-zinc-900'
       )}
     >
@@ -94,10 +94,10 @@ const SearchInput = memo(function SearchInput({
   inputRef,
 }: SearchInputProps) {
   return (
-    <div className="border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
+    <div className="border-be border-zinc-100 px-4 py-3 dark:border-zinc-800">
       <div className="relative">
         <svg
-          className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-zinc-400"
+          className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -117,7 +117,7 @@ const SearchInput = memo(function SearchInput({
           onChange={(e) => onQueryChange(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
-          className="text-body w-full rounded-md border border-zinc-200 bg-zinc-50 py-2 pr-4 pl-10 transition-colors outline-none placeholder:text-zinc-400 focus:border-zinc-300 focus:bg-white dark:border-zinc-700 dark:bg-zinc-900 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:bg-zinc-950"
+          className="text-body w-full rounded-md border border-zinc-200 bg-zinc-50 py-2 ps-10 pe-4 transition-colors outline-none placeholder:text-zinc-400 focus:border-zinc-300 focus:bg-white dark:border-zinc-700 dark:bg-zinc-900 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:bg-zinc-950"
           aria-label={placeholder}
           role="combobox"
           aria-expanded={resultsCount > 0}
@@ -126,7 +126,7 @@ const SearchInput = memo(function SearchInput({
           autoComplete="off"
         />
         {isSearching && (
-          <div className="absolute top-1/2 right-3 -translate-y-1/2">
+          <div className="absolute end-3 top-1/2 -translate-y-1/2">
             <svg
               className="h-4 w-4 animate-spin text-zinc-400"
               fill="none"
@@ -299,7 +299,7 @@ const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
   return (
     <ModalLayout isOpen={isOpen} onClose={onClose} titleId={titleId} maxWidth="max-w-lg">
       <div className="flex flex-col">
-        <div className="border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
+        <div className="border-be border-zinc-100 px-4 py-3 dark:border-zinc-800">
           <h2 id={titleId} className="text-body font-semibold">
             {t('search.title')}
           </h2>

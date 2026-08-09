@@ -39,7 +39,7 @@ const GroupHeader = ({
   clearLabel: string;
   label: string;
 }) => (
-  <div className="pbs-6 pbe-2 inset-bs-0 bg-sidebar mbe-1 sticky z-10 flex items-center justify-between border-b border-zinc-100 ps-3 pe-3 dark:border-zinc-800">
+  <div className="pbs-6 pbe-2 inset-bs-0 bg-sidebar mbe-1 border-be sticky z-10 flex items-center justify-between border-zinc-100 ps-3 pe-3 dark:border-zinc-800">
     <span className="caption-md font-bold text-zinc-400 uppercase">{label}</span>
     {showClear && (
       <Button
@@ -152,7 +152,7 @@ const TabButtons = ({
   setActiveTab: (tab: 'chats' | 'projects') => void;
   t: (key: string) => string;
 }) => (
-  <div className="mb-3 flex gap-1 px-3">
+  <div className="mbe-3 flex gap-1 px-3">
     <button
       onClick={() => setActiveTab('chats')}
       className={`caption-xs focus-ring duration-fast flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md py-1.5 font-bold tracking-wider uppercase transition-all ${
@@ -278,7 +278,7 @@ const Sidebar = () => {
   if (!isHydrated) {
     return (
       <div
-        className="bg-sidebar flex h-full flex-col shadow-[1px_0_2px_rgba(0,0,0,0.06)] select-none"
+        className="border-sidebar-border bg-sidebar flex h-full flex-col border-e select-none"
         style={{ width: sidebarWidth }}
       >
         <SidebarSkeleton />
@@ -297,7 +297,7 @@ const Sidebar = () => {
   return (
     <div
       data-testid="sidebar"
-      className="bg-sidebar flex h-full flex-col shadow-[1px_0_2px_rgba(0,0,0,0.06)] select-none"
+      className="border-sidebar-border bg-sidebar flex h-full flex-col border-e select-none"
       style={{ width: sidebarWidth }}
     >
       <SidebarHeader activeTab={activeTab} onCreateNew={handleCreateNew} />

@@ -110,7 +110,7 @@ const FileBrowser = ({ onFileSelect }: FileBrowserProps) => {
     return (
       <div className="text-destructive text-body p-4">
         <p>{errorMessage}</p>
-        <Button variant="outline" size="sm" className="mt-2 gap-2" onClick={handleRefresh}>
+        <Button variant="outline" size="sm" className="mbs-2 gap-2" onClick={handleRefresh}>
           <RefreshCw className="h-4 w-4" />
           {t('common.retry')}
         </Button>
@@ -120,7 +120,7 @@ const FileBrowser = ({ onFileSelect }: FileBrowserProps) => {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b p-2">
+      <div className="border-be flex items-center justify-between p-2">
         <h3 className="text-body font-medium">{t('rag.indexedFiles')}</h3>
         <Button
           variant="ghost"

@@ -76,7 +76,7 @@ const ProjectCard = ({
   return (
     <div
       className={cn(
-        'group mb-0.5 flex cursor-pointer flex-col rounded-md px-2 py-1.5 transition-colors',
+        'group mbe-0.5 flex cursor-pointer flex-col rounded-md px-2 py-1.5 transition-colors',
         isActive ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50 text-foreground'
       )}
       onClick={onSelect}
@@ -171,7 +171,7 @@ const ProjectStats = ({
   const { formatFileSize } = useTranslation(language);
 
   return (
-    <div className="text-muted-foreground text-caption mt-1 flex items-center gap-2">
+    <div className="text-muted-foreground text-caption mbs-1 flex items-center gap-2">
       {project.chunkCount > 0 && (
         <>
           <span className="flex items-center gap-0.5">
@@ -278,7 +278,7 @@ const ProjectActions = ({
   return (
     <div
       className={cn(
-        'mt-1 flex items-center gap-1',
+        'mbs-1 flex items-center gap-1',
         isIndexing ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
         'transition-opacity'
       )}
@@ -355,7 +355,7 @@ type ExplorerModalProps = {
 const ExplorerModal = ({ project, onClose, titleId, t }: ExplorerModalProps) => (
   <ModalLayout isOpen onClose={onClose} titleId={titleId} maxWidth="max-w-4xl" className="h-[80vh]">
     <div className="flex h-full flex-col">
-      <div className="border-sidebar-border flex items-center justify-between border-b px-4 py-3">
+      <div className="border-sidebar-border border-be flex items-center justify-between px-4 py-3">
         <h2 id={titleId} className="text-heading font-medium">
           {project.name}
         </h2>

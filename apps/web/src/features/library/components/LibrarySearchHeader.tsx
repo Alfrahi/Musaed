@@ -40,7 +40,7 @@ const HeaderBar = ({
   onClose: () => void;
   refreshTitle: string;
 }) => (
-  <div className="pbs-6 pbe-6 flex items-center justify-between border-b border-zinc-100 ps-6 pe-6 dark:border-zinc-800">
+  <div className="pbs-6 pbe-6 border-be flex items-center justify-between border-zinc-100 ps-6 pe-6 dark:border-zinc-800">
     <div className="flex items-center gap-4">
       <div className="shadow-pro flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 text-white shadow-blue-500/20">
         <HardDrive size={18} />
@@ -203,7 +203,7 @@ const LibrarySearchHeader = ({
         onClose={onClose}
         refreshTitle={t('library.refreshModels')}
       />
-      <div className="space-y-4 border-b border-zinc-100 bg-zinc-50/50 py-4 ps-6 pe-6 dark:border-zinc-800 dark:bg-zinc-900/50">
+      <div className="border-be space-y-4 border-zinc-100 bg-zinc-50/50 py-4 ps-6 pe-6 dark:border-zinc-800 dark:bg-zinc-900/50">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <TabBar
             activeTab={activeTab}
