@@ -12,6 +12,7 @@ const manifest: FeatureManifest = {
     hooks: [
       'useChatSend',
       'useConversationActions',
+      'useConversationInitialization',
       'useConversationMessages',
       'useAttachmentManager',
       'useTauriEvents',
@@ -20,7 +21,12 @@ const manifest: FeatureManifest = {
       'useTokenUsage',
     ],
     components: ['TokenContextBar'],
-    utils: ['isDefaultTitle', 'generateConversationTitle', 'initializeConversations'],
+    utils: [
+      'isDefaultTitle',
+      'generateConversationTitle',
+      'initializeConversations',
+      'attachmentImageSrc',
+    ],
   },
   ipcEndpoints: [
     'cmd_ollama_chat',
