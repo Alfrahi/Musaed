@@ -16,6 +16,7 @@ const manifest: FeatureManifest = {
       'useStorageCleanup',
       'useIpcLatencyStats',
       'useIpcViolations',
+      'useSettingsInitialization',
     ],
     components: ['SettingsModal'],
     utils: [],

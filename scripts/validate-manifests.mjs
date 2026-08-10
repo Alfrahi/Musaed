@@ -204,11 +204,47 @@ function extractExports(filePath) {
   }
   
   // Extract default exports from feature.manifest
-  const manifestExport = content.match(/export\s+{\s*default\s+as\s+default\s*}\s+from\s+["']\.\/feature\.manifest["']/);
+  const manifestExport = content.match(/export\s+{\s*default\s+as\s+default\s*}\s*from\s+["']\.\/feature\.manifest["']/);
   if (manifestExport) {
     hooks.push("default");
   }
-  
+
+  // Catch-all: named re-exports from submodules not covered by the
+  // hooks/utils/components/store matchers above (e.g. `./image-attachment`).
+  // These are non-component named value exports, so push them into the
+  // `hooks` bucket — the same bucket the validator checks manifest `utils`
+  // against (see the "Check utils" block below). `type`-only specifiers and
+  // `export { default as Foo }` aliases are skipped: the former are not part
+  // of the runtime public surface, and the latter are already captured by
+  // the component-specific matchers when they come from `./components/*`.
+  const seen = new Set([...hooks, ...components]);
+  const allNamedReExports = content.matchAll(/export\s+\{\s*([^}]+)\s*\}\s+from\s+["'](\.\/[^"']+)["']/g);
+  for (const m of allNamedReExports) {
+    const specifierPath = m[2];
+    // Skip paths the dedicated matchers above already handle.
+    if (
+      specifierPath.startsWith("./hooks/") ||
+      specifierPath.startsWith("./utils/") ||
+      specifierPath.startsWith("./components") ||
+      specifierPath.startsWith("@/store/") ||
+      specifierPath === "./feature.manifest"
+    ) {
+      continue;
+    }
+    const names = m[1].split(",").map(s => s.trim());
+    for (const raw of names) {
+      // Drop `type Foo` and `type { ... }` specifiers.
+      if (raw.startsWith("type ") || raw === "type") continue;
+      // Drop `default as Foo` — already captured by ./components/* matchers.
+      if (raw.startsWith("default as")) continue;
+      const name = raw.replace(/^type\s+/, "").trim();
+      if (name && !seen.has(name)) {
+        hooks.push(name);
+        seen.add(name);
+      }
+    }
+  }
+
   return { hooks, components };
 }
 
