@@ -427,17 +427,16 @@ pub async fn get_file_chunks<'a>(req: GetFileChunksRequest<'a>) -> ApiResponse<V
             }
         }
     };
-    let canonical_path = match validate_and_canonicalize_file_path(
-        std::path::Path::new(&project.path),
-        &req.file_path,
-    ) {
-        Ok(p) => p,
-        Err(e) => return rag_validation_error(format!("Invalid file path: {}", e)),
-    };
-    match s
-        .get_file_by_path(&req.project_id, &canonical_path.to_string_lossy())
-        .await
+    // Validate and canonicalize the file path to ensure it stays within the
+    // project boundary, but use the original relative path for the DB lookup —
+    // the `files` table stores `relative_path` (e.g. "src/main.rs"), not the
+    // canonical absolute path.
+    if let Err(e) =
+        validate_and_canonicalize_file_path(std::path::Path::new(&project.path), &req.file_path)
     {
+        return rag_validation_error(format!("Invalid file path: {}", e));
+    }
+    match s.get_file_by_path(&req.project_id, &req.file_path).await {
         Ok(Some(file)) => {
             if let Some(file_id) = file.id {
                 match s.get_file_chunks(file_id).await {
