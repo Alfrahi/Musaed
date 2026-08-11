@@ -55,11 +55,7 @@ const MessageContent = ({ message, isUser }: { message: Message; isUser: boolean
   const showLoading = !isUser && !parsed.main && !parsed.thinking && isStreaming;
 
   return (
-    <div
-      className="prose prose-sm md:prose-base dark:prose-invert max-w-none break-words"
-      dir="auto"
-      aria-busy={isStreaming}
-    >
+    <div className="max-w-none break-words" dir="auto" aria-busy={isStreaming}>
       {!isUser && (parsed.thinking || !parsed.isFinished) && (
         <ThinkingBlock
           content={parsed.thinking}
