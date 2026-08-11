@@ -40,9 +40,9 @@ const HeaderBar = ({
   onClose: () => void;
   refreshTitle: string;
 }) => (
-  <div className="pbs-6 pbe-6 border-be flex items-center justify-between border-zinc-100 ps-6 pe-6 dark:border-zinc-800">
-    <div className="flex items-center gap-4">
-      <div className="shadow-pro flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 text-white shadow-blue-500/20">
+  <div className="border-be flex items-center justify-between border-zinc-100 px-4 py-3 dark:border-zinc-800">
+    <div className="flex items-center gap-3">
+      <div className="shadow-pro flex h-9 w-9 items-center justify-center rounded-md bg-blue-600 text-white shadow-blue-500/20">
         <HardDrive size={18} />
       </div>
       <div>
@@ -60,7 +60,7 @@ const HeaderBar = ({
         size="icon"
         onClick={onRefresh}
         className={cn(
-          'rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800',
+          'rounded-md text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800',
           isRefreshing && 'animate-spin text-blue-500'
         )}
         title={refreshTitle}
@@ -71,7 +71,7 @@ const HeaderBar = ({
         variant="ghost"
         size="icon"
         onClick={onClose}
-        className="rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        className="rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800"
       >
         <X size={20} />
       </Button>
@@ -203,7 +203,7 @@ const LibrarySearchHeader = ({
         onClose={onClose}
         refreshTitle={t('library.refreshModels')}
       />
-      <div className="border-be space-y-4 border-zinc-100 bg-zinc-50/50 py-4 ps-6 pe-6 dark:border-zinc-800 dark:bg-zinc-900/50">
+      <div className="border-be space-y-4 border-zinc-100 bg-zinc-50/50 py-4 ps-8 pe-8 dark:border-zinc-800 dark:bg-zinc-900/50">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <TabBar
             activeTab={activeTab}

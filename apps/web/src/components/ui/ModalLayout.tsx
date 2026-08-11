@@ -5,6 +5,16 @@ import FocusTrap from 'focus-trap-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
+/*
+ * Modal padding convention (apps-wide):
+ *   - Small modals (max-w-md/max-w-sm/max-w-lg): content body p-6.
+ *   - Page-like modals (max-w-3xl and wider, e.g. SettingsModal, LogViewer,
+ *     ModelLibrary): content body p-8.
+ *   - Headers: px-4 py-3 border-be, gap-3, icon container h-9 w-9 rounded-md.
+ *   - Footers: px-4 py-3 border-bs, gap-2, flex justify-end (or justify-between
+ *     when a status label sits opposite the action buttons).
+ */
+
 interface ModalLayoutProps {
   isOpen: boolean;
   /**

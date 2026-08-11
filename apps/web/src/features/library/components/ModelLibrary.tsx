@@ -60,7 +60,7 @@ const FeaturedGrid = ({
     style={{ height: '100%' }}
     data={filteredFeatured}
     totalCount={filteredFeatured.length}
-    listClassName="grid grid-cols-1 md:grid-cols-2 gap-4 p-6"
+    listClassName="grid grid-cols-1 md:grid-cols-2 gap-4 p-8"
     atBottomStateChange={onAtBottomChange}
     itemContent={(_idx, model) => (
       <ModelCard
@@ -111,12 +111,12 @@ const InstalledList = ({
 }) => {
   if (filteredInstalled.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 px-6">
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-8">
         <p className="text-body text-zinc-500 dark:text-zinc-400">{emptyCta}</p>
         <Button
           variant="secondary"
           onClick={onBrowseLibrary}
-          className="text-caption rounded-lg font-semibold"
+          className="text-caption rounded-md font-semibold"
         >
           {emptyCta}
         </Button>
@@ -132,8 +132,8 @@ const InstalledList = ({
       itemContent={(idx, model) => (
         <div
           className={cn(
-            'pbe-4 ps-6 pe-6',
-            idx === 0 && 'pbs-6',
+            'pbe-4 ps-8 pe-8',
+            idx === 0 && 'pbs-8',
             idx === filteredInstalled.length - 1 && 'pbe-12'
           )}
         >
@@ -154,7 +154,7 @@ const InstalledList = ({
 
 /** Connection warning banner. */
 const ConnectionWarning = ({ message }: { message: string }) => (
-  <div className="mbs-4 ms-6 me-6 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
+  <div className="mbs-4 ms-8 me-8 flex items-center gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
     <AlertCircle size={18} className="shrink-0 text-amber-600 dark:text-amber-400" />
     <p className="text-caption font-medium text-amber-800 dark:text-amber-200">{message}</p>
   </div>
@@ -170,14 +170,14 @@ const LibraryFooter = ({
   closeLabel: string;
   onClose: () => void;
 }) => (
-  <div className="border-bs flex items-center justify-between border-zinc-100 bg-zinc-50 py-4 ps-6 pe-6 dark:border-zinc-800 dark:bg-zinc-900/80">
+  <div className="border-bs flex items-center justify-between border-zinc-100 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/80">
     <span className="caption-md font-bold tracking-widest text-zinc-400 uppercase">
       {storageLabel}
     </span>
     <Button
       variant="secondary"
       onClick={onClose}
-      className="text-caption shadow-native h-10 rounded-lg ps-6 pe-6 tracking-normal uppercase"
+      className="text-caption shadow-native h-10 rounded-md ps-6 pe-6 tracking-normal uppercase"
     >
       {closeLabel}
     </Button>
