@@ -26,7 +26,7 @@ describe('cn', () => {
       const variant =
         'bg-zinc-900 font-semibold text-white shadow-native hover:opacity-90 dark:bg-zinc-100 dark:text-zinc-900';
       const caller =
-        'text-caption shadow-native h-10 flex-1 gap-2 rounded-lg ps-4 pe-4 font-bold tracking-normal uppercase';
+        'text-caption shadow-native h-8 w-full gap-2 rounded-md ps-3 pe-3 font-bold tracking-normal uppercase';
       const result = cn(variant, caller);
       expect(result).toContain('text-white');
       expect(result).toContain('text-caption');
