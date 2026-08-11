@@ -14,7 +14,7 @@ const SidebarInfo = ({ trailing }: { trailing?: React.ReactNode }) => {
   const { version } = useAppVersion();
 
   return (
-    <div className="border-bs border-sidebar-border duration-fast flex items-center gap-1 bg-zinc-50/50 p-4 transition-colors dark:bg-zinc-900/20">
+    <div className="border-bs border-sidebar-border duration-fast flex h-12 shrink-0 items-center gap-1 bg-zinc-50/50 px-3 transition-colors dark:bg-zinc-900/20">
       <Button
         variant="ghost"
         onClick={() => openModal('info')}

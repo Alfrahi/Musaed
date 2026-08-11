@@ -304,31 +304,35 @@ const CollapsedNewChatButton = ({
   onCreateNew: () => void;
   label: string;
 }) => (
-  <Button
-    variant="ghost"
-    size="icon"
-    onClick={onCreateNew}
-    className="hover:border-sidebar-border mbs-3 h-8 w-8 shrink-0 rounded-md border border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-    title={label}
-    aria-label={label}
-  >
-    <Plus size={16} />
-  </Button>
+  <div className="flex h-12 shrink-0 items-center">
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={onCreateNew}
+      className="hover:border-sidebar-border h-8 w-8 shrink-0 rounded-md border border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+      title={label}
+      aria-label={label}
+    >
+      <Plus size={16} />
+    </Button>
+  </div>
 );
 
 /** Expand-sidebar icon button for the collapsed rail. */
 const CollapsedExpandButton = ({ onExpand, label }: { onExpand: () => void; label: string }) => (
-  <Button
-    variant="ghost"
-    size="icon"
-    onClick={onExpand}
-    className="hover:border-sidebar-border mbe-3 h-8 w-8 shrink-0 rounded-md border border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-    title={label}
-    aria-label={label}
-    aria-expanded={false}
-  >
-    <PanelLeftOpen size={16} />
-  </Button>
+  <div className="flex h-12 shrink-0 items-center">
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={onExpand}
+      className="hover:border-sidebar-border h-8 w-8 shrink-0 rounded-md border border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+      title={label}
+      aria-label={label}
+      aria-expanded={false}
+    >
+      <PanelLeftOpen size={16} />
+    </Button>
+  </div>
 );
 
 /** Collapse-sidebar icon button shown in the expanded sidebar footer. */
