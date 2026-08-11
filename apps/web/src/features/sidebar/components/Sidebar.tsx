@@ -12,7 +12,7 @@ import {
 import { Virtuoso } from 'react-virtuoso';
 import { useIsHydrated } from '@/store/hooks';
 import { useSettingsStore } from '@/store';
-import { useSidebarTab, useSetSidebarTab } from '@/store';
+import { useSidebarTab, useSetSidebarTab, useShowAddProject, useSetShowAddProject } from '@/store';
 import { useSidebarCollapsed, useSetGlobalSettings } from '@/store/settings-store';
 import { useTranslation } from '@/lib/i18n';
 import { ProjectList, AddProjectDialog } from '@/features/rag';
@@ -493,7 +493,8 @@ const ExpandedSidebar = ({
 const Sidebar = () => {
   const activeTab = useSidebarTab();
   const setActiveTab = useSetSidebarTab();
-  const [showAddProject, setShowAddProject] = useState(false);
+  const showAddProject = useShowAddProject();
+  const setShowAddProject = useSetShowAddProject();
   const { createNewConversation } = useConversationActions();
 
   const filteredConversations = useFilteredConversations();

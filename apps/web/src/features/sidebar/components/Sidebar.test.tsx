@@ -225,6 +225,7 @@ describe('Sidebar', () => {
       errorMessage: null,
       activeModal: null,
       sidebarTab: 'chats',
+      showAddProject: false,
       _pendingRehydrations: 0,
     });
     useSettingsStore.setState({
