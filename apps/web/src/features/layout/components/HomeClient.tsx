@@ -16,7 +16,11 @@ import { isMac as detectIsMac, isWindows as detectIsWindows } from '@/lib/platfo
 import { checkIsTauri } from '@/lib/ipc';
 import { Button } from '@/components/ui/button';
 
-import { useTauriEvents, useConversationMessages } from '@/features/conversation';
+import {
+  useTauriEvents,
+  useConversationMessages,
+  usePersistActiveConversation,
+} from '@/features/conversation';
 import { useLibraryTauriEvents } from '@/features/library';
 import { useAppInitialization } from '@/hooks';
 import { useOllamaConnection } from '@/hooks/useOllamaConnection';
@@ -150,6 +154,7 @@ const HomeClient = () => {
   useGlobalShortcuts();
   useAutoCollapseSidebar();
   useConversationMessages();
+  usePersistActiveConversation();
 
   useEffect(() => {
     const unsubscribe = registerHydrationCoordination();
