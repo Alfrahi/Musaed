@@ -13,7 +13,7 @@ const ChatWindowSkeleton = () => {
           <Skeleton className="h-8 w-8 shrink-0 rounded-md" />
           <div className={`flex-1 space-y-2 ${i % 2 === 0 ? 'flex flex-col items-end' : ''}`}>
             <Skeleton className="h-3 w-20 rounded" />
-            <Skeleton className="h-20 w-full rounded-2xl" />
+            <Skeleton className="h-20 w-full rounded-md" />
             <Skeleton className="h-3 w-32 rounded" />
           </div>
         </div>

@@ -64,7 +64,7 @@ const SearchResultItem = memo(function SearchResultItem({
             {result.message.role === 'user' ? roleUserLabel : roleAssistantLabel}
           </span>
         </div>
-        <p className="line-clamp-2 text-sm text-zinc-700 dark:text-zinc-300">
+        <p className="text-body line-clamp-2 text-zinc-700 dark:text-zinc-300">
           {result.message.content}
         </p>
       </div>
@@ -205,7 +205,7 @@ const SearchResultsList = memo(function SearchResultsList({
 
       {showEmpty && (
         <div className="px-4 py-8 text-center">
-          <p className="text-sm text-zinc-400">{emptyLabel}</p>
+          <p className="text-body text-zinc-400">{emptyLabel}</p>
         </div>
       )}
 
@@ -217,7 +217,7 @@ const SearchResultsList = memo(function SearchResultsList({
 
       {!hasQuery && (
         <div className="px-4 py-8 text-center">
-          <p className="text-sm text-zinc-400">{startTypingLabel}</p>
+          <p className="text-body text-zinc-400">{startTypingLabel}</p>
         </div>
       )}
     </div>

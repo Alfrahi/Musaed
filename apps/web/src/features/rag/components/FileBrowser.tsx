@@ -37,7 +37,7 @@ const TreeNode = ({
   };
 
   return (
-    <div className="my-0.5">
+    <div className="mbe-0.5">
       <div
         className={cn(
           'hover:bg-accent flex cursor-pointer items-center gap-1 rounded-md px-2 py-1',

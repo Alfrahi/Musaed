@@ -50,7 +50,7 @@ describe('Input', () => {
     expect(cls).toContain('py-2');
     expect(cls).toContain('px-3');
     // font size
-    expect(cls).toContain('text-sm');
+    expect(cls).toContain('text-body');
     // border
     expect(cls).toContain('border-zinc-200');
     expect(cls).toContain('dark:border-zinc-700');
@@ -101,7 +101,7 @@ describe('Textarea', () => {
     expect(cls).toContain('rounded-md');
     expect(cls).toContain('py-2');
     expect(cls).toContain('px-3');
-    expect(cls).toContain('text-sm');
+    expect(cls).toContain('text-body');
     expect(cls).toContain('border-zinc-200');
     expect(cls).toContain('dark:border-zinc-700');
     expect(cls).toContain('bg-white');
