@@ -61,7 +61,7 @@ const renderParsedLog = (
         <span className="break-words text-zinc-700 dark:text-zinc-300">{parsed.message}</span>
         {parsed.context !== undefined && parsed.context !== null && (
           <pre
-            className="caption-xs mbs-1.5 overflow-x-auto rounded-lg border border-zinc-100 bg-zinc-50 p-2 text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/50 dark:text-zinc-400"
+            className="caption-xs mbs-1.5 overflow-x-auto rounded-md border border-zinc-100 bg-zinc-50 p-2 text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/50 dark:text-zinc-400"
             tabIndex={0}
           >
             {JSON.stringify(parsed.context, null, 2)}
@@ -110,9 +110,9 @@ const LogViewerHeader = ({
   clearLogs,
   onClose,
 }: LogViewerHeaderProps) => (
-  <div className="pbs-6 pbe-6 border-be flex shrink-0 items-center justify-between border-zinc-100 ps-6 pe-6 dark:border-zinc-800">
-    <div className="flex items-center gap-4">
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+  <div className="border-be flex shrink-0 items-center justify-between border-zinc-100 px-4 py-3 dark:border-zinc-800">
+    <div className="flex items-center gap-3">
+      <div className="flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-zinc-100 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
         <Terminal size={18} aria-hidden="true" />
       </div>
       <div>
@@ -127,7 +127,7 @@ const LogViewerHeader = ({
         variant="ghost"
         size="icon"
         onClick={fetchLogs}
-        className="focus-ring rounded-xl text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        className="focus-ring rounded-md text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
         title={t('logs.refreshLogs')}
       >
         <RefreshCw
@@ -140,7 +140,7 @@ const LogViewerHeader = ({
         variant="ghost"
         size="icon"
         onClick={clearLogs}
-        className="rounded-xl text-zinc-500 hover:bg-zinc-100 hover:text-red-500 focus-visible:ring-2 focus-visible:ring-red-500 dark:hover:bg-zinc-800"
+        className="rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-red-500 focus-visible:ring-2 focus-visible:ring-red-500 dark:hover:bg-zinc-800"
         title={t('logs.clearLogs')}
       >
         <Trash2 size={18} aria-hidden="true" />
@@ -149,7 +149,7 @@ const LogViewerHeader = ({
         variant="ghost"
         size="icon"
         onClick={onClose}
-        className="focus-ring rounded-xl text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        className="focus-ring rounded-md text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
         aria-label={t('a11y.closeModal')}
       >
         <X size={20} aria-hidden="true" />
@@ -164,12 +164,12 @@ interface LogViewerFooterProps {
 }
 
 const LogViewerFooter = ({ t, onClose }: LogViewerFooterProps) => (
-  <div className="border-bs flex shrink-0 items-center justify-between border-zinc-100 bg-zinc-50/50 py-4 ps-6 pe-6 dark:border-zinc-800 dark:bg-zinc-900/80">
+  <div className="border-bs flex shrink-0 items-center justify-between border-zinc-100 bg-zinc-50/50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/80">
     <span className="caption-md font-medium text-zinc-400">{t('logs.logStorageInfo')}</span>
     <Button
       variant="secondary"
       onClick={onClose}
-      className="text-body focus-ring shadow-native rounded-xl py-2 ps-6 pe-6 tracking-normal"
+      className="text-body focus-ring shadow-native rounded-md py-2 ps-6 pe-6 tracking-normal"
     >
       {t('common.done')}
     </Button>

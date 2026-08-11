@@ -144,11 +144,15 @@ const RenderModalHeader = ({
   onSearchKeyDown,
   searchInputRef,
 }: RenderModalHeaderProps) => (
-  <div className="border-be flex shrink-0 flex-col gap-3 border-zinc-100 p-4 dark:border-zinc-800">
+  <div className="border-be flex shrink-0 flex-col gap-3 border-zinc-100 px-4 py-3 dark:border-zinc-800">
     <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2 font-semibold">
-        <Settings2 size={18} className="text-blue-500" aria-hidden="true" />
-        <span id={titleId}>{t('settings.title')}</span>
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-zinc-100 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+          <Settings2 size={18} className="text-blue-500" aria-hidden="true" />
+        </div>
+        <span id={titleId} className="font-semibold">
+          {t('settings.title')}
+        </span>
       </div>
       <Button
         variant="ghost"
@@ -307,7 +311,7 @@ interface RenderModalFooterProps {
 }
 
 const RenderModalFooter = ({ t, onClose }: RenderModalFooterProps) => (
-  <div className="border-bs flex shrink-0 justify-end border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
+  <div className="border-bs flex shrink-0 justify-end gap-2 border-zinc-100 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/50">
     <Button variant="secondary" size="md" onClick={onClose} className="tracking-normal">
       {t('common.done')}
     </Button>

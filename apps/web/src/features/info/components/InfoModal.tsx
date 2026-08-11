@@ -24,7 +24,7 @@ const InfoSection = ({
   title: string;
   description: string;
 }) => (
-  <div className="flex gap-4 rounded-xl border border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
+  <div className="flex gap-4 rounded-md border border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
     <div className="shrink-0 text-blue-500">
       <Icon size={20} />
     </div>
@@ -106,7 +106,7 @@ const InfoModal = ({ isOpen, onClose }: InfoModalProps) => {
         <Button
           variant="secondary"
           onClick={() => openerApi.openUrl('https://github.com/alfrahi/musaed')}
-          className="text-caption shadow-native w-full gap-2 rounded-xl"
+          className="text-caption shadow-native w-full gap-2 rounded-md"
         >
           <Github size={14} />
           {t('info.github')}
