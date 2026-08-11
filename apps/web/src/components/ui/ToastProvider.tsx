@@ -4,7 +4,7 @@ import { Toaster, resolveValue, type Toast } from 'react-hot-toast';
 import { AlertCircle, Check } from 'lucide-react';
 
 const BASE_CLASS =
-  'dark:bg-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-800 rounded-xl text-body font-medium shadow-pro';
+  'bg-white dark:bg-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-800 rounded-xl text-body font-medium shadow-pro';
 
 const toastIcon = (type: Toast['type']) => {
   if (type === 'success') return <Check size={16} className="text-green-500" />;

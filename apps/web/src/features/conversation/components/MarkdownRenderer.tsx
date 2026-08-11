@@ -166,7 +166,7 @@ const useMarkdownComponents = (
           <a
             href={safeHref}
             onClick={(e) => handleLinkClick(e, href || '')}
-            className="cursor-pointer font-medium text-blue-500 transition-colors hover:underline"
+            className="cursor-pointer font-medium text-blue-600 transition-colors hover:underline dark:text-blue-400"
             target="_blank"
             rel="noopener noreferrer"
             {...props}

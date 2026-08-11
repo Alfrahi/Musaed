@@ -66,7 +66,7 @@ const ModalSurface = forwardRef<
       zIndex
     );
     const panelClassName = cn(
-      'border-sidebar-border shadow-pro flex w-full flex-col overflow-hidden border bg-white outline-none dark:bg-zinc-950',
+      'border-sidebar-border shadow-pro flex w-full flex-col overflow-hidden border bg-background outline-none',
       maxWidth,
       className
     );
