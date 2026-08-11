@@ -14,6 +14,7 @@ const manifest: FeatureManifest = {
       'useConversationActions',
       'useConversationInitialization',
       'useConversationMessages',
+      'usePersistActiveConversation',
       'useAttachmentManager',
       'useTauriEvents',
       'useAutoTitle',

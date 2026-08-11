@@ -10,6 +10,7 @@ export { useAttachmentManager } from './hooks/useAttachmentManager';
 export { useTauriEvents } from './hooks/useTauriEvents';
 export { useAutoTitle, triggerAutoTitle } from './hooks/useAutoTitle';
 export { useConversationMessages } from './hooks/useConversationMessages';
+export { usePersistActiveConversation } from './hooks/usePersistActiveConversation';
 export { useTokenUsage } from './hooks/useTokenUsage';
 export { initializeConversations } from './utils/conversation-backend';
 export { isDefaultTitle, generateConversationTitle } from './utils/title-generator';

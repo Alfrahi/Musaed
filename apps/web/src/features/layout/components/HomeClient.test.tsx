@@ -81,6 +81,7 @@ vi.mock('@/hooks/useOllamaConnection', () => ({
 vi.mock('@/features/conversation', () => ({
   useTauriEvents: vi.fn(),
   useConversationMessages: vi.fn(),
+  usePersistActiveConversation: vi.fn(),
 }));
 
 vi.mock('next/dynamic', () => ({
