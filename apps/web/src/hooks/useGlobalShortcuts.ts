@@ -5,7 +5,7 @@ import { useConversationActions } from '@/features/conversation';
 import { stopStream } from '@/store/coordination';
 import { chatApi } from '@/lib/ipc';
 import { useOpenModal, useCloseModal } from '@/store/hooks';
-import { selectIsAnyModalOpen, useUIStore } from '@/store/ui-store';
+import { selectIsAnyModalOpen, useUIStore, useSetShowAddProject } from '@/store/ui-store';
 import { useConversationStore } from '@/store/conversation-store';
 import { useStreamingStore } from '@/store/streaming-store';
 import { useSettingsStore } from '@/store/settings-store';
@@ -14,7 +14,7 @@ import { useSettingsStore } from '@/store/settings-store';
  * Hook to register global keyboard shortcuts for primary application actions.
  *
  * Actions:
- * - Cmd/Ctrl + N: New Chat
+ * - Cmd/Ctrl + N: New Chat (when chats tab is active) or New Project (when projects tab is active)
  * - Cmd/Ctrl + B: Toggle sidebar (collapse/expand)
  * - Cmd/Ctrl + ,: Settings
  * - Cmd/Ctrl + L: Model Library
@@ -29,12 +29,18 @@ export function useGlobalShortcuts() {
   const { createNewConversation } = useConversationActions();
   const openModal = useOpenModal();
   const closeModal = useCloseModal();
+  const setShowAddProject = useSetShowAddProject();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
         e.preventDefault();
-        createNewConversation();
+        const { sidebarTab } = useUIStore.getState();
+        if (sidebarTab === 'projects') {
+          setShowAddProject(true);
+        } else {
+          createNewConversation();
+        }
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
@@ -102,5 +108,5 @@ export function useGlobalShortcuts() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [createNewConversation, openModal, closeModal]);
+  }, [createNewConversation, openModal, closeModal, setShowAddProject]);
 }

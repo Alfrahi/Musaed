@@ -86,6 +86,8 @@ describe('useGlobalShortcuts', () => {
       isOllamaConnected: false,
       errorMessage: null,
       activeModal: null,
+      sidebarTab: 'chats',
+      showAddProject: false,
       _pendingRehydrations: 0,
     });
     useConversationStore.setState({
@@ -205,6 +207,37 @@ describe('useGlobalShortcuts', () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b' }));
 
       expect(settingsState.setGlobalSettings).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Cmd/Ctrl+N context-aware routing', () => {
+    const dispatchNew = (metaKey = true) => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', ctrlKey: metaKey, metaKey }));
+    };
+
+    it('creates a new conversation when sidebar tab is "chats"', () => {
+      useUIStore.setState({ sidebarTab: 'chats' });
+      render(<Harness />);
+      dispatchNew();
+
+      expect(mockActions.createNewConversation).toHaveBeenCalledTimes(1);
+    });
+
+    it('opens the Add Project dialog when sidebar tab is "projects"', () => {
+      useUIStore.setState({ sidebarTab: 'projects', showAddProject: false });
+      render(<Harness />);
+      dispatchNew();
+
+      expect(mockActions.createNewConversation).not.toHaveBeenCalled();
+      expect(useUIStore.getState().showAddProject).toBe(true);
+    });
+
+    it('does not open Add Project dialog when sidebar tab is "chats"', () => {
+      useUIStore.setState({ sidebarTab: 'chats', showAddProject: false });
+      render(<Harness />);
+      dispatchNew();
+
+      expect(useUIStore.getState().showAddProject).toBe(false);
     });
   });
 });

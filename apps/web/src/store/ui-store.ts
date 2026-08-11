@@ -22,6 +22,7 @@ interface UIState {
   errorMessage: string | null;
   activeModal: ModalKind | null;
   sidebarTab: SidebarTab;
+  showAddProject: boolean;
   /** Counter for pending store rehydrations. Decremented by each store's onRehydrateStorage callback. */
   _pendingRehydrations: number;
   setStreaming: (isStreaming: boolean) => void;
@@ -32,6 +33,7 @@ interface UIState {
   openModal: (kind: ModalKind) => void;
   closeModal: () => void;
   setSidebarTab: (tab: SidebarTab) => void;
+  setShowAddProject: (show: boolean) => void;
   /** Called before rehydration starts. Increments the pending counter by `count`. */
   setPendingRehydrations: (count: number) => void;
   /** Called by store's onRehydrateStorage when rehydration completes. */
@@ -52,6 +54,7 @@ export const useUIStore = createWithEqualityFn<UIState>()(
     errorMessage: null,
     activeModal: null,
     sidebarTab: 'chats',
+    showAddProject: false,
     _pendingRehydrations: 0,
     setStreaming: (isStreaming) => set({ isStreaming }),
     setInitialized: (isInitialized) => set({ isInitialized }),
@@ -61,6 +64,7 @@ export const useUIStore = createWithEqualityFn<UIState>()(
     openModal: (kind) => set({ activeModal: kind }),
     closeModal: () => set({ activeModal: null }),
     setSidebarTab: (sidebarTab) => set({ sidebarTab }),
+    setShowAddProject: (showAddProject) => set({ showAddProject }),
     setPendingRehydrations: (count) => set({ _pendingRehydrations: count }),
     onStoreRehydrated: () =>
       set((state) => {
@@ -99,3 +103,5 @@ export const useSetOllamaConnected = () => useUIStore((s) => s.setOllamaConnecte
 export const useSetUIError = () => useUIStore((s) => s.setErrorMessage);
 export const useSidebarTab = () => useUIStore((s) => s.sidebarTab);
 export const useSetSidebarTab = () => useUIStore((s) => s.setSidebarTab);
+export const useShowAddProject = () => useUIStore((s) => s.showAddProject);
+export const useSetShowAddProject = () => useUIStore((s) => s.setShowAddProject);
