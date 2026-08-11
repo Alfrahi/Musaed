@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 const inputBaseClasses = [
   'rounded-md',
   'py-2 px-3',
-  'text-sm',
+  'text-body',
   'border border-zinc-200 dark:border-zinc-700',
   'bg-white dark:bg-zinc-900',
   'transition-all duration-150',

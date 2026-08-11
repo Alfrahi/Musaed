@@ -6,10 +6,10 @@ const SidebarSkeleton = () => {
   return (
     <div className="flex h-full flex-col space-y-4 p-4">
       {/* Header Placeholder */}
-      <Skeleton className="h-10 w-full rounded-xl" />
+      <Skeleton className="h-10 w-full rounded-md" />
 
       {/* Search Placeholder */}
-      <Skeleton className="h-8 w-full rounded-lg" />
+      <Skeleton className="h-8 w-full rounded-md" />
 
       {/* List Item Placeholders */}
       <div className="pbs-4 space-y-3">

@@ -135,7 +135,7 @@ export const InlineError = ({
   return (
     <div
       className={cn(
-        'text-body flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300',
+        'text-body flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300',
         className
       )}
     >

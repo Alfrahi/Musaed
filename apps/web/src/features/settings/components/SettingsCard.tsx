@@ -14,7 +14,7 @@ interface SettingsCardProps {
 export const SettingsCard = ({ children, className }: SettingsCardProps) => (
   <div
     className={cn(
-      'rounded-md border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50',
+      'shadow-raised rounded-md border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900/50',
       className
     )}
   >

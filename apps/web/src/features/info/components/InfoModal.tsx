@@ -47,13 +47,13 @@ const InfoHeader = ({
   version: string | null;
   onClose: () => void;
 }) => (
-  <div className="border-be flex shrink-0 items-center justify-between border-zinc-100 p-6 dark:border-zinc-800">
-    <div className="flex items-center gap-4">
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
-        <Info size={20} />
+  <div className="border-be flex shrink-0 items-center justify-between border-zinc-100 px-4 py-3 dark:border-zinc-800">
+    <div className="flex items-center gap-3">
+      <div className="flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-zinc-100 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+        <Info size={18} />
       </div>
       <div>
-        <h2 id={titleId} className="text-xl font-bold tracking-tight">
+        <h2 id={titleId} className="text-heading font-semibold tracking-tight">
           {title}
         </h2>
         {version && (
@@ -65,9 +65,9 @@ const InfoHeader = ({
       variant="ghost"
       size="icon"
       onClick={onClose}
-      className="rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800"
+      className="rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800"
     >
-      <X size={20} />
+      <X size={18} />
     </Button>
   </div>
 );

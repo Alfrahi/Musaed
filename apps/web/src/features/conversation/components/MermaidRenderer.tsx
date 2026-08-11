@@ -41,7 +41,7 @@ const initMermaid = (theme: MermaidRendererProps['theme']) => {
 /** Loading state while mermaid renders. */
 const MermaidLoading = ({ className, label }: { className: string; label: string }) => (
   <div
-    className={`flex items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 p-8 dark:border-zinc-800 dark:bg-zinc-900 ${className}`}
+    className={`flex items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 p-8 dark:border-zinc-800 dark:bg-zinc-900 ${className}`}
   >
     <div className="text-body flex items-center gap-3 text-zinc-500 dark:text-zinc-400">
       <div className="border-bs-transparent h-4 w-4 animate-spin rounded-full border-2 border-current" />
@@ -67,7 +67,7 @@ const MermaidError = ({
   requirementNote: string;
 }) => (
   <div
-    className={`text-body rounded-xl border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-950/50 ${className}`}
+    className={`text-body rounded-md border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-950/50 ${className}`}
   >
     <div className="mbe-3 flex items-start justify-between">
       <div className="font-semibold text-red-700 dark:text-red-400">{errorTitle}</div>
@@ -105,7 +105,7 @@ const MermaidDiagram = ({
 }) => (
   <div
     ref={containerRef}
-    className={`mermaid-container shadow-native my-6 flex justify-center overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950 ${className}`}
+    className={`mermaid-container shadow-native mbs-6 mbe-6 flex justify-center overflow-x-auto rounded-md border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950 ${className}`}
     // Sanitize SVG output before injection
     dangerouslySetInnerHTML={{
       __html: DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } }),
