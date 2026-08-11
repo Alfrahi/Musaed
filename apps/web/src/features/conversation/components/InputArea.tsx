@@ -51,9 +51,8 @@ const AttachButtons = ({
 
 /** Stop streaming button. */
 const AbortButton = ({ onClick, label }: { onClick: () => void; label: string }) => (
-  <Button variant="secondary" size="sm" onClick={onClick}>
+  <Button variant="danger" size="icon" onClick={onClick} aria-label={label}>
     <Square size={10} fill="currentColor" />
-    {label}
   </Button>
 );
 
