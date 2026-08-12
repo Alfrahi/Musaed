@@ -71,6 +71,10 @@ export const SearchResults = () => {
       <p className="text-muted-foreground text-caption font-medium">
         {t('rag.searchResultCount', { count: results.length })}
       </p>
+      {/* Dense result cards (space-y-1.5, p-2 per card) — intentionally
+        tighter than the px-4 py-3 navigation rows in SearchModal. RAG
+        results are content snapshots (file path + line range + code preview)
+        packed into a max-h-80 scroll area, not full-width navigation options. */}
       <div className="max-h-80 space-y-1.5 overflow-y-auto" role="list">
         {results.map((result, i) => (
           <SearchResultCard key={`${result.chunkId}-${i}`} result={result} rank={i + 1} />

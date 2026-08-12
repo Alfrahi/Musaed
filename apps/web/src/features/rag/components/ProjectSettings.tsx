@@ -70,7 +70,7 @@ const ProjectSettingsActions = ({
   isSaving: boolean;
   t: (key: string) => string;
 }) => (
-  <div className="border-bs pbs-2 flex justify-end gap-2">
+  <div className="border-bs flex shrink-0 justify-end gap-2 px-4 py-3">
     <Button variant="outline" className="text-body" onClick={onClose}>
       {t('common.cancel')}
     </Button>
@@ -139,35 +139,37 @@ const ProjectSettingsForm = ({ onClose }: { onClose: () => void }) => {
   };
 
   return (
-    <div className="flex flex-1 flex-col gap-4 overflow-auto">
-      <div className="space-y-1">
-        <label className="text-body font-medium">{t('rag.projectName')}</label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="border-input bg-background text-body w-full rounded-md border px-3 py-2"
+    <>
+      <div className="flex flex-1 flex-col gap-4 overflow-auto p-6">
+        <div className="space-y-1">
+          <label className="text-body font-medium">{t('rag.projectName')}</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="border-input bg-background text-body w-full rounded-md border px-3 py-2"
+          />
+        </div>
+        <EmbeddingModelSelect
+          value={embeddingModel}
+          onChange={setEmbeddingModel}
+          models={embeddingModels}
+          t={t}
         />
-      </div>
-      <EmbeddingModelSelect
-        value={embeddingModel}
-        onChange={setEmbeddingModel}
-        models={embeddingModels}
-        t={t}
-      />
-      <div className="space-y-1">
-        <label className="text-body font-medium">{t('rag.ignorePatterns')}</label>
-        <textarea
-          value={ignorePatterns}
-          onChange={(e) => setIgnorePatterns(e.target.value)}
-          rows={5}
-          placeholder="node_modules\ndist\n.git"
-          className="border-input bg-background text-body w-full rounded-md border px-3 py-2 font-mono"
-        />
-        <p className="text-muted-foreground text-caption">{t('rag.ignorePatternsDescription')}</p>
+        <div className="space-y-1">
+          <label className="text-body font-medium">{t('rag.ignorePatterns')}</label>
+          <textarea
+            value={ignorePatterns}
+            onChange={(e) => setIgnorePatterns(e.target.value)}
+            rows={5}
+            placeholder="node_modules\ndist\n.git"
+            className="border-input bg-background text-body w-full rounded-md border px-3 py-2 font-mono"
+          />
+          <p className="text-muted-foreground text-caption">{t('rag.ignorePatternsDescription')}</p>
+        </div>
       </div>
       <ProjectSettingsActions onClose={onClose} onSave={handleSave} isSaving={isSaving} t={t} />
-    </div>
+    </>
   );
 };
 
@@ -183,9 +185,9 @@ const ProjectSettings = ({ onClose, titleId: titleIdProp }: ProjectSettingsProps
   }
 
   return (
-    <div className="flex h-full flex-col p-4">
-      <div className="flex items-center justify-between">
-        <h2 id={titleId} className="text-lg font-medium">
+    <div className="flex h-full flex-col">
+      <div className="border-be flex shrink-0 items-center justify-between border-zinc-100 px-4 py-3 dark:border-zinc-800">
+        <h2 id={titleId} className="text-heading font-medium">
           {t('rag.projectSettings')}
         </h2>
         <Button

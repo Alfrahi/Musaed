@@ -76,6 +76,10 @@ const ProjectCard = ({
   return (
     <div
       className={cn(
+        // Dense card padding (px-2 py-1.5) — intentionally tighter than the
+        // px-4 py-2.5 list-row convention (ConversationItem). ProjectCard
+        // is a multi-row card (header + stats + actions) living inside the
+        // narrow RAG/Projects sidebar tab, not a single-line list row.
         'group mbe-0.5 flex cursor-pointer flex-col rounded-md px-2 py-1.5 transition-colors',
         isActive ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50 text-foreground'
       )}
@@ -355,7 +359,7 @@ type ExplorerModalProps = {
 const ExplorerModal = ({ project, onClose, titleId, t }: ExplorerModalProps) => (
   <ModalLayout isOpen onClose={onClose} titleId={titleId} maxWidth="max-w-4xl" className="h-[80vh]">
     <div className="flex h-full flex-col">
-      <div className="border-sidebar-border border-be flex items-center justify-between px-4 py-3">
+      <div className="border-sidebar-border border-be flex shrink-0 items-center justify-between px-4 py-3">
         <h2 id={titleId} className="text-heading font-medium">
           {project.name}
         </h2>
