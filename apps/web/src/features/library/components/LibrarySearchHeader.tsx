@@ -91,7 +91,7 @@ const TabBar = ({
   featuredLabel: string;
   installedLabel: string;
 }) => (
-  <div className="flex w-fit rounded-lg bg-zinc-200/50 p-1 dark:bg-zinc-800/50">
+  <div className="flex w-fit rounded-md bg-zinc-200/50 p-1 dark:bg-zinc-800/50">
     {(['featured', 'installed'] as const).map((tab) => (
       <button
         key={tab}
@@ -138,7 +138,7 @@ const CustomPullForm = ({
           placeholder={placeholder}
           value={customModel}
           onChange={(e) => setCustomModel(e.target.value)}
-          className="text-caption focus-ring w-full rounded-lg border border-zinc-200 bg-white py-2 ps-9 pe-3 font-mono transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
+          className="text-caption focus-ring w-full rounded-md border border-zinc-200 bg-white py-2 ps-9 pe-3 font-mono transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
         />
       </div>
       <Button
@@ -146,7 +146,7 @@ const CustomPullForm = ({
         variant="secondary"
         size="icon"
         disabled={!customModel.trim()}
-        className="rounded-lg active:scale-95 disabled:opacity-50"
+        className="rounded-md active:scale-95 disabled:opacity-50"
         title={buttonTitle}
       >
         <Plus size={14} />
@@ -172,7 +172,7 @@ const SearchBar = ({
       placeholder={placeholder}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="text-body focus-ring w-full rounded-lg border border-zinc-200 bg-white py-2.5 ps-10 pe-4 transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
+      className="text-body focus-ring w-full rounded-md border border-zinc-200 bg-white py-2.5 ps-10 pe-4 transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800"
     />
   </div>
 );

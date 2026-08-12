@@ -36,9 +36,9 @@ const InstalledModelCard = ({
   const displaySize = size ? (typeof size === 'string' ? size : formatFileSize(size)) : null;
 
   return (
-    <div className="group flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/50 dark:hover:border-zinc-700">
+    <div className="group flex items-center justify-between rounded-md border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/50 dark:hover:border-zinc-700">
       <div className="flex items-center gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 dark:bg-zinc-800">
+        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-zinc-100 text-zinc-500 dark:bg-zinc-800">
           {isReasoning ? (
             <BrainCircuit size={18} />
           ) : isCode ? (
@@ -88,7 +88,7 @@ const InstalledModelCard = ({
             variant="ghost"
             size="icon"
             onClick={() => onDelete(name)}
-            className="rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+            className="rounded-md text-zinc-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
           >
             <Trash2 size={18} />
           </Button>
