@@ -419,7 +419,8 @@
   "tray": {
     "menu": {
       "showWindow": "Show Window",
-      "quit": "Quit"
+      "quit": "Quit",
+      "about": "About Musaed"
     },
     "tooltip": {
       "idle": "Musaed",
