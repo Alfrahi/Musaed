@@ -80,7 +80,7 @@ const NoModelsOnboarding = ({
         onClick={onInstallModel}
         className="shadow-pro gap-3 rounded-md"
       >
-        <Download size={18} />
+        <Download size={18} className="mirror-rtl" />
         {t('chat.onboarding.installModel')}
       </Button>
     </>

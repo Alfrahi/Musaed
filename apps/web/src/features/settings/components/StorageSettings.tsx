@@ -36,7 +36,7 @@ const ExportActions = ({
         onClick={onExportJson}
         className="text-caption flex-1 gap-2 rounded-md bg-zinc-100 py-2 font-medium hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
       >
-        <Download size={14} />
+        <Download size={14} className="mirror-rtl" />
         {labels.exportJson}
       </Button>
       <Button

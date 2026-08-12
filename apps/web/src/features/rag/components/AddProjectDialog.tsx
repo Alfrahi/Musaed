@@ -352,7 +352,7 @@ const EmbeddingModelSelect = ({
               </>
             ) : (
               <>
-                <Download size={14} />
+                <Download size={14} className="mirror-rtl" />
                 {t('rag.pullModel')}
               </>
             )}
