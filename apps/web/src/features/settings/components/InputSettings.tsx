@@ -13,7 +13,7 @@ const InputSettings = () => {
   const { t } = useTranslation(language);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <div className="text-body flex items-center gap-2 font-medium">
         <Keyboard size={14} className="text-zinc-400" />
         <span>{t('settings.enterToSend')}</span>

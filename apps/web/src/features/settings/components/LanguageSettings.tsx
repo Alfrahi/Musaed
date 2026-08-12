@@ -15,7 +15,7 @@ const LanguageSettings = () => {
   const availableLanguages: Language[] = ['en', 'ar'];
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <div className="text-body flex items-center gap-2 font-medium">
         <Languages size={14} className="text-zinc-400" />
         <label>{t('settings.language')}</label>

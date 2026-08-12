@@ -23,7 +23,14 @@ interface LogViewerProps {
   onClose: () => void;
 }
 
-// Standalone log rendering functions
+// Standalone log rendering functions.
+//
+// Log rows use `py-3 ps-6 pe-6` (log-entry density: taller vertical padding
+// for monospace line readability, wider horizontal insets to align the
+// timestamp/level/message columns) — distinct from the app-wide navigable
+// list-row convention (`px-4 py-2.5` in ConversationItem, ShortcutCheatsheet,
+// CommandPalette). Log rows are non-navigable, non-selectable line items in a
+// virtualized scroller, so the denser list-row padding does not apply.
 const renderParsedLog = (
   parsed: ParsedLog,
   formatDate: (date: Date, options?: Intl.DateTimeFormatOptions) => string
