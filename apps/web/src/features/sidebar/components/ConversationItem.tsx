@@ -121,6 +121,11 @@ interface ConversationRowProps {
   children: React.ReactNode;
 }
 
+// App-wide navigable list-row padding convention: `px-4 py-2.5`. Used by
+// ShortcutCheatsheet (`px-4 py-2.5`) and CommandPalette (`px-4 py-2.5`).
+// Dense, multi-row cards (e.g. ProjectCard `px-2 py-1.5`) and non-navigable
+// log rows (e.g. LogViewer `py-3 ps-6 pe-6`) intentionally diverge; see the
+// justifying comments at each deviation site.
 const rowClassName = (isActive: boolean) =>
   cn(
     'group text-label focus-ring duration-fast relative flex cursor-pointer items-center gap-3 border-s-2 border-transparent px-4 py-2.5 transition-all',
