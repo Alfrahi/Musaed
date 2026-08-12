@@ -20,7 +20,7 @@ const ThemeSettings = () => {
   ];
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <div className="text-body flex items-center gap-2 font-medium">
         <Monitor size={14} className="text-zinc-400" />
         <label>{t('settings.appearance')}</label>

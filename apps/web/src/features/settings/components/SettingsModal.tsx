@@ -192,6 +192,15 @@ interface RenderTabNavigationProps {
   isRtl: boolean;
 }
 
+/**
+ * Vertical sidebar tab navigation (`aria-orientation="vertical"`, `border-s-2`
+ * accent bar, `px-3 py-2.5`). This is a distinct tab style from the horizontal
+ * pill tabs in `LibrarySearchHeader` (`aria-orientation` horizontal, `px-4
+ * py-1.5`, no accent bar) — the sidebar tabs are taller (label + icon, full
+ * width, left-accent) while the library pills are compact (centered,
+ * inline-width). Different padding is intentional; do not normalize across the
+ * two.
+ */
 const RenderTabNavigation = ({
   tabs,
   activeTab,
