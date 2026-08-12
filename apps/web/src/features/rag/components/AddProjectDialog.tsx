@@ -121,22 +121,22 @@ export const AddProjectDialog = ({ onClose, onAdded }: AddProjectDialogProps) =>
 
   return (
     <ModalLayout isOpen onClose={onClose} titleId={titleId} maxWidth="max-w-md">
-      <div className="bg-background border-border border-be space-y-4 p-6">
-        <div className="flex items-center justify-between">
-          <h2 id={titleId} className="text-lg font-semibold">
-            {t('rag.addProject')}
-          </h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="hover:bg-accent rounded"
-            aria-label={t('a11y.closeModal')}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+      <div className="border-be flex shrink-0 items-center justify-between border-zinc-100 px-4 py-3 dark:border-zinc-800">
+        <h2 id={titleId} className="text-heading font-semibold tracking-tight">
+          {t('rag.addProject')}
+        </h2>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="hover:bg-accent rounded-md"
+          aria-label={t('a11y.closeModal')}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
 
+      <div className="space-y-4 p-6">
         <p className="text-muted-foreground text-body">{t('rag.addProjectDescription')}</p>
 
         <AddProjectFormFields

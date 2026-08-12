@@ -88,7 +88,7 @@ export const RagContextBadge = () => {
           className="h-[80vh]"
         >
           <div className="flex h-full flex-col">
-            <div className="border-sidebar-border border-be flex items-center justify-between px-4 py-3">
+            <div className="border-sidebar-border border-be flex shrink-0 items-center justify-between px-4 py-3">
               <h2 id={titleId} className="text-heading font-medium">
                 {activeProject.name}
               </h2>
