@@ -76,9 +76,9 @@ const InstalledModelCard = ({
   const { isHeavy } = getHardwareFit(details?.parameterSize);
 
   return (
-    <div className="group flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/50 dark:hover:border-zinc-700">
+    <div className="group flex items-center justify-between rounded-md border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/50 dark:hover:border-zinc-700">
       <div className="flex items-center gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 dark:bg-zinc-800">
+        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-zinc-100 text-zinc-500 dark:bg-zinc-800">
           <Zap size={18} />
         </div>
         <div>
@@ -110,7 +110,7 @@ const InstalledModelCard = ({
             variant="ghost"
             size="icon"
             onClick={() => onDelete(name)}
-            className="rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+            className="rounded-md text-zinc-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
           >
             <Trash2 size={18} />
           </Button>
@@ -378,7 +378,7 @@ const FeaturedModelCard = ({
   return (
     <div
       className={cn(
-        'group duration-slow flex h-full flex-col justify-between rounded-lg border p-5 transition-all',
+        'group duration-slow flex h-full flex-col justify-between rounded-md border p-4 transition-all',
         isDownloaded
           ? 'border-blue-100 bg-blue-50/30 dark:border-blue-900/30 dark:bg-blue-900/10'
           : 'shadow-raised border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/50 dark:hover:border-zinc-700'
@@ -438,7 +438,7 @@ const FeaturedModelHeader = ({
         )}
       </div>
       {isDownloaded && (
-        <div className="shrink-0 rounded-lg bg-green-100 p-1.5 text-green-600 dark:bg-green-900/30 dark:text-green-400">
+        <div className="shrink-0 rounded-md bg-green-100 p-1.5 text-green-600 dark:bg-green-900/30 dark:text-green-400">
           <CheckCircle2 size={16} />
         </div>
       )}
