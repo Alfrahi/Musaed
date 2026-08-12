@@ -80,7 +80,7 @@ const MermaidError = ({
         📋 {copyLabel}
       </Button>
     </div>
-    <pre className="text-caption overflow-auto rounded-lg border border-red-100 bg-white p-4 font-mono whitespace-pre-wrap text-red-600 dark:border-red-900 dark:bg-zinc-950 dark:text-red-500">
+    <pre className="text-caption overflow-auto rounded-md border border-red-100 bg-white p-4 font-mono whitespace-pre-wrap text-red-600 dark:border-red-900 dark:bg-zinc-950 dark:text-red-500">
       {error}
     </pre>
     <p
