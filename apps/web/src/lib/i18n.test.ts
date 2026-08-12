@@ -74,7 +74,7 @@ describe('formatRelativeTime', () => {
 
   it('returns "just now" for timestamps less than 60 seconds old', () => {
     expect(formatRelativeTime(NOW - 30_000, 'en')).toBe('Just now');
-    expect(formatRelativeTime(NOW - 30_000, 'ar')).toBe('الآن');
+    expect(formatRelativeTime(NOW - 30_000, 'ar')).toBe('منذ قليل');
   });
 
   it('returns a localized "Nm ago" for sub-hour deltas (English)', () => {
