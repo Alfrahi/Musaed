@@ -85,7 +85,7 @@ export function traceStoreMutation({
  *
  * Returns true when a trace was emitted this call (useful for tests).
  */
-export function traceAppendToken(conversationId: string, chunkCount: number): boolean {
+export function traceAppendToken(conversationId: string, contentLen: number): boolean {
   const count = (tokenCounters.get(conversationId) ?? 0) + 1;
   tokenCounters.set(conversationId, count);
   if (count % TOKEN_TRACE_EVERY_N !== 0) {
@@ -96,7 +96,7 @@ export function traceAppendToken(conversationId: string, chunkCount: number): bo
     action: 'appendToken',
     level: 'DEBUG',
     message: `appendToken #${count} for ${conversationId}`,
-    context: { conversationId, chunkCount, tokenIdx: count },
+    context: { conversationId, contentLen, tokenIdx: count },
     throttleMs: 0,
   });
   return true;
