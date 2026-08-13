@@ -4,6 +4,7 @@ import {
   type ModelParams,
   type ModelDefaultParams,
   VALIDATION_LIMITS,
+  RAG_VALIDATION_LIMITS,
 } from '@musaed/contracts';
 import { chatApi, conversationApi } from '@/lib/ipc';
 import { logger } from '@/lib/logger';
@@ -23,7 +24,10 @@ import type { ChatRagSource } from '@/features/conversation/hooks/useChatRag';
 type TranslationFn = (key: string, values?: Record<string, string | number | boolean>) => string;
 
 /** Callback signature for RAG context assembly (injected from useChatRag hook). */
-type AssembleChatRag = (query: string) => Promise<{
+type AssembleChatRag = (
+  query: string,
+  maxChars?: number
+) => Promise<{
   ragSources?: ChatRagSource[];
   assembledContext?: string;
   ragTokenCount?: number;
@@ -189,6 +193,54 @@ function buildMessageHistory(
   return history;
 }
 
+/** Lightweight token estimate for conversation history (excluding current turn). */
+function estimateHistoryTokens(convMessages: Message[], currentRequestId: string): number {
+  let total = 0;
+  for (let i = convMessages.length - 1; i >= 0; i--) {
+    const msg = convMessages[i];
+    if (msg.requestId === currentRequestId) continue;
+    if (msg.role !== 'user' && msg.role !== 'assistant') continue;
+    if (!msg.content || msg.content.length === 0) continue;
+    if (msg.error || msg.stopped) continue;
+    total += msg.promptEvalCount ?? Math.ceil(msg.content.length / 4);
+  }
+  return total;
+}
+
+/** Chars-per-token ratio used for char budget estimation (matches Rust chars/3). */
+const CHARS_PER_TOKEN = 3;
+
+/** Reserves for system prompt and current user prompt, in chars. */
+const MIN_RAG_RESERVE_CHARS = 200;
+
+/** Maximum character budget for RAG context. */
+const RAG_MAX_CHARS = RAG_VALIDATION_LIMITS.MAX_RAG_CONTEXT_CHARS;
+
+/**
+ * Derive the character budget for RAG context assembly so it fits within the
+ * model's context window alongside the system prompt, conversation history,
+ * and current user message.
+ *
+ * Formula: min(MAX_RAG_CONTEXT_CHARS, numCtx * charsPerToken - reserveForPrompt - reserveForHistory)
+ * Returns undefined when the budget is too small to be useful, letting the
+ * RAG hook fall back to its default.
+ */
+function computeRagCharBudget(
+  numCtx: number,
+  systemPromptChars: number,
+  historyTokens: number,
+  currentPromptChars: number
+): number | undefined {
+  const totalCharCapacity = numCtx * CHARS_PER_TOKEN;
+  const reserveForPrompt = systemPromptChars + currentPromptChars;
+  const reserveForHistory = historyTokens * CHARS_PER_TOKEN;
+  const remaining =
+    totalCharCapacity - reserveForPrompt - reserveForHistory - MIN_RAG_RESERVE_CHARS;
+
+  if (remaining <= 0) return undefined;
+  return Math.min(RAG_MAX_CHARS, remaining);
+}
+
 /**
  * Build the chat API payload with full multi-message context:
  * [systemPrompt?, ...history, ragContext?, currentUserMessage]
@@ -277,7 +329,29 @@ export class ChatSendService {
     initiateStreaming(currentConversationId, requestId);
 
     try {
-      const { ragSources, assembledContext, ragTokenCount } = await assembleChatRag(trimmedInput);
+      const resolved = selectResolvedParams(
+        selectedModel,
+        this.deps.contextWindow,
+        this.deps.defaultParams
+      );
+
+      const systemPrompt = settingsState.globalSettings.systemPrompt;
+      const systemPromptChars = systemPrompt ? systemPrompt.length : 0;
+      const currentPromptChars = fullPrompt.length;
+
+      const convMessages = messageStore.messages[currentConversationId] || [];
+      const historyTokens = estimateHistoryTokens(convMessages, requestId);
+      const ragMaxChars = computeRagCharBudget(
+        resolved.numCtx,
+        systemPromptChars,
+        historyTokens,
+        currentPromptChars
+      );
+
+      const { ragSources, assembledContext, ragTokenCount } = await assembleChatRag(
+        trimmedInput,
+        ragMaxChars
+      );
 
       const [userMsg, assistantMsg] = createChatMessages(
         trimmedInput,
@@ -342,7 +416,29 @@ export class ChatSendService {
     initiateStreaming(currentConversationId, requestId);
 
     try {
-      const { ragSources, assembledContext, ragTokenCount } = await assembleChatRag(trimmedInput);
+      const resolved = selectResolvedParams(
+        selectedModel,
+        this.deps.contextWindow,
+        this.deps.defaultParams
+      );
+
+      const systemPrompt = settingsState.globalSettings.systemPrompt;
+      const systemPromptChars = systemPrompt ? systemPrompt.length : 0;
+      const currentPromptChars = fullPrompt.length;
+
+      const convMessages = messageStore.messages[currentConversationId] || [];
+      const historyTokens = estimateHistoryTokens(convMessages, requestId);
+      const ragMaxChars = computeRagCharBudget(
+        resolved.numCtx,
+        systemPromptChars,
+        historyTokens,
+        currentPromptChars
+      );
+
+      const { ragSources, assembledContext, ragTokenCount } = await assembleChatRag(
+        trimmedInput,
+        ragMaxChars
+      );
 
       const editedMsg = (messageStore.messages[currentConversationId] ?? []).find(
         (m) => m.id === editedMessageId

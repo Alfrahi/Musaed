@@ -28,7 +28,7 @@ path and line numbers when referring to specific code.\n\n",
     );
 
     let mut context = header.clone();
-    let mut total_chars = context.len();
+    let mut total_chars = context.chars().count();
     let mut citations: Vec<Citation> = Vec::new();
 
     for (i, result) in results.iter().enumerate() {
@@ -47,12 +47,13 @@ path and line numbers when referring to specific code.\n\n",
             result.content
         );
 
-        if total_chars + source_block.len() > max_chars {
+        let block_chars = source_block.chars().count();
+        if total_chars + block_chars > max_chars {
             break;
         }
 
         context.push_str(&source_block);
-        total_chars += source_block.len();
+        total_chars += block_chars;
 
         citations.push(Citation {
             file_path: result.file_path.clone(),
@@ -62,8 +63,10 @@ path and line numbers when referring to specific code.\n\n",
         });
     }
 
-    // Rough token estimate: ~4 chars per token (conservative for code)
-    let token_count = context.len() / 4;
+    // Token estimate: ~3 chars per token (conservative for code, which
+    // typically packs 2.5-3.5 chars per token). Uses characters, not bytes,
+    // so multi-byte UTF-8 (e.g. Arabic, CJK) doesn't inflate the estimate.
+    let token_count = context.chars().count() / 3;
 
     (context, citations, token_count)
 }
@@ -216,5 +219,35 @@ mod tests {
 
         // Verify source block format
         assert!(ctx.contains("### Source 1: src/lib.ts (lines 10-12) `typescript`\n```\nexport const x = 1;\n```\n\n"));
+    }
+
+    #[test]
+    fn multi_byte_content_measured_by_chars_not_bytes() {
+        // Arabic text: each character is 2 bytes in UTF-8 but counts as 1 char.
+        let arabic = "ا"; // 1 char, 2 bytes
+        let content = arabic.repeat(100); // 100 chars, 200 bytes
+        let results = vec![make_result("ar.txt", &content, 1, 100, None)];
+
+        // Total chars: header(216) + source prefix(40) + content(100) + suffix(6) = 362.
+        // Total bytes: 462 (200 bytes of Arabic content vs 100 chars).
+        let (ctx, citations, tokens) = build_rag_system_context(&results, "/project", 362);
+        assert_eq!(
+            citations.len(),
+            1,
+            "multi-byte content should fit char-based budget"
+        );
+
+        // A byte-based budget would reject at max=362 (462 bytes > 362).
+        // A char-based budget correctly fits (362 chars == 362 max).
+        let (_, citations_rejected, _) = build_rag_system_context(&results, "/project", 361);
+        assert_eq!(
+            citations_rejected.len(),
+            0,
+            "content should not fit at 361 char budget"
+        );
+
+        // Token count uses chars/3, not bytes/4.
+        let expected_chars = ctx.chars().count();
+        assert_eq!(tokens, expected_chars / 3);
     }
 }
