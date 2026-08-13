@@ -19,30 +19,38 @@ beforeEach(() => {
 describe('useChatRag', () => {
   it('maps RAG citations to the chat ragSources shape', async () => {
     assembleContextMock.mockResolvedValue({
-      assembled_context: 'ctx',
+      assembledContext: 'ctx',
       citations: [
         { filePath: '/a.ts', startLine: 1, endLine: 10, language: 'typescript' },
         { filePath: '/b.md', startLine: 5, endLine: 8, language: undefined },
       ],
-      token_count: 2,
+      tokenCount: 2,
     });
 
     const { result } = renderHook(() => useChatRag());
-    const { ragSources } = await act(() => result.current.assembleChatRag('query'));
+    const { ragSources, assembledContext, ragTokenCount } = await act(() =>
+      result.current.assembleChatRag('query')
+    );
 
     expect(ragSources).toEqual([
       { filePath: '/a.ts', startLine: 1, endLine: 10, language: 'typescript' },
       { filePath: '/b.md', startLine: 5, endLine: 8, language: undefined },
     ]);
+    expect(assembledContext).toBe('ctx');
+    expect(ragTokenCount).toBe(2);
   });
 
-  it('returns undefined ragSources when RAG returns null (no active project)', async () => {
+  it('returns undefined ragSources and assembledContext when RAG returns null (no active project)', async () => {
     assembleContextMock.mockResolvedValue(null);
 
     const { result } = renderHook(() => useChatRag());
-    const { ragSources } = await act(() => result.current.assembleChatRag('query'));
+    const { ragSources, assembledContext, ragTokenCount } = await act(() =>
+      result.current.assembleChatRag('query')
+    );
 
     expect(ragSources).toBeUndefined();
+    expect(assembledContext).toBeUndefined();
+    expect(ragTokenCount).toBe(0);
   });
 
   it('propagates RAG assembly failures (swallowed by rag feature hook)', async () => {
@@ -50,8 +58,12 @@ describe('useChatRag', () => {
     assembleContextMock.mockResolvedValue(null);
 
     const { result } = renderHook(() => useChatRag());
-    const { ragSources } = await act(() => result.current.assembleChatRag('query'));
+    const { ragSources, assembledContext, ragTokenCount } = await act(() =>
+      result.current.assembleChatRag('query')
+    );
 
     expect(ragSources).toBeUndefined();
+    expect(assembledContext).toBeUndefined();
+    expect(ragTokenCount).toBe(0);
   });
 });

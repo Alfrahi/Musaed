@@ -43,6 +43,7 @@ const settingsStoreState = vi.hoisted(() => ({
     language: 'en',
     ollamaUrl: 'http://localhost:11434',
     stop: [] as string[],
+    systemPrompt: '',
   },
 }));
 
@@ -177,6 +178,7 @@ beforeEach(() => {
   };
   settingsStoreState.globalSettings.ollamaUrl = 'http://localhost:11434';
   settingsStoreState.globalSettings.stop = [];
+  settingsStoreState.globalSettings.systemPrompt = '';
   modelStoreState.selectedModel = 'llama3';
 
   mockChatApi.chat.mockResolvedValue(true);
@@ -203,10 +205,12 @@ describe('ChatSendService.sendMessage', () => {
     expect(mockChatApi.chat).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: 'http://localhost:11434',
-        messages: [{ role: 'user', content: 'hello' }],
         model: 'llama3',
       })
     );
+    const payload = mockChatApi.chat.mock.calls[0][0];
+    // With no system prompt and no history, the payload is a single user message.
+    expect(payload.messages).toEqual([{ role: 'user', content: 'hello' }]);
     expect(mockPersistUserMessage).toHaveBeenCalled();
     expect(mockHandleStreamError).not.toHaveBeenCalled();
   });
@@ -233,6 +237,111 @@ describe('ChatSendService.sendMessage', () => {
     const [, assistantMsg] = messageStoreActions.addMessages.mock.calls[0][1];
     expect(assistantMsg.ragSources).toEqual([
       { filePath: '/a.ts', startLine: 1, endLine: 2, language: 'typescript' },
+    ]);
+  });
+
+  it('prepends system prompt as a system message when globalSettings.systemPrompt is set', async () => {
+    settingsStoreState.globalSettings.systemPrompt = 'You are a helpful assistant.';
+    const service = createService();
+
+    await service.sendMessage({ input: 'hello' });
+
+    const payload = mockChatApi.chat.mock.calls[0][0];
+    expect(payload.messages[0]).toEqual({
+      role: 'system',
+      content: 'You are a helpful assistant.',
+    });
+    // Current user message is still the last element.
+    expect(payload.messages[payload.messages.length - 1]).toEqual({
+      role: 'user',
+      content: 'hello',
+    });
+  });
+
+  it('injects RAG assembled context as a system message before the user message', async () => {
+    mockAssembleChatRag.mockResolvedValue({
+      ragSources: [{ filePath: '/a.ts', startLine: 1, endLine: 2, language: 'typescript' }],
+      assembledContext: 'RAG context: relevant code snippet',
+      ragTokenCount: 10,
+    });
+    const service = createService();
+
+    await service.sendMessage({ input: 'query' });
+
+    const payload = mockChatApi.chat.mock.calls[0][0];
+    // Without system prompt: [ragSystemMessage, userMessage]
+    expect(payload.messages).toEqual([
+      { role: 'system', content: 'RAG context: relevant code snippet' },
+      { role: 'user', content: 'query' },
+    ]);
+  });
+
+  it('includes conversation history before the current user message', async () => {
+    const priorUser: Message = {
+      id: 'u1',
+      role: 'user',
+      content: 'previous question',
+      timestamp: 1,
+      requestId: 'req-1',
+    };
+    const priorAssistant: Message = {
+      id: 'a1',
+      role: 'assistant',
+      content: 'previous answer',
+      timestamp: 2,
+      model: 'llama3',
+      requestId: 'req-1',
+      done: true,
+    };
+    messageStoreState.messages = { conv1: [priorUser, priorAssistant] };
+    const service = createService();
+
+    await service.sendMessage({ input: 'follow up' });
+
+    const payload = mockChatApi.chat.mock.calls[0][0];
+    // [priorUser, priorAssistant, currentUserMessage]
+    expect(payload.messages).toEqual([
+      { role: 'user', content: 'previous question' },
+      { role: 'assistant', content: 'previous answer' },
+      { role: 'user', content: 'follow up' },
+    ]);
+  });
+
+  it('combines system prompt, history, RAG context, and current message in order', async () => {
+    settingsStoreState.globalSettings.systemPrompt = 'System instructions';
+    mockAssembleChatRag.mockResolvedValue({
+      ragSources: undefined,
+      assembledContext: 'RAG snippet',
+      ragTokenCount: 5,
+    });
+    const priorUser: Message = {
+      id: 'u1',
+      role: 'user',
+      content: 'old question',
+      timestamp: 1,
+      requestId: 'req-1',
+    };
+    const priorAssistant: Message = {
+      id: 'a1',
+      role: 'assistant',
+      content: 'old answer',
+      timestamp: 2,
+      model: 'llama3',
+      requestId: 'req-1',
+      done: true,
+    };
+    messageStoreState.messages = { conv1: [priorUser, priorAssistant] };
+    const service = createService();
+
+    await service.sendMessage({ input: 'new question' });
+
+    const payload = mockChatApi.chat.mock.calls[0][0];
+    expect(payload.messages).toEqual([
+      { role: 'system', content: 'System instructions' },
+      { role: 'user', content: 'old question' },
+      { role: 'assistant', content: 'old answer' },
+      { role: 'system', content: 'RAG snippet' },
+      { role: 'user', content: 'new question' },
     ]);
   });
 

@@ -1,5 +1,6 @@
 import {
   type Message,
+  type ChatMessage,
   type ModelParams,
   type ModelDefaultParams,
   VALIDATION_LIMITS,
@@ -22,7 +23,11 @@ import type { ChatRagSource } from '@/features/conversation/hooks/useChatRag';
 type TranslationFn = (key: string, values?: Record<string, string | number | boolean>) => string;
 
 /** Callback signature for RAG context assembly (injected from useChatRag hook). */
-type AssembleChatRag = (query: string) => Promise<{ ragSources?: ChatRagSource[] }>;
+type AssembleChatRag = (query: string) => Promise<{
+  ragSources?: ChatRagSource[];
+  assembledContext?: string;
+  ragTokenCount?: number;
+}>;
 
 /** Callback signature for stream error handling (injected from useChatStream hook). */
 type HandleStreamError = (
@@ -130,10 +135,67 @@ function resolveOllamaUrl(globalSettings: { ollamaUrl?: string } | undefined): s
   return globalSettings?.ollamaUrl || 'http://localhost:11434';
 }
 
-/** Build the chat API payload. */
+/**
+ * Build a token-budgeted slice of prior conversation messages to send as
+ * context. Walks backwards from the latest message, accumulating token
+ * estimates via a reversed `promptEvalCount` walk, and stops when the
+ * cumulative budget is exhausted.
+ *
+ * Only messages with role `user` or `assistant` and non-empty content are
+ * included — error bubbles, stopped placeholders, and system messages are
+ * filtered out. The returned slice is in chronological order.
+ *
+ * The last user message in the slice is the *current* user message and is
+ * excluded from the history (it's appended separately as the final element
+ * in the payload).
+ */
+function buildMessageHistory(
+  convMessages: Message[],
+  currentRequestId: string,
+  numCtx: number,
+  reserves: { systemPrompt: number; ragContext: number; currentPrompt: number }
+): ChatMessage[] {
+  const totalReserve = reserves.systemPrompt + reserves.ragContext + reserves.currentPrompt;
+  const budget = Math.max(0, numCtx - totalReserve);
+  if (budget <= 0 || convMessages.length === 0) return [];
+
+  // Walk backwards, skipping the placeholder assistant for the current
+  // request and the current user message itself (both share currentRequestId).
+  const history: ChatMessage[] = [];
+  let estimatedTokens = 0;
+
+  for (let i = convMessages.length - 1; i >= 0; i--) {
+    const msg = convMessages[i];
+
+    // Skip the current turn's messages (they go in the payload separately).
+    if (msg.requestId === currentRequestId) continue;
+
+    // Only include user/assistant messages with non-empty content.
+    if (msg.role !== 'user' && msg.role !== 'assistant') continue;
+    if (!msg.content || msg.content.length === 0) continue;
+    // Skip error/stopped placeholders.
+    if (msg.error || msg.stopped) continue;
+
+    // Rough token estimate: ~4 chars per token. Use promptEvalCount from
+    // the assistant message if available for a more accurate cumulative check.
+    const msgTokens = msg.promptEvalCount ?? Math.ceil(msg.content.length / 4);
+
+    if (estimatedTokens + msgTokens > budget) break;
+
+    history.unshift({ role: msg.role, content: msg.content });
+    estimatedTokens += msgTokens;
+  }
+
+  return history;
+}
+
+/**
+ * Build the chat API payload with full multi-message context:
+ * [systemPrompt?, ...history, ragContext?, currentUserMessage]
+ */
 function buildChatPayload(
   ollamaUrl: string,
-  fullPrompt: string,
+  messages: ChatMessage[],
   selectedModel: string,
   requestId: string,
   params: ModelParams,
@@ -141,7 +203,7 @@ function buildChatPayload(
 ) {
   return {
     baseUrl: ollamaUrl,
-    messages: [{ role: 'user', content: fullPrompt }],
+    messages,
     options: {
       temperature: params.temperature,
       stop,
@@ -215,7 +277,7 @@ export class ChatSendService {
     initiateStreaming(currentConversationId, requestId);
 
     try {
-      const { ragSources } = await assembleChatRag(trimmedInput);
+      const { ragSources, assembledContext, ragTokenCount } = await assembleChatRag(trimmedInput);
 
       const [userMsg, assistantMsg] = createChatMessages(
         trimmedInput,
@@ -235,6 +297,9 @@ export class ChatSendService {
         fullPrompt,
         selectedModel,
         messages: messageStore.messages,
+        systemPrompt: settingsState.globalSettings.systemPrompt,
+        assembledContext,
+        ragTokenCount,
         t,
         handleStreamError,
       });
@@ -277,7 +342,7 @@ export class ChatSendService {
     initiateStreaming(currentConversationId, requestId);
 
     try {
-      const { ragSources } = await assembleChatRag(trimmedInput);
+      const { ragSources, assembledContext, ragTokenCount } = await assembleChatRag(trimmedInput);
 
       const editedMsg = (messageStore.messages[currentConversationId] ?? []).find(
         (m) => m.id === editedMessageId
@@ -328,6 +393,9 @@ export class ChatSendService {
         fullPrompt,
         selectedModel,
         messages: messageStore.messages,
+        systemPrompt: settingsState.globalSettings.systemPrompt,
+        assembledContext,
+        ragTokenCount,
         t,
         handleStreamError,
       });
@@ -349,10 +417,24 @@ export class ChatSendService {
     fullPrompt: string;
     selectedModel: string;
     messages: Record<string, Message[]>;
+    systemPrompt: string;
+    assembledContext?: string;
+    ragTokenCount?: number;
     t: TranslationFn;
     handleStreamError: HandleStreamError;
   }): Promise<void> {
-    const { conversationId, requestId, ollamaUrl, fullPrompt, selectedModel, messages, t } = params;
+    const {
+      conversationId,
+      requestId,
+      ollamaUrl,
+      fullPrompt,
+      selectedModel,
+      messages,
+      systemPrompt,
+      assembledContext,
+      ragTokenCount,
+      t,
+    } = params;
 
     try {
       const resolved = selectResolvedParams(
@@ -360,9 +442,36 @@ export class ChatSendService {
         this.deps.contextWindow,
         this.deps.defaultParams
       );
+      const numCtx = resolved.numCtx;
+
+      // Estimate reserves for the token-budgeted history slice.
+      const systemPromptTokens = systemPrompt ? Math.ceil(systemPrompt.length / 4) : 0;
+      const ragTokens =
+        ragTokenCount ?? (assembledContext ? Math.ceil(assembledContext.length / 4) : 0);
+      const currentPromptTokens = Math.ceil(fullPrompt.length / 4);
+
+      const convMessages = messages[conversationId] || [];
+      const history = buildMessageHistory(convMessages, requestId, numCtx, {
+        systemPrompt: systemPromptTokens,
+        ragContext: ragTokens,
+        currentPrompt: currentPromptTokens,
+      });
+
+      // Assemble the full messages array:
+      // [systemPrompt?, ...history, ragContext?, currentUserMessage]
+      const chatMessages: ChatMessage[] = [];
+      if (systemPrompt) {
+        chatMessages.push({ role: 'system', content: systemPrompt });
+      }
+      chatMessages.push(...history);
+      if (assembledContext) {
+        chatMessages.push({ role: 'system', content: assembledContext });
+      }
+      chatMessages.push({ role: 'user', content: fullPrompt });
+
       const payload = buildChatPayload(
         ollamaUrl,
-        fullPrompt,
+        chatMessages,
         selectedModel,
         requestId,
         resolved,
@@ -371,7 +480,6 @@ export class ChatSendService {
       const success = await chatApi.chat(payload);
       if (success !== true) throw new Error(t('chat.connectionFailed'));
 
-      const convMessages = messages[conversationId] || [];
       const assistantMsg = convMessages.find(
         (msg) => msg.role === 'assistant' && msg.requestId === requestId
       );
