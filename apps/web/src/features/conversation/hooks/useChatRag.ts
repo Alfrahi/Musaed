@@ -15,6 +15,10 @@ export type ChatRagSource = {
 export type ChatRagResult = {
   /** Citations flattened to the shape stored on Message.ragSources. */
   ragSources: ChatRagSource[] | undefined;
+  /** Assembled RAG context text to inject into the chat messages. */
+  assembledContext?: string;
+  /** Token count reported by the RAG assembler (0 when no context). */
+  ragTokenCount?: number;
 };
 
 /**
@@ -33,13 +37,20 @@ export function useChatRag(): {
   const assembleChatRag = useCallback(
     async (query: string): Promise<ChatRagResult> => {
       const ragResult = await assembleContext(query);
-      const ragSources = ragResult?.citations.map((s) => ({
+      if (!ragResult) {
+        return { ragSources: undefined, assembledContext: undefined, ragTokenCount: 0 };
+      }
+      const ragSources = ragResult.citations.map((s) => ({
         filePath: s.filePath,
         startLine: s.startLine,
         endLine: s.endLine,
         language: s.language ?? undefined,
       }));
-      return { ragSources };
+      return {
+        ragSources,
+        assembledContext: ragResult.assembledContext || undefined,
+        ragTokenCount: ragResult.tokenCount,
+      };
     },
     [assembleContext]
   );
