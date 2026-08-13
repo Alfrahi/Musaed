@@ -12,6 +12,9 @@ export const MessageSchema = z.object({
   requestId: z.string().nullish(),
   evalCount: z.number().int().nullish(),
   promptEvalCount: z.number().int().nullish(),
+  completionTokens: z.number().int().nullish(),
+  promptTokens: z.number().int().nullish(),
+  totalTokens: z.number().int().nullish(),
   evalDuration: z.number().int().nullish(),
   totalDuration: z.number().int().nullish(),
   ragSources: z

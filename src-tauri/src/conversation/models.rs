@@ -95,8 +95,14 @@ pub struct Message {
     pub request_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub eval_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none", alias = "completion_tokens")]
+    pub completion_tokens: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt_eval_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none", alias = "prompt_tokens")]
+    pub prompt_tokens: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none", alias = "total_tokens")]
+    pub total_tokens: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub total_duration: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]

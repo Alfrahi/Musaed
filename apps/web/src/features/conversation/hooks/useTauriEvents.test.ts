@@ -122,6 +122,9 @@ function makeToken(opts: {
   promptEvalCount?: number;
   evalDuration?: number;
   totalDuration?: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
 }) {
   return {
     requestId: opts.requestId,
@@ -131,6 +134,9 @@ function makeToken(opts: {
     promptEvalCount: opts.promptEvalCount,
     evalDuration: opts.evalDuration,
     totalDuration: opts.totalDuration,
+    promptTokens: opts.promptTokens,
+    completionTokens: opts.completionTokens,
+    totalTokens: opts.totalTokens,
   };
 }
 
@@ -306,6 +312,9 @@ describe('useTauriEvents', () => {
         promptEvalCount: 42,
         evalDuration: 5000,
         totalDuration: 20000,
+        promptTokens: 42,
+        completionTokens: 10,
+        totalTokens: 52,
       });
     });
   });

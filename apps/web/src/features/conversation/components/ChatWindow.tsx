@@ -28,6 +28,9 @@ interface MessageLabels {
   assistant: string;
   copy: string;
   tokens: string;
+  outputTokens: string;
+  promptTokens: string;
+  totalTokens: string;
 }
 
 /** Pre-resolved translated labels shared across all message bubbles. */
@@ -40,6 +43,9 @@ const useMessageLabels = (
       assistant: t('chat.assistant'),
       copy: t('common.copy'),
       tokens: t('chat.tokens'),
+      outputTokens: t('chat.outputTokens'),
+      promptTokens: t('chat.promptTokens'),
+      totalTokens: t('chat.totalTokens'),
     }),
     [t]
   );

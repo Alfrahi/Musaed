@@ -47,6 +47,25 @@ const handleToken = (payload: OllamaToken) => {
   if (payload.promptEvalCount != null) metrics.promptEvalCount = payload.promptEvalCount;
   if (payload.evalDuration != null) metrics.evalDuration = payload.evalDuration;
   if (payload.totalDuration != null) metrics.totalDuration = payload.totalDuration;
+
+  // Populate semantic token aliases alongside the legacy Ollama field names.
+  // Ollama sends `eval_count`/`prompt_eval_count`; newer versions may use
+  // `completion_tokens`/`prompt_tokens`/`total_tokens`. The Rust OllamaToken
+  // struct deserializes either name into the same field; the TS schema has
+  // both as optional. Here we normalize: prefer the semantic name if present,
+  // fall back to the legacy name, and compute `totalTokens` when both parts
+  // are available.
+  const promptTokens = payload.promptTokens ?? payload.promptEvalCount ?? undefined;
+  const completionTokens = payload.completionTokens ?? payload.evalCount ?? undefined;
+  const totalTokens =
+    payload.totalTokens ??
+    (promptTokens != null && completionTokens != null
+      ? promptTokens + completionTokens
+      : undefined);
+  if (promptTokens != null) metrics.promptTokens = promptTokens;
+  if (completionTokens != null) metrics.completionTokens = completionTokens;
+  if (totalTokens != null) metrics.totalTokens = totalTokens;
+
   if (Object.keys(metrics).length > 0) {
     streamingStore.setPendingMetrics(convId, metrics);
   }
