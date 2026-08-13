@@ -75,8 +75,8 @@ export const TOP_P_RANGE = [0, 1] as const;
 /** Allowed range for num_predict: [min, max]. `-1` is Ollama's sentinel for unlimited generation. */
 export const NUM_PREDICT_RANGE = [-1, 32768] as const;
 
-/** Allowed range for num_ctx: [min, max]. */
-export const NUM_CTX_RANGE = [1, 131072] as const;
+/** Allowed range for num_ctx: [min, max]. 2M covers all current and near-future model context windows. */
+export const NUM_CTX_RANGE = [1, 2_097_152] as const;
 
 /** Maximum number of stop sequences. */
 export const MAX_STOP_SEQUENCES = 10;

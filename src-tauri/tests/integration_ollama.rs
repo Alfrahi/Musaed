@@ -1,7 +1,9 @@
 //! Integration tests for Ollama IPC commands using mockito.
 
 use musaed_lib::ollama::streaming::{process_chat_stream, TokenSink};
-use musaed_lib::payloads::{ApiResponse, BackendError, OllamaHealth, OllamaModel, OllamaToken};
+use musaed_lib::payloads::{
+    ApiResponse, BackendError, ModelValidation, OllamaHealth, OllamaModel, OllamaToken,
+};
 use musaed_lib::shared::{
     clear_request_cache, request_cache_try_insert, test_cache_lock, CONCURRENT_SEMAPHORE,
     MAX_CONCURRENT_CHATS, REQUEST_CACHE,
@@ -788,4 +790,232 @@ async fn duplicate_request_rejected_without_acquiring_semaphore() {
     drop(held_permits);
 
     clear_request_cache();
+}
+
+// ==================== context_length extraction (cmd_ollama_validate_model) ====================
+
+/// Helper: mock the `/api/show` endpoint with a given `model_info` object and
+/// `details` family, then call `cmd_ollama_validate_model` and return the result.
+async fn validate_model_with_model_info(
+    server: &mut mockito::ServerGuard,
+    model_info: serde_json::Value,
+    family: &str,
+) -> ApiResponse<ModelValidation> {
+    let body = serde_json::json!({
+        "details": {
+            "format": "gguf",
+            "family": family,
+            "parameter_size": "8B",
+            "quantization_level": "Q4_0"
+        },
+        "model_info": model_info,
+    });
+
+    server
+        .mock("POST", "/api/show")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(body.to_string())
+        .create_async()
+        .await;
+
+    let url = mock_base_url(server);
+    musaed_lib::ollama::cmd_ollama_validate_model(url, "test-model".to_string()).await
+}
+
+/// When multiple `.context_length` keys exist, the one whose prefix matches
+/// `details.family` is selected over the larger `general.context_length`.
+#[tokio::test]
+async fn context_length_prefers_family_match_over_larger_general() {
+    let _guard = setup().await;
+    let mut server = mockito::Server::new_async().await;
+
+    let model_info = serde_json::json!({
+        "general.context_length": 131072,
+        "llama.context_length": 8192
+    });
+
+    let result = validate_model_with_model_info(&mut server, model_info, "llama").await;
+
+    assert!(result.success);
+    let validation = result.data.unwrap();
+    assert_eq!(validation.context_length, Some(8192));
+}
+
+/// When no family match is found, falls back to the max numeric value.
+#[tokio::test]
+async fn context_length_falls_back_to_max_without_family_match() {
+    let _guard = setup().await;
+    let mut server = mockito::Server::new_async().await;
+
+    let model_info = serde_json::json!({
+        "general.context_length": 32768,
+        "qwen2.context_length": 4096
+    });
+
+    let result = validate_model_with_model_info(&mut server, model_info, "llama").await;
+
+    assert!(result.success);
+    let validation = result.data.unwrap();
+    assert_eq!(validation.context_length, Some(32768));
+}
+
+/// Single `.context_length` match is returned directly.
+#[tokio::test]
+async fn context_length_single_match() {
+    let _guard = setup().await;
+    let mut server = mockito::Server::new_async().await;
+
+    let model_info = serde_json::json!({
+        "llama.context_length": 8192
+    });
+
+    let result = validate_model_with_model_info(&mut server, model_info, "llama").await;
+
+    assert!(result.success);
+    let validation = result.data.unwrap();
+    assert_eq!(validation.context_length, Some(8192));
+}
+
+/// Missing `model_info` → `context_length` is `None`.
+#[tokio::test]
+async fn context_length_missing_returns_none() {
+    let _guard = setup().await;
+    let mut server = mockito::Server::new_async().await;
+
+    // No model_info key at all in the response.
+    server
+        .mock("POST", "/api/show")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(
+            serde_json::json!({
+                "details": {
+                    "format": "gguf",
+                    "family": "llama",
+                    "parameter_size": "8B",
+                    "quantization_level": "Q4_0"
+                }
+            })
+            .to_string(),
+        )
+        .create_async()
+        .await;
+
+    let url = mock_base_url(&server);
+    let result = musaed_lib::ollama::cmd_ollama_validate_model(url, "test-model".to_string()).await;
+
+    assert!(result.success);
+    let validation = result.data.unwrap();
+    assert_eq!(validation.context_length, None);
+}
+
+/// Malformed (non-numeric) `.context_length` values are silently dropped.
+#[tokio::test]
+async fn context_length_malformed_value_dropped() {
+    let _guard = setup().await;
+    let mut server = mockito::Server::new_async().await;
+
+    let model_info = serde_json::json!({
+        "llama.context_length": "large",
+        "general.context_length": 4096
+    });
+
+    let result = validate_model_with_model_info(&mut server, model_info, "llama").await;
+
+    assert!(result.success);
+    let validation = result.data.unwrap();
+    // The string "large" was dropped; 4096 (general) is the fallback max.
+    assert_eq!(validation.context_length, Some(4096));
+}
+
+/// All malformed → `context_length` is `None`.
+#[tokio::test]
+async fn context_length_all_malformed_returns_none() {
+    let _guard = setup().await;
+    let mut server = mockito::Server::new_async().await;
+
+    let model_info = serde_json::json!({
+        "llama.context_length": "large",
+        "general.context_length": "big"
+    });
+
+    let result = validate_model_with_model_info(&mut server, model_info, "llama").await;
+
+    assert!(result.success);
+    let validation = result.data.unwrap();
+    assert_eq!(validation.context_length, None);
+}
+
+/// Values above `NUM_CTX_RANGE` ceiling are clamped.
+#[tokio::test]
+async fn context_length_above_range_clamped() {
+    let _guard = setup().await;
+    let mut server = mockito::Server::new_async().await;
+
+    let model_info = serde_json::json!({
+        "llama.context_length": 4_000_000_u64
+    });
+
+    let result = validate_model_with_model_info(&mut server, model_info, "llama").await;
+
+    assert!(result.success);
+    let validation = result.data.unwrap();
+    assert_eq!(validation.context_length, Some(2_097_152));
+}
+
+/// Family match to a candidate that is smaller than another candidate
+/// still wins — family preference takes priority over max.
+#[tokio::test]
+async fn context_length_family_match_wins_over_larger_non_match() {
+    let _guard = setup().await;
+    let mut server = mockito::Server::new_async().await;
+
+    let model_info = serde_json::json!({
+        "qwen2.context_length": 32768,
+        "llama.context_length": 8192
+    });
+
+    let result = validate_model_with_model_info(&mut server, model_info, "llama").await;
+
+    assert!(result.success);
+    let validation = result.data.unwrap();
+    // Family "llama" matches → 8192, not the larger 32768.
+    assert_eq!(validation.context_length, Some(8192));
+}
+
+/// Missing `details.family` falls back to max when multiple candidates exist.
+#[tokio::test]
+async fn context_length_no_family_falls_back_to_max() {
+    let _guard = setup().await;
+    let mut server = mockito::Server::new_async().await;
+
+    server
+        .mock("POST", "/api/show")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(
+            serde_json::json!({
+                "details": {
+                    "format": "gguf",
+                    "parameter_size": "8B",
+                    "quantization_level": "Q4_0"
+                },
+                "model_info": {
+                    "llama.context_length": 8192,
+                    "general.context_length": 32768
+                }
+            })
+            .to_string(),
+        )
+        .create_async()
+        .await;
+
+    let url = mock_base_url(&server);
+    let result = musaed_lib::ollama::cmd_ollama_validate_model(url, "test-model".to_string()).await;
+
+    assert!(result.success);
+    let validation = result.data.unwrap();
+    // No family → fall back to max(8192, 32768) = 32768.
+    assert_eq!(validation.context_length, Some(32768));
 }
