@@ -7,7 +7,7 @@ import { useSettingsStore } from '@/store/settings-store';
 import { useModelContextWindow } from '@/features/library';
 
 export interface TokenUsageInfo {
-  /** Total tokens used in the current conversation (prompt + completion). */
+  /** Prompt tokens used in the current context window (from last assistant turn). */
   usedTokens: number;
   /** Resolved context window — model's `context_length` if available, else `numCtx` from settings. */
   contextWindow: number;
@@ -20,7 +20,12 @@ export interface TokenUsageInfo {
 /**
  * Hook that computes the current conversation's token usage for
  * context-window visualization. Reads the last assistant message's
- * `promptEvalCount` + `evalCount` from the message store.
+ * `promptEvalCount` from the message store — this is the number of
+ * tokens Ollama consumed as input (system prompt + history + RAG +
+ * current user message) and directly reflects how full the context
+ * window is. Completion tokens (`evalCount`) are excluded because they
+ * become part of the next turn's `promptEvalCount` — counting them
+ * separately would double-count.
  *
  * The context-window denominator prefers the model's actual
  * `context_length` (fetched via `cmd_ollama_validate_model`), falling
@@ -37,6 +42,10 @@ export function useTokenUsage(): TokenUsageInfo {
   const contextWindow = modelContextWindow ?? numCtx;
 
   return useMemo(() => {
+    if (!contextWindow || contextWindow <= 0) {
+      return { usedTokens: 0, contextWindow: 0, percentage: 0, hasData: false };
+    }
+
     if (!currentConversationId || !messages || messages.length === 0) {
       return { usedTokens: 0, contextWindow, percentage: 0, hasData: false };
     }
@@ -46,9 +55,7 @@ export function useTokenUsage(): TokenUsageInfo {
       return { usedTokens: 0, contextWindow, percentage: 0, hasData: false };
     }
 
-    const promptTokens = lastAssistant.promptEvalCount ?? 0;
-    const completionTokens = lastAssistant.evalCount ?? 0;
-    const usedTokens = promptTokens + completionTokens;
+    const usedTokens = lastAssistant.promptEvalCount ?? 0;
 
     if (usedTokens === 0) {
       return { usedTokens: 0, contextWindow, percentage: 0, hasData: false };
