@@ -209,6 +209,9 @@ const F32_CONSTS = new Set(['MAX_THRESHOLD', 'MIN_THRESHOLD']);
 // Ranges that are (f32, f32) in Rust
 const F32_RANGES = new Set(['TEMPERATURE_RANGE', 'TOP_P_RANGE']);
 
+// Ranges that are (i32, i32) in Rust — can hold negative sentinels
+const I32_RANGES = new Set(['NUM_PREDICT_RANGE']);
+
 // ---------------------------------------------------------------------------
 // 3. Generate Rust code
 // ---------------------------------------------------------------------------
@@ -240,6 +243,7 @@ function rustType(name, value) {
   if (Array.isArray(value)) {
     if (typeof value[0] === 'string') return '&[&str]';
     if (F32_RANGES.has(name)) return '(f32, f32)';
+    if (I32_RANGES.has(name)) return '(i32, i32)';
     return '(u32, u32)';
   }
   if (typeof value === 'string') return '&str';

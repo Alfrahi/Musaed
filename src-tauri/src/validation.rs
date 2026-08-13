@@ -307,6 +307,15 @@ mod tests {
     }
 
     #[test]
+    fn valid_num_predict_negative_one() {
+        let opts = ChatOptions {
+            num_predict: Some(-1),
+            ..Default::default()
+        };
+        assert!(validate_chat_options(&opts).is_ok());
+    }
+
+    #[test]
     fn too_many_stop_sequences() {
         let opts = ChatOptions {
             stop: Some(
@@ -413,7 +422,7 @@ mod tests {
         assert_eq!(TEMPERATURE_RANGE, (0.0, 2.0));
         assert_eq!(TOP_K_RANGE, (1, 200));
         assert_eq!(TOP_P_RANGE, (0.0, 1.0));
-        assert_eq!(NUM_PREDICT_RANGE, (1, 32768));
+        assert_eq!(NUM_PREDICT_RANGE, (-1, 32768));
         assert_eq!(NUM_CTX_RANGE, (1, 131072));
         assert_eq!(MAX_STOP_SEQUENCES, 10);
         assert_eq!(MAX_STOP_SEQUENCE_LEN, 256);

@@ -587,12 +587,10 @@ fn parse_modelfile_parameters(raw: &str) -> Option<ModelDefaultParams> {
             }
             "num_predict" if num_predict.is_none() => {
                 // Ollama's Modelfile convention uses `num_predict -1` to mean
-                // "unbounded". Our chat validation (and the frontend Zod
-                // schema) require `num_predict >= 1`, so we treat any
-                // negative value as absent (`None`) and let the downstream
-                // default apply — otherwise models declaring `-1` would fail
-                // validation on every send.
-                num_predict = value.parse::<i32>().ok().filter(|v| *v >= 0);
+                // "unbounded". Our chat validation now accepts `-1` as a
+                // valid sentinel, so we pass it through instead of
+                // treating it as absent.
+                num_predict = value.parse::<i32>().ok();
             }
             _ => {}
         }
@@ -637,9 +635,9 @@ mod tests {
         assert_eq!(params.top_p, Some(0.9));
         assert_eq!(params.top_k, Some(40));
         assert_eq!(params.num_ctx, Some(8192));
-        // `num_predict -1` is Ollama's "unbounded" sentinel and is treated
-        // as absent (None) so chat validation doesn't reject it downstream.
-        assert_eq!(params.num_predict, None);
+        // `num_predict -1` is Ollama's "unbounded" sentinel, now preserved
+        // as-is since chat validation accepts it.
+        assert_eq!(params.num_predict, Some(-1));
     }
 
     #[test]
@@ -718,13 +716,12 @@ mod tests {
     }
 
     #[test]
-    fn parse_negative_num_predict_is_treated_as_absent() {
-        // Ollama uses -1 for num_predict to mean "unbounded"; our chat
-        // validation requires >= 1, so the parser treats negative values as
-        // absent (None). With no other tracked field present, the whole
-        // struct is dropped per the "nothing parsed" rule.
+    fn parse_negative_num_predict_is_preserved() {
+        // `num_predict -1` is Ollama's "unbounded" sentinel, now preserved
+        // as `Some(-1)` since chat validation accepts it.
         let raw = "num_predict                    -1\n";
-        assert!(parse_modelfile_parameters(raw).is_none());
+        let params = parse_modelfile_parameters(raw).expect("expected Some");
+        assert_eq!(params.num_predict, Some(-1));
     }
 
     #[test]
@@ -749,12 +746,12 @@ mod tests {
 
     #[test]
     fn parse_negative_num_predict_when_other_fields_present() {
-        // `num_predict -1` is treated as absent (None), but the other tracked
+        // `num_predict -1` is preserved as `Some(-1)`, and the other tracked
         // field keeps the struct alive.
         let raw = "num_predict                    -1\n\
                    top_k                          40\n";
         let params = parse_modelfile_parameters(raw).expect("expected Some");
-        assert!(params.num_predict.is_none());
+        assert_eq!(params.num_predict, Some(-1));
         assert_eq!(params.top_k, Some(40));
     }
 
