@@ -65,7 +65,7 @@ pub struct ChatOptions {
     pub temperature: Option<f32>,
     pub top_k: Option<u32>,
     pub top_p: Option<f32>,
-    pub num_predict: Option<u32>,
+    pub num_predict: Option<i32>,
     pub num_ctx: Option<u32>,
     pub stop: Option<Vec<String>>,
 }
@@ -304,6 +304,18 @@ mod tests {
         let back: ChatOptions = serde_json::from_str(&json).unwrap();
         assert_eq!(back.temperature.unwrap(), 0.7);
         assert_eq!(back.num_ctx.unwrap(), 4096);
+    }
+
+    #[test]
+    fn chat_options_num_predict_negative_one_roundtrip() {
+        let opts = ChatOptions {
+            num_predict: Some(-1),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&opts).unwrap();
+        assert!(json.contains("\"numPredict\":-1"));
+        let back: ChatOptions = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.num_predict, Some(-1));
     }
 
     // --- OllamaToken tests ---
