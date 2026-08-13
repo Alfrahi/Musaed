@@ -3,10 +3,45 @@
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { ChatSettingsSchema, type ChatSettings, DEFAULT_SETTINGS } from '@musaed/contracts';
+import {
+  ChatSettingsSchema,
+  type ChatSettings,
+  DEFAULT_SETTINGS,
+  VALIDATION_LIMITS,
+} from '@musaed/contracts';
 import { createTauriStorage } from '@/lib/tauri-storage';
 import { useUIStore } from '@/store/ui-store';
 import { logger } from '@/lib/logger';
+
+/**
+ * Snaps an out-of-bounds persisted sampling parameter to the nearest valid
+ * value. Called during rehydration so legacy persisted state that predates
+ * the schema bounds is corrected in-place rather than triggering a wholesale
+ * reset to `DEFAULT_SETTINGS`.
+ */
+const clampSettingsFields = (settings: ChatSettings): ChatSettings => ({
+  ...settings,
+  temperature: Math.max(
+    VALIDATION_LIMITS.TEMPERATURE_RANGE[0],
+    Math.min(VALIDATION_LIMITS.TEMPERATURE_RANGE[1], settings.temperature)
+  ),
+  topK: Math.max(
+    VALIDATION_LIMITS.TOP_K_RANGE[0],
+    Math.min(VALIDATION_LIMITS.TOP_K_RANGE[1], settings.topK)
+  ),
+  topP: Math.max(
+    VALIDATION_LIMITS.TOP_P_RANGE[0],
+    Math.min(VALIDATION_LIMITS.TOP_P_RANGE[1], settings.topP)
+  ),
+  numPredict: Math.max(
+    VALIDATION_LIMITS.NUM_PREDICT_RANGE[0],
+    Math.min(VALIDATION_LIMITS.NUM_PREDICT_RANGE[1], settings.numPredict)
+  ),
+  numCtx: Math.max(
+    VALIDATION_LIMITS.NUM_CTX_RANGE[0],
+    Math.min(VALIDATION_LIMITS.NUM_CTX_RANGE[1], settings.numCtx)
+  ),
+});
 
 /**
  * Migration registry for settings-store. Add handlers as schema evolves.
@@ -124,7 +159,9 @@ export const useSettingsStore = createWithEqualityFn<SettingsState>()(
           if (error) {
             logger.error('Settings store rehydration failed:', { error: String(error) });
           } else if (state) {
-            // Validate rehydrated state against schema
+            // Clamp out-of-bounds persisted values before validation so
+            // legacy state is corrected in-place rather than wholesale reset.
+            state.globalSettings = clampSettingsFields(state.globalSettings);
             const result = ChatSettingsSchema.safeParse(state.globalSettings);
             if (!result.success) {
               logger.warn('Rehydrated settings failed validation, resetting to defaults:', {

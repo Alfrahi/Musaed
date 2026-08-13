@@ -3,6 +3,7 @@ import {
   OllamaModelSchema,
   MessageSchema,
   ChatSettingsSchema,
+  ModelParamsSchema,
   DEFAULT_SETTINGS,
   sanitizeError,
   BackendErrorCode,
@@ -204,6 +205,91 @@ describe('Contracts: Zod Schemas', () => {
 
   it('validates default chat settings', () => {
     expect(ChatSettingsSchema.safeParse(DEFAULT_SETTINGS).success).toBe(true);
+  });
+
+  it('rejects ChatSettings with temperature above max', () => {
+    const invalid = { ...DEFAULT_SETTINGS, temperature: 3 };
+    expect(ChatSettingsSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('rejects ChatSettings with temperature below min', () => {
+    const invalid = { ...DEFAULT_SETTINGS, temperature: -0.1 };
+    expect(ChatSettingsSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('rejects ChatSettings with non-integer topK', () => {
+    const invalid = { ...DEFAULT_SETTINGS, topK: 40.5 };
+    expect(ChatSettingsSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('rejects ChatSettings with topK above max', () => {
+    const invalid = { ...DEFAULT_SETTINGS, topK: 201 };
+    expect(ChatSettingsSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('rejects ChatSettings with topP above max', () => {
+    const invalid = { ...DEFAULT_SETTINGS, topP: 1.1 };
+    expect(ChatSettingsSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('rejects ChatSettings with numPredict above max', () => {
+    const invalid = { ...DEFAULT_SETTINGS, numPredict: 32769 };
+    expect(ChatSettingsSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('rejects ChatSettings with numPredict below -1 sentinel', () => {
+    const invalid = { ...DEFAULT_SETTINGS, numPredict: -2 };
+    expect(ChatSettingsSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('accepts ChatSettings with numPredict = -1 (unlimited sentinel)', () => {
+    const valid = { ...DEFAULT_SETTINGS, numPredict: -1 };
+    expect(ChatSettingsSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it('rejects ChatSettings with numCtx above max', () => {
+    const invalid = { ...DEFAULT_SETTINGS, numCtx: 131073 };
+    expect(ChatSettingsSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('rejects ChatSettings with numCtx below min', () => {
+    const invalid = { ...DEFAULT_SETTINGS, numCtx: 0 };
+    expect(ChatSettingsSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('rejects ChatSettings with non-finite temperature (NaN)', () => {
+    const invalid = { ...DEFAULT_SETTINGS, temperature: NaN };
+    expect(ChatSettingsSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('rejects ChatSettings with non-finite topP (Infinity)', () => {
+    const invalid = { ...DEFAULT_SETTINGS, topP: Infinity };
+    expect(ChatSettingsSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('rejects ModelParamsSchema with temperature above max', () => {
+    const invalid = { temperature: 5, topK: 40, topP: 0.9, numCtx: 4096, numPredict: 2048 };
+    expect(ModelParamsSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('rejects ModelParamsSchema with topK above max', () => {
+    const invalid = { temperature: 0.7, topK: 500, topP: 0.9, numCtx: 4096, numPredict: 2048 };
+    expect(ModelParamsSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('rejects ModelParamsSchema with numPredict = -2 (below -1 sentinel)', () => {
+    const invalid = { temperature: 0.7, topK: 40, topP: 0.9, numCtx: 4096, numPredict: -2 };
+    expect(ModelParamsSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('accepts ModelParamsSchema with numPredict = -1 (unlimited sentinel)', () => {
+    const valid = { temperature: 0.7, topK: 40, topP: 0.9, numCtx: 4096, numPredict: -1 };
+    expect(ModelParamsSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it('accepts ModelParamsSchema at boundary values', () => {
+    const valid = { temperature: 0, topK: 1, topP: 0, numCtx: 1, numPredict: -1 };
+    expect(ModelParamsSchema.safeParse(valid).success).toBe(true);
   });
 });
 
