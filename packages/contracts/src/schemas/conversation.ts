@@ -6,20 +6,20 @@ export const MessageSchema = z.object({
   role: z.enum(['user', 'assistant', 'system']),
   content: z.string(),
   images: z.array(z.string()).nullish(),
-  timestamp: z.number(),
+  timestamp: z.number().int(),
   model: z.string().nullish(),
   done: z.boolean().nullish(),
   requestId: z.string().nullish(),
-  evalCount: z.number().nullish(),
-  promptEvalCount: z.number().nullish(),
-  evalDuration: z.number().nullish(),
-  totalDuration: z.number().nullish(),
+  evalCount: z.number().int().nullish(),
+  promptEvalCount: z.number().int().nullish(),
+  evalDuration: z.number().int().nullish(),
+  totalDuration: z.number().int().nullish(),
   ragSources: z
     .array(
       z.object({
         filePath: z.string(),
-        startLine: z.number(),
-        endLine: z.number(),
+        startLine: z.number().int(),
+        endLine: z.number().int(),
         language: z.string().nullish(),
       })
     )
@@ -39,8 +39,8 @@ export const ConversationSchema = z.object({
   messages: z.array(MessageSchema),
   model: z.string(),
   settings: ChatSettingsSchema,
-  createdAt: z.number(),
-  updatedAt: z.number(),
+  createdAt: z.number().int(),
+  updatedAt: z.number().int(),
 });
 
 export const MessageSearchResultSchema = z.object({

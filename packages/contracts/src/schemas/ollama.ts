@@ -11,7 +11,7 @@ export const OllamaModelDetailsSchema = z.object({
 
 export const OllamaModelSchema = z.object({
   name: z.string(),
-  size: z.number().nullish(),
+  size: z.number().int().nullish(),
   digest: z.string().nullish(),
   details: OllamaModelDetailsSchema.nullish(),
 });
@@ -29,22 +29,22 @@ export const OllamaTokenSchema = z.object({
   createdAt: z.string().nullish(),
   message: ChatMessageSchema.nullish(),
   done: z.boolean().default(false),
-  totalDuration: z.number().nullish(),
-  loadDuration: z.number().nullish(),
-  promptEvalCount: z.number().nullish(),
-  promptEvalDuration: z.number().nullish(),
-  evalCount: z.number().nullish(),
-  evalDuration: z.number().nullish(),
+  totalDuration: z.number().int().nullish(),
+  loadDuration: z.number().int().nullish(),
+  promptEvalCount: z.number().int().nullish(),
+  promptEvalDuration: z.number().int().nullish(),
+  evalCount: z.number().int().nullish(),
+  evalDuration: z.number().int().nullish(),
   requestId: z.string().nullish(),
 });
 
 export const PullProgressSchema = z.object({
   status: z.string(),
   digest: z.string().nullish(),
-  completed: z.number().nullish(),
-  total: z.number().nullish(),
+  completed: z.number().int().nullish(),
+  total: z.number().int().nullish(),
   name: z.string().nullish(),
-  percentage: z.number().nullish(),
+  percentage: z.number().finite().nullish(),
 });
 
 export const PullErrorSchema = z.object({
@@ -54,8 +54,8 @@ export const PullErrorSchema = z.object({
 });
 
 export const ModelDefaultParamsSchema = z.object({
-  temperature: z.number().nullish(),
-  topP: z.number().nullish(),
+  temperature: z.number().finite().nullish(),
+  topP: z.number().finite().nullish(),
   topK: z.number().int().nullish(),
   numCtx: z.number().int().nonnegative().nullish(),
   numPredict: z.number().int().nullish(),
@@ -72,7 +72,7 @@ export const ModelValidationSchema = z.object({
 export const OllamaHealthSchema = z.object({
   isRunning: z.boolean(),
   version: z.string().nullish(),
-  responseTimeMs: z.coerce.number(),
+  responseTimeMs: z.coerce.number().int(),
 });
 
 // Back-compat alias for callers that imported the historical name.
