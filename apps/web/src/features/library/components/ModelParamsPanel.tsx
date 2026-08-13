@@ -336,7 +336,10 @@ const ModelParamsPanel = ({ className }: { className?: string }) => {
     numPredictOverridden,
   } = useModelParamsPanelState();
 
-  const numCtxMax = contextWindow ?? VALIDATION_LIMITS.NUM_CTX_RANGE[1];
+  const numCtxMax = Math.min(
+    contextWindow ?? VALIDATION_LIMITS.NUM_CTX_RANGE[1],
+    VALIDATION_LIMITS.NUM_CTX_RANGE[1]
+  );
   const numCtxHint =
     numCtxClamped && rawNumCtxOverride !== null
       ? t('library.numCtxAboveModelMax', {

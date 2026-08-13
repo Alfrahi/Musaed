@@ -63,8 +63,8 @@ pub const TOP_P_RANGE: (f32, f32) = (0.0, 1.0);
 /// Allowed range for num_predict: [min, max]. `-1` is Ollama's sentinel for unlimited generation.
 pub const NUM_PREDICT_RANGE: (i32, i32) = (-1, 32768);
 
-/// Allowed range for num_ctx: [min, max].
-pub const NUM_CTX_RANGE: (u32, u32) = (1, 131072);
+/// Allowed range for num_ctx: [min, max]. 2M covers all current and near-future model context windows.
+pub const NUM_CTX_RANGE: (u32, u32) = (1, 2097152);
 
 /// Maximum number of stop sequences.
 pub const MAX_STOP_SEQUENCES: usize = 10;

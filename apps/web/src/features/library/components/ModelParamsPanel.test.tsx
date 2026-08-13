@@ -217,4 +217,13 @@ describe('ModelParamsPanel — per-model sampling parameters', () => {
     // formatted display uses formatNumber → "0.3".
     expect(screen.getByText('0.3')).toBeInTheDocument();
   });
+
+  it('clamps numCtxMax to NUM_CTX_RANGE ceiling when contextWindow exceeds it', () => {
+    mockContextWindow = 4_000_000;
+    render(<ModelParamsPanel />);
+    // numCtx is the first <input type="number"> (numPredict is the second).
+    const numCtxInput = screen.getAllByRole('spinbutton')[0];
+    // Math.min(4M, 2_097_152) → the max attribute should be 2097152, not 4M.
+    expect(numCtxInput.getAttribute('max')).toBe(String(2_097_152));
+  });
 });

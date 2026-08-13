@@ -423,7 +423,7 @@ mod tests {
         assert_eq!(TOP_K_RANGE, (1, 200));
         assert_eq!(TOP_P_RANGE, (0.0, 1.0));
         assert_eq!(NUM_PREDICT_RANGE, (-1, 32768));
-        assert_eq!(NUM_CTX_RANGE, (1, 131072));
+        assert_eq!(NUM_CTX_RANGE, (1, 2_097_152));
         assert_eq!(MAX_STOP_SEQUENCES, 10);
         assert_eq!(MAX_STOP_SEQUENCE_LEN, 256);
         assert_eq!(VALID_ROLES, &["system", "user", "assistant"]);

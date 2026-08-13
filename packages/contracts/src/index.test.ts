@@ -248,7 +248,7 @@ describe('Contracts: Zod Schemas', () => {
   });
 
   it('rejects ChatSettings with numCtx above max', () => {
-    const invalid = { ...DEFAULT_SETTINGS, numCtx: 131073 };
+    const invalid = { ...DEFAULT_SETTINGS, numCtx: 2_097_153 };
     expect(ChatSettingsSchema.safeParse(invalid).success).toBe(false);
   });
 

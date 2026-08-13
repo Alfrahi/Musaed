@@ -17,6 +17,7 @@ use super::client::{
     PULL_ABSOLUTE_TIMEOUT_SECS,
 };
 use crate::error_codes;
+use crate::generated_validation::NUM_CTX_RANGE;
 use crate::payloads::{
     BackendError, ModelDefaultParams, ModelValidation, OllamaModel, PullProgress, PullStreamError,
 };
@@ -32,6 +33,17 @@ use tokio::time;
 use tokio_util::codec::{FramedRead, LinesCodec};
 use tokio_util::sync::CancellationToken;
 use tracing;
+
+/// Clamp a raw context_length value to the `NUM_CTX_RANGE` bounds and
+/// convert to `u32`. Values above the ceiling are capped to the max
+/// supported `num_ctx`; values below the floor are raised to the minimum.
+/// Malformed (non-numeric) values are filtered out before this is called.
+fn clamp_ctx(n: u64) -> Option<u32> {
+    let min = NUM_CTX_RANGE.0 as u64;
+    let max = NUM_CTX_RANGE.1 as u64;
+    let clamped = n.clamp(min, max);
+    u32::try_from(clamped).ok()
+}
 
 pub struct ModelService;
 
@@ -142,26 +154,61 @@ impl ModelService {
             Ok(resp) if resp.status().is_success() => {
                 match resp.json::<serde_json::Value>().await {
                     Ok(json) => {
-                        let details = serde_json::from_value(
-                            json.get("details").cloned().unwrap_or_default(),
-                        )
-                        .ok();
+                        let details: Option<crate::payloads::OllamaModelDetails> =
+                            serde_json::from_value(
+                                json.get("details").cloned().unwrap_or_default(),
+                            )
+                            .ok();
 
                         // Extract the model's context_length from `model_info`.
                         // The key is architecture-prefixed (e.g.
-                        // `llama.context_length`, `qwen2.context_length`), so
-                        // we scan for any key ending in `.context_length`.
+                        // `llama.context_length`, `qwen2.context_length`).
+                        // When multiple `.context_length` keys exist (common
+                        // for quantized models that carry both
+                        // `general.context_length` and `<family>.context_length`),
+                        // prefer the one whose prefix matches the model's
+                        // architecture family, then fall back to the max
+                        // numeric value. The result is clamped to
+                        // `NUM_CTX_RANGE`.
+                        let family: Option<&str> =
+                            details.as_ref().and_then(|d| d.family.as_deref());
+
                         let context_length = json
                             .get("model_info")
                             .and_then(|mi| mi.as_object())
                             .and_then(|obj| {
-                                obj.iter().find_map(|(k, v)| {
-                                    k.ends_with(".context_length")
-                                        .then_some(v)
-                                        .and_then(|v| v.as_u64())
-                                        .map(|n| n as u32)
-                                })
-                            });
+                                // Collect all `.context_length` candidates,
+                                // extracting the architecture prefix (the part
+                                // before `.context_length`) and the numeric
+                                // value. Non-numeric values are silently dropped.
+                                let candidates: Vec<(&str, u64)> = obj
+                                    .iter()
+                                    .filter_map(|(k, v)| {
+                                        let key = k.as_str();
+                                        let prefix = key.strip_suffix(".context_length")?;
+                                        v.as_u64().map(|n| (prefix, n))
+                                    })
+                                    .collect();
+
+                                if candidates.is_empty() {
+                                    return None;
+                                }
+
+                                // Prefer the candidate whose prefix matches
+                                // the model's architecture family.
+                                if let Some(fam) = family {
+                                    if let Some((_, n)) =
+                                        candidates.iter().find(|(prefix, _)| *prefix == fam)
+                                    {
+                                        return Some(clamp_ctx(*n));
+                                    }
+                                }
+
+                                // Fall back to the max numeric value.
+                                let max = candidates.iter().map(|(_, n)| *n).max()?;
+                                Some(clamp_ctx(max))
+                            })
+                            .flatten();
 
                         // Extract per-model sampling defaults from the
                         // Modelfile's `PARAMETER` directives. Ollama exposes
@@ -620,6 +667,21 @@ fn parse_modelfile_parameters(raw: &str) -> Option<ModelDefaultParams> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn clamp_ctx_within_range() {
+        assert_eq!(clamp_ctx(8192), Some(8192));
+    }
+
+    #[test]
+    fn clamp_ctx_above_max() {
+        assert_eq!(clamp_ctx(4_000_000), Some(NUM_CTX_RANGE.1));
+    }
+
+    #[test]
+    fn clamp_ctx_below_min() {
+        assert_eq!(clamp_ctx(0), Some(NUM_CTX_RANGE.0));
+    }
 
     #[test]
     fn parse_full_modelfile_parameters() {
