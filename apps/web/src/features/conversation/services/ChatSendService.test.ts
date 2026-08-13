@@ -345,6 +345,127 @@ describe('ChatSendService.sendMessage', () => {
     ]);
   });
 
+  it('reduces history when ragTokenCount consumes most of the context budget', async () => {
+    // With numCtx=4096 (DEFAULT_MODEL_PARAMS), a ragTokenCount of 3800
+    // leaves only ~296 tokens for history + system + current prompt.
+    // The short history messages (~3 tokens each) should fit, but a
+    // message whose promptEvalCount exceeds the remaining budget should
+    // be dropped.
+    mockAssembleChatRag.mockResolvedValue({
+      ragSources: undefined,
+      assembledContext: 'x',
+      ragTokenCount: 3800,
+    });
+    mockSelectResolvedParams.mockReturnValue({
+      ...DEFAULT_MODEL_PARAMS,
+      numCtx: 4096,
+    });
+
+    const smallUser: Message = {
+      id: 'u-small',
+      role: 'user',
+      content: 'hi',
+      timestamp: 1,
+      requestId: 'req-small',
+    };
+    const smallAssistant: Message = {
+      id: 'a-small',
+      role: 'assistant',
+      content: 'hey',
+      timestamp: 2,
+      model: 'llama3',
+      requestId: 'req-small',
+      done: true,
+      promptEvalCount: 3,
+    };
+    // promptEvalCount=500 — exceeds remaining budget (~296 - 3 - 3 for 'hi' = ~290)
+    const bigUser: Message = {
+      id: 'u-big',
+      role: 'user',
+      content: 'large question',
+      timestamp: 3,
+      requestId: 'req-big',
+    };
+    const bigAssistant: Message = {
+      id: 'a-big',
+      role: 'assistant',
+      content: 'large answer',
+      timestamp: 4,
+      model: 'llama3',
+      requestId: 'req-big',
+      done: true,
+      promptEvalCount: 500,
+    };
+
+    // Oldest first: bigUser, bigAssistant, smallUser, smallAssistant
+    messageStoreState.messages = {
+      conv1: [bigUser, bigAssistant, smallUser, smallAssistant],
+    };
+    const service = createService();
+
+    await service.sendMessage({ input: 'follow up' });
+
+    const payload = mockChatApi.chat.mock.calls[0][0];
+    // Only the small pair should fit — the big pair is dropped.
+    // Payload: [smallUser, smallAssistant, ragSystem('x'), currentUserMessage]
+    expect(payload.messages).toEqual([
+      { role: 'user', content: 'hi' },
+      { role: 'assistant', content: 'hey' },
+      { role: 'system', content: 'x' },
+      { role: 'user', content: 'follow up' },
+    ]);
+  });
+
+  it('falls back to char/4 heuristic for ragTokenCount when not provided', async () => {
+    // When ragTokenCount is undefined but assembledContext is present,
+    // the budget uses Math.ceil(assembledContext.length / 4).
+    // assembledContext of 400 chars → ~100 tokens reserved for RAG.
+    const longCtx = 'y'.repeat(400);
+    mockAssembleChatRag.mockResolvedValue({
+      ragSources: undefined,
+      assembledContext: longCtx,
+      ragTokenCount: 0,
+    });
+    mockSelectResolvedParams.mockReturnValue({
+      ...DEFAULT_MODEL_PARAMS,
+      numCtx: 4096,
+    });
+
+    const smallUser: Message = {
+      id: 'u-small',
+      role: 'user',
+      content: 'hi',
+      timestamp: 1,
+      requestId: 'req-small',
+    };
+    const smallAssistant: Message = {
+      id: 'a-small',
+      role: 'assistant',
+      content: 'hey',
+      timestamp: 2,
+      model: 'llama3',
+      requestId: 'req-small',
+      done: true,
+      promptEvalCount: 3,
+    };
+
+    messageStoreState.messages = { conv1: [smallUser, smallAssistant] };
+    const service = createService();
+
+    await service.sendMessage({ input: 'follow up' });
+
+    const payload = mockChatApi.chat.mock.calls[0][0];
+    // Budget: 4096 - 100 (rag) - 3 (current prompt 'follow up'/4) = 3993.
+    // small pair (3 tokens) should fit easily.
+    // Order: [history, ragSystem, currentUser]
+    expect(payload.messages).toEqual([
+      { role: 'user', content: 'hi' },
+      { role: 'assistant', content: 'hey' },
+      { role: 'system', content: longCtx },
+      { role: 'user', content: 'follow up' },
+    ]);
+  });
+
   it('routes chatApi failures to handleStreamError', async () => {
     mockChatApi.chat.mockRejectedValue(new Error('API failure'));
     const service = createService();
