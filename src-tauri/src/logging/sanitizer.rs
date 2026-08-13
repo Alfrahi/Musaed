@@ -53,7 +53,7 @@ pub(crate) fn sanitize_log_entry(entry: &str) -> String {
     if collapsed.chars().count() > MAX_LOG_ENTRY_LEN {
         format!(
             "{}... [TRUNCATED]",
-            &collapsed
+            collapsed
                 .chars()
                 .take(MAX_LOG_ENTRY_LEN.saturating_sub(15))
                 .collect::<String>()
