@@ -48,11 +48,11 @@ describe('Conversation Store migrations', () => {
   });
 
   it('exposes the current store schema version', () => {
-    expect(VERSION).toBe(3);
+    expect(VERSION).toBe(4);
     expect(typeof MIGRATIONS[VERSION]).toBe('function');
   });
 
-  it('round-trips a v1 persisted shape through the v3 migration unchanged', () => {
+  it('round-trips a v1 persisted shape through the v4 migration unchanged', () => {
     const legacy = {
       conversations: { c1: { id: 'c1', title: 'Old', model: 'llama2' } },
       conversationIds: ['c1'],
@@ -60,17 +60,19 @@ describe('Conversation Store migrations', () => {
       searchQuery: '',
     };
 
-    // v1 → v3: messages were never persisted here, so the migration must not
+    // v1 → v4: messages were never persisted here, so the migration must not
     // invent or drop fields. Old-shape `ConversationMetadata` round-trips
     // with `error` and `stopped` left undefined (handled on the Rust side per STANDARDS §10).
     const fromV1 = MIGRATIONS[1](legacy) as typeof legacy;
     const fromV2 = MIGRATIONS[2](legacy) as typeof legacy;
     const fromV3 = MIGRATIONS[3](legacy) as typeof legacy;
+    const fromV4 = MIGRATIONS[4](legacy) as typeof legacy;
 
     expect(fromV1).toEqual(legacy);
     expect(fromV2).toEqual(legacy);
     expect(fromV3).toEqual(legacy);
-    expect('error' in fromV3.conversations.c1).toBe(false);
+    expect(fromV4).toEqual(legacy);
+    expect('error' in fromV4.conversations.c1).toBe(false);
   });
 
   it('coerces a malformed persisted value back to the default state shape', () => {

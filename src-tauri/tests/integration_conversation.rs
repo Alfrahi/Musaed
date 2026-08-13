@@ -633,10 +633,10 @@ async fn test_migration_version_recorded() {
         )
         .unwrap_or(0);
 
-    // Should be at least version 2 (with performance indexes)
+    // Should be at the latest version (stamped by canonical migration framework)
     assert!(
-        version >= 2,
-        "Should have run migrations to version 2+, got {}",
+        version >= 4,
+        "Should have run migrations to version 4+, got {}",
         version
     );
 }

@@ -279,6 +279,115 @@ fn apply_migration_step(
     Ok(())
 }
 
+/// Runs migrations synchronously on a `&Connection`.
+///
+/// This is the synchronous counterpart to [`run_migrations`], intended for
+/// connection-time schema evolution where an async runtime is not available.
+/// It reuses the same canonical [`MigrationStep`] definitions and
+/// [`version_tracker`] infrastructure so there is a single migration owner.
+///
+/// On a fresh database (version 0) the caller is expected to have already
+/// executed the full current schema DDL. This function stamps the version
+/// to `LATEST_VERSION` without re-running migrations, then returns. On
+/// existing databases it applies incremental migration steps from the
+/// recorded version up to `LATEST_VERSION`.
+pub fn run_migrations_sync(
+    conn: &mut Connection,
+    target: MigrationTarget,
+) -> MigrationResult<MigrationExecutionResult> {
+    let from_version = version_tracker::get_current_version(conn, target)?;
+    let target_version = get_latest_version(target);
+
+    if from_version >= target_version {
+        tracing::info!(
+            target = target.as_str(),
+            current = from_version,
+            latest = target_version,
+            "Already at target version"
+        );
+        return Ok(MigrationExecutionResult {
+            success: true,
+            from_version,
+            to_version: from_version,
+            applied_migrations: vec![],
+            error: None,
+        });
+    }
+
+    tracing::info!(
+        target = target.as_str(),
+        from = from_version,
+        to = target_version,
+        "Starting sync migration"
+    );
+
+    let mut applied_migrations = Vec::new();
+    let mut current_version = from_version;
+
+    let tx = conn.transaction()?;
+
+    // Fresh database: schema DDL already executed by the caller. Stamp the
+    // version to LATEST_VERSION so incremental migrations are skipped.
+    if from_version == 0 {
+        version_tracker::set_version_tx(&tx, target, target_version)?;
+        tx.commit()?;
+
+        tracing::info!(
+            target = target.as_str(),
+            version = target_version,
+            "Stamped fresh database to latest version"
+        );
+
+        return Ok(MigrationExecutionResult {
+            success: true,
+            from_version,
+            to_version: target_version,
+            applied_migrations: vec![],
+            error: None,
+        });
+    }
+
+    for next_version in (from_version + 1)..=target_version {
+        let migration = get_migration(target, next_version).ok_or_else(|| {
+            MigrationError::MissingMigration {
+                target: target.as_str().to_string(),
+                version: next_version,
+            }
+        })?;
+
+        apply_migration_step(&tx, target, &migration)?;
+
+        version_tracker::set_version_tx(&tx, target, next_version)?;
+
+        applied_migrations.push(next_version);
+        current_version = next_version;
+
+        tracing::info!(
+            target = target.as_str(),
+            version = next_version,
+            description = migration.description,
+            "Applied sync migration"
+        );
+    }
+
+    tx.commit()?;
+
+    tracing::info!(
+        target = target.as_str(),
+        from = from_version,
+        to = current_version,
+        "Sync migration completed successfully"
+    );
+
+    Ok(MigrationExecutionResult {
+        success: true,
+        from_version,
+        to_version: current_version,
+        applied_migrations,
+        error: None,
+    })
+}
+
 /// Rolls back to a previous version
 pub async fn rollback_to_version(
     conn: Arc<Mutex<Connection>>,
@@ -426,7 +535,7 @@ mod tests {
         // Set initial version to latest
         {
             let conn_guard = conn.lock().await;
-            version_tracker::set_version(&conn_guard, MigrationTarget::Conversations, 3)
+            version_tracker::set_version(&conn_guard, MigrationTarget::Conversations, 4)
                 .expect("Failed to set version");
         }
 
@@ -435,8 +544,8 @@ mod tests {
             .expect("Migration failed");
 
         assert!(result.success);
-        assert_eq!(result.from_version, 3);
-        assert_eq!(result.to_version, 3);
+        assert_eq!(result.from_version, 4);
+        assert_eq!(result.to_version, 4);
         assert!(result.applied_migrations.is_empty());
     }
 
@@ -450,40 +559,40 @@ mod tests {
 
         assert!(result.success);
         assert_eq!(result.from_version, 0);
-        assert_eq!(result.to_version, 3); // Latest version
-        assert_eq!(result.applied_migrations, vec![1, 2, 3]);
+        assert_eq!(result.to_version, 4); // Latest version
+        assert_eq!(result.applied_migrations, vec![1, 2, 3, 4]);
     }
 
     #[tokio::test]
     async fn test_rollback_success() {
         let conn = create_test_db(MigrationTarget::Conversations);
 
-        // Migrate to v3
-        run_migrations(conn.clone(), MigrationTarget::Conversations, Some(3))
+        // Migrate to v4
+        run_migrations(conn.clone(), MigrationTarget::Conversations, None)
             .await
             .expect("Migration failed");
 
-        // Rollback to v2
-        let result = rollback_to_version(conn.clone(), MigrationTarget::Conversations, 2)
+        // Rollback to v3
+        let result = rollback_to_version(conn.clone(), MigrationTarget::Conversations, 3)
             .await
             .expect("Rollback failed");
 
         assert!(result.success);
-        assert_eq!(result.from_version, 3);
-        assert_eq!(result.to_version, 2);
+        assert_eq!(result.from_version, 4);
+        assert_eq!(result.to_version, 3);
     }
 
     #[tokio::test]
     async fn test_rollback_invalid_sequence() {
         let conn = create_test_db(MigrationTarget::Conversations);
 
-        // Migrate to v3
-        run_migrations(conn.clone(), MigrationTarget::Conversations, Some(3))
+        // Migrate to v4
+        run_migrations(conn.clone(), MigrationTarget::Conversations, None)
             .await
             .expect("Migration failed");
 
-        // Try to rollback to v4 (invalid - higher than current)
-        let result = rollback_to_version(conn.clone(), MigrationTarget::Conversations, 4).await;
+        // Try to rollback to v5 (invalid - higher than current)
+        let result = rollback_to_version(conn.clone(), MigrationTarget::Conversations, 5).await;
 
         assert!(result.is_err());
     }
@@ -522,7 +631,7 @@ mod tests {
     #[tokio::test]
     async fn test_list_migrations() {
         let conversations_migrations = list_migrations(MigrationTarget::Conversations);
-        assert_eq!(conversations_migrations.len(), 3); // v1, v2, and v3
+        assert_eq!(conversations_migrations.len(), 4); // v1, v2, v3, and v4
 
         let rag_migrations = list_migrations(MigrationTarget::Rag);
         assert_eq!(rag_migrations.len(), 3); // v1, v2, and v3
@@ -530,7 +639,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_latest_version() {
-        assert_eq!(get_latest_version(MigrationTarget::Conversations), 3);
+        assert_eq!(get_latest_version(MigrationTarget::Conversations), 4);
         assert_eq!(get_latest_version(MigrationTarget::Rag), 3);
     }
 }

@@ -85,11 +85,11 @@ Components are **not** exported via `index.ts` (per DDD rules). They are used in
 
 | Store               | Version | Persistence                                                    |
 | ------------------- | ------- | -------------------------------------------------------------- |
-| `conversationStore` | 3       | Persisted by the Rust backend (SQLite). No zustand persist.    |
+| `conversationStore` | 4       | Persisted by the Rust backend (SQLite). No zustand persist.    |
 | `messageStore`      | 0       | In-memory cache only — messages persisted by the Rust backend. |
 | `streamingStore`    | —       | Fully in-memory, not persisted.                                |
 
-> **Note:** Persistence for conversation and message stores has migrated to the Rust backend (SQLite). The state schema version `3` is enforced by both the frontend store and the Rust migration system (see `src-tauri/src/conversation/connection.rs`). `streamingStore` is intentionally absent from the manifest's `stateSchemas` — it became fully in-memory after persist middleware was removed, and versioning an unpersisted buffer would be misleading (see STANDARDS.md §9).
+> **Note:** Persistence for conversation and message stores has migrated to the Rust backend (SQLite). The state schema version `4` is enforced by both the frontend store and the Rust migration system (see `src-tauri/src/conversation/connection.rs`). `streamingStore` is intentionally absent from the manifest's `stateSchemas` — it became fully in-memory after persist middleware was removed, and versioning an unpersisted buffer would be misleading (see STANDARDS.md §9).
 
 ## Dependencies
 

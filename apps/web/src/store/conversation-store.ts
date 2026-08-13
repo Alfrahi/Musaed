@@ -44,11 +44,22 @@ const CONVERSATION_MIGRATIONS: Record<number, (data: unknown) => unknown> = {
     // its own SQLite migration.
     return { ...DEFAULT_CONVERSATION_STATE, ...persisted };
   },
+  4: (data: unknown) => {
+    const persisted =
+      typeof data === 'object' && data !== null ? (data as Partial<ConversationState>) : {};
+    // Schema change: `Message.promptEvalCount` is now persisted in SQLite
+    // (Rust migration v4 — `ALTER TABLE messages ADD COLUMN
+    // prompt_eval_count INTEGER`). This store never persists messages
+    // directly — it persists `ConversationMetadata` only — so the migration
+    // is intentionally a pass-through. Rust round-trips messages through
+    // its own SQLite migration.
+    return { ...DEFAULT_CONVERSATION_STATE, ...persisted };
+  },
 };
 
 // Exported so unit tests can round-trip legacy shapes without spinning up the
 // whole Zustand store. Internal — not part of the public store API surface.
-export const CONVERSATION_STORE_VERSION = 3;
+export const CONVERSATION_STORE_VERSION = 4;
 export const __test_CONVERSATION_MIGRATIONS = CONVERSATION_MIGRATIONS;
 // Back-compat alias for tests that import the old `__test_`-prefixed name.
 // `CONVERSATION_STORE_VERSION` is the canonical identifier consumed by
