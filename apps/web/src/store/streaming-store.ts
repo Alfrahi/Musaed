@@ -7,7 +7,7 @@ import { traceStoreMutation, traceAppendToken, resetTokenCounter } from '@/lib/s
 
 /** Internal buffer for efficient stream accumulation. */
 interface StreamingBuffer {
-  chunks: string[];
+  content: string;
 }
 
 /**
@@ -38,7 +38,7 @@ function runFlushToConversation(
     return { content: '', metrics };
   }
 
-  const content = buffer.chunks.join('');
+  const content = buffer.content;
   const metrics = pendingMetrics[conversationId] ?? {};
 
   // Clear flushed content and metrics, and mark as flushed atomically.
@@ -86,6 +86,7 @@ export interface StreamingState {
   flushedStreams: Set<string>;
 
   appendToken: (conversationId: string, token: string, requestId: string) => void;
+  appendTokenBulk: (conversationId: string, text: string, requestId: string) => void;
   setPendingMetrics: (conversationId: string, metrics: Partial<Message>) => void;
   flushToConversation: (
     conversationId: string
@@ -105,8 +106,8 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
     flushedStreams: new Set<string>(),
 
     appendToken: (conversationId, token, requestId) => {
-      const currentChunks = get().liveContent[conversationId]?.chunks.length ?? 0;
-      traceAppendToken(conversationId, currentChunks);
+      const currentLen = get().liveContent[conversationId]?.content.length ?? 0;
+      traceAppendToken(conversationId, currentLen);
       set((state) => {
         // Gate on the requestId to prevent tokens from a stale stream
         // being appended to a newer stream (or after stop). If the
@@ -117,12 +118,30 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
           return state;
         }
 
-        const buffer = state.liveContent[conversationId] ?? { chunks: [] };
+        const buffer = state.liveContent[conversationId] ?? { content: '' };
         return {
           liveContent: {
             ...state.liveContent,
             [conversationId]: {
-              chunks: [...buffer.chunks, token],
+              content: buffer.content + token,
+            },
+          },
+        };
+      });
+    },
+
+    appendTokenBulk: (conversationId, text, requestId) => {
+      set((state) => {
+        if (state.activeStreams[conversationId] !== requestId) {
+          return state;
+        }
+
+        const buffer = state.liveContent[conversationId] ?? { content: '' };
+        return {
+          liveContent: {
+            ...state.liveContent,
+            [conversationId]: {
+              content: buffer.content + text,
             },
           },
         };
@@ -204,7 +223,7 @@ export const useStreamingStore = _useStreamingStore;
 
 // Selectors – accept Zustand state as argument
 export const selectLiveContent = (conversationId: string) => (state: StreamingState) =>
-  state.liveContent[conversationId]?.chunks.join('') ?? null;
+  state.liveContent[conversationId]?.content ?? null;
 
 export const selectIsLiveStreaming = (conversationId: string) => (state: StreamingState) =>
   conversationId in state.activeStreams;

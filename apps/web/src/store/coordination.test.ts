@@ -88,7 +88,7 @@ describe('registerHydrationCoordination', () => {
 describe('stopStream — abort', () => {
   beforeEach(() => {
     useStreamingStore.setState({
-      liveContent: { 'conv-1': { chunks: ['hello'] } },
+      liveContent: { 'conv-1': { content: 'hello' } },
       pendingMetrics: {},
       activeStreams: { 'conv-1': 'req-1' },
       flushedStreams: new Set<string>(),
@@ -146,7 +146,7 @@ describe('stopStream — abort', () => {
 describe('stopStream — abort race guard', () => {
   beforeEach(() => {
     useStreamingStore.setState({
-      liveContent: { 'conv-1': { chunks: ['new-stream-content'] } },
+      liveContent: { 'conv-1': { content: 'new-stream-content' } },
       pendingMetrics: {},
       activeStreams: { 'conv-1': 'req-2' },
       flushedStreams: new Set<string>(),
@@ -213,7 +213,7 @@ describe('stopStream — abort race guard', () => {
 describe('stopStream — complete', () => {
   beforeEach(() => {
     useStreamingStore.setState({
-      liveContent: { 'conv-1': { chunks: ['hello'] } },
+      liveContent: { 'conv-1': { content: 'hello' } },
       pendingMetrics: { 'conv-1': { promptEvalCount: 42, evalCount: 10 } },
       activeStreams: { 'conv-1': 'req-1' },
       flushedStreams: new Set<string>(),
@@ -315,7 +315,7 @@ describe('stopStream — complete', () => {
 describe('stopStream — double-stop resolution guard', () => {
   beforeEach(() => {
     useStreamingStore.setState({
-      liveContent: { 'conv-1': { chunks: ['hello'] } },
+      liveContent: { 'conv-1': { content: 'hello' } },
       pendingMetrics: {},
       activeStreams: { 'conv-1': 'req-1' },
       flushedStreams: new Set<string>(),
@@ -442,7 +442,7 @@ describe('stopStream — double-stop resolution guard', () => {
 describe('stopStream — error', () => {
   beforeEach(() => {
     useStreamingStore.setState({
-      liveContent: { 'conv-1': { chunks: ['hello'] } },
+      liveContent: { 'conv-1': { content: 'hello' } },
       pendingMetrics: { 'conv-1': { promptEvalCount: 42, evalCount: 10 } },
       activeStreams: { 'conv-1': 'req-1' },
       flushedStreams: new Set<string>(),
@@ -532,7 +532,7 @@ describe('stopStream — error', () => {
   it('respects the abort race guard — bails out when expectedRequestId mismatches', () => {
     useStreamingStore.setState({
       activeStreams: { 'conv-1': 'req-2' },
-      liveContent: { 'conv-1': { chunks: ['new-stream-content'] } },
+      liveContent: { 'conv-1': { content: 'new-stream-content' } },
     });
 
     // Caller read req-1 (the old stream), but the active stream is now req-2.
@@ -560,7 +560,7 @@ describe('stopStream — error', () => {
 describe('stopStream — batch-end', () => {
   beforeEach(() => {
     useStreamingStore.setState({
-      liveContent: { 'conv-1': { chunks: ['discard-me'] } },
+      liveContent: { 'conv-1': { content: 'discard-me' } },
       pendingMetrics: {},
       activeStreams: { 'conv-1': 'req-1' },
       flushedStreams: new Set<string>(),

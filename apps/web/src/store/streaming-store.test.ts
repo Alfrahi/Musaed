@@ -94,7 +94,7 @@ describe('useStreamingStore', () => {
       useStreamingStore.getState().appendToken('conv1', ' world', 'req1');
 
       const state = useStreamingStore.getState();
-      expect(state.liveContent.conv1?.chunks).toEqual(['hello', ' world']);
+      expect(state.liveContent.conv1?.content).toBe('hello world');
     });
 
     it('should initialize buffer if not exists', () => {
@@ -102,7 +102,7 @@ describe('useStreamingStore', () => {
       useStreamingStore.getState().appendToken('conv1', 'first', 'req1');
 
       const state = useStreamingStore.getState();
-      expect(state.liveContent.conv1).toEqual({ chunks: ['first'] });
+      expect(state.liveContent.conv1).toEqual({ content: 'first' });
     });
 
     it('should silently ignore tokens for non-active streams', () => {
@@ -120,7 +120,7 @@ describe('useStreamingStore', () => {
       useStreamingStore.getState().appendToken('conv1', 'after', 'req1');
 
       const state = useStreamingStore.getState();
-      expect(state.liveContent.conv1?.chunks).toEqual(['before']);
+      expect(state.liveContent.conv1?.content).toBe('before');
     });
 
     it('should ignore tokens from a stale requestId', () => {
@@ -134,7 +134,7 @@ describe('useStreamingStore', () => {
       useStreamingStore.getState().appendToken('conv1', 'new', 'req2');
 
       const state = useStreamingStore.getState();
-      expect(state.liveContent.conv1?.chunks).toEqual(['old', 'new']);
+      expect(state.liveContent.conv1?.content).toBe('oldnew');
     });
   });
 
@@ -233,7 +233,7 @@ describe('useStreamingStore', () => {
       expect(state.pendingMetrics.conv1).toBeUndefined();
     });
 
-    it('should return empty string content when buffer has no chunks', () => {
+    it('should return empty string content when buffer is empty', () => {
       useStreamingStore.getState().startStream('conv1', 'req1');
       useStreamingStore.getState().setPendingMetrics('conv1', { role: 'assistant' });
 
@@ -295,7 +295,7 @@ describe('useStreamingStore', () => {
       useStreamingStore.getState().clearStream('conv1');
 
       const state = useStreamingStore.getState();
-      expect(state.liveContent.conv2?.chunks).toEqual(['test2']);
+      expect(state.liveContent.conv2?.content).toBe('test2');
       expect(state.activeStreams.conv2).toBe('req2');
     });
 
@@ -308,7 +308,7 @@ describe('useStreamingStore', () => {
 
   describe('selectors', () => {
     describe('selectLiveContent', () => {
-      it('should return joined chunks for conversation', () => {
+      it('should return content for conversation', () => {
         useStreamingStore.getState().startStream('conv1', 'req1');
         useStreamingStore.getState().appendToken('conv1', 'hello', 'req1');
         useStreamingStore.getState().appendToken('conv1', ' ', 'req1');

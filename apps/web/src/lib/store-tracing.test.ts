@@ -158,7 +158,7 @@ describe('store-tracing', () => {
         feature: 'streaming',
         action: 'appendToken',
         level: 'DEBUG',
-        context: { conversationId: 'conv1', chunkCount: N, tokenIdx: N },
+        context: { conversationId: 'conv1', contentLen: N, tokenIdx: N },
       });
     });
 
