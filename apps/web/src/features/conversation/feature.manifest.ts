@@ -60,7 +60,7 @@ const manifest: FeatureManifest = {
     background: ['cmd_ollama_generate_title'],
   },
   stateSchemas: {
-    conversationStore: 3,
+    conversationStore: 4,
     messageStore: 0, // in-memory cache only, no persistence version
     // `streamingStore` is intentionally absent — it became fully in-memory
     // after Phase 3 #10 (persist middleware removed). STANDARDS §9 scopes

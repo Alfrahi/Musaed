@@ -5,7 +5,7 @@
 use crate::migrations::MigrationStep;
 
 /// Latest migration version for conversations database
-pub const LATEST_VERSION: u32 = 3;
+pub const LATEST_VERSION: u32 = 4;
 
 /// Gets the migration step for a specific version
 pub fn get_migration(version: u32) -> Option<MigrationStep> {
@@ -81,6 +81,12 @@ pub fn get_migration(version: u32) -> Option<MigrationStep> {
                 "ALTER TABLE conversations DROP COLUMN model",
                 "ALTER TABLE conversations DROP COLUMN settings",
             ],
+        )),
+        4 => Some(MigrationStep::new(
+            4,
+            "Add prompt_eval_count column for context-window visualization",
+            &["ALTER TABLE messages ADD COLUMN prompt_eval_count INTEGER DEFAULT NULL"],
+            &["ALTER TABLE messages DROP COLUMN prompt_eval_count"],
         )),
         _ => None,
     }
