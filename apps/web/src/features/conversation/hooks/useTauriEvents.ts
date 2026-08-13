@@ -21,6 +21,7 @@ import {
 } from '@musaed/contracts';
 import toast from 'react-hot-toast';
 import { logger } from '@/lib/logger';
+import { bufferToken, setBulkFlush } from '@/lib/token-coalescer';
 
 /** Handle incoming Ollama token events (streaming responses). */
 const handleToken = (payload: OllamaToken) => {
@@ -34,10 +35,11 @@ const handleToken = (payload: OllamaToken) => {
   if (!convId) return;
 
   const token = payload.message?.content ?? '';
-  const _isFirstToken = !(convId in streamingStore.liveContent);
 
-  // Accumulate token in the lightweight streaming buffer
-  streamingStore.appendToken(convId, token, requestId);
+  // Buffer the token for the next rAF tick instead of mutating the store
+  // on every token. `setPendingMetrics` stays synchronous because metrics
+  // only need to be present at flush time, not per-token.
+  bufferToken(convId, token, requestId);
 
   // Stash metrics so they're included in the next flush
   const metrics: Partial<Message> = {};
@@ -138,6 +140,9 @@ export function useTauriEvents() {
     };
 
     const setup = async () => {
+      setBulkFlush((convId, text, reqId) => {
+        useStreamingStore.getState().appendTokenBulk(convId, text, reqId);
+      });
       try {
         await register('ollama-token', OllamaTokenSchema, handleToken);
         await register('ollama-error', BackendErrorSchema, handleError);
@@ -150,6 +155,7 @@ export function useTauriEvents() {
 
     return () => {
       isMounted = false;
+      setBulkFlush(() => {});
       unlisteners.forEach((un) => un());
     };
   }, []);

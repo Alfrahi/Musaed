@@ -15,6 +15,8 @@ import { traceStoreMutation } from '@/lib/store-tracing';
 // "already exported a member named 'ConversationMetadata'" collisions.
 export type { ConversationMetadata } from './conversation-store';
 
+import { drainPendingTokenBatch } from '@/lib/token-coalescer';
+
 /**
  * Coordinates streaming start/stop between the streaming store
  * and UI state (isStreaming flag).
@@ -82,6 +84,13 @@ export function flushAndStop(conversationId: string, expectedRequestId?: string)
     const activeRequestId = streamingStore.activeStreams[conversationId];
     if (activeRequestId !== expectedRequestId) return;
   }
+
+  // Drain any tokens still buffered in the rAF coalescer so they make it
+  // into the streaming store before `flushToConversation` reads the buffer.
+  // Without this, tokens that arrived since the last rAF tick would be
+  // stranded when the stream is torn down. Must run after the abort race
+  // guard so stale-stream tokens are not drained onto a newer stream.
+  drainPendingTokenBatch();
 
   const result = streamingStore.flushToConversation(conversationId);
 
