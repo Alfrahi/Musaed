@@ -98,7 +98,8 @@ impl ConversationStore {
 
         let mut stmt_msg = conn.prepare(
             "SELECT id, role, content, timestamp, model, done, request_id, images,
-                    eval_count, prompt_eval_count, total_duration, eval_duration, rag_sources, error
+                    eval_count, prompt_eval_count, completion_tokens, prompt_tokens, total_tokens,
+                    total_duration, eval_duration, rag_sources, error
              FROM messages WHERE conversation_id = ?1 ORDER BY timestamp ASC",
         )?;
         let msgs = stmt_msg
@@ -116,13 +117,16 @@ impl ConversationStore {
                         .map(|s| serde_json::from_str(&s).unwrap_or_default()),
                     eval_count: row.get(8)?,
                     prompt_eval_count: row.get(9)?,
-                    total_duration: row.get(10)?,
-                    eval_duration: row.get(11)?,
+                    completion_tokens: row.get(10)?,
+                    prompt_tokens: row.get(11)?,
+                    total_tokens: row.get(12)?,
+                    total_duration: row.get(13)?,
+                    eval_duration: row.get(14)?,
                     rag_sources: row
-                        .get::<_, Option<String>>(12)?
+                        .get::<_, Option<String>>(15)?
                         .map(|s| serde_json::from_str(&s).unwrap_or_default()),
                     error: row
-                        .get::<_, Option<String>>(13)?
+                        .get::<_, Option<String>>(16)?
                         .and_then(|s| serde_json::from_str::<MessageError>(&s).ok()),
                 })
             })?
@@ -194,8 +198,10 @@ impl ConversationStore {
         let conn = self.lock_conn().await;
         conn.execute(
             "INSERT INTO messages (id, conversation_id, role, content, timestamp, model, done,
-                                  request_id, images, eval_count, prompt_eval_count, total_duration, eval_duration, rag_sources, error)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
+                                  request_id, images, eval_count, prompt_eval_count,
+                                  completion_tokens, prompt_tokens, total_tokens,
+                                  total_duration, eval_duration, rag_sources, error)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)
              ON CONFLICT(id) DO UPDATE SET
                  content = excluded.content,
                  model = excluded.model,
@@ -204,6 +210,9 @@ impl ConversationStore {
                  images = excluded.images,
                  eval_count = excluded.eval_count,
                  prompt_eval_count = excluded.prompt_eval_count,
+                 completion_tokens = excluded.completion_tokens,
+                 prompt_tokens = excluded.prompt_tokens,
+                 total_tokens = excluded.total_tokens,
                  total_duration = excluded.total_duration,
                  eval_duration = excluded.eval_duration,
                  rag_sources = excluded.rag_sources,
@@ -217,13 +226,22 @@ impl ConversationStore {
                 &msg.model,
                 &msg.done,
                 &msg.request_id,
-                &msg.images.as_ref().map(|v| serde_json::to_string(v).unwrap_or_default()),
+                &msg.images
+                    .as_ref()
+                    .map(|v| serde_json::to_string(v).unwrap_or_default()),
                 &msg.eval_count,
                 &msg.prompt_eval_count,
+                &msg.completion_tokens,
+                &msg.prompt_tokens,
+                &msg.total_tokens,
                 &msg.total_duration,
                 &msg.eval_duration,
-                &msg.rag_sources.as_ref().map(|v| serde_json::to_string(v).unwrap_or_default()),
-                &msg.error.as_ref().map(|e| serde_json::to_string(e).unwrap_or_default()),
+                &msg.rag_sources
+                    .as_ref()
+                    .map(|v| serde_json::to_string(v).unwrap_or_default()),
+                &msg.error
+                    .as_ref()
+                    .map(|e| serde_json::to_string(e).unwrap_or_default()),
             ],
         )?;
         Ok(())
@@ -255,6 +273,7 @@ impl ConversationStore {
         let mut stmt = conn.prepare(
             "SELECT m.id, m.role, m.content, m.timestamp, m.model, m.done,
                     m.request_id, m.images, m.eval_count, m.prompt_eval_count,
+                    m.completion_tokens, m.prompt_tokens, m.total_tokens,
                     m.total_duration, m.eval_duration, m.rag_sources, m.error,
                     c.id AS conv_id, c.title AS conv_title
              FROM messages m
@@ -280,17 +299,20 @@ impl ConversationStore {
                             .map(|s| serde_json::from_str(&s).unwrap_or_default()),
                         eval_count: row.get(8)?,
                         prompt_eval_count: row.get(9)?,
-                        total_duration: row.get(10)?,
-                        eval_duration: row.get(11)?,
+                        completion_tokens: row.get(10)?,
+                        prompt_tokens: row.get(11)?,
+                        total_tokens: row.get(12)?,
+                        total_duration: row.get(13)?,
+                        eval_duration: row.get(14)?,
                         rag_sources: row
-                            .get::<_, Option<String>>(12)?
+                            .get::<_, Option<String>>(15)?
                             .map(|s| serde_json::from_str(&s).unwrap_or_default()),
                         error: row
-                            .get::<_, Option<String>>(13)?
+                            .get::<_, Option<String>>(16)?
                             .and_then(|s| serde_json::from_str::<MessageError>(&s).ok()),
                     },
-                    conversation_id: row.get(14)?,
-                    conversation_title: row.get(15)?,
+                    conversation_id: row.get(17)?,
+                    conversation_title: row.get(18)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -341,7 +363,10 @@ mod tests {
             done: None,
             request_id: None,
             eval_count: None,
+            completion_tokens: None,
             prompt_eval_count: None,
+            prompt_tokens: None,
+            total_tokens: None,
             total_duration: None,
             eval_duration: None,
             rag_sources: None,

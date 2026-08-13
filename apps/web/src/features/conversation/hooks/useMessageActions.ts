@@ -14,9 +14,10 @@ export function useMessageActions(message: Message) {
     setTimeout(() => setCopied(false), 2000);
   }, [message.content]);
 
-  const durationNs = message.evalDuration || message.totalDuration || 0;
   const tps =
-    message.evalCount != null && durationNs > 0 ? message.evalCount / (durationNs / 1e9) : 0;
+    message.evalCount != null && message.evalDuration != null && message.evalDuration > 0
+      ? message.evalCount / (message.evalDuration / 1e9)
+      : 0;
 
   return {
     copied,

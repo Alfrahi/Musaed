@@ -5,7 +5,7 @@
 use crate::migrations::MigrationStep;
 
 /// Latest migration version for conversations database
-pub const LATEST_VERSION: u32 = 4;
+pub const LATEST_VERSION: u32 = 5;
 
 /// Gets the migration step for a specific version
 pub fn get_migration(version: u32) -> Option<MigrationStep> {
@@ -87,6 +87,20 @@ pub fn get_migration(version: u32) -> Option<MigrationStep> {
             "Add prompt_eval_count column for context-window visualization",
             &["ALTER TABLE messages ADD COLUMN prompt_eval_count INTEGER DEFAULT NULL"],
             &["ALTER TABLE messages DROP COLUMN prompt_eval_count"],
+        )),
+        5 => Some(MigrationStep::new(
+            5,
+            "Add semantic token alias columns (completion_tokens, prompt_tokens, total_tokens)",
+            &[
+                "ALTER TABLE messages ADD COLUMN completion_tokens INTEGER DEFAULT NULL",
+                "ALTER TABLE messages ADD COLUMN prompt_tokens INTEGER DEFAULT NULL",
+                "ALTER TABLE messages ADD COLUMN total_tokens INTEGER DEFAULT NULL",
+            ],
+            &[
+                "ALTER TABLE messages DROP COLUMN completion_tokens",
+                "ALTER TABLE messages DROP COLUMN prompt_tokens",
+                "ALTER TABLE messages DROP COLUMN total_tokens",
+            ],
         )),
         _ => None,
     }

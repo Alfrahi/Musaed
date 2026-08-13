@@ -35,6 +35,9 @@ export const OllamaTokenSchema = z.object({
   promptEvalDuration: z.number().int().nullish(),
   evalCount: z.number().int().nullish(),
   evalDuration: z.number().int().nullish(),
+  completionTokens: z.number().int().nullish(),
+  promptTokens: z.number().int().nullish(),
+  totalTokens: z.number().int().nullish(),
   requestId: z.string().nullish(),
 });
 

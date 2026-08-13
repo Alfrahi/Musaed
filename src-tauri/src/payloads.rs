@@ -90,10 +90,14 @@ pub struct OllamaToken {
     pub prompt_eval_count: Option<u32>,
     #[serde(alias = "prompt_eval_duration")]
     pub prompt_eval_duration: Option<u64>,
-    #[serde(alias = "eval_count")]
+    #[serde(alias = "eval_count", alias = "completion_tokens")]
     pub eval_count: Option<u32>,
     #[serde(alias = "eval_duration")]
     pub eval_duration: Option<u64>,
+    #[serde(alias = "prompt_tokens")]
+    pub prompt_tokens: Option<u32>,
+    #[serde(alias = "total_tokens")]
+    pub total_tokens: Option<u32>,
     pub request_id: String,
 }
 
@@ -333,6 +337,8 @@ mod tests {
             prompt_eval_duration: None,
             eval_count: Some(50),
             eval_duration: None,
+            prompt_tokens: None,
+            total_tokens: None,
             request_id: "req-1".to_string(),
         };
         let json = serde_json::to_string(&token).unwrap();
@@ -384,6 +390,28 @@ mod tests {
         assert!(json.contains("\"promptEvalCount\":42"));
         assert!(json.contains("\"evalCount\":10"));
         assert!(json.contains("\"totalDuration\":5000000000"));
+    }
+
+    /// Verifies that `OllamaToken` can also deserialize the semantic alias
+    /// names (`completion_tokens`, `prompt_tokens`, `total_tokens`) — newer
+    /// Ollama versions may use these names instead of the legacy `eval_count`.
+    #[test]
+    fn ollama_token_deser_semantic_aliases() {
+        let json = serde_json::json!({
+            "model": "llama3",
+            "done": true,
+            "prompt_tokens": 42,
+            "completion_tokens": 10,
+            "total_tokens": 52,
+            "eval_duration": 500_000_000_u64,
+            "total_duration": 5_000_000_000_u64,
+            "requestId": "req-1",
+        });
+
+        let token: OllamaToken = serde_json::from_value(json).unwrap();
+        assert_eq!(token.prompt_tokens, Some(42));
+        assert_eq!(token.eval_count, Some(10));
+        assert_eq!(token.total_tokens, Some(52));
     }
 
     // --- OllamaModel / OllamaModelDetails tests ---

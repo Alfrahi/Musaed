@@ -88,6 +88,9 @@ const baseLabels = {
   assistant: 'Assistant',
   copy: 'Copy',
   tokens: 'Tokens',
+  outputTokens: 'Output',
+  promptTokens: 'Prompt',
+  totalTokens: 'Total',
 };
 const formatNumber = (n: number) => String(n);
 

@@ -45,6 +45,9 @@ interface MessageBubbleProps {
     assistant: string;
     copy: string;
     tokens: string;
+    outputTokens: string;
+    promptTokens: string;
+    totalTokens: string;
   };
   formatNumber: (num: number, options?: Intl.NumberFormatOptions) => string;
   /** Called when the user selects "Regenerate" from the context menu.
@@ -352,7 +355,13 @@ interface MessageFooterProps {
   isUser: boolean;
   isStopped: boolean;
   msgId: string;
-  labels: { copy: string; tokens: string };
+  labels: {
+    copy: string;
+    tokens: string;
+    outputTokens: string;
+    promptTokens: string;
+    totalTokens: string;
+  };
   message: Message;
   tps: number;
   formatNumber: (num: number, options?: Intl.NumberFormatOptions) => string;
@@ -382,17 +391,33 @@ const MessageFooter = ({
   t,
 }: MessageFooterProps) => {
   const evalCount = message.evalCount;
+  const promptTokens = message.promptTokens ?? message.promptEvalCount ?? null;
+  const completionTokens = message.completionTokens ?? evalCount ?? null;
   const hasStats = !isUser && evalCount != null;
 
   return (
     <div className="pbs-4 border-bs border-sidebar-border/50 flex items-center gap-4">
       {hasStats && evalCount != null && (
         <div className="caption-xs flex items-center gap-4 font-bold text-zinc-400">
+          {promptTokens != null && (
+            <span className="flex items-center gap-1.5">
+              <Cpu size={12} />
+              {formatNumber(promptTokens)}
+              {labels.promptTokens}
+            </span>
+          )}
           <span className="flex items-center gap-1.5">
             <Cpu size={12} />
             {formatNumber(evalCount)}
-            {labels.tokens}
+            {labels.outputTokens}
           </span>
+          {promptTokens != null && completionTokens != null && (
+            <span className="flex items-center gap-1.5">
+              <Cpu size={12} />
+              {formatNumber(promptTokens + completionTokens)}
+              {labels.totalTokens}
+            </span>
+          )}
           {tps > 0 && (
             <span className="text-primary flex items-center gap-1.5">
               <Zap size={12} />
@@ -575,7 +600,15 @@ interface MessageBubbleBodyProps {
   isStopped: boolean;
   isEditing: boolean;
   message: Message;
-  labels: { user: string; assistant: string; copy: string; tokens: string };
+  labels: {
+    user: string;
+    assistant: string;
+    copy: string;
+    tokens: string;
+    outputTokens: string;
+    promptTokens: string;
+    totalTokens: string;
+  };
   sourceReferences: SourceReference[];
   isExpanded: boolean;
   onToggleExpand: () => void;
