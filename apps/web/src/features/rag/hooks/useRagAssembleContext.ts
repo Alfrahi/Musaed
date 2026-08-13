@@ -19,7 +19,7 @@ export function useRagAssembleContext() {
   const ollamaUrl = useOllamaUrl();
 
   const assembleContext = useCallback(
-    async (query: string): Promise<AssembledContext | null> => {
+    async (query: string, maxChars?: number): Promise<AssembledContext | null> => {
       if (!activeProject) return null;
 
       try {
@@ -28,6 +28,7 @@ export function useRagAssembleContext() {
           query,
           topK: 10,
           baseUrl: ollamaUrl,
+          maxChars,
         });
         return result;
       } catch (err) {

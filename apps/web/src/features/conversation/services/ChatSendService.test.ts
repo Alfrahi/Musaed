@@ -345,6 +345,55 @@ describe('ChatSendService.sendMessage', () => {
     ]);
   });
 
+  it('passes a RAG char budget derived from numCtx to assembleChatRag', async () => {
+    // numCtx=4096 → total char capacity = 4096 * 3 = 12288.
+    // currentPrompt 'query' = 5 chars, no system prompt, no history.
+    // reserve = 200 (MIN_RAG_RESERVE_CHARS).
+    // ragMaxChars = min(20000, 12288 - 0 - 5 - 200) = 12083.
+    mockSelectResolvedParams.mockReturnValue({
+      ...DEFAULT_MODEL_PARAMS,
+      numCtx: 4096,
+    });
+
+    const service = createService();
+    await service.sendMessage({ input: 'query' });
+
+    expect(mockAssembleChatRag).toHaveBeenCalledWith('query', 12083);
+  });
+
+  it('caps RAG char budget at MAX_RAG_CONTEXT_CHARS for large numCtx', async () => {
+    // numCtx=100000 → total char capacity = 300000.
+    // Even with no history/prompt overhead, the budget is capped at 20000.
+    mockSelectResolvedParams.mockReturnValue({
+      ...DEFAULT_MODEL_PARAMS,
+      numCtx: 100000,
+    });
+
+    const service = createService();
+    await service.sendMessage({ input: 'query' });
+
+    expect(mockAssembleChatRag).toHaveBeenCalledWith('query', 20000);
+  });
+
+  it('passes undefined ragMaxChars when numCtx is too small for a budget', async () => {
+    // numCtx=100 → total char capacity = 300.
+    // currentPrompt 'a very long query that exceeds the tiny context' = 48 chars.
+    // 300 - 48 - 200 = 52 → still positive, so test with an even smaller numCtx.
+    mockSelectResolvedParams.mockReturnValue({
+      ...DEFAULT_MODEL_PARAMS,
+      numCtx: 50,
+    });
+
+    const service = createService();
+    await service.sendMessage({ input: 'a very long query that exceeds the tiny context' });
+
+    // 50 * 3 = 150 total char capacity. 150 - 48 - 200 = -98 → negative → undefined.
+    expect(mockAssembleChatRag).toHaveBeenCalledWith(
+      'a very long query that exceeds the tiny context',
+      undefined
+    );
+  });
+
   it('reduces history when ragTokenCount consumes most of the context budget', async () => {
     // With numCtx=4096 (DEFAULT_MODEL_PARAMS), a ragTokenCount of 3800
     // leaves only ~296 tokens for history + system + current prompt.

@@ -38,6 +38,20 @@ describe('useChatRag', () => {
     ]);
     expect(assembledContext).toBe('ctx');
     expect(ragTokenCount).toBe(2);
+    expect(assembleContextMock).toHaveBeenCalledWith('query', undefined);
+  });
+
+  it('forwards maxChars to the underlying assembleContext hook', async () => {
+    assembleContextMock.mockResolvedValue({
+      assembledContext: 'ctx',
+      citations: [],
+      tokenCount: 0,
+    });
+
+    const { result } = renderHook(() => useChatRag());
+    await act(() => result.current.assembleChatRag('query', 5000));
+
+    expect(assembleContextMock).toHaveBeenCalledWith('query', 5000);
   });
 
   it('returns undefined ragSources and assembledContext when RAG returns null (no active project)', async () => {
@@ -51,6 +65,7 @@ describe('useChatRag', () => {
     expect(ragSources).toBeUndefined();
     expect(assembledContext).toBeUndefined();
     expect(ragTokenCount).toBe(0);
+    expect(assembleContextMock).toHaveBeenCalledWith('query', undefined);
   });
 
   it('propagates RAG assembly failures (swallowed by rag feature hook)', async () => {

@@ -30,13 +30,13 @@ export type ChatRagResult = {
  * NOT block the chat send (see useChatSend ragIntegration test).
  */
 export function useChatRag(): {
-  assembleChatRag: (query: string) => Promise<ChatRagResult>;
+  assembleChatRag: (query: string, maxChars?: number) => Promise<ChatRagResult>;
 } {
   const { assembleContext } = useRagAssembleContext();
 
   const assembleChatRag = useCallback(
-    async (query: string): Promise<ChatRagResult> => {
-      const ragResult = await assembleContext(query);
+    async (query: string, maxChars?: number): Promise<ChatRagResult> => {
+      const ragResult = await assembleContext(query, maxChars);
       if (!ragResult) {
         return { ragSources: undefined, assembledContext: undefined, ragTokenCount: 0 };
       }
