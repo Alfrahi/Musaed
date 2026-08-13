@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { VALIDATION_LIMITS } from '../validation-limits';
 
 export const ChatMessageSchema = z.object({
   role: z.string(),
@@ -7,11 +8,31 @@ export const ChatMessageSchema = z.object({
 });
 
 export const ChatSettingsSchema = z.object({
-  temperature: z.number(),
-  topK: z.number(),
-  topP: z.number(),
-  numPredict: z.number(),
-  numCtx: z.number(),
+  temperature: z
+    .number()
+    .min(VALIDATION_LIMITS.TEMPERATURE_RANGE[0])
+    .max(VALIDATION_LIMITS.TEMPERATURE_RANGE[1])
+    .finite(),
+  topK: z
+    .number()
+    .int()
+    .min(VALIDATION_LIMITS.TOP_K_RANGE[0])
+    .max(VALIDATION_LIMITS.TOP_K_RANGE[1]),
+  topP: z
+    .number()
+    .min(VALIDATION_LIMITS.TOP_P_RANGE[0])
+    .max(VALIDATION_LIMITS.TOP_P_RANGE[1])
+    .finite(),
+  numPredict: z
+    .number()
+    .int()
+    .min(VALIDATION_LIMITS.NUM_PREDICT_RANGE[0])
+    .max(VALIDATION_LIMITS.NUM_PREDICT_RANGE[1]),
+  numCtx: z
+    .number()
+    .int()
+    .min(VALIDATION_LIMITS.NUM_CTX_RANGE[0])
+    .max(VALIDATION_LIMITS.NUM_CTX_RANGE[1]),
   stop: z.array(z.string()),
   systemPrompt: z.string(),
   ollamaUrl: z.string(),
@@ -36,11 +57,31 @@ export const ChatSettingsSchema = z.object({
  * workflow-wide, not model-specific.
  */
 export const ModelParamsSchema = z.object({
-  temperature: z.number(),
-  topK: z.number(),
-  topP: z.number(),
-  numCtx: z.number(),
-  numPredict: z.number(),
+  temperature: z
+    .number()
+    .min(VALIDATION_LIMITS.TEMPERATURE_RANGE[0])
+    .max(VALIDATION_LIMITS.TEMPERATURE_RANGE[1])
+    .finite(),
+  topK: z
+    .number()
+    .int()
+    .min(VALIDATION_LIMITS.TOP_K_RANGE[0])
+    .max(VALIDATION_LIMITS.TOP_K_RANGE[1]),
+  topP: z
+    .number()
+    .min(VALIDATION_LIMITS.TOP_P_RANGE[0])
+    .max(VALIDATION_LIMITS.TOP_P_RANGE[1])
+    .finite(),
+  numCtx: z
+    .number()
+    .int()
+    .min(VALIDATION_LIMITS.NUM_CTX_RANGE[0])
+    .max(VALIDATION_LIMITS.NUM_CTX_RANGE[1]),
+  numPredict: z
+    .number()
+    .int()
+    .min(VALIDATION_LIMITS.NUM_PREDICT_RANGE[0])
+    .max(VALIDATION_LIMITS.NUM_PREDICT_RANGE[1]),
 });
 export type ModelParams = z.infer<typeof ModelParamsSchema>;
 
