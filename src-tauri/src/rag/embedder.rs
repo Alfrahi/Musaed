@@ -55,7 +55,7 @@ struct EmbedResponse {
     #[allow(dead_code)]
     load_duration: Option<u64>,
     #[allow(dead_code)]
-    prompt_eval_count: Option<u64>,
+    prompt_eval_count: Option<u32>,
 }
 
 // ====================== EMBEDDER ======================

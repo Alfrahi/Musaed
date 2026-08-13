@@ -34,6 +34,7 @@ export const ChatOptionsSchema = z.object({
     .number()
     .min(VALIDATION_LIMITS.TEMPERATURE_RANGE[0])
     .max(VALIDATION_LIMITS.TEMPERATURE_RANGE[1])
+    .finite()
     .optional(),
   topK: z
     .number()
@@ -45,6 +46,7 @@ export const ChatOptionsSchema = z.object({
     .number()
     .min(VALIDATION_LIMITS.TOP_P_RANGE[0])
     .max(VALIDATION_LIMITS.TOP_P_RANGE[1])
+    .finite()
     .optional(),
   numPredict: z
     .number()
