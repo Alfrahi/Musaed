@@ -65,7 +65,13 @@ const MessageContent = ({ message, isUser }: { message: Message; isUser: boolean
       )}
 
       {parsed.main ? (
-        <MarkdownRenderer content={parsed.main} />
+        isStreaming ? (
+          <div className="break-words whitespace-pre-wrap" dir="auto">
+            {parsed.main}
+          </div>
+        ) : (
+          <MarkdownRenderer content={parsed.main} />
+        )
       ) : showLoading ? (
         <div className="flex gap-1.5 py-2" aria-hidden="true">
           {[0, 150, 300].map((delay) => (
