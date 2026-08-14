@@ -113,10 +113,7 @@ const useRehypePlugins = (enableLatex: boolean): PluggableList =>
       plugins.push([
         rehypeKatex,
         {
-          throwOnError: false,
           errorColor: '#ef4444',
-          strict: false,
-          output: 'html',
           trust: false,
         },
       ]);
