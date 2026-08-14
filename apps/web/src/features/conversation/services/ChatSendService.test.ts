@@ -2,7 +2,7 @@
 // No React rendering required; store access is mocked via getState().
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DEFAULT_MODEL_PARAMS } from '@musaed/contracts';
-import type { Message } from '@musaed/contracts';
+import type { Message, ModelParams } from '@musaed/contracts';
 
 // --- Hoisted mocks ---------------------------------------------------------
 // vi.mock factories are hoisted above all other code, so any variable they
@@ -64,7 +64,7 @@ const mockPersistUserMessage = vi.hoisted(() => vi.fn().mockResolvedValue(undefi
 const mockStopStream = vi.hoisted(() => vi.fn());
 const mockLogger = vi.hoisted(() => ({ error: vi.fn() }));
 const mockSelectResolvedParams = vi.hoisted(() =>
-  vi.fn((_model: string, _ctx: number | null, _dp: unknown) => DEFAULT_MODEL_PARAMS)
+  vi.fn((_model: string, _ctx: number | null, _dp: unknown): ModelParams => DEFAULT_MODEL_PARAMS)
 );
 
 // --- vi.mock calls (hoisted) -----------------------------------------------
