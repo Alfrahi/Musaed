@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import mermaid from 'mermaid';
 import DOMPurify from 'dompurify';
 
 import {
-  extractMermaidContent,
   detectUnsupportedDiagram,
   preprocessMermaidContent,
 } from '@/features/conversation/utils/mermaid-utils';
+import { initOnce, nextDiagramId } from '@/features/conversation/utils/mermaid-service';
 import { useSettingsStore } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
@@ -18,25 +18,6 @@ interface MermaidRendererProps {
   theme?: 'default' | 'dark' | 'base' | 'forest' | 'neutral';
   className?: string;
 }
-
-/** Initialize mermaid with theme-aware configuration. */
-const initMermaid = (theme: MermaidRendererProps['theme']) => {
-  const isDark = document.documentElement.classList.contains('dark');
-
-  mermaid.initialize({
-    startOnLoad: false,
-    theme: isDark ? 'dark' : theme,
-    securityLevel: 'strict',
-    suppressErrorRendering: true,
-    flowchart: { useMaxWidth: true, htmlLabels: true },
-    sequence: { useMaxWidth: true },
-    gantt: { useMaxWidth: true },
-    pie: { useMaxWidth: true },
-    mindmap: { useMaxWidth: true },
-    timeline: { useMaxWidth: true },
-    xyChart: { useMaxWidth: true },
-  });
-};
 
 /** Loading state while mermaid renders. */
 const MermaidLoading = ({ className, label }: { className: string; label: string }) => (
@@ -49,6 +30,30 @@ const MermaidLoading = ({ className, label }: { className: string; label: string
     </div>
   </div>
 );
+
+/** Parses an i18n string containing <code>...</code> tags into JSX with
+ *  styled <code> elements, avoiding dangerouslySetInnerHTML. */
+const RequirementNote = ({ note }: { note: string }) => {
+  const parts = note.split(/(<code>.*?<\/code>)/g);
+  return (
+    <p className="text-caption mbs-3 text-red-500/80">
+      {parts.map((part, i) => {
+        const codeMatch = part.match(/^<code>(.*)<\/code>$/);
+        if (codeMatch) {
+          return (
+            <code
+              key={i}
+              className="rounded bg-red-100 px-1 py-0.5 font-mono text-red-700 dark:bg-red-900/50 dark:text-red-400"
+            >
+              {codeMatch[1]}
+            </code>
+          );
+        }
+        return <React.Fragment key={i}>{part}</React.Fragment>;
+      })}
+    </p>
+  );
+};
 
 /** Error state with copy-source action. */
 const MermaidError = ({
@@ -83,11 +88,7 @@ const MermaidError = ({
     <pre className="text-caption overflow-auto rounded-md border border-red-100 bg-white p-4 font-mono whitespace-pre-wrap text-red-600 dark:border-red-900 dark:bg-zinc-950 dark:text-red-500">
       {error}
     </pre>
-    <p
-      className="text-caption mbs-3 text-red-500/80"
-      // Sanitize requirement note (i18n string) before injection
-      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(requirementNote) }}
-    />
+    <RequirementNote note={requirementNote} />
   </div>
 );
 
@@ -106,7 +107,6 @@ const MermaidDiagram = ({
   <div
     ref={containerRef}
     className={`mermaid-container shadow-native mbs-6 mbe-6 flex justify-center overflow-x-auto rounded-md border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950 ${className}`}
-    // Sanitize SVG output before injection
     dangerouslySetInnerHTML={{
       __html: DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } }),
     }}
@@ -114,17 +114,24 @@ const MermaidDiagram = ({
   />
 );
 
-/** Hook encapsulating mermaid rendering state and logic. */
-const useMermaidRender = (mermaidContent: string | null, theme: MermaidRendererProps['theme']) => {
+/** Hook encapsulating mermaid rendering state and logic.
+ *
+ *  Uses a per-instance generation ref to supersede stale async renders:
+ *  when content changes mid-render, the generation counter increments and
+ *  the in-flight render's result is discarded when it resolves. */
+const useMermaidRender = (mermaidContent: string, theme: MermaidRendererProps['theme']) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
+  const generationRef = useRef(0);
   const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
 
   const renderDiagram = useCallback(async () => {
-    if (!mermaidContent || isRendering) return;
+    if (!mermaidContent) return;
+
+    const generation = ++generationRef.current;
     setSvg('');
     setErrorMessage(null);
     setIsRendering(true);
@@ -137,37 +144,34 @@ const useMermaidRender = (mermaidContent: string | null, theme: MermaidRendererP
     }
 
     try {
-      initMermaid(theme);
-      const id = `mermaid-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      initOnce(theme);
+      const id = nextDiagramId();
       const processedContent = preprocessMermaidContent(mermaidContent);
       const { svg: renderedSvg } = await mermaid.render(id, processedContent);
+
+      if (generation !== generationRef.current) return;
+
       setSvg(renderedSvg);
       setErrorMessage(null);
     } catch (err: unknown) {
+      if (generation !== generationRef.current) return;
+
       let message = err instanceof Error ? err.message : String(err);
       if (message.includes('Parse error') || message.includes('Lexer error')) {
         message += `\n\n💡 ${t('settings.markdown.requirementNote').replace(/<\/?code>/g, '')}`;
       }
       setErrorMessage(message);
       setSvg('');
-      if (containerRef.current) containerRef.current.innerHTML = '';
     } finally {
-      setIsRendering(false);
+      if (generation === generationRef.current) {
+        setIsRendering(false);
+      }
     }
-  }, [mermaidContent, theme, t, isRendering]);
+  }, [mermaidContent, theme, t]);
 
   useEffect(() => {
     renderDiagram();
   }, [renderDiagram]);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    return () => {
-      setSvg('');
-      setErrorMessage(null);
-      if (container) container.innerHTML = '';
-    };
-  }, []);
 
   return { containerRef, svg, errorMessage, isRendering, t };
 };
@@ -177,7 +181,7 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
   theme = 'default',
   className = '',
 }) => {
-  const mermaidContent = useMemo(() => extractMermaidContent(content), [content]);
+  const mermaidContent = content.trim();
   const { containerRef, svg, errorMessage, isRendering, t } = useMermaidRender(
     mermaidContent,
     theme

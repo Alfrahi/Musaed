@@ -1,0 +1,244 @@
+import { render, screen, waitFor, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+const { mockMermaidRender, mockMermaidInitialize } = vi.hoisted(() => ({
+  mockMermaidRender: vi.fn(),
+  mockMermaidInitialize: vi.fn(),
+}));
+
+vi.mock('mermaid', () => ({
+  default: {
+    initialize: mockMermaidInitialize,
+    render: mockMermaidRender,
+  },
+}));
+
+const { mockT } = vi.hoisted(() => ({
+  mockT: vi.fn((key: string) => key),
+}));
+
+vi.mock('@/lib/i18n', () => ({
+  useTranslation: () => ({
+    t: mockT,
+    formatNumber: (n: number) => String(n),
+    formatDate: (d: number | Date) => String(d),
+    isRtl: false,
+    formatFileSize: (b: number) => `${b} B`,
+  }),
+}));
+
+vi.mock('@/store', () => ({
+  useSettingsStore: (selector: (s: { globalSettings: { language: string } }) => string) =>
+    selector({ globalSettings: { language: 'en' } }),
+}));
+
+vi.mock('dompurify', () => ({
+  default: {
+    sanitize: (svg: string) => svg,
+  },
+}));
+
+import MermaidRenderer from './MermaidRenderer';
+import { resetMermaidService } from '@/features/conversation/utils/mermaid-service';
+
+const validSvg = '<svg>diagram</svg>';
+const flowchartContent = 'flowchart TD\n  A --> B';
+
+describe('MermaidRenderer', () => {
+  beforeEach(() => {
+    mockMermaidInitialize.mockClear();
+    mockMermaidRender.mockReset();
+    mockT.mockReset();
+    mockT.mockImplementation((key: string) => key);
+    resetMermaidService();
+  });
+
+  afterEach(() => {
+    resetMermaidService();
+  });
+
+  it('renders a valid diagram as sanitized SVG', async () => {
+    mockMermaidRender.mockResolvedValue({ svg: validSvg });
+
+    render(<MermaidRenderer content={flowchartContent} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('a11y.mermaidDiagram')).toBeTruthy();
+    });
+    expect(screen.getByLabelText('a11y.mermaidDiagram').innerHTML).toBe(validSvg);
+  });
+
+  it('shows loading state while rendering', async () => {
+    let resolveRender: (value: { svg: string }) => void;
+    mockMermaidRender.mockReturnValue(
+      new Promise<{ svg: string }>((resolve) => {
+        resolveRender = resolve;
+      })
+    );
+
+    render(<MermaidRenderer content={flowchartContent} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('settings.markdown.renderingDiagram')).toBeTruthy();
+    });
+
+    await act(async () => {
+      resolveRender!({ svg: validSvg });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('a11y.mermaidDiagram')).toBeTruthy();
+    });
+  });
+
+  it('shows error state for invalid syntax', async () => {
+    mockMermaidRender.mockRejectedValue(new Error('Parse error: unexpected token'));
+
+    render(<MermaidRenderer content="invalid mermaid syntax" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('settings.markdown.mermaidError')).toBeTruthy();
+    });
+    expect(screen.getByText(/Parse error: unexpected token/)).toBeTruthy();
+  });
+
+  it('renders error with requirement note containing <code> tags as JSX', async () => {
+    mockT.mockImplementation((key: string) => {
+      if (key === 'settings.markdown.requirementNote') {
+        return 'requirementDiagram is strict — relationships must use keywords like <code>satisfies</code>, <code>verifies</code>, etc.';
+      }
+      return key;
+    });
+    mockMermaidRender.mockRejectedValue(new Error('Parse error'));
+
+    render(<MermaidRenderer content="invalid" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('settings.markdown.mermaidError')).toBeTruthy();
+    });
+
+    expect(screen.getByText('satisfies')).toBeTruthy();
+    expect(screen.getByText('verifies')).toBeTruthy();
+  });
+
+  it('processes content through preprocessMermaidContent before rendering', async () => {
+    mockMermaidRender.mockResolvedValue({ svg: validSvg });
+
+    render(<MermaidRenderer content={flowchartContent} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('a11y.mermaidDiagram')).toBeTruthy();
+    });
+    expect(mockMermaidRender).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.stringContaining('flowchart TD')
+    );
+  });
+
+  it('returns null for empty content', () => {
+    const { container } = render(<MermaidRenderer content="   " />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('re-renders when content changes (not blocked by in-flight render)', async () => {
+    const firstContent = 'sequenceDiagram\n  Alice->>Bob: Hello';
+    const secondContent = 'sequenceDiagram\n  Alice->>Bob: Hi';
+    const secondSvg = '<svg>second</svg>';
+
+    let resolveSecond: (value: { svg: string }) => void;
+
+    mockMermaidRender.mockImplementation((_id: string, content: string) => {
+      if (content.includes('Hello')) {
+        return new Promise<{ svg: string }>(() => {
+          // Never resolves — simulates an in-flight render
+        });
+      }
+      return new Promise<{ svg: string }>((resolve) => {
+        resolveSecond = resolve;
+      });
+    });
+
+    const { rerender } = render(<MermaidRenderer content={firstContent} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('settings.markdown.renderingDiagram')).toBeTruthy();
+    });
+
+    rerender(<MermaidRenderer content={secondContent} />);
+
+    await act(async () => {
+      resolveSecond!({ svg: secondSvg });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('a11y.mermaidDiagram')).toBeTruthy();
+      expect(screen.getByLabelText('a11y.mermaidDiagram').innerHTML).toBe(secondSvg);
+    });
+  });
+
+  it('discards stale render result when content changes mid-render', async () => {
+    const firstContent = 'sequenceDiagram\n  Alice->>Bob: Hello';
+    const secondContent = 'sequenceDiagram\n  Alice->>Bob: Hi';
+    const firstSvg = '<svg>stale</svg>';
+    const secondSvg = '<svg>fresh</svg>';
+
+    let resolveFirst: (value: { svg: string }) => void;
+    let resolveSecond: (value: { svg: string }) => void;
+
+    mockMermaidRender.mockImplementation((_id: string, content: string) => {
+      if (content.includes('Hello')) {
+        return new Promise<{ svg: string }>((resolve) => {
+          resolveFirst = resolve;
+        });
+      }
+      return new Promise<{ svg: string }>((resolve) => {
+        resolveSecond = resolve;
+      });
+    });
+
+    const { rerender } = render(<MermaidRenderer content={firstContent} />);
+
+    rerender(<MermaidRenderer content={secondContent} />);
+
+    await act(async () => {
+      resolveSecond!({ svg: secondSvg });
+    });
+
+    await act(async () => {
+      resolveFirst!({ svg: firstSvg });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('a11y.mermaidDiagram')).toBeTruthy();
+      expect(screen.getByLabelText('a11y.mermaidDiagram').innerHTML).toBe(secondSvg);
+    });
+  });
+
+  it('initializes mermaid only once for multiple renders with same theme', async () => {
+    mockMermaidRender.mockResolvedValue({ svg: validSvg });
+
+    const { rerender } = render(<MermaidRenderer content={flowchartContent} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('a11y.mermaidDiagram')).toBeTruthy();
+    });
+
+    rerender(<MermaidRenderer content="sequenceDiagram\n  Alice->>Bob: Hi" />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('a11y.mermaidDiagram')).toBeTruthy();
+    });
+
+    expect(mockMermaidInitialize).toHaveBeenCalledTimes(1);
+  });
+
+  it('provides a copy source button in error state', async () => {
+    mockMermaidRender.mockRejectedValue(new Error('Parse error'));
+
+    render(<MermaidRenderer content={flowchartContent} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/settings\.markdown\.copySource/)).toBeTruthy();
+    });
+  });
+});

@@ -2,54 +2,6 @@
  * Utility functions for Mermaid diagram preprocessing and validation.
  */
 
-const SUPPORTED_DIAGRAM_TYPES = [
-  'flowchart',
-  'graph',
-  'sequenceDiagram',
-  'classDiagram',
-  'stateDiagram',
-  'stateDiagram-v2',
-  'erDiagram',
-  'journey',
-  'gantt',
-  'pie',
-  'mindmap',
-  'timeline',
-  'gitGraph',
-  'requirementDiagram',
-  'architecture',
-  'block',
-  'c4Diagram',
-  'xyChart',
-  'sankey-beta',
-  'quadrantChart',
-  'radarChart',
-  'barChart',
-  'packetDiagram',
-  'blockDiagram',
-  'dependencyGraph',
-] as const;
-
-/**
- * Extracts mermaid content from a string and determines if it's a valid diagram.
- */
-export function extractMermaidContent(content: string): string {
-  if (!content?.trim()) return '';
-
-  let match = content.match(/```mermaid\s*([\s\S]*?)```/i);
-  if (!match) {
-    match = content.match(/```\s*([\s\S]*?)```/);
-  }
-
-  if (match?.[1]) return match[1].trim();
-
-  const looksLikeMermaid = SUPPORTED_DIAGRAM_TYPES.some(
-    (type) => content.trim().startsWith(type) || content.includes(type)
-  );
-
-  return looksLikeMermaid ? content.trim() : '';
-}
-
 /**
  * Detects diagram types that are known to be unsupported or require special handling.
  */
