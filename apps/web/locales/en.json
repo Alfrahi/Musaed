@@ -447,7 +447,7 @@
     "actualSize": "Actual Size"
   },
   "info": {
-    "openInfo": "Open application information",
+    "openInfo": "Open {appName} information",
     "description": "Musaed is a privacy-centric desktop interface for Ollama, designed for local-first AI interactions.",
     "github": "View on GitHub",
     "website": "Visit Website",

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useId } from 'react';
 import { Send, Square, ImageIcon, Paperclip } from 'lucide-react';
 import { useChatInput } from '@/features/conversation/hooks/useChatInput';
 import { stopStream } from '@/store/coordination';
@@ -12,6 +12,7 @@ import { ModelSelector } from '@/features/library';
 import { RagContextBadge } from '@/features/rag';
 import { Button } from '@/components/ui/button';
 import TokenContextBar from './TokenContextBar';
+import type { FileAttachment } from '@/features/conversation/hooks/useAttachmentUtils';
 
 /** Attach action buttons (image + file upload). */
 const AttachButtons = ({
@@ -104,7 +105,7 @@ const ToolbarRight = ({
   sendAriaLabel: string;
 }) => (
   <div className="flex items-center gap-3">
-    <span className="caption-xs hidden font-mono font-bold tracking-widest text-zinc-400 uppercase sm:block">
+    <span className="caption-xs hidden font-mono font-bold tracking-widest text-zinc-600 uppercase sm:block dark:text-zinc-400">
       {shortcutLabel}
     </span>
     {isStreaming ? (
@@ -113,6 +114,105 @@ const ToolbarRight = ({
       <SendButton disabled={disabled} ariaLabel={sendAriaLabel} />
     )}
   </div>
+);
+
+/** Form content for the input area (extracted to keep InputArea under lint limit). */
+const InputAreaForm = ({
+  textareaRef,
+  textareaId,
+  input,
+  setInput,
+  handleKeyDown,
+  isDragOver,
+  onSend,
+  handleTauriImageUpload,
+  handleTauriFileUpload,
+  canSend,
+  isStreaming,
+  handleAbort,
+  shortcutLabel,
+  t,
+  images,
+  files,
+  removeImage,
+  removeFile,
+}: {
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  textareaId: string;
+  input: string;
+  setInput: (v: string) => void;
+  handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  isDragOver: boolean;
+  onSend: () => void;
+  handleTauriImageUpload: () => void;
+  handleTauriFileUpload: () => void;
+  canSend: boolean;
+  isStreaming: boolean;
+  handleAbort: () => void;
+  shortcutLabel: string;
+  t: (key: string) => string;
+  images: string[];
+  files: FileAttachment[];
+  removeImage: (index: number) => void;
+  removeFile: (index: number) => void;
+}) => (
+  <>
+    <AttachmentPreview
+      images={images}
+      files={files}
+      onRemoveImage={removeImage}
+      onRemoveFile={removeFile}
+    />
+
+    <RagContextBadge />
+
+    <div
+      className={`border-sidebar-border shadow-raised duration-normal focus-within:shadow-raised rounded-md border bg-white p-1 ring-1 ring-zinc-200 transition-all focus-within:ring-blue-500/30 max-md:p-0.5 dark:bg-zinc-900 dark:ring-zinc-800 ${isDragOver ? 'ring-offset-background ring-2 ring-blue-500 ring-offset-2' : ''}`}
+    >
+      {isDragOver && (
+        <div className="caption-md pbs-2 pointer-events-none px-3 text-center text-blue-600 dark:text-blue-400">
+          {t('a11y.dropFiles')}
+        </div>
+      )}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSend();
+        }}
+        className="flex flex-col"
+        data-testid="input-area-form"
+      >
+        <textarea
+          ref={textareaRef}
+          id={textareaId}
+          name="chat-input"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={t('chat.askAnything')}
+          className="text-body max-h-48 min-h-[60px] w-full resize-none border-none bg-transparent p-3 font-sans shadow-none outline-none placeholder:text-zinc-400 focus-visible:ring-0 focus-visible:outline-none"
+          rows={1}
+        />
+        <div className="pbe-2 flex items-center justify-between ps-2 pe-2">
+          <ToolbarLeft
+            onImage={handleTauriImageUpload}
+            onFile={handleTauriFileUpload}
+            imageLabel={t('chat.attachImage')}
+            fileLabel={t('common.files')}
+          />
+          <TokenContextBar />
+          <ToolbarRight
+            isStreaming={isStreaming}
+            disabled={!canSend}
+            onAbort={handleAbort}
+            shortcutLabel={shortcutLabel}
+            abortLabel={t('chat.stop')}
+            sendAriaLabel={t('a11y.sendMessage')}
+          />
+        </div>
+      </form>
+    </div>
+  </>
 );
 
 /**
@@ -165,64 +265,32 @@ export const InputArea = () => {
       ? t('chat.shortcutSend')
       : t('chat.shortcutMultiLine');
 
-  const canSend = selectedModel && (input.trim() || images.length > 0 || files.length > 0);
+  const canSend = !!selectedModel && (input.trim() !== '' || images.length > 0 || files.length > 0);
+  const textareaId = useId();
 
   return (
     <div className="border-bs border-sidebar-border bg-background shrink-0 p-4">
       <div className="ms-auto me-auto max-w-4xl space-y-3">
-        <AttachmentPreview
+        <InputAreaForm
+          textareaRef={textareaRef}
+          textareaId={textareaId}
+          input={input}
+          setInput={setInput}
+          handleKeyDown={handleKeyDown}
+          isDragOver={isDragOver}
+          onSend={onSend}
+          handleTauriImageUpload={handleTauriImageUpload}
+          handleTauriFileUpload={handleTauriFileUpload}
+          canSend={canSend}
+          isStreaming={isStreaming}
+          handleAbort={handleAbort}
+          shortcutLabel={shortcutLabel}
+          t={t}
           images={images}
           files={files}
-          onRemoveImage={removeImage}
-          onRemoveFile={removeFile}
+          removeImage={removeImage}
+          removeFile={removeFile}
         />
-
-        <RagContextBadge />
-
-        <div
-          className={`border-sidebar-border shadow-raised duration-normal focus-within:shadow-raised rounded-md border bg-white p-1 ring-1 ring-zinc-200 transition-all focus-within:ring-blue-500/30 max-md:p-0.5 dark:bg-zinc-900 dark:ring-zinc-800 ${isDragOver ? 'ring-offset-background ring-2 ring-blue-500 ring-offset-2' : ''}`}
-        >
-          {isDragOver && (
-            <div className="caption-md pbs-2 pointer-events-none px-3 text-center text-blue-600 dark:text-blue-400">
-              {t('a11y.dropFiles')}
-            </div>
-          )}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              onSend();
-            }}
-            className="flex flex-col"
-            data-testid="input-area-form"
-          >
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={t('chat.askAnything')}
-              className="text-body max-h-48 min-h-[60px] w-full resize-none border-none bg-transparent p-3 font-sans shadow-none outline-none placeholder:text-zinc-400 focus-visible:ring-0 focus-visible:outline-none"
-              rows={1}
-            />
-            <div className="pbe-2 flex items-center justify-between ps-2 pe-2">
-              <ToolbarLeft
-                onImage={handleTauriImageUpload}
-                onFile={handleTauriFileUpload}
-                imageLabel={t('chat.attachImage')}
-                fileLabel={t('common.files')}
-              />
-              <TokenContextBar />
-              <ToolbarRight
-                isStreaming={isStreaming}
-                disabled={!canSend}
-                onAbort={handleAbort}
-                shortcutLabel={shortcutLabel}
-                abortLabel={t('chat.stop')}
-                sendAriaLabel={t('a11y.sendMessage')}
-              />
-            </div>
-          </form>
-        </div>
       </div>
     </div>
   );

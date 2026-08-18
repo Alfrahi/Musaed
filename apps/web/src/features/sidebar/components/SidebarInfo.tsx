@@ -19,7 +19,7 @@ const SidebarInfo = ({ trailing }: { trailing?: React.ReactNode }) => {
         variant="ghost"
         onClick={() => openModal('info')}
         className="group flex min-w-0 flex-1 cursor-pointer items-center justify-start gap-3 p-0 text-start hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
-        aria-label={t('info.openInfo')}
+        aria-label={t('info.openInfo', { appName: t('common.appName') })}
       >
         <div className="shadow-native flex h-8 w-8 shrink-0 items-center justify-center bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900">
           <Info size={16} />

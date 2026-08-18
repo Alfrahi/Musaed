@@ -15,6 +15,7 @@ import type { ConversationMetadata } from '@/store/conversation-store';
 
 interface ConversationItemProps {
   conversation: ConversationMetadata;
+  _conversationId?: string;
 }
 
 /** Inline rename input for conversation title. */
@@ -114,7 +115,7 @@ interface ConversationRowProps {
   shouldAnimate: boolean;
   rowRef: React.RefObject<HTMLDivElement | null>;
   isActive: boolean;
-  conversationId: string;
+  _conversationId?: string;
   onClick: () => void;
   onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
   onContextMenu: (e: React.MouseEvent<HTMLDivElement>) => void;
@@ -138,7 +139,7 @@ const ConversationRow = ({
   shouldAnimate,
   rowRef,
   isActive,
-  conversationId,
+  _conversationId,
   onClick,
   onKeyDown,
   onContextMenu,
@@ -146,11 +147,6 @@ const ConversationRow = ({
 }: ConversationRowProps) => {
   const sharedProps = {
     ref: rowRef,
-    role: 'option' as const,
-    'aria-current': isActive ? ('page' as const) : undefined,
-    'aria-selected': isActive || undefined,
-    tabIndex: isActive ? 0 : -1,
-    id: `conversation-option-${conversationId}`,
     onClick,
     onKeyDown,
     onContextMenu,
@@ -180,7 +176,7 @@ const ConversationTitle = ({ conversation }: { conversation: ConversationMetadat
   </div>
 );
 
-const ConversationItem = ({ conversation }: ConversationItemProps) => {
+const ConversationItem = ({ conversation, _conversationId }: ConversationItemProps) => {
   const currentConversationId = useCurrentConversationId();
   const setCurrentConversationId = useSetCurrentConversationId();
   const language = useLanguage();
@@ -269,7 +265,7 @@ const ConversationItem = ({ conversation }: ConversationItemProps) => {
       shouldAnimate={shouldAnimate}
       rowRef={rowRef}
       isActive={isActive}
-      conversationId={conversation.id}
+      _conversationId={conversation.id}
       onClick={() => setCurrentConversationId(conversation.id)}
       onKeyDown={handleKeyDown}
       onContextMenu={handleContextMenu}
