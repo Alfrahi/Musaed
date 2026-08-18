@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
 import { useSearchQuery, useSetSearchQuery } from '@/store/conversation-store';
 import { useLanguage } from '@/store';
@@ -16,6 +16,7 @@ const SearchInput = () => {
   // Local state for debounced input
   const [inputValue, setInputValue] = useState(searchQuery);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputId = useId();
 
   // Sync input when searchQuery changes externally (e.g., cleared by another component)
   useEffect(() => {
@@ -45,6 +46,8 @@ const SearchInput = () => {
         aria-hidden="true"
       />
       <Input
+        id={inputId}
+        name="search-chats"
         type="text"
         placeholder={t('sidebar.searchChats')}
         value={inputValue}

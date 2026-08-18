@@ -24,6 +24,7 @@ const SelectorTrigger = ({
   onClick,
   onKeyDown,
   triggerRef,
+  ariaLabel,
 }: {
   triggerId: string;
   listboxId: string;
@@ -34,6 +35,7 @@ const SelectorTrigger = ({
   onClick: () => void;
   onKeyDown: (e: React.KeyboardEvent<HTMLButtonElement>) => void;
   triggerRef: React.RefObject<HTMLButtonElement | null>;
+  ariaLabel: string;
 }) => (
   <button
     ref={triggerRef}
@@ -44,6 +46,7 @@ const SelectorTrigger = ({
     aria-expanded={isOpen}
     aria-controls={listboxId}
     aria-activedescendant={activeOptionId}
+    aria-label={selectedModel ? undefined : ariaLabel}
     onClick={onClick}
     onKeyDown={onKeyDown}
     className={cn(
@@ -56,7 +59,11 @@ const SelectorTrigger = ({
       size={16}
       className={cn('duration-slow transition-transform', isOpen && 'rotate-90')}
     />
-    <span className="max-w-[150px] truncate">{selectedModel || placeholder}</span>
+    <span
+      className={cn('max-w-[150px] truncate', !selectedModel && 'text-zinc-600 dark:text-zinc-300')}
+    >
+      {selectedModel || placeholder}
+    </span>
     <ChevronDown
       size={14}
       className={cn('duration-normal transition-transform', isOpen && 'rotate-180')}
@@ -419,6 +426,7 @@ const ModelSelector = () => {
           onClick={() => setIsOpen((o) => !o)}
           onKeyDown={handleTriggerKeyDown}
           triggerRef={triggerRef}
+          ariaLabel={t('a11y.selectModel')}
         />
         <RefreshButton
           onClick={() => fetchModels(true)}

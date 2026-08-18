@@ -70,12 +70,14 @@ const SidebarItemContent = ({
   filteredConversations,
   handleClearAll,
   t,
+  _currentConversationId,
 }: {
   item: SidebarItem;
   searchQuery: string;
   filteredConversations: ConversationMetadata[];
   handleClearAll: () => void;
   t: (key: string) => string;
+  _currentConversationId?: string | null;
 }) => {
   if (item.type === 'header') {
     return (
@@ -194,6 +196,7 @@ const ChatsTabContent = ({
   loadMore,
   handleListboxKeyDown,
   handleClearAll,
+  currentConversationId,
   t,
 }: {
   searchQuery: string;
@@ -202,6 +205,7 @@ const ChatsTabContent = ({
   loadMore: () => void;
   handleListboxKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
   handleClearAll: () => void;
+  currentConversationId: string | null;
   t: (key: string) => string;
 }) => {
   const [showShadow, setShowShadow] = useState(false);
@@ -209,14 +213,11 @@ const ChatsTabContent = ({
   return (
     <>
       <SearchInput />
-      <nav aria-label={t('a11y.conversationList')} className="relative flex-1 overflow-hidden">
-        <div
-          role="listbox"
-          aria-label={t('a11y.conversationList')}
-          tabIndex={-1}
-          onKeyDown={handleListboxKeyDown}
-          className="h-full"
-        >
+      <nav
+        aria-label={t('a11y.conversationList')}
+        className="relative h-full flex-1 overflow-hidden"
+      >
+        <div tabIndex={-1} onKeyDown={handleListboxKeyDown} className="h-full">
           <Virtuoso
             style={{ height: '100%' }}
             data={virtualItems}
@@ -228,6 +229,7 @@ const ChatsTabContent = ({
                 filteredConversations={filteredConversations}
                 handleClearAll={handleClearAll}
                 t={t}
+                _currentConversationId={currentConversationId}
               />
             )}
             endReached={() => {
@@ -407,6 +409,7 @@ const TabContent = ({
   loadMore,
   handleListboxKeyDown,
   handleClearAll,
+  currentConversationId,
   t,
 }: {
   activeTab: 'chats' | 'projects';
@@ -416,6 +419,7 @@ const TabContent = ({
   loadMore: () => void;
   handleListboxKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
   handleClearAll: () => void;
+  currentConversationId: string | null;
   t: (key: string) => string;
 }) =>
   activeTab === 'chats' ? (
@@ -426,6 +430,7 @@ const TabContent = ({
       loadMore={loadMore}
       handleListboxKeyDown={handleListboxKeyDown}
       handleClearAll={handleClearAll}
+      currentConversationId={currentConversationId}
       t={t}
     />
   ) : (
@@ -450,6 +455,7 @@ const ExpandedSidebar = ({
   handleClearAll,
   onCollapse,
   collapseLabel,
+  currentConversationId,
   t,
 }: {
   activeTab: 'chats' | 'projects';
@@ -466,6 +472,7 @@ const ExpandedSidebar = ({
   handleClearAll: () => void;
   onCollapse: () => void;
   collapseLabel: string;
+  currentConversationId: string | null;
   t: (key: string) => string;
 }) => (
   <div
@@ -484,6 +491,7 @@ const ExpandedSidebar = ({
       loadMore={loadMore}
       handleListboxKeyDown={handleListboxKeyDown}
       handleClearAll={handleClearAll}
+      currentConversationId={currentConversationId}
       t={t}
     />
     <AddProjectSlot show={showAddProject} onClose={() => setShowAddProject(false)} />
@@ -599,6 +607,7 @@ const Sidebar = () => {
       handleClearAll={handleClearAll}
       onCollapse={() => setSidebarCollapsed(true)}
       collapseLabel={t('a11y.collapseSidebar')}
+      currentConversationId={currentConversationId}
       t={t}
     />
   );

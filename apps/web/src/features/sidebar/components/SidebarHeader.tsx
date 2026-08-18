@@ -20,11 +20,11 @@ const SidebarHeader = ({ activeTab, onCreateNew }: SidebarHeaderProps) => {
       <Button
         variant="secondary"
         onClick={onCreateNew}
-        className="text-caption shadow-native h-8 w-full gap-2 rounded-md ps-3 pe-3 font-bold tracking-normal uppercase"
+        className="shadow-native text-caption h-8 w-full gap-2 rounded-md ps-3 pe-3 font-bold tracking-normal uppercase"
       >
         <Plus size={14} />
         {activeTab === 'chats' ? t('sidebar.newChat') : t('sidebar.newProject')}
-        <span className="caption-xs font-normal tracking-normal text-zinc-400">
+        <span className="font-normal tracking-normal text-white dark:text-zinc-900">
           {isMac() ? '⌘N' : 'Ctrl+N'}
         </span>
       </Button>
