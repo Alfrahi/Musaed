@@ -93,7 +93,7 @@ const CodeBlock = ({ language, value }: CodeBlockProps) => {
       </div>
 
       <div className="focus-ring overflow-x-auto p-4 outline-none">
-        <pre className="text-body font-mono whitespace-pre text-zinc-300">
+        <pre dir="ltr" className="text-body font-mono whitespace-pre text-zinc-300">
           <code>{value}</code>
         </pre>
       </div>

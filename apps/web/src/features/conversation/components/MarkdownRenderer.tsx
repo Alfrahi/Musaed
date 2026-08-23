@@ -13,6 +13,7 @@ import 'katex/dist/katex.min.css';
 
 import CodeBlock from './CodeBlock';
 import { openerApi } from '@/lib/ipc';
+import { resolveAllowedHref } from '@/lib/url-allowlist';
 import { useSettingsStore } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 
@@ -66,27 +67,6 @@ const normalizeLatexDelimiters = (content: string): string => {
 
   return transformed;
 };
-
-/** Sanitizes hrefs to only allow safe protocols in a Tauri desktop environment. */
-const ALLOWED_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
-
-function resolveAllowedHref(href: string | undefined | null): string | null {
-  if (!href?.trim()) return null;
-
-  try {
-    const base =
-      typeof window !== 'undefined' && window.location?.href
-        ? window.location.href
-        : 'https://invalid.invalid/';
-
-    const url = new URL(href, base);
-    if (ALLOWED_LINK_PROTOCOLS.has(url.protocol)) return url.toString();
-  } catch {
-    /* Invalid URL → treat as unsafe */
-  }
-
-  return null;
-}
 
 /** Process content — apply LaTeX normalization if enabled. */
 const useProcessedContent = (content: string, enableLatex: boolean) =>
