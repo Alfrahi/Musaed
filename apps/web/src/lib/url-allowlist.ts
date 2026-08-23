@@ -55,8 +55,39 @@ export const OPENER_ALLOWED_PATTERNS: readonly RegExp[] = [
 ];
 
 /**
- * Checks whether a URL matches the opener allowlist.
+ * Checks whether a URL matches the opener allowlist. Used by MarkdownRenderer
+ * to resolve safe markdown hrefs and by the opener plugin to enforce the same
+ * allowlist on click.
  */
 export function isOpenerUrlAllowed(url: string): boolean {
   return OPENER_ALLOWED_PATTERNS.some((pattern) => pattern.test(url));
+}
+
+/**
+ * Allowed protocols for markdown links rendered in the conversation view.
+ * Kept intentionally broad (http/https/mailto) at this layer; the opener
+ * plugin narrows to the allowlist patterns above at the click boundary.
+ */
+export const ALLOWED_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
+
+/**
+ * Sanitizes an href to only allow safe protocols and return a safe, resolved
+ * URL string for rendering as a link. Returns null for unsafe/invalid URLs.
+ */
+export function resolveAllowedHref(href: string | undefined | null): string | null {
+  if (!href?.trim()) return null;
+
+  try {
+    const base =
+      typeof window !== 'undefined' && window.location?.href
+        ? window.location.href
+        : 'https://invalid.invalid/';
+
+    const url = new URL(href, base);
+    if (ALLOWED_LINK_PROTOCOLS.has(url.protocol)) return url.toString();
+  } catch {
+    /* Invalid URL -> treat as unsafe */
+  }
+
+  return null;
 }
