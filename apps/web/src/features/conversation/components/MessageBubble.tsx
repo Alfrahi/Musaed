@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import {
   Copy,
@@ -312,20 +312,28 @@ const StoppedStatusLine = ({ isStopped, msgId, onContinue, t }: StoppedStatusLin
  * under the max-lines-per-function lint gate.
  */
 function useMessageContextMenu(
-  handleCopy: () => void,
+  handleCopy: (overrideText?: string) => void,
   msgId: string,
   onRegenerate: ((msgId: string) => void) | undefined,
   onDelete: (() => void) | undefined,
   t: (key: string) => string
 ) {
+  // Selection captured when the menu opens, so Copy honors an in-bubble
+  // selection instead of always copying the whole message.
+  const selectedTextRef = useRef('');
   const { showContextMenu } = useContextMenu({
-    onCopy: handleCopy,
+    onCopy: () => handleCopy(selectedTextRef.current || undefined),
     onRegenerate: onRegenerate ? () => onRegenerate(msgId) : undefined,
     onDelete,
   });
   return useCallback(
     async (e: React.MouseEvent<HTMLDivElement>) => {
       e.preventDefault();
+      const selection = window.getSelection();
+      selectedTextRef.current =
+        selection && !selection.isCollapsed && e.currentTarget.contains(selection.anchorNode)
+          ? selection.toString()
+          : '';
       showContextMenu('message', e.clientX, e.clientY, {
         copy: t('contextMenu.message.copy'),
         regenerate: t('contextMenu.message.regenerate'),
@@ -366,7 +374,7 @@ interface MessageFooterProps {
   tps: number;
   formatNumber: (num: number, options?: Intl.NumberFormatOptions) => string;
   copied: boolean;
-  handleCopy: () => void;
+  handleCopy: (overrideText?: string) => void;
   onRegenerate?: (msgId: string) => void;
   onContinue?: (msgId: string) => void;
   onStartEdit?: () => void;
@@ -440,7 +448,7 @@ const MessageFooter = ({
         <Button
           variant="ghost"
           size="icon"
-          onClick={handleCopy}
+          onClick={() => handleCopy()}
           className="hover:text-foreground cursor-pointer p-1 text-zinc-400"
           aria-label={labels.copy}
         >
@@ -617,7 +625,7 @@ interface MessageBubbleBodyProps {
   tps: number;
   formatNumber: (num: number, options?: Intl.NumberFormatOptions) => string;
   copied: boolean;
-  handleCopy: () => void;
+  handleCopy: (overrideText?: string) => void;
   onRegenerate?: (msgId: string) => void;
   onContinue?: (msgId: string) => void;
   onStartEdit?: () => void;
