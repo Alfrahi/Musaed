@@ -9,9 +9,9 @@ import rehypeHighlight from 'rehype-highlight';
 import rehypeKatex from 'rehype-katex';
 import type { PluggableList } from 'unified';
 import 'highlight.js/styles/github-dark.css';
-import 'katex/dist/katex.min.css';
 
 import CodeBlock from './CodeBlock';
+import remarkLatexNormalize from '@/features/conversation/utils/remark-latex-normalize';
 import { openerApi } from '@/lib/ipc';
 import { resolveAllowedHref } from '@/lib/url-allowlist';
 import { useSettingsStore } from '@/store';
@@ -32,56 +32,14 @@ interface MarkdownRendererProps {
   content: string;
 }
 
-/**
- * Normalizes LaTeX delimiters from various LLM outputs into standard $...$ and $$...$$ format.
- */
-const normalizeLatexDelimiters = (content: string): string => {
-  if (!content?.trim()) return content;
-
-  let transformed = content;
-
-  transformed = transformed.replace(
-    /\\{1,2}\[\s*([\s\S]*?)\s*\\{1,2}\]/g,
-    (_, inner) => `\n$$\n${inner.trim()}\n$$\n`
-  );
-
-  transformed = transformed.replace(
-    /\\{1,2}\(\s*([\s\S]*?)\s*\\{1,2}\)/g,
-    (_, inner) => `$${inner.trim()}$`
-  );
-
-  transformed = transformed.replace(
-    /(?<![\w$\\])\(\s*([^)]*?[\^_={}+\-*/\\][^)]*?)\s*\)(?![\w$\\])/g,
-    (_, inner) => `$${inner.trim()}$`
-  );
-
-  transformed = transformed.replace(
-    /^\s*\[\s*([\s\S]*?)\s*\]\s*$/gm,
-    (_, inner) => `\n$$\n${inner.trim()}\n$$\n`
-  );
-
-  transformed = transformed.replace(/\\left\s*\[/g, '\\left[');
-  transformed = transformed.replace(/\\right\s*\]/g, '\\right]');
-  transformed = transformed.replace(/\\left\s*\{/g, '\\left\\{');
-  transformed = transformed.replace(/\\right\s*\}/g, '\\right\\}');
-
-  return transformed;
-};
-
-/** Process content — apply LaTeX normalization if enabled. */
-const useProcessedContent = (content: string, enableLatex: boolean) =>
-  useMemo(() => {
-    if (!enableLatex) return content;
-    let normalized = normalizeLatexDelimiters(content);
-    normalized = normalized.replace(/\n{3,}/g, '\n\n');
-    return normalized;
-  }, [content, enableLatex]);
-
 /** Build remark plugins list based on settings. */
 const useRemarkPlugins = (enableLatex: boolean): PluggableList =>
   useMemo(() => {
     const plugins: PluggableList = [remarkGfm];
-    if (enableLatex) plugins.push([remarkMath, { singleDollarTextMath: true }]);
+    if (enableLatex) {
+      plugins.push(remarkLatexNormalize);
+      plugins.push([remarkMath, { singleDollarTextMath: true }]);
+    }
     return plugins;
   }, [enableLatex]);
 
@@ -177,7 +135,6 @@ const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
   const globalSettings = useSettingsStore((s) => s.globalSettings);
   const { t } = useTranslation(globalSettings.language);
 
-  const processedContent = useProcessedContent(content, globalSettings.enableLatex);
   const remarkPlugins = useRemarkPlugins(globalSettings.enableLatex);
   const rehypePlugins = useRehypePlugins(globalSettings.enableLatex);
 
@@ -202,7 +159,7 @@ const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
       rehypePlugins={rehypePlugins}
       components={components}
     >
-      {processedContent}
+      {content}
     </ReactMarkdown>
   );
 };
