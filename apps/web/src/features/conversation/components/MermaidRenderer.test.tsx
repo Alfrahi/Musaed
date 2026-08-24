@@ -41,6 +41,7 @@ vi.mock('dompurify', () => ({
 
 import MermaidRenderer from './MermaidRenderer';
 import { resetMermaidService } from '@/features/conversation/utils/mermaid-service';
+import { clearRenderCache } from './MermaidRenderer';
 
 const validSvg = '<svg>diagram</svg>';
 const flowchartContent = 'flowchart TD\n  A --> B';
@@ -52,10 +53,12 @@ describe('MermaidRenderer', () => {
     mockT.mockReset();
     mockT.mockImplementation((key: string) => key);
     resetMermaidService();
+    clearRenderCache();
   });
 
   afterEach(() => {
     resetMermaidService();
+    clearRenderCache();
   });
 
   it('renders a valid diagram as sanitized SVG', async () => {
@@ -245,5 +248,51 @@ describe('MermaidRenderer', () => {
     await waitFor(() => {
       expect(screen.getByText(/settings\.markdown\.copySource/)).toBeTruthy();
     });
+  });
+
+  it('caches rendered SVG and avoids re-rendering on same content', async () => {
+    mockMermaidRender.mockResolvedValue({ svg: validSvg });
+
+    const { rerender } = render(<MermaidRenderer content={flowchartContent} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('a11y.mermaidDiagram')).toBeTruthy();
+    });
+
+    // First render calls mermaid.render
+    expect(mockMermaidRender).toHaveBeenCalledTimes(1);
+
+    // Re-render with same content should use cache
+    rerender(<MermaidRenderer content={flowchartContent} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('a11y.mermaidDiagram')).toBeTruthy();
+    });
+
+    // mermaid.render should NOT be called again (cached)
+    expect(mockMermaidRender).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-renders when content changes (cache miss)', async () => {
+    mockMermaidRender.mockResolvedValue({ svg: validSvg });
+
+    const { rerender } = render(<MermaidRenderer content={flowchartContent} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('a11y.mermaidDiagram')).toBeTruthy();
+    });
+
+    expect(mockMermaidRender).toHaveBeenCalledTimes(1);
+
+    // Change content
+    const newContent = 'sequenceDiagram\n  Alice->>Bob: Hi';
+    rerender(<MermaidRenderer content={newContent} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('a11y.mermaidDiagram')).toBeTruthy();
+    });
+
+    // mermaid.render should be called again (cache miss)
+    expect(mockMermaidRender).toHaveBeenCalledTimes(2);
   });
 });
