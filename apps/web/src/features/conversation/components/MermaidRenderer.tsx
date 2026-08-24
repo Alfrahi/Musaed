@@ -8,8 +8,12 @@ import {
   detectUnsupportedDiagram,
   preprocessMermaidContent,
 } from '@/features/conversation/utils/mermaid-utils';
-import { initOnce, nextDiagramId } from '@/features/conversation/utils/mermaid-service';
-import { useSettingsStore } from '@/store';
+import {
+  initOnce,
+  resetForThemeChange,
+  nextDiagramId,
+} from '@/features/conversation/utils/mermaid-service';
+import { useSettingsStore, useGlobalSettings } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 
@@ -108,7 +112,7 @@ const MermaidDiagram = ({
     ref={containerRef}
     className={`mermaid-container shadow-native mbs-6 mbe-6 flex justify-center overflow-x-auto rounded-md border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950 ${className}`}
     dangerouslySetInnerHTML={{
-      __html: DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } }),
+      __html: DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: false } }),
     }}
     aria-label={ariaLabel}
   />
@@ -119,7 +123,11 @@ const MermaidDiagram = ({
  *  Uses a per-instance generation ref to supersede stale async renders:
  *  when content changes mid-render, the generation counter increments and
  *  the in-flight render's result is discarded when it resolves. */
-const useMermaidRender = (mermaidContent: string, theme: MermaidRendererProps['theme']) => {
+const useMermaidRender = (
+  mermaidContent: string,
+  theme: MermaidRendererProps['theme'],
+  isDark: boolean
+) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -144,7 +152,7 @@ const useMermaidRender = (mermaidContent: string, theme: MermaidRendererProps['t
     }
 
     try {
-      initOnce(theme);
+      initOnce(theme, isDark);
       const id = nextDiagramId();
       const processedContent = preprocessMermaidContent(mermaidContent);
       const { svg: renderedSvg } = await mermaid.render(id, processedContent);
@@ -167,7 +175,7 @@ const useMermaidRender = (mermaidContent: string, theme: MermaidRendererProps['t
         setIsRendering(false);
       }
     }
-  }, [mermaidContent, theme, t]);
+  }, [mermaidContent, theme, isDark, t]);
 
   useEffect(() => {
     renderDiagram();
@@ -176,16 +184,36 @@ const useMermaidRender = (mermaidContent: string, theme: MermaidRendererProps['t
   return { containerRef, svg, errorMessage, isRendering, t };
 };
 
-const MermaidRenderer: React.FC<MermaidRendererProps> = ({
-  content,
-  theme = 'default',
-  className = '',
-}) => {
+/** Maps settings theme ('light' | 'dark' | 'system') to mermaid theme + isDark flag. */
+const resolveMermaidTheme = (
+  settingsTheme: 'light' | 'dark' | 'system'
+): { mermaidTheme: 'default' | 'dark' | 'base' | 'forest' | 'neutral'; isDark: boolean } => {
+  if (settingsTheme === 'dark') {
+    return { mermaidTheme: 'dark', isDark: true };
+  }
+  if (settingsTheme === 'light') {
+    return { mermaidTheme: 'default', isDark: false };
+  }
+  // system - detect from document
+  const isDark =
+    typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+  return { mermaidTheme: isDark ? 'dark' : 'default', isDark };
+};
+
+const MermaidRenderer: React.FC<MermaidRendererProps> = ({ content, className = '' }) => {
   const mermaidContent = content.trim();
+  const globalSettings = useGlobalSettings();
+  const { mermaidTheme, isDark } = resolveMermaidTheme(globalSettings.theme);
   const { containerRef, svg, errorMessage, isRendering, t } = useMermaidRender(
     mermaidContent,
-    theme
+    mermaidTheme,
+    isDark
   );
+
+  // Reset mermaid when theme changes
+  useEffect(() => {
+    resetForThemeChange(mermaidTheme, isDark);
+  }, [mermaidTheme, isDark]);
 
   const copySource = useCallback(() => {
     if (mermaidContent) {
