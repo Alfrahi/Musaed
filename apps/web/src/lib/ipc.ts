@@ -1498,7 +1498,20 @@ export const contextMenuApi = {
     x: number,
     y: number,
     labels: Partial<ContextMenuLabels>
-  ) => callInternal('cmd_context_menu_show', { kind, x, y, labels }),
+  ) =>
+    callInternal('cmd_context_menu_show', {
+      kind,
+      x,
+      y,
+      labels: {
+        rename: '',
+        export: '',
+        delete: '',
+        copy: '',
+        regenerate: '',
+        ...labels,
+      },
+    }),
 };
 
 /**

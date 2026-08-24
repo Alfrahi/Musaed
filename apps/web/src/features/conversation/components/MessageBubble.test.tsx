@@ -1,8 +1,12 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import type { Message } from '@musaed/contracts';
 import MessageBubble from './MessageBubble';
 import { dialogApi } from '@/lib/ipc';
+
+// Shared spy for useMessageActions.handleCopy so tests can assert what the
+// copy path received (selection override vs. undefined full-message copy).
+const { mockHandleCopy } = vi.hoisted(() => ({ mockHandleCopy: vi.fn() }));
 
 // The citation chip mounts FileChunkViewer in a modal. Mock it to a stub so
 // the test doesn't pull in the full RAG IPC pipeline.
@@ -28,12 +32,15 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@/features/conversation/hooks/useMessageActions', () => ({
-  useMessageActions: () => ({ copied: false, handleCopy: vi.fn(), tps: null }),
+  useMessageActions: () => ({ copied: false, handleCopy: mockHandleCopy, tps: null }),
 }));
 
 vi.mock('@/lib/ipc', () => ({
   dialogApi: {
     ask: vi.fn().mockResolvedValue(true),
+  },
+  contextMenuApi: {
+    show: vi.fn().mockResolvedValue({ selectedItem: 'copy' }),
   },
 }));
 
@@ -536,5 +543,64 @@ describe('MessageBubble - delete action', () => {
       expect(dialogApi.ask).toHaveBeenCalled();
     });
     expect(onDeleteMessage).not.toHaveBeenCalled();
+  });
+});
+
+describe('MessageBubble - context menu copy', () => {
+  const copyableMessage: Message = {
+    id: 'msg-copy',
+    role: 'assistant',
+    content: 'selectable sentence',
+    timestamp: Date.now(),
+  };
+
+  const renderCopyable = () =>
+    render(
+      <MessageBubble message={copyableMessage} labels={baseLabels} formatNumber={formatNumber} />
+    );
+
+  beforeEach(() => {
+    mockHandleCopy.mockClear();
+    window.getSelection()?.removeAllRanges();
+  });
+
+  it('copies only the selected text when Copy is chosen from the context menu', async () => {
+    renderCopyable();
+
+    const textEl = screen.getByText('selectable sentence');
+    const range = document.createRange();
+    range.selectNodeContents(textEl);
+    window.getSelection()?.addRange(range);
+
+    fireEvent.contextMenu(textEl);
+
+    await waitFor(() => {
+      expect(mockHandleCopy).toHaveBeenCalledWith('selectable sentence');
+    });
+  });
+
+  it('falls back to whole-message copy (no override) when nothing is selected', async () => {
+    renderCopyable();
+
+    fireEvent.contextMenu(screen.getByText('selectable sentence'));
+
+    await waitFor(() => {
+      expect(mockHandleCopy).toHaveBeenCalledWith(undefined);
+    });
+  });
+
+  it('ignores selections outside the bubble and copies the whole message', async () => {
+    renderCopyable();
+
+    // Select unrelated text outside the bubble (document body)…
+    const range = document.createRange();
+    range.selectNodeContents(document.body);
+    window.getSelection()?.addRange(range);
+
+    fireEvent.contextMenu(screen.getByText('selectable sentence'));
+
+    await waitFor(() => {
+      expect(mockHandleCopy).toHaveBeenCalledWith(undefined);
+    });
   });
 });

@@ -217,7 +217,13 @@ const ChatsTabContent = ({
         aria-label={t('a11y.conversationList')}
         className="relative h-full flex-1 overflow-hidden"
       >
-        <div tabIndex={-1} onKeyDown={handleListboxKeyDown} className="h-full">
+        <div
+          role="listbox"
+          aria-label={t('a11y.conversationList')}
+          tabIndex={-1}
+          onKeyDown={handleListboxKeyDown}
+          className="h-full"
+        >
           <Virtuoso
             style={{ height: '100%' }}
             data={virtualItems}

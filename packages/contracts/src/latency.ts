@@ -59,10 +59,10 @@ export const IPC_LATENCY_BUDGETS: Readonly<Record<string, LatencyBudgetMs>> = {
   cmd_trace_start: 500,
   cmd_trace_complete: 500,
   cmd_trace_get_context: 500,
-  /** UI dialogs — user-blocking, fast required */
-  cmd_dialog_ask: 1000,
-  cmd_dialog_open_file: 1000,
-  cmd_dialog_save_file: 1000,
+  /** UI dialogs — user-interactive, blocks until user dismisses native dialog */
+  cmd_dialog_ask: 10_000,
+  cmd_dialog_open_file: 60_000,
+  cmd_dialog_save_file: 60_000,
   cmd_opener_open_url: 1000,
   /** RAG management — lightweight metadata ops */
   cmd_rag_list_projects: 2000,
@@ -103,10 +103,10 @@ export const IPC_LATENCY_BUDGETS: Readonly<Record<string, LatencyBudgetMs>> = {
   cmd_rollback_migrations: 10000,
   cmd_get_migration_status: 2000,
   cmd_list_migrations: 1000,
-  /** Native context-menu popup — user-blocking, must appear near-instantly.
-   * Selection wait is bounded by user reaction time, but the show path itself
-   * (menu build + popup_at) must stay well under a second. */
-  cmd_context_menu_show: 1000,
+  /** Native context-menu popup — user-blocking, blocks until user selects or
+   * dismisses. The show path (menu build + popup_at) is near-instant, but the
+   * call awaits user interaction, so the budget must accommodate reaction time. */
+  cmd_context_menu_show: 30_000,
   /** App metadata — read-only version string read from compile-time embedded
    * tauri.conf.json. Must return near-instantly. */
   cmd_get_app_version: 500,
