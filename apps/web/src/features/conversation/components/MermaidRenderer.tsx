@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import mermaid from 'mermaid';
 import DOMPurify from 'dompurify';
 
@@ -16,6 +16,24 @@ import {
 import { useSettingsStore, useGlobalSettings } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
+
+/** Simple content hash for caching (FNV-1a 32-bit). */
+function contentHash(str: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = (hash * 0x01000193) >>> 0;
+  }
+  return hash.toString(16);
+}
+
+/** Per-session render cache: contentHash -> { svg, errorMessage }. */
+const renderCache = new Map<string, { svg: string; errorMessage: string | null }>();
+
+/** Clear the render cache (for testing). */
+export function clearRenderCache(): void {
+  renderCache.clear();
+}
 
 interface MermaidRendererProps {
   content: string;
@@ -122,7 +140,9 @@ const MermaidDiagram = ({
  *
  *  Uses a per-instance generation ref to supersede stale async renders:
  *  when content changes mid-render, the generation counter increments and
- *  the in-flight render's result is discarded when it resolves. */
+ *  the in-flight render's result is discarded when it resolves.
+ *  Caches rendered SVGs by content hash + theme + isDark to avoid re-rendering
+ *  identical diagrams. */
 const useMermaidRender = (
   mermaidContent: string,
   theme: MermaidRendererProps['theme'],
@@ -136,8 +156,33 @@ const useMermaidRender = (
   const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
 
+  // Cache key includes theme and isDark since they affect output
+  const cacheKey = useMemo(
+    () => `${contentHash(mermaidContent)}|${theme}|${isDark}`,
+    [mermaidContent, theme, isDark]
+  );
+
+  // Check cache on mount and when cache key changes
+  useEffect(() => {
+    const cached = renderCache.get(cacheKey);
+    if (cached) {
+      setSvg(cached.svg);
+      setErrorMessage(cached.errorMessage);
+      setIsRendering(false);
+    }
+  }, [cacheKey]);
+
   const renderDiagram = useCallback(async () => {
     if (!mermaidContent) return;
+
+    // Check cache again in case it was populated by another instance
+    const cached = renderCache.get(cacheKey);
+    if (cached) {
+      setSvg(cached.svg);
+      setErrorMessage(cached.errorMessage);
+      setIsRendering(false);
+      return;
+    }
 
     const generation = ++generationRef.current;
     setSvg('');
@@ -161,6 +206,8 @@ const useMermaidRender = (
 
       setSvg(renderedSvg);
       setErrorMessage(null);
+      // Cache successful render
+      renderCache.set(cacheKey, { svg: renderedSvg, errorMessage: null });
     } catch (err: unknown) {
       if (generation !== generationRef.current) return;
 
@@ -170,12 +217,14 @@ const useMermaidRender = (
       }
       setErrorMessage(message);
       setSvg('');
+      // Cache error to avoid re-trying
+      renderCache.set(cacheKey, { svg: '', errorMessage: message });
     } finally {
       if (generation === generationRef.current) {
         setIsRendering(false);
       }
     }
-  }, [mermaidContent, theme, isDark, t]);
+  }, [mermaidContent, theme, isDark, t, cacheKey]);
 
   useEffect(() => {
     renderDiagram();
