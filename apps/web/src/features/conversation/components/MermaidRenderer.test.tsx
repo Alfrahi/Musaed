@@ -30,6 +30,7 @@ vi.mock('@/lib/i18n', () => ({
 vi.mock('@/store', () => ({
   useSettingsStore: (selector: (s: { globalSettings: { language: string } }) => string) =>
     selector({ globalSettings: { language: 'en' } }),
+  useGlobalSettings: () => ({ theme: 'system', language: 'en' }),
 }));
 
 vi.mock('dompurify', () => ({
@@ -214,7 +215,7 @@ describe('MermaidRenderer', () => {
     });
   });
 
-  it('initializes mermaid only once for multiple renders with same theme', async () => {
+  it('initializes mermaid on mount and re-initializes on theme change', async () => {
     mockMermaidRender.mockResolvedValue({ svg: validSvg });
 
     const { rerender } = render(<MermaidRenderer content={flowchartContent} />);
@@ -223,13 +224,17 @@ describe('MermaidRenderer', () => {
       expect(screen.getByLabelText('a11y.mermaidDiagram')).toBeTruthy();
     });
 
+    // First render: initOnce + resetForThemeChange on mount = 2 calls
+    expect(mockMermaidInitialize).toHaveBeenCalledTimes(2);
+
     rerender(<MermaidRenderer content="sequenceDiagram\n  Alice->>Bob: Hi" />);
 
     await waitFor(() => {
       expect(screen.getByLabelText('a11y.mermaidDiagram')).toBeTruthy();
     });
 
-    expect(mockMermaidInitialize).toHaveBeenCalledTimes(1);
+    // Second render with same theme: no additional calls
+    expect(mockMermaidInitialize).toHaveBeenCalledTimes(2);
   });
 
   it('provides a copy source button in error state', async () => {

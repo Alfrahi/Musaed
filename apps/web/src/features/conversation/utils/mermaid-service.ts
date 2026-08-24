@@ -10,11 +10,7 @@ interface InitializedState {
 let initialized: InitializedState | null = null;
 let idCounter = 0;
 
-const isDarkMode = (): boolean =>
-  typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
-
-const buildInitConfig = (theme: MermaidTheme | 'dark') => {
-  const isDark = isDarkMode();
+const buildInitConfig = (theme: MermaidTheme | 'dark', isDark: boolean) => {
   return {
     startOnLoad: false,
     theme: isDark ? 'dark' : theme,
@@ -30,15 +26,20 @@ const buildInitConfig = (theme: MermaidTheme | 'dark') => {
   };
 };
 
-export function initOnce(theme: MermaidTheme = 'default'): void {
-  const isDark = isDarkMode();
+export function initOnce(theme: MermaidTheme = 'default', isDark: boolean): void {
   const resolvedTheme = isDark ? 'dark' : theme;
 
   if (initialized && initialized.isDark === isDark && initialized.theme === resolvedTheme) {
     return;
   }
 
-  mermaid.initialize(buildInitConfig(theme));
+  mermaid.initialize(buildInitConfig(resolvedTheme, isDark));
+  initialized = { theme: resolvedTheme, isDark };
+}
+
+export function resetForThemeChange(theme: MermaidTheme = 'default', isDark: boolean): void {
+  const resolvedTheme = isDark ? 'dark' : theme;
+  mermaid.initialize(buildInitConfig(resolvedTheme, isDark));
   initialized = { theme: resolvedTheme, isDark };
 }
 

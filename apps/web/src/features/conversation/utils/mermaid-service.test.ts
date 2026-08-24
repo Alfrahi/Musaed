@@ -12,7 +12,12 @@ vi.mock('mermaid', () => ({
   },
 }));
 
-import { initOnce, nextDiagramId, resetMermaidService } from './mermaid-service';
+import {
+  initOnce,
+  nextDiagramId,
+  resetMermaidService,
+  resetForThemeChange,
+} from './mermaid-service';
 
 describe('mermaid-service', () => {
   beforeEach(() => {
@@ -26,7 +31,7 @@ describe('mermaid-service', () => {
 
   describe('initOnce', () => {
     it('calls mermaid.initialize on first call', () => {
-      initOnce('default');
+      initOnce('default', false);
       expect(mockInitialize).toHaveBeenCalledTimes(1);
       expect(mockInitialize).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -37,26 +42,33 @@ describe('mermaid-service', () => {
       );
     });
 
-    it('does not re-initialize when called again with the same theme', () => {
-      initOnce('default');
-      initOnce('default');
+    it('does not re-initialize when called again with the same theme and isDark', () => {
+      initOnce('default', false);
+      initOnce('default', false);
       expect(mockInitialize).toHaveBeenCalledTimes(1);
     });
 
     it('re-initializes when theme changes', () => {
-      initOnce('default');
-      initOnce('forest');
+      initOnce('default', false);
+      initOnce('forest', false);
       expect(mockInitialize).toHaveBeenCalledTimes(2);
     });
 
-    it('re-initializes when dark mode toggles', () => {
-      document.documentElement.classList.add('dark');
-      initOnce('default');
+    it('re-initializes when isDark changes', () => {
+      initOnce('default', false);
+      initOnce('default', true);
+      expect(mockInitialize).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('resetForThemeChange', () => {
+    it('re-initializes mermaid with new theme and isDark', () => {
+      initOnce('default', false);
       expect(mockInitialize).toHaveBeenCalledTimes(1);
 
-      document.documentElement.classList.remove('dark');
-      initOnce('default');
+      resetForThemeChange('dark', true);
       expect(mockInitialize).toHaveBeenCalledTimes(2);
+      expect(mockInitialize).toHaveBeenLastCalledWith(expect.objectContaining({ theme: 'dark' }));
     });
   });
 
@@ -78,14 +90,14 @@ describe('mermaid-service', () => {
 
   describe('resetMermaidService', () => {
     it('allows re-initialization after reset', () => {
-      initOnce('default');
+      initOnce('default', false);
       expect(mockInitialize).toHaveBeenCalledTimes(1);
 
-      initOnce('default');
+      initOnce('default', false);
       expect(mockInitialize).toHaveBeenCalledTimes(1);
 
       resetMermaidService();
-      initOnce('default');
+      initOnce('default', false);
       expect(mockInitialize).toHaveBeenCalledTimes(2);
     });
   });
