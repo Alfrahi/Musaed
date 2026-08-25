@@ -221,6 +221,44 @@ describe('mermaid-utils', () => {
     });
   });
 
+  describe('preprocessMermaidContent - gitGraph', () => {
+    it('declares a branch on first checkout of an unknown branch', () => {
+      const input = `gitGraph
+    commit
+    checkout main
+    commit
+    checkout feature/auth
+    commit`;
+      const result = preprocessMermaidContent(input);
+      expect(result).toContain('branch feature/auth');
+      expect(result.indexOf('branch feature/auth')).toBeLessThan(
+        result.indexOf('checkout feature/auth')
+      );
+    });
+
+    it('leaves fully valid gitGraph sources unchanged', () => {
+      const input = `gitGraph
+    branch dev
+    checkout dev
+    commit
+    checkout main
+    merge dev`;
+      const result = preprocessMermaidContent(input);
+      expect(result).toBe(input);
+    });
+
+    it('injects each missing branch only once', () => {
+      const input = `gitGraph
+    checkout dev
+    commit
+    checkout main
+    commit
+    checkout dev`;
+      const result = preprocessMermaidContent(input);
+      expect(result.match(/branch dev/g)).toHaveLength(1);
+    });
+  });
+
   describe('preprocessMermaidContent - gantt', () => {
     it('adds dateFormat if missing', () => {
       const input = 'gantt\n  section A\n  task : 5d';
@@ -239,6 +277,29 @@ describe('mermaid-utils', () => {
       const result = preprocessMermaidContent(input);
       // Note: regex captures bare tasks and uses default 7d if no duration captured
       expect(result).toContain('My Task : 2026-01-01, 7d');
+    });
+
+    it('preserves canonical task lines with ids and dates', () => {
+      const input =
+        'gantt\n  dateFormat YYYY-MM-DD\n  axisFormat %Y-%m-%d\n  Task 1 :t1, 2022-01-01, 2022-01-31';
+      const result = preprocessMermaidContent(input);
+      expect(result).toContain('Task 1 :t1, 2022-01-01, 2022-01-31');
+    });
+
+    it('converts pseudo-syntax project/task rows to canonical tasks', () => {
+      const input = `gantt
+    title Project Schedule
+    project Task 1,2022-01-01..2022-01-31
+    task Task 2,2022-02-01..2022-02-28
+    task Task 3,2022-03-01..2022-03-31`;
+      const result = preprocessMermaidContent(input);
+      expect(result).toContain('Task 1 :2022-01-01, 2022-01-31');
+      expect(result).toContain('Task 2 :2022-02-01, 2022-02-28');
+      expect(result).toContain('Task 3 :2022-03-01, 2022-03-31');
+      expect(result).not.toMatch(
+        /^[ \t]*(?:project|task)\b[ \t]+[^,\n]+,[ \t]*\d{4}-\d{2}-\d{2}\.\./im
+      );
+      expect(result).not.toContain('..');
     });
   });
 
