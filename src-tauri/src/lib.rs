@@ -53,6 +53,18 @@ pub fn run() {
     // Intercept window close: if background tasks (chat stream, model pull,
     // RAG indexing) are active, hide to tray instead of exiting.
     builder = builder.on_window_event(|window, event| {
+        // Files the user physically drops onto the window are a Rust-side
+        // trust anchor: register them as filesystem grants so attachment
+        // reads via cmd_fs_* stay authorized without webview-controlled
+        // path approval.
+        if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event {
+            if let Some(grants) = window
+                .app_handle()
+                .try_state::<fs_commands::FsAccessGrants>()
+            {
+                grants.grant_paths(paths.iter().map(|p| p.to_string_lossy().into_owned()));
+            }
+        }
         tray::on_window_event(window, event);
     });
 
@@ -95,6 +107,10 @@ pub fn run() {
         let rag_store = rag::store::RagStore::open(&db_path)
             .map_err(|e| format!("Failed to initialize RAG store: {}", e))?;
         app.manage(Arc::new(RwLock::new(rag_store)));
+
+        // Filesystem grants for cmd_fs_* — populated only by native file
+        // dialogs and window drag-drop events, never by webview IPC.
+        app.manage(fs_commands::FsAccessGrants::default());
 
         log::info!("RAG store initialized at {:?}", db_path);
 

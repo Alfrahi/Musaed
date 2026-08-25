@@ -1,6 +1,7 @@
+use crate::fs_commands::FsAccessGrants;
 use crate::payloads::ApiResponse;
 use serde::Deserialize;
-use tauri::AppHandle;
+use tauri::{AppHandle, State};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 
 /// Shows a native confirmation dialog to the user and returns their response.
@@ -70,14 +71,18 @@ pub struct FileFilter {
 ///
 /// # Returns
 /// `ApiResponse<Option<Vec<String>>>` — selected path(s), or None if cancelled
+///
+/// Selected paths are registered as filesystem access grants, authorizing
+/// subsequent `cmd_fs_*` calls against them (STANDARDS §16).
 #[tauri::command]
 pub async fn cmd_dialog_open_file(
     app: AppHandle,
+    grants: State<'_, FsAccessGrants>,
     filters: Option<Vec<FileFilter>>,
     multiple: Option<bool>,
     directory: Option<bool>,
     default_path: Option<String>,
-) -> ApiResponse<Option<Vec<String>>> {
+) -> Result<ApiResponse<Option<Vec<String>>>, String> {
     let mut builder = app.dialog().file();
 
     if let Some(f) = filters {
@@ -123,16 +128,19 @@ pub async fn cmd_dialog_open_file(
     };
 
     match result {
-        Some(paths) if !paths.is_empty() => ApiResponse {
-            success: true,
-            data: Some(Some(paths)),
-            error: None,
-        },
-        _ => ApiResponse {
+        Some(paths) if !paths.is_empty() => {
+            grants.grant_paths(paths.iter().cloned());
+            Ok(ApiResponse {
+                success: true,
+                data: Some(Some(paths)),
+                error: None,
+            })
+        }
+        _ => Ok(ApiResponse {
             success: true,
             data: Some(None),
             error: None,
-        },
+        }),
     }
 }
 
@@ -147,12 +155,16 @@ pub async fn cmd_dialog_open_file(
 ///
 /// # Returns
 /// `ApiResponse<Option<String>>` — the selected save path, or None if cancelled
+///
+/// The selected path is registered as a filesystem access grant,
+/// authorizing the subsequent `cmd_fs_write_text_file` call (STANDARDS §16).
 #[tauri::command]
 pub async fn cmd_dialog_save_file(
     app: AppHandle,
+    grants: State<'_, FsAccessGrants>,
     filters: Option<Vec<FileFilter>>,
     default_path: Option<String>,
-) -> ApiResponse<Option<String>> {
+) -> Result<ApiResponse<Option<String>>, String> {
     let mut builder = app.dialog().file();
 
     if let Some(f) = filters {
@@ -169,17 +181,20 @@ pub async fn cmd_dialog_save_file(
     match builder.blocking_save_file() {
         Some(path) => {
             let path_str = path.as_path().map(|pb| pb.to_string_lossy().to_string());
-            ApiResponse {
+            if let Some(selected) = &path_str {
+                grants.grant_paths([selected.clone()]);
+            }
+            Ok(ApiResponse {
                 success: true,
                 data: Some(path_str),
                 error: None,
-            }
+            })
         }
-        None => ApiResponse {
+        None => Ok(ApiResponse {
             success: true,
             data: Some(None),
             error: None,
-        },
+        }),
     }
 }
 
