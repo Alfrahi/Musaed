@@ -259,6 +259,36 @@ describe('mermaid-utils', () => {
     });
   });
 
+  describe('preprocessMermaidContent - multi-word node ids', () => {
+    it('slugs multi-word declarations, endpoints, and style targets', () => {
+      const input = `graph LR
+    User writes message[User Writes Message]
+    Validate input[Validate Input]
+    Validate input -->|VALID|> Add message to UI[Add Message to UI]
+    Validate input -->|INVALID|> Validation Error
+    style Validation Error fill:#f9e0b3,stroke:#999`;
+      const result = preprocessMermaidContent(input);
+      expect(result).toContain('User_writes_message["User Writes Message"]');
+      expect(result).toMatch(/Validate_input\[.*\] -->\|VALID\| Add_message_to_UI\[/);
+      expect(result).toContain('-->|INVALID| Validation_Error["Validation Error"]');
+      expect(result).toContain('style Validation_Error fill:#f9e0b3,stroke:#999');
+      expect(result).not.toContain('|>');
+    });
+
+    it('leaves single-token nodes and valid flowcharts unchanged', () => {
+      const input = 'flowchart TD\n  A[Label] --> B';
+      const result = preprocessMermaidContent(input);
+      expect(result).toBe('flowchart TD;\n  A[Label] --> B;');
+    });
+
+    it('does not touch subgraph titles or edge labels', () => {
+      const input = 'graph LR\n  A -->|edge label| B\n  subgraph My Group\n  X --> Y\n  end';
+      const result = preprocessMermaidContent(input);
+      expect(result).toContain('|edge label|');
+      expect(result).toContain('subgraph My Group');
+    });
+  });
+
   describe('preprocessMermaidContent - gantt', () => {
     it('adds dateFormat if missing', () => {
       const input = 'gantt\n  section A\n  task : 5d';
