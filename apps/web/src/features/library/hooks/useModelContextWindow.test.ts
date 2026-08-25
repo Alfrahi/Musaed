@@ -24,15 +24,41 @@ vi.mock('@/store/settings-store', () => ({
 }));
 
 import { useModelContextWindow } from './useModelContextWindow';
+import { clearModelCapabilitiesCache } from './model-capabilities-cache';
 
 beforeEach(() => {
   mockSelectedModel = '';
   mockBaseUrl = 'http://localhost:11434';
   mockValidateModel.mockReset();
   mockValidateModel.mockResolvedValue(null);
+  clearModelCapabilitiesCache();
 });
 
 describe('useModelContextWindow', () => {
+  it('shares a single IPC call across multiple mounted consumers', async () => {
+    mockSelectedModel = 'llama3';
+    mockValidateModel.mockResolvedValue({
+      isValid: true,
+      modelName: 'llama3',
+      details: null,
+      contextLength: 8192,
+      defaultParams: null,
+    });
+
+    const { result } = renderHook(() => [
+      useModelContextWindow(),
+      useModelContextWindow(),
+      useModelContextWindow(),
+    ]);
+
+    await waitFor(() => {
+      expect(result.current.every((info) => !info.loading)).toBe(true);
+    });
+
+    expect(mockValidateModel).toHaveBeenCalledTimes(1);
+    expect(result.current.every((info) => info.contextWindow === 8192)).toBe(true);
+  });
+
   it('fetches context_length from validateModel when model is valid', async () => {
     mockSelectedModel = 'llama3';
     mockValidateModel.mockResolvedValue({

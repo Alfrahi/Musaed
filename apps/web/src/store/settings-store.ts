@@ -55,6 +55,10 @@ const clampSettingsFields = (settings: ChatSettings): ChatSettings => ({
  *            contract alignment, STANDARDS §9 schema-change migration rule).
  * Version 4: Backfill `sidebarCollapsed` (boolean) from DEFAULT_SETTINGS
  *            for persisted stores at v3. Idempotent, type-tolerant.
+ * Version 5: Audit F-3 — sampling config moved to per-model profiles in
+ *            model-params-store. Reset the five deprecated global sampling
+ *            fields to DEFAULT_SETTINGS so persisted state stops carrying
+ *            stale legacy writes. Idempotent, serde-shell-preserving.
  */
 const SETTINGS_MIGRATIONS: Record<number, (data: unknown) => Partial<ChatSettings>> = {
   1: (data: unknown) => {
@@ -118,6 +122,23 @@ const SETTINGS_MIGRATIONS: Record<number, (data: unknown) => Partial<ChatSetting
     if (typeof merged.sidebarCollapsed !== 'boolean') merged.sidebarCollapsed = false;
     return merged;
   },
+  5: (data: unknown) => {
+    // Audit F-3: the five global sampling fields are a dead serde shell —
+    // effective values resolve per-model from model-params-store. Fold any
+    // drifted legacy values back to DEFAULT_SETTINGS so the persisted file
+    // stops carrying stale user writes. Idempotent.
+    const persisted =
+      typeof data === 'object' && data !== null ? (data as Partial<ChatSettings>) : {};
+    const merged: ChatSettings = { ...DEFAULT_SETTINGS, ...persisted };
+    return {
+      ...merged,
+      temperature: DEFAULT_SETTINGS.temperature,
+      topK: DEFAULT_SETTINGS.topK,
+      topP: DEFAULT_SETTINGS.topP,
+      numPredict: DEFAULT_SETTINGS.numPredict,
+      numCtx: DEFAULT_SETTINGS.numCtx,
+    };
+  },
 };
 
 export interface SettingsState {
@@ -140,9 +161,9 @@ export const useSettingsStore = createWithEqualityFn<SettingsState>()(
     {
       name: 'musaed-settings-storage',
       storage: createJSONStorage(() =>
-        createTauriStorage('settings-state.json', 4, SETTINGS_MIGRATIONS)
+        createTauriStorage('settings-state.json', 5, SETTINGS_MIGRATIONS)
       ),
-      version: 4,
+      version: 5,
       migrate: (_persistedState: unknown, _version: number) => {
         // Migrations are handled by createTauriStorage (canonical path).
         // This is a safety-net default-state merge only.

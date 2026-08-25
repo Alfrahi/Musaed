@@ -19,7 +19,7 @@ describe('useStreamingStore', () => {
       // Setup: add some data
       useStreamingStore.getState().startStream('conv1', 'req1');
       useStreamingStore.getState().appendToken('conv1', 'hello', 'req1');
-      useStreamingStore.getState().setPendingMetrics('conv1', { role: 'assistant' });
+      useStreamingStore.getState().setPendingMetrics('conv1', 'req1', { role: 'assistant' });
       useStreamingStore.getState().markFlushed('conv1');
 
       // Act
@@ -140,7 +140,8 @@ describe('useStreamingStore', () => {
 
   describe('setPendingMetrics', () => {
     it('should set metrics for a conversation', () => {
-      useStreamingStore.getState().setPendingMetrics('conv1', {
+      useStreamingStore.getState().startStream('conv1', 'req-metrics');
+      useStreamingStore.getState().setPendingMetrics('conv1', 'req-metrics', {
         role: 'assistant',
         model: 'llama3',
       });
@@ -153,8 +154,9 @@ describe('useStreamingStore', () => {
     });
 
     it('should merge metrics for same conversation', () => {
-      useStreamingStore.getState().setPendingMetrics('conv1', { role: 'assistant' });
-      useStreamingStore.getState().setPendingMetrics('conv1', { model: 'llama3' });
+      useStreamingStore.getState().startStream('conv1', 'req-merge');
+      useStreamingStore.getState().setPendingMetrics('conv1', 'req-merge', { role: 'assistant' });
+      useStreamingStore.getState().setPendingMetrics('conv1', 'req-merge', { model: 'llama3' });
 
       const state = useStreamingStore.getState();
       expect(state.pendingMetrics.conv1).toEqual({
@@ -164,14 +166,34 @@ describe('useStreamingStore', () => {
     });
 
     it('should allow multiple conversations to have metrics', () => {
-      useStreamingStore.getState().setPendingMetrics('conv1', { role: 'assistant' });
-      useStreamingStore.getState().setPendingMetrics('conv2', { role: 'user' });
+      useStreamingStore.getState().startStream('conv1', 'req-a');
+      useStreamingStore.getState().startStream('conv2', 'req-b');
+      useStreamingStore.getState().setPendingMetrics('conv1', 'req-a', { role: 'assistant' });
+      useStreamingStore.getState().setPendingMetrics('conv2', 'req-b', { role: 'user' });
 
       const state = useStreamingStore.getState();
       expect(state.pendingMetrics).toEqual({
         conv1: { role: 'assistant' },
         conv2: { role: 'user' },
       });
+    });
+
+    it('should ignore metrics from a stale requestId (F-10)', () => {
+      // A retry replaced req1 with req2; late metrics tagged req1 belong to
+      // the dead stream and must not land on the new one.
+      useStreamingStore.getState().startStream('conv1', 'req1');
+      useStreamingStore.getState().startStream('conv1', 'req2');
+      useStreamingStore.getState().setPendingMetrics('conv1', 'req1', { evalCount: 5 });
+
+      const state = useStreamingStore.getState();
+      expect(state.pendingMetrics.conv1).toBeUndefined();
+    });
+
+    it('should ignore metrics when no stream is active for the conversation (F-10)', () => {
+      useStreamingStore.getState().setPendingMetrics('conv1', 'req-ghost', { evalCount: 9 });
+
+      const state = useStreamingStore.getState();
+      expect(state.pendingMetrics.conv1).toBeUndefined();
     });
   });
 
@@ -180,7 +202,7 @@ describe('useStreamingStore', () => {
       useStreamingStore.getState().startStream('conv1', 'req1');
       useStreamingStore.getState().appendToken('conv1', 'hello', 'req1');
       useStreamingStore.getState().appendToken('conv1', ' world', 'req1');
-      useStreamingStore.getState().setPendingMetrics('conv1', { role: 'assistant' });
+      useStreamingStore.getState().setPendingMetrics('conv1', 'req1', { role: 'assistant' });
 
       const result = useStreamingStore.getState().flushToConversation('conv1');
 
@@ -219,7 +241,7 @@ describe('useStreamingStore', () => {
 
       // Late tokens arrive (stream still in activeStreams, not yet cleared)
       useStreamingStore.getState().appendToken('conv1', 'part2', 'req1');
-      useStreamingStore.getState().setPendingMetrics('conv1', { evalCount: 5 });
+      useStreamingStore.getState().setPendingMetrics('conv1', 'req1', { evalCount: 5 });
 
       const result = useStreamingStore.getState().flushToConversation('conv1');
       expect(result).toEqual({
@@ -235,7 +257,7 @@ describe('useStreamingStore', () => {
 
     it('should return empty string content when buffer is empty', () => {
       useStreamingStore.getState().startStream('conv1', 'req1');
-      useStreamingStore.getState().setPendingMetrics('conv1', { role: 'assistant' });
+      useStreamingStore.getState().setPendingMetrics('conv1', 'req1', { role: 'assistant' });
 
       const result = useStreamingStore.getState().flushToConversation('conv1');
       expect(result).toEqual({
@@ -274,7 +296,7 @@ describe('useStreamingStore', () => {
     it('should remove all stream-related data for a conversation', () => {
       useStreamingStore.getState().startStream('conv1', 'req1');
       useStreamingStore.getState().appendToken('conv1', 'test', 'req1');
-      useStreamingStore.getState().setPendingMetrics('conv1', { role: 'assistant' });
+      useStreamingStore.getState().setPendingMetrics('conv1', 'req1', { role: 'assistant' });
       useStreamingStore.getState().markFlushed('conv1');
 
       useStreamingStore.getState().clearStream('conv1');
@@ -370,7 +392,7 @@ describe('useStreamingStore', () => {
       // Append tokens
       useStreamingStore.getState().appendToken('conv1', 'chunk1', 'req1');
       useStreamingStore.getState().appendToken('conv1', 'chunk2', 'req1');
-      useStreamingStore.getState().setPendingMetrics('conv1', { role: 'assistant' });
+      useStreamingStore.getState().setPendingMetrics('conv1', 'req1', { role: 'assistant' });
 
       // Flush
       const result = useStreamingStore.getState().flushToConversation('conv1');

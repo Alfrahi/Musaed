@@ -13,7 +13,7 @@ use super::client::{
 };
 use super::streaming::{process_chat_stream, TauriEmitter};
 use crate::error_codes;
-use crate::payloads::{BackendError, ChatMessage, ChatOptions, OllamaHealth};
+use crate::payloads::{BackendError, ChatMessage, ChatOptions, OllamaHealth, OllamaOptions};
 use crate::rate_limiter::RATE_LIMITER;
 use crate::validation::{
     is_valid_model_name, is_valid_request_id, validate_chat_message, validate_chat_options,
@@ -285,17 +285,29 @@ fn validate_chat_inputs<R: Runtime>(req: &OllamaChatRequest<R>) -> Result<(), Ba
     Ok(())
 }
 
+/// Build the `/api/chat` request body. Options are converted to
+/// [`OllamaOptions`] because Ollama matches option keys exactly against its
+/// snake_case tags and silently drops unknown ones — sending the camelCase
+/// IPC shape would disable every parameter except `temperature` and `stop`.
+fn build_chat_payload(
+    model: &str,
+    messages: &[ChatMessage],
+    options: &ChatOptions,
+) -> serde_json::Value {
+    json!({
+        "model": model,
+        "messages": messages,
+        "options": OllamaOptions::from(options),
+        "stream": true
+    })
+}
+
 /// Send the initial HTTP request to the Ollama chat endpoint with retry.
 async fn send_chat_request<R: Runtime>(
     req: &OllamaChatRequest<R>,
     url: &str,
 ) -> Result<reqwest::Response, BackendError> {
-    let payload = json!({
-        "model": req.model,
-        "messages": req.messages,
-        "options": req.options,
-        "stream": true
-    });
+    let payload = build_chat_payload(&req.model, &req.messages, &req.options);
 
     let url_owned = url.to_string();
     let response = match retry_with_backoff(
@@ -343,4 +355,63 @@ async fn send_chat_request<R: Runtime>(
     }
 
     Ok(response)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Wire-format regression test: Ollama matches option keys exactly
+    /// against its snake_case JSON tags and silently warns+skips unknown
+    /// keys, so the outgoing chat body must carry snake_case option keys.
+    #[test]
+    fn chat_payload_sends_snake_case_options_to_ollama() {
+        let options = ChatOptions {
+            temperature: Some(0.75),
+            top_k: Some(40),
+            top_p: Some(0.75),
+            num_predict: Some(512),
+            num_ctx: Some(8192),
+            stop: None,
+        };
+
+        let payload = build_chat_payload("llama3", &[], &options);
+
+        assert_eq!(payload["model"], "llama3");
+        assert_eq!(payload["stream"], true);
+        assert_eq!(payload["options"]["num_ctx"], 8192);
+        assert_eq!(payload["options"]["num_predict"], 512);
+        assert_eq!(payload["options"]["top_k"], 40);
+        assert_eq!(payload["options"]["top_p"], 0.75);
+        assert_eq!(payload["options"]["temperature"], 0.75);
+        for camel in ["numCtx", "numPredict", "topK", "topP"] {
+            assert!(
+                payload["options"].get(camel).is_none(),
+                "camelCase key {} must never reach the wire",
+                camel
+            );
+        }
+    }
+
+    #[test]
+    fn chat_payload_omits_unset_options() {
+        let payload = build_chat_payload("llama3", &[], &ChatOptions::default());
+        assert!(
+            payload["options"].as_object().unwrap().is_empty(),
+            "unset options must be omitted, got: {}",
+            payload["options"]
+        );
+    }
+
+    #[test]
+    fn chat_payload_carries_messages() {
+        let messages = vec![ChatMessage {
+            role: "user".to_string(),
+            content: "hello".to_string(),
+            images: None,
+        }];
+        let payload = build_chat_payload("llama3", &messages, &ChatOptions::default());
+        assert_eq!(payload["messages"][0]["role"], "user");
+        assert_eq!(payload["messages"][0]["content"], "hello");
+    }
 }

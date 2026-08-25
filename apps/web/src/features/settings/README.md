@@ -69,7 +69,7 @@ All components are internal — **not** re-exported from `index.ts` (per DDD rul
 
 | Store               | Version | Persistence Key                              |
 | ------------------- | ------- | -------------------------------------------- |
-| `settingsStore`     | 4       | `musaed-settings-storage`                    |
+| `settingsStore`     | 5       | `musaed-settings-storage`                    |
 | `conversationStore` | 3       | (read-only access for conversation settings) |
 | `modelStore`        | 1       | `musaed-model-storage`                       |
 | `logs`              | —       | `logs.json`                                  |

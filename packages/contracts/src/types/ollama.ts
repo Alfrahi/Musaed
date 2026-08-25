@@ -3,13 +3,15 @@ import {
   type OllamaModelDetailsSchema,
   type OllamaModelSchema,
   type ModelStateSchema,
-  type ModelDefaultParamsSchema,
   type ModelValidationSchema,
   type OllamaTokenSchema,
   type PullProgressSchema,
   type PullErrorSchema,
   type OllamaHealthSchema,
 } from '../schemas/ollama';
+// ModelDefaultParamsSchema lives in schemas/chat beside ModelParamsSchema
+// (keeping it there breaks the schemas → types → schemas import cycle).
+import { type ModelDefaultParamsSchema } from '../schemas/chat';
 
 export type OllamaModelDetails = z.infer<typeof OllamaModelDetailsSchema>;
 export type OllamaModel = z.infer<typeof OllamaModelSchema>;

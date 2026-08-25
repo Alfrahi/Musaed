@@ -305,9 +305,10 @@ describe('useTauriEvents', () => {
         })
       );
 
-      // setPendingMetrics is synchronous (not buffered through rAF).
+      // setPendingMetrics is synchronous (not buffered through rAF) and now
+      // carries the requestId for the store's stale-stream gate.
       expect(mockSetPendingMetrics).toHaveBeenCalledTimes(1);
-      expect(mockSetPendingMetrics).toHaveBeenCalledWith('conv-1', {
+      expect(mockSetPendingMetrics).toHaveBeenCalledWith('conv-1', 'req-1', {
         evalCount: 10,
         promptEvalCount: 42,
         evalDuration: 5000,

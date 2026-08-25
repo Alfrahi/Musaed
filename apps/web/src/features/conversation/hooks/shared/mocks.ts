@@ -300,6 +300,13 @@ vi.mock('@/store/rag-store', () => ({
 vi.mock('@/store/model-params-store', () => ({
   useModelParamsStore: selectorAware({ profiles: {} }),
   selectResolvedParams: vi.fn(() => DEFAULT_MODEL_PARAMS),
+  // Flat resolved shape (params + F-9 diagnostics); tests override via
+  // `vi.mocked(useResolvedModelParams).mockReturnValue(...)`.
+  useResolvedModelParams: vi.fn(() => ({
+    ...DEFAULT_MODEL_PARAMS,
+    rawNumCtxOverride: null,
+    numCtxClamped: false,
+  })),
 }));
 
 vi.mock('@/features/conversation/utils/message-persistence', () => ({

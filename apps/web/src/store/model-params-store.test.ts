@@ -167,7 +167,7 @@ describe('model-params-store', () => {
       expect(params.numPredict).toBe(-1); // defaultParams fallback
     });
 
-    it('uses defaultParams.numCtx over contextLength when no override', () => {
+    it('clamps defaultParams.numCtx to contextLength when it exceeds it (F-9)', () => {
       const defaultParams = {
         temperature: 0.5,
         topP: 0.85,
@@ -175,9 +175,10 @@ describe('model-params-store', () => {
         numCtx: 16384,
         numPredict: -1,
       };
-      // contextLength is 8192 — defaultParams.numCtx (16384) should win.
+      // Modelfile default wins over contextLength when within range, but a
+      // value above the model's real window must never reach Ollama.
       const params = selectResolvedParams('unknown-model', 8192, defaultParams);
-      expect(params.numCtx).toBe(16384);
+      expect(params.numCtx).toBe(8192);
     });
 
     it('falls back to contextLength for numCtx when defaultParams.numCtx is null', () => {
@@ -418,7 +419,7 @@ describe('model-params-store', () => {
       expect(result.current.numCtxClamped).toBe(false);
     });
 
-    it('uses defaultParams.numCtx over contextLength when no override', () => {
+    it('clamps defaultParams.numCtx to contextLength when it exceeds it (F-9)', () => {
       const defaultParams = {
         temperature: null,
         topP: null,
@@ -429,7 +430,7 @@ describe('model-params-store', () => {
       const { result } = renderHook(() =>
         useResolvedModelParams('unknown-model', 8192, defaultParams)
       );
-      expect(result.current.numCtx).toBe(16384);
+      expect(result.current.numCtx).toBe(8192);
     });
 
     it('prefers override over defaultParams but keeps defaultParams for other fields', () => {

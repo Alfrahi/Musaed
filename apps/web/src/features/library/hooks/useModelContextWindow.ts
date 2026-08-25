@@ -1,10 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { ollamaApi } from '@/lib/ipc';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useSelectedModel } from '@/store/model-store';
 import { useOllamaUrl } from '@/store/settings-store';
 import type { ModelDefaultParams } from '@musaed/contracts';
+import {
+  subscribeModelCapabilities,
+  getCachedModelCapabilities,
+  fetchModelCapabilities,
+} from './model-capabilities-cache';
 
 export interface ModelContextWindowInfo {
   /** The resolved context window size for the current model. */
@@ -18,63 +22,45 @@ export interface ModelContextWindowInfo {
 }
 
 /**
- * Fetches the current model's `context_length` and per-model sampling
- * defaults from the Ollama server via `cmd_ollama_validate_model` (which
- * calls `/api/show`). The `contextWindow` value is architecture-prefixed
- * (e.g. `llama.context_length`), extracted on the Rust side. The
- * `defaultParams` are parsed from the Modelfile's `PARAMETER` directives;
- * null when the model has no Modelfile or those directives are absent.
+ * Exposes the current model's `context_length` and Modelfile sampling
+ * defaults as a thin selector over the feature-wide capabilities cache.
+ * All mounted consumers share one `cmd_ollama_validate_model` call per
+ * (baseUrl, model); switching back to a known model serves the cached
+ * facts synchronously instead of racing through a null window.
  *
  * Falls back to `null` for both `contextWindow` and `defaultParams` when
- * the model is invalid or the server is unreachable —
- * `selectResolvedParams` / `useResolvedModelParams` then fall back to
- * `DEFAULT_MODEL_PARAMS` per field.
+ * the model is invalid or the server is unreachable — resolution then
+ * falls back to `DEFAULT_MODEL_PARAMS` per field (see
+ * `@/lib/token-budget#resolveModelParams`).
  */
 export function useModelContextWindow(): ModelContextWindowInfo {
   const selectedModel = useSelectedModel();
   const baseUrl = useOllamaUrl();
-  const [contextWindow, setContextWindow] = useState<number | null>(null);
-  const [defaultParams, setDefaultParams] = useState<ModelDefaultParams | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const hasKey = Boolean(selectedModel && baseUrl);
+  const [fetchFailed, setFetchFailed] = useState(false);
+
+  const caps = useSyncExternalStore(
+    subscribeModelCapabilities,
+    () => (hasKey ? getCachedModelCapabilities(baseUrl, selectedModel) : null),
+    () => null
+  );
 
   useEffect(() => {
-    if (!selectedModel || !baseUrl) {
-      setContextWindow(null);
-      setDefaultParams(null);
-      setError(null);
-      return;
-    }
-
+    setFetchFailed(false);
+    if (!selectedModel || !baseUrl) return;
     let cancelled = false;
-    setLoading(true);
-    setError(null);
-
-    ollamaApi
-      .validateModel(baseUrl, selectedModel)
-      .then((result) => {
-        if (cancelled) return;
-        if (result && result.isValid) {
-          setContextWindow(result.contextLength ?? null);
-          setDefaultParams(result.defaultParams ?? null);
-        } else {
-          setContextWindow(null);
-          setDefaultParams(null);
-        }
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setContextWindow(null);
-        setDefaultParams(null);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
+    fetchModelCapabilities(baseUrl, selectedModel).catch(() => {
+      if (!cancelled) setFetchFailed(true);
+    });
     return () => {
       cancelled = true;
     };
-  }, [selectedModel, baseUrl]);
+  }, [baseUrl, selectedModel]);
 
-  return { contextWindow, defaultParams, loading, error };
+  return {
+    contextWindow: caps?.contextWindow ?? null,
+    defaultParams: caps?.modelfileDefaults ?? null,
+    loading: hasKey && caps === null && !fetchFailed,
+    error: null,
+  };
 }

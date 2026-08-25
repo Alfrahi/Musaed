@@ -394,12 +394,12 @@ describe('ChatSendService.sendMessage', () => {
     );
   });
 
-  it('reduces history when ragTokenCount consumes most of the context budget', async () => {
-    // With numCtx=4096 (DEFAULT_MODEL_PARAMS), a ragTokenCount of 3800
-    // leaves only ~296 tokens for history + system + current prompt.
-    // The short history messages (~3 tokens each) should fit, but a
-    // message whose promptEvalCount exceeds the remaining budget should
-    // be dropped.
+  it('keeps messages whose own content fits even when cumulative promptEvalCount exceeds the budget (F-2)', async () => {
+    // With numCtx=8192, ragTokenCount=3800 and the reserved 2048-token
+    // output request (F-4), ~2341 tokens remain for history. promptEvalCount
+    // on an assistant message is Ollama's cumulative whole-turn count, so
+    // weighting by it would wrongly drop the "big" turn whose content is
+    // only ~7 tokens.
     mockAssembleChatRag.mockResolvedValue({
       ragSources: undefined,
       assembledContext: 'x',
@@ -407,7 +407,7 @@ describe('ChatSendService.sendMessage', () => {
     });
     mockSelectResolvedParams.mockReturnValue({
       ...DEFAULT_MODEL_PARAMS,
-      numCtx: 4096,
+      numCtx: 8192,
     });
 
     const smallUser: Message = {
@@ -427,7 +427,8 @@ describe('ChatSendService.sendMessage', () => {
       done: true,
       promptEvalCount: 3,
     };
-    // promptEvalCount=500 — exceeds remaining budget (~296 - 3 - 3 for 'hi' = ~290)
+    // promptEvalCount=500 is cumulative for that turn's entire prompt —
+    // the message's own content ('large answer') is only ~3 tokens.
     const bigUser: Message = {
       id: 'u-big',
       role: 'user',
@@ -455,14 +456,73 @@ describe('ChatSendService.sendMessage', () => {
     await service.sendMessage({ input: 'follow up' });
 
     const payload = mockChatApi.chat.mock.calls[0][0];
-    // Only the small pair should fit — the big pair is dropped.
-    // Payload: [smallUser, smallAssistant, ragSystem('x'), currentUserMessage]
+    // Per-message weighting keeps both turns.
     expect(payload.messages).toEqual([
+      { role: 'user', content: 'large question' },
+      { role: 'assistant', content: 'large answer' },
       { role: 'user', content: 'hi' },
       { role: 'assistant', content: 'hey' },
       { role: 'system', content: 'x' },
       { role: 'user', content: 'follow up' },
     ]);
+  });
+
+  it('reserves requested num_predict from the history budget (F-4)', async () => {
+    // numCtx=100, numPredict=50, prompt 'query'≈2 tokens.
+    // remaining = 98 → effectiveOutput = 50 → history budget = 48 tokens.
+    // 30 history messages of 11 chars (~3 tokens) each: newest 16 fit.
+    // Without reservation the budget would be 98 → all 30 fit.
+    mockSelectResolvedParams.mockReturnValue({
+      ...DEFAULT_MODEL_PARAMS,
+      numCtx: 100,
+      numPredict: 50,
+    });
+
+    const turns = Array.from({ length: 30 }, (_, i) => ({
+      id: `m-${i}`,
+      role: i % 2 === 0 ? ('user' as const) : ('assistant' as const),
+      content: `msg-${String(i).padStart(2, '0')}-abcd`, // 11 chars ≈ 3 tokens
+      timestamp: i,
+      ...(i % 2 === 1 ? { model: 'llama3', done: true } : {}),
+      requestId: `r-${i}`,
+    }));
+    messageStoreState.messages = { conv1: turns };
+
+    const service = createService();
+    await service.sendMessage({ input: 'query' });
+
+    const payload = mockChatApi.chat.mock.calls[0][0];
+    // 48-token budget / ~3-token messages → 16 kept + current prompt = 17.
+    expect(payload.messages).toHaveLength(17);
+    // Newest-first retention drops the OLDEST turns: first kept is index 14.
+    expect(payload.messages[0].content).toBe('msg-14-abcd');
+    expect(payload.messages[payload.messages.length - 1].content).toBe('query');
+  });
+
+  it('gives unlimited (-1) num_predict the whole remaining window, leaving no extra history room (F-4)', async () => {
+    mockSelectResolvedParams.mockReturnValue({
+      ...DEFAULT_MODEL_PARAMS,
+      numCtx: 100,
+      numPredict: -1,
+    });
+
+    const turns = Array.from({ length: 4 }, (_, i) => ({
+      id: `m-${i}`,
+      role: i % 2 === 0 ? ('user' as const) : ('assistant' as const),
+      content: `msg-${i}`,
+      timestamp: i,
+      ...(i % 2 === 1 ? { model: 'llama3', done: true } : {}),
+      requestId: `r-${i}`,
+    }));
+    messageStoreState.messages = { conv1: turns };
+
+    const service = createService();
+    await service.sendMessage({ input: 'query' });
+
+    const payload = mockChatApi.chat.mock.calls[0][0];
+    // Unlimited generation may consume all remaining space, so nothing is
+    // guaranteed for additional history beyond the counted reserves.
+    expect(payload.messages).toEqual([{ role: 'user', content: 'query' }]);
   });
 
   it('falls back to char/4 heuristic for ragTokenCount when not provided', async () => {

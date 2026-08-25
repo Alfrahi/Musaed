@@ -3,13 +3,14 @@
 import { useMemo } from 'react';
 import { useMessageStore } from '@/store/message-store';
 import { useConversationStore } from '@/store/conversation-store';
-import { useSettingsStore } from '@/store/settings-store';
+import { useResolvedModelParams } from '@/store/model-params-store';
+import { useSelectedModel } from '@/store/model-store';
 import { useModelContextWindow } from '@/features/library';
 
 export interface TokenUsageInfo {
   /** Prompt tokens used in the current context window (from last assistant turn). */
   usedTokens: number;
-  /** Resolved context window — model's `context_length` if available, else `numCtx` from settings. */
+  /** Resolved context window — exactly the `numCtx` the next request will send. */
   contextWindow: number;
   /** Usage ratio as a percentage (0-100). Returns 0 if no data. */
   percentage: number;
@@ -27,19 +28,24 @@ export interface TokenUsageInfo {
  * become part of the next turn's `promptEvalCount` — counting them
  * separately would double-count.
  *
- * The context-window denominator prefers the model's actual
- * `context_length` (fetched via `cmd_ollama_validate_model`), falling
- * back to the user's `numCtx` setting when unavailable.
+ * The denominator comes solely from `useResolvedModelParams` — the same
+ * resolution path ChatSendService uses — so the HUD always shows the
+ * `numCtx` the next request actually sends (override applied, clamped to
+ * the real window), never raw `/api/show` metadata.
+ *
+ * Usage numbers only count when the newest assistant turn was produced
+ * by the currently selected model; switching models resets the HUD to
+ * empty until a turn completes under the new selection.
  */
 export function useTokenUsage(): TokenUsageInfo {
   const currentConversationId = useConversationStore((s) => s.currentConversationId);
   const messages = useMessageStore((s) =>
     currentConversationId ? s.messages[currentConversationId] : undefined
   );
-  const numCtx = useSettingsStore((s) => s.globalSettings.numCtx);
-  const { contextWindow: modelContextWindow } = useModelContextWindow();
-
-  const contextWindow = modelContextWindow ?? numCtx;
+  const selectedModel = useSelectedModel();
+  const { contextWindow: modelContextWindow, defaultParams } = useModelContextWindow();
+  const resolved = useResolvedModelParams(selectedModel, modelContextWindow, defaultParams);
+  const contextWindow = resolved.numCtx;
 
   return useMemo(() => {
     if (!contextWindow || contextWindow <= 0) {
@@ -55,6 +61,12 @@ export function useTokenUsage(): TokenUsageInfo {
       return { usedTokens: 0, contextWindow, percentage: 0, hasData: false };
     }
 
+    // Stale-model guard: metrics from a different (or unknown) model say
+    // nothing about the current request's window — hide them instead.
+    if (!lastAssistant.model || lastAssistant.model !== selectedModel) {
+      return { usedTokens: 0, contextWindow, percentage: 0, hasData: false };
+    }
+
     const usedTokens = lastAssistant.promptEvalCount ?? 0;
 
     if (usedTokens === 0) {
@@ -63,5 +75,5 @@ export function useTokenUsage(): TokenUsageInfo {
 
     const percentage = Math.min(100, Math.round((usedTokens / contextWindow) * 100));
     return { usedTokens, contextWindow, percentage, hasData: true };
-  }, [currentConversationId, messages, contextWindow]);
+  }, [currentConversationId, messages, contextWindow, selectedModel]);
 }
