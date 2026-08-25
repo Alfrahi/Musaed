@@ -8,6 +8,12 @@ export const ChatMessageSchema = z.object({
 });
 
 export const ChatSettingsSchema = z.object({
+  // ── Deprecated sampling shell (audit F-3) ──────────────────────────────
+  // The five fields below are REQUIRED by Rust's `ChatSettings` serde
+  // struct (`cmd_conversation_create`) but no longer carry user intent:
+  // per-model sampling lives in `model-params-store` profiles. Do not add
+  // new readers or writers; persisted values are serde-compatible defaults
+  // only. Removal requires a coordinated Rust contract change.
   temperature: z
     .number()
     .min(VALIDATION_LIMITS.TEMPERATURE_RANGE[0])
@@ -106,3 +112,41 @@ export const ModelParamProfileSchema = z.object({
   overrides: z.array(ModelParamKeySchema).default([]),
 });
 export type ModelParamProfile = z.infer<typeof ModelParamProfileSchema>;
+
+/**
+ * Per-model capability facts derived from Ollama's `/api/show`
+ * (`cmd_ollama_validate_model`). Purely descriptive — no user intent.
+ *
+ * Lives beside {@link ModelParamsSchema} (not `types/ollama`) because
+ * importing the type from `types/ollama` would close a schemas → types →
+ * schemas circular dependency. `ModelDefaultParams` (the z.infer alias)
+ * remains exported from `types/ollama`.
+ */
+export const ModelDefaultParamsSchema = z.object({
+  temperature: z.number().finite().nullish(),
+  topP: z.number().finite().nullish(),
+  topK: z.number().int().nullish(),
+  numCtx: z.number().int().nonnegative().nullish(),
+  numPredict: z.number().int().nullish(),
+});
+
+export interface ModelCapabilities {
+  /** From model_info `*.context_length`, already NUM_CTX_RANGE-clamped
+   *  Rust-side. `null` = unknown (validation unavailable or failed). */
+  contextWindow: number | null;
+  /** Modelfile `PARAMETER` defaults. `null` fields = directive absent. */
+  modelfileDefaults: z.infer<typeof ModelDefaultParamsSchema> | null;
+}
+
+/**
+ * The effective sampling parameters for one request, plus diagnostics about
+ * whether the stored `numCtx` override survived verbatim. Produced solely by
+ * the shared resolver in `apps/web/src/lib/token-budget.ts`.
+ */
+export interface ResolvedModelParams {
+  params: ModelParams;
+  /** Stored `numCtx` override verbatim, even when resolution had to clamp it. */
+  rawNumCtxOverride: number | null;
+  /** True when the stored override exceeded a limit and was reduced. */
+  numCtxClamped: boolean;
+}

@@ -75,6 +75,31 @@ function runFlushToConversation(
   return { content, metrics };
 }
 
+/**
+ * Body of `setPendingMetrics`, lifted out of the store-creator arrow so the
+ * creator stays under the project's per-function line limit.
+ */
+function runSetPendingMetrics(
+  state: StreamingState,
+  conversationId: string,
+  requestId: string,
+  metrics: Partial<Message>
+): StreamingState | Partial<StreamingState> {
+  // Defense-in-depth gate mirroring appendToken: metrics tagged with a
+  // requestId that no longer owns this conversation's stream belong to
+  // a dead retry and must not land on the active one.
+  if (state.activeStreams[conversationId] !== requestId) {
+    return state;
+  }
+
+  return {
+    pendingMetrics: {
+      ...state.pendingMetrics,
+      [conversationId]: { ...state.pendingMetrics[conversationId], ...metrics },
+    },
+  };
+}
+
 export interface StreamingState {
   /** Per-conversation live content buffer (only for actively streaming conversations). */
   liveContent: Record<string, StreamingBuffer>;
@@ -87,7 +112,7 @@ export interface StreamingState {
 
   appendToken: (conversationId: string, token: string, requestId: string) => void;
   appendTokenBulk: (conversationId: string, text: string, requestId: string) => void;
-  setPendingMetrics: (conversationId: string, metrics: Partial<Message>) => void;
+  setPendingMetrics: (conversationId: string, requestId: string, metrics: Partial<Message>) => void;
   flushToConversation: (
     conversationId: string
   ) => { content: string; metrics: Partial<Message> } | null;
@@ -148,13 +173,8 @@ const _useStreamingStore = createWithEqualityFn<StreamingState>()(
       });
     },
 
-    setPendingMetrics: (conversationId, metrics) => {
-      set((state) => ({
-        pendingMetrics: {
-          ...state.pendingMetrics,
-          [conversationId]: { ...state.pendingMetrics[conversationId], ...metrics },
-        },
-      }));
+    setPendingMetrics: (conversationId, requestId, metrics) => {
+      set((state) => runSetPendingMetrics(state, conversationId, requestId, metrics));
     },
 
     flushToConversation: (conversationId) => runFlushToConversation(conversationId, get, set),

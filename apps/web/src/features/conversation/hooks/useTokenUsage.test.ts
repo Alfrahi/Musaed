@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { DEFAULT_MODEL_PARAMS } from '@musaed/contracts';
 import { mockAllDependencies, mockIpc, mockStores } from './shared/mocks';
 import type { Message } from '@musaed/contracts';
 
@@ -9,10 +10,15 @@ vi.mock('@/features/library', () => ({
   useModelContextWindow: vi.fn(),
 }));
 
+// `useResolvedModelParams` is mocked in shared/mocks.ts (same module registry);
+// tests control it via vi.mocked(...).mockReturnValue below.
+import { useResolvedModelParams } from '@/store/model-params-store';
+
 import { useModelContextWindow } from '@/features/library';
 import { useTokenUsage } from './useTokenUsage';
 
 const mockUseModelContextWindow = vi.mocked(useModelContextWindow);
+const mockUseResolvedModelParams = vi.mocked(useResolvedModelParams);
 
 // The mock store inits `messages` as `{ conv1: [] }` (inferred `never[]`).
 // Cast through a typed accessor so we can assign `Message[]` values.
@@ -23,12 +29,17 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockIpc.ollamaApi.validateModel.mockResolvedValue(null);
   messagesByConv.conv1 = [];
-  // Default: no model context window → falls back to numCtx (4096)
+  // Default: no model context window → falls back to DEFAULT_MODEL_PARAMS.numCtx (4096)
   mockUseModelContextWindow.mockReturnValue({
     contextWindow: null,
     defaultParams: null,
     loading: false,
     error: null,
+  });
+  mockUseResolvedModelParams.mockReturnValue({
+    ...DEFAULT_MODEL_PARAMS,
+    rawNumCtxOverride: null,
+    numCtxClamped: false,
   });
 });
 
@@ -48,12 +59,65 @@ describe('useTokenUsage', () => {
       loading: false,
       error: null,
     });
+    mockUseResolvedModelParams.mockReturnValue({
+      ...DEFAULT_MODEL_PARAMS,
+      numCtx: 8192,
+      rawNumCtxOverride: null,
+      numCtxClamped: false,
+    });
 
     const { result } = renderHook(() => useTokenUsage());
 
     expect(result.current.usedTokens).toBe(0);
     expect(result.current.contextWindow).toBe(8192);
     expect(result.current.hasData).toBe(false);
+  });
+
+  it('denominator equals the resolved numCtx the request sends, not raw metadata (F-6)', async () => {
+    // Raw /api/show window is 131072, but the stored override resolves to
+    // 8192 after clamping — the HUD must show the request's denominator.
+    mockUseModelContextWindow.mockReturnValue({
+      contextWindow: 131072,
+      defaultParams: null,
+      loading: false,
+      error: null,
+    });
+    mockUseResolvedModelParams.mockReturnValue({
+      ...DEFAULT_MODEL_PARAMS,
+      numCtx: 8192,
+      rawNumCtxOverride: 32768,
+      numCtxClamped: true,
+    });
+
+    const { result } = renderHook(() => useTokenUsage());
+
+    expect(result.current.contextWindow).toBe(8192);
+  });
+
+  it('hides usage until a turn completes under the selected model', async () => {
+    mockUseResolvedModelParams.mockReturnValue({
+      ...DEFAULT_MODEL_PARAMS,
+      numCtx: 8192,
+      rawNumCtxOverride: null,
+      numCtxClamped: false,
+    });
+    messagesByConv.conv1 = [
+      {
+        id: 'msg-1',
+        role: 'assistant',
+        content: 'from another model',
+        timestamp: 1,
+        model: 'mistral',
+        requestId: 'req-1',
+        promptEvalCount: 3000,
+        evalCount: 500,
+      },
+    ];
+
+    const { result } = renderHook(() => useTokenUsage());
+
+    expect(result.current.hasData).toBe(false);
+    expect(result.current.usedTokens).toBe(0);
   });
 
   it('falls back to numCtx when model context_length is unavailable', async () => {
@@ -88,6 +152,12 @@ describe('useTokenUsage', () => {
       defaultParams: null,
       loading: false,
       error: null,
+    });
+    mockUseResolvedModelParams.mockReturnValue({
+      ...DEFAULT_MODEL_PARAMS,
+      numCtx: 8192,
+      rawNumCtxOverride: null,
+      numCtxClamped: false,
     });
 
     messagesByConv.conv1 = [
@@ -142,11 +212,13 @@ describe('useTokenUsage', () => {
   });
 
   it('guards against contextWindow === 0 to avoid division by zero', async () => {
-    mockUseModelContextWindow.mockReturnValue({
-      contextWindow: 0,
-      defaultParams: null,
-      loading: false,
-      error: null,
+    // Denominator is the resolved numCtx the request would send — a 0 there
+    // (not raw metadata) is what must disable the HUD.
+    mockUseResolvedModelParams.mockReturnValue({
+      ...DEFAULT_MODEL_PARAMS,
+      numCtx: 0,
+      rawNumCtxOverride: null,
+      numCtxClamped: false,
     });
 
     messagesByConv.conv1 = [
@@ -176,6 +248,12 @@ describe('useTokenUsage', () => {
       defaultParams: null,
       loading: false,
       error: null,
+    });
+    mockUseResolvedModelParams.mockReturnValue({
+      ...DEFAULT_MODEL_PARAMS,
+      numCtx: 8192,
+      rawNumCtxOverride: null,
+      numCtxClamped: false,
     });
 
     messagesByConv.conv1 = [

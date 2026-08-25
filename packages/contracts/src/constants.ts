@@ -10,10 +10,18 @@ export {
 import { type ChatSettings } from './types/chat';
 
 export const DEFAULT_SETTINGS: ChatSettings = {
+  // The five sampling fields below are a deprecated serde-compatible shell
+  // (audit F-3): Rust's ChatSettings requires them, but user intent lives
+  // exclusively in model-params-store profiles. Do not add new readers.
+  /** @deprecated Dead config shell — use `DEFAULT_MODEL_PARAMS` / profiles. */
   temperature: 0.7,
+  /** @deprecated Dead config shell — use `DEFAULT_MODEL_PARAMS` / profiles. */
   topK: 40,
+  /** @deprecated Dead config shell — use `DEFAULT_MODEL_PARAMS` / profiles. */
   topP: 0.9,
+  /** @deprecated Dead config shell — use `DEFAULT_MODEL_PARAMS` / profiles. */
   numPredict: 2048,
+  /** @deprecated Dead config shell — use `DEFAULT_MODEL_PARAMS` / profiles. */
   numCtx: 4096,
   stop: [] as string[],
   systemPrompt: '',

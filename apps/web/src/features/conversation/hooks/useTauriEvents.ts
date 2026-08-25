@@ -67,7 +67,7 @@ const handleToken = (payload: OllamaToken) => {
   if (totalTokens != null) metrics.totalTokens = totalTokens;
 
   if (Object.keys(metrics).length > 0) {
-    streamingStore.setPendingMetrics(convId, metrics);
+    streamingStore.setPendingMetrics(convId, requestId, metrics);
   }
 
   // On stream completion, flush remaining content + metrics and clean up.

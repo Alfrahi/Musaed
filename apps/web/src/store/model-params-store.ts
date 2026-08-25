@@ -14,6 +14,7 @@ import {
 import { createTauriStorage } from '@/lib/tauri-storage';
 import { useUIStore } from '@/store/ui-store';
 import { logger } from '@/lib/logger';
+import { resolveModelParams } from '@/lib/token-budget';
 
 /**
  * Migration registry for model-params-store. Add handlers as schema evolves.
@@ -138,25 +139,9 @@ export const useModelParamsStore = createWithEqualityFn<ModelParamsState>()(
 /**
  * Resolve the effective sampling params for a model given its `context_length`
  * and Modelfile sampling defaults (or nulls when metadata is unavailable).
- * Resolution order per field:
- *
- * 1. User override for the field if present in the model's profile.
- * 2. Model's Modelfile default from `/api/show` (for all five fields).
- *    For `numCtx` only: when the Modelfile default is absent, the model's
- *    `contextLength` from `model_info` is used as an additional fallback.
- * 3. `DEFAULT_MODEL_PARAMS` for the field.
- *
- * `numCtx` is the only field with a two-tier metadata fallback because it
- * is the only param with a model-derived `model_info` default distinct from
- * the Modelfile's `PARAMETER num_ctx` directive. The other four fall back
- * to `DEFAULT_MODEL_PARAMS` when neither the user override nor the
- * Modelfile default are available.
- *
- * When a stored `numCtx` override exceeds the current model's
- * `contextLength`, the resolved value is clamped down to `contextLength`
- * (so the value sent to Ollama never overshoots the model's actual context
- * window). The stored override is preserved verbatim by the store; only the
- * resolved value seen by callers is clamped.
+ * Thin adapter over the single shared resolver in
+ * `@/lib/token-budget#resolveModelParams`; see there for the precedence
+ * ladder and clamping semantics.
  *
  * @param defaultParams Per-model sampling defaults parsed from the
  * Modelfile's `PARAMETER` directives by `cmd_ollama_validate_model`. Pass
@@ -166,112 +151,36 @@ export const selectResolvedParams = (
   modelName: string,
   contextLength: number | null,
   defaultParams: ModelDefaultParams | null = null
-): ModelParams => {
-  const profile = useModelParamsStore.getState().profiles[modelName];
-  const dpFallback = (key: 'temperature' | 'topP' | 'topK' | 'numPredict') =>
-    defaultParams?.[key] ?? DEFAULT_MODEL_PARAMS[key];
-  const numCtxFallback = defaultParams?.numCtx ?? contextLength ?? DEFAULT_MODEL_PARAMS.numCtx;
-  if (!profile) {
-    return {
-      ...DEFAULT_MODEL_PARAMS,
-      temperature: dpFallback('temperature'),
-      topP: dpFallback('topP'),
-      topK: dpFallback('topK'),
-      numPredict: dpFallback('numPredict'),
-      numCtx: numCtxFallback,
-    };
-  }
-  const overrides = profile.overrides;
-  const params = profile.params;
-  const resolve = <K extends ModelParamKey>(k: K, fallback: number) =>
-    overrides.includes(k) ? params[k] : fallback;
-  const numCtxOverride = overrides.includes('numCtx') ? params.numCtx : null;
-  const numCtx = clampNumCtx(numCtxOverride, contextLength, defaultParams?.numCtx ?? null);
-  return {
-    temperature: resolve('temperature', dpFallback('temperature')),
-    topK: resolve('topK', dpFallback('topK')),
-    topP: resolve('topP', dpFallback('topP')),
-    numPredict: resolve('numPredict', dpFallback('numPredict')),
-    numCtx,
-  };
-};
-
-/**
- * Clamp a stored `numCtx` override against the model's `contextLength`.
- *
- * Resolution for `numCtx` (no user override path — callers pre-check):
- * 1. Stored user override (if valid against contextLength).
- * 2. Modelfile `PARAMETER num_ctx` default when present.
- * 3. Model's `contextLength` from `model_info`.
- * 4. `DEFAULT_MODEL_PARAMS.numCtx`.
- */
-function clampNumCtx(
-  override: number | null,
-  contextLength: number | null,
-  modelfileNumCtx: number | null
-): number {
-  if (override === null) {
-    if (modelfileNumCtx !== null) return modelfileNumCtx;
-    return contextLength ?? DEFAULT_MODEL_PARAMS.numCtx;
-  }
-  if (contextLength !== null && override > contextLength) return contextLength;
-  return override;
-}
+): ModelParams =>
+  resolveModelParams(useModelParamsStore.getState().profiles[modelName], {
+    contextWindow: contextLength,
+    modelfileDefaults: defaultParams,
+  }).params;
 
 /**
  * React hook form of `selectResolvedParams` for components that need to
- * re-render on profile changes. Returns resolved params plus the raw stored
- * override value for `numCtx` (so the panel can show a clamp hint when the
- * stored override exceeds the current model's `contextLength`).
+ * re-render on profile changes. Returns the resolved params flattened plus
+ * the raw stored override value for `numCtx` (so the panel can show a clamp
+ * hint when resolution had to reduce the stored value).
  *
  * @param defaultParams Per-model sampling defaults parsed from the
  * Modelfile's `PARAMETER` directives by `cmd_ollama_validate_model`. Pass
  * `null` when the model has no Modelfile or the directives are absent.
  */
-export interface ResolvedModelParams extends ModelParams {
-  /** Stored `numCtx` override verbatim, even if it exceeds `contextLength`. */
-  rawNumCtxOverride: number | null;
-  /** True when the user has overridden `numCtx` and it exceeds `contextLength`. */
-  numCtxClamped: boolean;
-}
-
 export const useResolvedModelParams = (
   modelName: string,
   contextLength: number | null,
   defaultParams: ModelDefaultParams | null = null
-): ResolvedModelParams =>
+) =>
   useModelParamsStore((state) => {
-    const profile = state.profiles[modelName];
-    const dpFallback = (key: 'temperature' | 'topP' | 'topK' | 'numPredict') =>
-      defaultParams?.[key] ?? DEFAULT_MODEL_PARAMS[key];
-    const numCtxFallback = defaultParams?.numCtx ?? contextLength ?? DEFAULT_MODEL_PARAMS.numCtx;
-    if (!profile) {
-      return {
-        ...DEFAULT_MODEL_PARAMS,
-        temperature: dpFallback('temperature'),
-        topP: dpFallback('topP'),
-        topK: dpFallback('topK'),
-        numPredict: dpFallback('numPredict'),
-        numCtx: numCtxFallback,
-        rawNumCtxOverride: null,
-        numCtxClamped: false,
-      };
-    }
-    const overrides = profile.overrides;
-    const params = profile.params;
-    const resolve = <K extends ModelParamKey>(k: K, fallback: number) =>
-      overrides.includes(k) ? params[k] : fallback;
-    const numCtxOverride = overrides.includes('numCtx') ? params.numCtx : null;
-    const numCtxClamped =
-      numCtxOverride !== null && contextLength !== null && numCtxOverride > contextLength;
+    const resolved = resolveModelParams(state.profiles[modelName], {
+      contextWindow: contextLength,
+      modelfileDefaults: defaultParams,
+    });
     return {
-      temperature: resolve('temperature', dpFallback('temperature')),
-      topK: resolve('topK', dpFallback('topK')),
-      topP: resolve('topP', dpFallback('topP')),
-      numPredict: resolve('numPredict', dpFallback('numPredict')),
-      numCtx: clampNumCtx(numCtxOverride, contextLength, defaultParams?.numCtx ?? null),
-      rawNumCtxOverride: numCtxOverride,
-      numCtxClamped,
+      ...resolved.params,
+      rawNumCtxOverride: resolved.rawNumCtxOverride,
+      numCtxClamped: resolved.numCtxClamped,
     };
   }, shallow);
 

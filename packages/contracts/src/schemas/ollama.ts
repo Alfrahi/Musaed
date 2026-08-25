@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ChatMessageSchema } from './chat';
+import { ChatMessageSchema, ModelDefaultParamsSchema } from './chat';
 
 // Ollama related schemas
 export const OllamaModelDetailsSchema = z.object({
@@ -54,14 +54,6 @@ export const PullErrorSchema = z.object({
   name: z.string(),
   error: z.string(),
   duration: z.coerce.number().optional(),
-});
-
-export const ModelDefaultParamsSchema = z.object({
-  temperature: z.number().finite().nullish(),
-  topP: z.number().finite().nullish(),
-  topK: z.number().int().nullish(),
-  numCtx: z.number().int().nonnegative().nullish(),
-  numPredict: z.number().int().nullish(),
 });
 
 export const ModelValidationSchema = z.object({

@@ -70,6 +70,42 @@ pub struct ChatOptions {
     pub stop: Option<Vec<String>>,
 }
 
+/// The `options` object sent to Ollama's `/api/chat`.
+///
+/// Ollama matches option keys exactly against its snake_case JSON tags and
+/// silently warns+skips unknown keys, so this type has NO camelCase rename:
+/// field names serialize verbatim (`top_k`, `num_ctx`, ...). [`ChatOptions`]
+/// remains the IPC DTO (camelCase, TypeScript-facing); convert at the wire
+/// boundary via [`OllamaOptions::from`]. `None` fields are omitted entirely.
+#[derive(Debug, Serialize, Clone, PartialEq)]
+pub struct OllamaOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub temperature: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub top_k: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub top_p: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub num_predict: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub num_ctx: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stop: Option<Vec<String>>,
+}
+
+impl From<&ChatOptions> for OllamaOptions {
+    fn from(opts: &ChatOptions) -> Self {
+        Self {
+            temperature: opts.temperature,
+            top_k: opts.top_k,
+            top_p: opts.top_p,
+            num_predict: opts.num_predict,
+            num_ctx: opts.num_ctx,
+            stop: opts.stop.clone(),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct OllamaToken {
@@ -308,6 +344,44 @@ mod tests {
         let back: ChatOptions = serde_json::from_str(&json).unwrap();
         assert_eq!(back.temperature.unwrap(), 0.7);
         assert_eq!(back.num_ctx.unwrap(), 4096);
+    }
+
+    // --- OllamaOptions (outgoing /api/chat wire format) tests ---
+
+    #[test]
+    fn ollama_options_serializes_snake_case_keys() {
+        let opts = OllamaOptions::from(&ChatOptions {
+            temperature: Some(0.75),
+            top_k: Some(40),
+            top_p: Some(0.75),
+            num_predict: Some(512),
+            num_ctx: Some(8192),
+            stop: Some(vec!["</s>".to_string()]),
+        });
+        let json = serde_json::to_value(&opts).unwrap();
+        assert_eq!(json["temperature"], 0.75);
+        assert_eq!(json["top_k"], 40);
+        assert_eq!(json["top_p"], 0.75);
+        assert_eq!(json["num_predict"], 512);
+        assert_eq!(json["num_ctx"], 8192);
+        assert_eq!(json["stop"][0], "</s>");
+        // Ollama matches option keys exactly and silently drops unknown ones;
+        // camelCase spellings must therefore never reach the wire.
+        assert!(json.get("numCtx").is_none());
+        assert!(json.get("numPredict").is_none());
+        assert!(json.get("topK").is_none());
+        assert!(json.get("topP").is_none());
+    }
+
+    #[test]
+    fn ollama_options_skips_none_fields() {
+        let opts = OllamaOptions::from(&ChatOptions::default());
+        let json = serde_json::to_value(&opts).unwrap();
+        assert!(
+            json.as_object().unwrap().is_empty(),
+            "None fields must be omitted, got: {}",
+            json
+        );
     }
 
     #[test]
