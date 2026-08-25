@@ -110,7 +110,7 @@ const MermaidError = ({
     <pre className="text-caption overflow-auto rounded-md border border-red-100 bg-white p-4 font-mono whitespace-pre-wrap text-red-600 dark:border-red-900 dark:bg-zinc-950 dark:text-red-500">
       {error}
     </pre>
-    <RequirementNote note={requirementNote} />
+    {requirementNote && <RequirementNote note={requirementNote} />}
   </div>
 );
 
@@ -211,10 +211,7 @@ const useMermaidRender = (
     } catch (err: unknown) {
       if (generation !== generationRef.current) return;
 
-      let message = err instanceof Error ? err.message : String(err);
-      if (message.includes('Parse error') || message.includes('Lexer error')) {
-        message += `\n\n💡 ${t('settings.markdown.requirementNote').replace(/<\/?code>/g, '')}`;
-      }
+      const message = err instanceof Error ? err.message : String(err);
       setErrorMessage(message);
       setSvg('');
       // Cache error to avoid re-trying
@@ -224,7 +221,7 @@ const useMermaidRender = (
         setIsRendering(false);
       }
     }
-  }, [mermaidContent, theme, isDark, t, cacheKey]);
+  }, [mermaidContent, theme, isDark, cacheKey]);
 
   useEffect(() => {
     renderDiagram();
@@ -258,6 +255,11 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ content, className = 
     mermaidTheme,
     isDark
   );
+  // Only requirementDiagram failures get the strict-keywords note
+  const showsRequirementNote = useMemo(
+    () => preprocessMermaidContent(mermaidContent).startsWith('requirementDiagram'),
+    [mermaidContent]
+  );
 
   // Reset mermaid when theme changes
   useEffect(() => {
@@ -284,7 +286,7 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ content, className = 
         onCopySource={copySource}
         errorTitle={t('settings.markdown.mermaidError')}
         copyLabel={t('settings.markdown.copySource')}
-        requirementNote={t('settings.markdown.requirementNote')}
+        requirementNote={showsRequirementNote ? t('settings.markdown.requirementNote') : ''}
       />
     );
   }

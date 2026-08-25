@@ -106,7 +106,7 @@ describe('MermaidRenderer', () => {
     expect(screen.getByText(/Parse error: unexpected token/)).toBeTruthy();
   });
 
-  it('renders error with requirement note containing <code> tags as JSX', async () => {
+  it('shows requirement note for requirementDiagram errors', async () => {
     mockT.mockImplementation((key: string) => {
       if (key === 'settings.markdown.requirementNote') {
         return 'requirementDiagram is strict — relationships must use keywords like <code>satisfies</code>, <code>verifies</code>, etc.';
@@ -115,7 +115,7 @@ describe('MermaidRenderer', () => {
     });
     mockMermaidRender.mockRejectedValue(new Error('Parse error'));
 
-    render(<MermaidRenderer content="invalid" />);
+    render(<MermaidRenderer content={'requirementDiagram\n  req1 - satisfies -> req2'} />);
 
     await waitFor(() => {
       expect(screen.getByText('settings.markdown.mermaidError')).toBeTruthy();
@@ -123,6 +123,25 @@ describe('MermaidRenderer', () => {
 
     expect(screen.getByText('satisfies')).toBeTruthy();
     expect(screen.getByText('verifies')).toBeTruthy();
+  });
+
+  it('omits requirement note for non-requirement diagram errors', async () => {
+    mockT.mockImplementation((key: string) => {
+      if (key === 'settings.markdown.requirementNote') {
+        return 'requirementDiagram is strict — relationships must use keywords like <code>satisfies</code>, <code>verifies</code>, etc.';
+      }
+      return key;
+    });
+    mockMermaidRender.mockRejectedValue(new Error('Parse error'));
+
+    render(<MermaidRenderer content="flowchart TD\n  A --> B" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('settings.markdown.mermaidError')).toBeTruthy();
+    });
+
+    expect(screen.queryByText('satisfies')).toBeNull();
+    expect(screen.queryByText('verifies')).toBeNull();
   });
 
   it('processes content through preprocessMermaidContent before rendering', async () => {

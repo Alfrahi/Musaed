@@ -117,17 +117,22 @@ const fixSingleQuotes = (processed: string): string => {
   return processed;
 };
 
-/** Format erDiagram entity blocks with proper indentation. */
+/** Format erDiagram entity blocks with proper indentation.
+ *  Line-anchored so relationship arrows ending in `{` (e.g. `||--o{`)
+ *  are never mistaken for an entity-block opener. */
 const fixErDiagram = (processed: string): string => {
   if (!processed.includes('erDiagram')) return processed;
-  return processed.replace(/(\w+)\s*\{([^}]+)\}/g, (_, entity, attrs) => {
-    const formatted = attrs
-      .trim()
-      .split('\n')
-      .map((l: string) => `        ${l.trim()}`)
-      .join('\n');
-    return `${entity} {\n${formatted}\n    }`;
-  });
+  return processed.replace(
+    /^[ \t]*(\w+)[ \t]*\{[ \t]*\n([^}]+)\n[ \t]*\}[ \t]*$/gm,
+    (_, entity, attrs) => {
+      const formatted = attrs
+        .trim()
+        .split('\n')
+        .map((l: string) => `        ${l.trim()}`)
+        .join('\n');
+      return `${entity} {\n${formatted}\n    }`;
+    }
+  );
 };
 
 /** Fix quadrantChart value syntax and ensure axis declarations. */
@@ -166,11 +171,27 @@ const fixGantt = (processed: string): string => {
   return result;
 };
 
-/** Normalize flowchart/graph: unify to TD, fix arrows, add statement terminators. */
+/** Lowercase capitalized `Subgraph` headers (the keyword is case-sensitive). */
+const fixSubgraphCase = (processed: string): string => {
+  if (!/^(flowchart|graph)\b/im.test(processed)) return processed;
+  return processed.replace(/^[ \t]*Subgraph(?=[ \t]+\S)/gm, 'subgraph');
+};
+
+/** Quote flowchart node labels containing parentheses (bare parens break the parser). */
+const quoteParenLabels = (processed: string): string => {
+  if (!/^(flowchart|graph)\b/im.test(processed)) return processed;
+  return processed.replace(/\[([^\]"[\n]*\([^)\]]*\)[^"\][\n]*)\]/g, '["$1"]');
+};
+
+/** Normalize flowchart/graph keyword, preserving the declared direction. */
 const fixFlowchart = (processed: string): string => {
   if (!/^(flowchart|graph)/im.test(processed)) return processed;
 
-  let result = processed.replace(/^(flowchart|graph)\s+\w*/im, 'flowchart TD');
+  let result = processed.replace(
+    /^(flowchart|graph)(?:[ \t]+(\w+))?/im,
+    (_match, _keyword: string, direction?: string) =>
+      direction ? `flowchart ${direction.toUpperCase()}` : 'flowchart TD'
+  );
   result = result.replace(/->>/g, '-->');
   result = result.replace(/([^\n;}])\s*$/gm, '$1;');
   return result;
@@ -204,6 +225,8 @@ export function preprocessMermaidContent(raw: string): string {
   processed = fixErDiagram(processed);
   processed = fixQuadrantChart(processed);
   processed = fixGantt(processed);
+  processed = fixSubgraphCase(processed);
+  processed = quoteParenLabels(processed);
   processed = fixFlowchart(processed);
 
   return processed;

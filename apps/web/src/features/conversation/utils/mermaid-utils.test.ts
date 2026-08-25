@@ -151,6 +151,25 @@ describe('mermaid-utils', () => {
       expect(result).toContain('name string');
       expect(result).toContain('id int');
     });
+
+    it('preserves crow-foot relationship lines ending in o{', () => {
+      const input =
+        'erDiagram\n    User ||--o{ Conversation : "has many"\n\n    User {\n        string id\n    }';
+      const result = preprocessMermaidContent(input);
+      expect(result).toContain('User ||--o{ Conversation : "has many"');
+      expect(result).not.toContain('||--o {');
+      expect(result).toContain('string id');
+    });
+
+    it('keeps the full user-reported diagram parseable shape', () => {
+      const input =
+        'erDiagram\n    User ||--o{ Conversation : "has many"\n    Conversation }o--|| Message : "has many"\n\n    User {\n        string id\n    }\n    Message {\n        string id\n    }';
+      const result = preprocessMermaidContent(input);
+      expect(result).toContain('User ||--o{ Conversation : "has many"');
+      expect(result).toContain('Conversation }o--|| Message : "has many"');
+      expect(result).toContain('User {');
+      expect(result).toContain('Message {');
+    });
   });
 
   describe('preprocessMermaidContent - quadrantChart', () => {
@@ -194,9 +213,40 @@ describe('mermaid-utils', () => {
     });
   });
 
+  describe('preprocessMermaidContent - subgraph casing', () => {
+    it('lowercases capitalized Subgraph headers', () => {
+      const input = 'graph LR\nA --> B\n\nSubgraph Persist\nB\nend';
+      const result = preprocessMermaidContent(input);
+      expect(result).toContain('\nsubgraph Persist');
+      expect(result).not.toContain('Subgraph');
+    });
+  });
+
+  describe('preprocessMermaidContent - paren label quoting', () => {
+    it('quotes node labels containing parentheses', () => {
+      const input = 'graph TD\n    A[State Mgmt (e.g., Redux)] --> B[Tauri IPC (IPC)]';
+      const result = preprocessMermaidContent(input);
+      expect(result).toContain('A["State Mgmt (e.g., Redux)"]');
+      expect(result).toContain('B["Tauri IPC (IPC)"]');
+    });
+
+    it('leaves already-quoted labels and edge labels untouched', () => {
+      const input = 'flowchart TD\n    A["kept (as-is)"] -->|edge (label)| B';
+      const result = preprocessMermaidContent(input);
+      expect(result).toContain('A["kept (as-is)"]');
+      expect(result).toContain('|edge (label)|');
+    });
+  });
+
   describe('preprocessMermaidContent - flowchart', () => {
-    it('normalizes flowchart/graph to flowchart TD', () => {
+    it('normalizes graph keyword while preserving declared direction', () => {
       const input = 'graph LR\n  A --> B';
+      const result = preprocessMermaidContent(input);
+      expect(result).toBe('flowchart LR;\n  A --> B;');
+    });
+
+    it('defaults to TD when no direction is given', () => {
+      const input = 'graph\n  A --> B';
       const result = preprocessMermaidContent(input);
       expect(result).toBe('flowchart TD;\n  A --> B;');
     });
