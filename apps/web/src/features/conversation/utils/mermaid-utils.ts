@@ -164,7 +164,44 @@ const fixQuadrantChart = (processed: string): string => {
   return result;
 };
 
-/** Fix gantt chart: add dateFormat/axisFormat if missing, repair bare task lines. */
+/** Declare gitGraph branches on first checkout (LLMs often checkout branches they never created). */
+const fixGitGraphBranches = (processed: string): string => {
+  if (!/^\s*gitGraph\b/im.test(processed)) return processed;
+
+  const known = new Set(['main']);
+  const out: string[] = [];
+  for (const line of processed.split('\n')) {
+    const declared = line.match(/^[ \t]*branch[ \t]+("[^"]+"|[\w./-]+)/);
+    if (declared) {
+      known.add(declared[1]);
+    } else {
+      const checkedOut = line.match(/^[ \t]*checkout[ \t]+("[^"]+"|[\w./-]+)/);
+      if (checkedOut && !known.has(checkedOut[1])) {
+        out.push(`${line.match(/^[ \t]*/)?.[0]}branch ${checkedOut[1]}`);
+        known.add(checkedOut[1]);
+      }
+    }
+    out.push(line);
+  }
+  return out.join('\n');
+};
+
+/** Convert hallucinated gantt rows (`project|task Name,start..end`) to canonical `Name :start,end`. */
+const fixGanttPseudoSyntax = (processed: string): string => {
+  if (!processed.includes('gantt')) return processed;
+
+  return processed.replace(
+    /^([ \t]*)(?:project|task)\b[ \t]+([^,\n]+?),[ \t]*(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})[ \t]*$/gim,
+    (_m, indent: string, name: string, start: string, end: string) =>
+      `${indent}${name.trim()} :${start}, ${end}`
+  );
+};
+
+/**
+ * Fix gantt chart: add dateFormat/axisFormat if missing, repair bare text-duration
+ * task lines. Lines whose data section already contains a date (canonical
+ * `Name :tags, id, start, end` forms) are left untouched.
+ */
 const fixGantt = (processed: string): string => {
   if (!processed.includes('gantt')) return processed;
 
@@ -175,7 +212,7 @@ const fixGantt = (processed: string): string => {
     result = result.replace(/^(gantt\b)/im, '$1\n  axisFormat %Y-%m-%d');
 
   result = result.replace(
-    /^(\s*)([^:\n]+?)\s*:\s*(?![\d-]|after|crit|done|milestone|active)([^,\n]+?)(?:,\s*([^\n]+))?$/gm,
+    /^(\s*)([^:\n]+?)\s*:\s*(?![^:\n]*\d{4}-\d{2}-\d{2})(?![\d-]|after|crit|done|milestone|active)([^,\n]+?)(?:,\s*([^\n]+))?$/gm,
     (_, indent, taskName, __, durationPart) => {
       const cleanTask = taskName.trim();
       const duration = (durationPart?.trim() || '7d').replace(/^\s*,\s*/, '');
@@ -238,6 +275,8 @@ export function preprocessMermaidContent(raw: string): string {
   processed = fixSingleQuotes(processed);
   processed = fixErDiagram(processed);
   processed = fixQuadrantChart(processed);
+  processed = fixGitGraphBranches(processed);
+  processed = fixGanttPseudoSyntax(processed);
   processed = fixGantt(processed);
   processed = fixSubgraphCase(processed);
   processed = quoteParenLabels(processed);
