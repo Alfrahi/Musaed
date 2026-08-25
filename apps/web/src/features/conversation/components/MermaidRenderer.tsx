@@ -2,11 +2,11 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import mermaid from 'mermaid';
-import DOMPurify from 'dompurify';
 
 import {
   detectUnsupportedDiagram,
   preprocessMermaidContent,
+  sanitizeMermaidSvg,
 } from '@/features/conversation/utils/mermaid-utils';
 import {
   initOnce,
@@ -129,9 +129,7 @@ const MermaidDiagram = ({
   <div
     ref={containerRef}
     className={`mermaid-container shadow-native mbs-6 mbe-6 flex justify-center overflow-x-auto rounded-md border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950 ${className}`}
-    dangerouslySetInnerHTML={{
-      __html: DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: false } }),
-    }}
+    dangerouslySetInnerHTML={{ __html: sanitizeMermaidSvg(svg) }}
     aria-label={ariaLabel}
   />
 );
