@@ -2,6 +2,8 @@
  * Utility functions for Mermaid diagram preprocessing and validation.
  */
 
+import DOMPurify from 'dompurify';
+
 /**
  * Detects diagram types that are known to be unsupported or require special handling.
  */
@@ -13,6 +15,18 @@ export function detectUnsupportedDiagram(code: string): string | null {
   }
 
   return null;
+}
+
+/**
+ * Sanitizes a rendered Mermaid SVG for dangerouslySetInnerHTML.
+ * SVG-mode labels (<text>/<tspan>) survive this profile; HTML-in-SVG labels
+ * (<foreignObject>) are hard-disallowed by DOMPurify and must not be re-enabled —
+ * mermaid must render with htmlLabels:false (see mermaid-service buildInitConfig).
+ */
+export function sanitizeMermaidSvg(svg: string): string {
+  return DOMPurify.sanitize(svg, {
+    USE_PROFILES: { svg: true, svgFilters: false },
+  });
 }
 
 /** Fix common syntax issues (comments, pipes, case mismatches). */

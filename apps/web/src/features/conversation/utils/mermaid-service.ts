@@ -16,7 +16,10 @@ const buildInitConfig = (theme: MermaidTheme | 'dark', isDark: boolean) => {
     theme: isDark ? 'dark' : theme,
     securityLevel: 'strict' as const,
     suppressErrorRendering: true,
-    flowchart: { useMaxWidth: true, htmlLabels: true },
+    // SVG-mode labels (plain <text>): html labels live in <foreignObject>,
+    // which DOMPurify hard-disallows, so they would be stripped entirely.
+    htmlLabels: false,
+    flowchart: { useMaxWidth: true },
     sequence: { useMaxWidth: true },
     gantt: { useMaxWidth: true },
     pie: { useMaxWidth: true },

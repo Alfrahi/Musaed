@@ -1,7 +1,36 @@
 import { describe, it, expect } from 'vitest';
-import { detectUnsupportedDiagram, preprocessMermaidContent } from './mermaid-utils';
+import {
+  detectUnsupportedDiagram,
+  preprocessMermaidContent,
+  sanitizeMermaidSvg,
+} from './mermaid-utils';
 
 describe('mermaid-utils', () => {
+  describe('sanitizeMermaidSvg', () => {
+    it('keeps SVG-mode label text (<text>/<tspan>)', () => {
+      const svg =
+        '<svg xmlns="http://www.w3.org/2000/svg"><text x="0" y="10"><tspan>User writes</tspan></text></svg>';
+      const clean = sanitizeMermaidSvg(svg);
+      expect(clean).toContain('<text');
+      expect(clean).toContain('User writes');
+    });
+
+    it('strips scripts and event handlers from hostile payloads', () => {
+      const hostile =
+        '<svg><foreignObject><div onclick="pwn()"><script>alert(1)</script>TEXT</div></foreignObject></svg>';
+      const clean = sanitizeMermaidSvg(hostile);
+      expect(clean).not.toContain('onclick');
+      expect(clean).not.toContain('<script');
+      expect(clean).not.toContain('alert');
+    });
+
+    it('removes foreignObject label content entirely (DOMPurify hard-disallows it)', () => {
+      const svg =
+        '<svg><foreignObject width="10" height="10"><div xmlns="http://www.w3.org/1999/xhtml"><span>label</span></div></foreignObject></svg>';
+      expect(sanitizeMermaidSvg(svg)).not.toContain('label');
+    });
+  });
+
   describe('detectUnsupportedDiagram', () => {
     it('detects xychart-beta', () => {
       expect(detectUnsupportedDiagram('xychart-beta\n  "a" [1, 2]')).toBe(
