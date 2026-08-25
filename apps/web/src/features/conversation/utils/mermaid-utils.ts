@@ -222,6 +222,63 @@ const fixGantt = (processed: string): string => {
   return result;
 };
 
+/**
+ * Repair LLM flowcharts that use display names as node ids: bare ids cannot
+ * contain spaces, so `User writes message[label]`, multi-word edge endpoints and
+ * `style Name With Spaces ...` all break the parser. Rewrites them to slugged
+ * ids with quoted labels. Also strips stray `|label|>` closers. Open-link
+ * arrows without `>` (`A --- B`) are not endpoint-rewritten.
+ */
+const fixMultiWordNodes = (processed: string): string => {
+  if (!/^(flowchart|graph)\b/im.test(processed)) return processed;
+
+  const slugId = (name: string): string =>
+    name
+      .trim()
+      .replace(/\s+/g, '_')
+      .replace(/[^\p{L}\p{N}_-]/gu, '') || 'node';
+
+  const result = processed.replace(/\|([^|\n]*)\|>/g, '|$1|');
+
+  const lines = result.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (
+      /^[ \t]*(?:flowchart|graph|subgraph|end|direction|classDef|class|click|linkStyle|%%)\b/i.test(
+        line
+      )
+    ) {
+      continue;
+    }
+    if (/^[ \t]*style\b/i.test(line)) {
+      lines[i] = line.replace(
+        /^([ \t]*style[ \t]+)(.+?)(?=[ \t]+[a-z-]+[ \t]*:)/i,
+        (_m, prefix: string, name: string) => prefix + (name.includes(' ') ? slugId(name) : name)
+      );
+      continue;
+    }
+    lines[i] = line.replace(
+      /\b([A-Za-z]\w*(?:[ \t]+[A-Za-z0-9]\w*)+)[ \t]*\[([^[\]]*)\]/g,
+      (_m, name: string, label: string) => `${slugId(name)}["${label.trim()}"]`
+    );
+
+    if (lines[i].includes('>')) {
+      const spans: string[] = [];
+      let work = lines[i].replace(/("[^"]*"|\|[^|\n]*\|)/g, (m) => {
+        spans.push(m);
+        return `\u0000${spans.length - 1}\u0000`;
+      });
+      work = work.replace(
+        /(^|[>\s])([A-Za-z]\w*(?:[ \t]+[A-Za-z0-9]\w*)+)(?=[ \t]*(?:-{2,3}>|={2,3}>|-\.{1,3}>|\||;|$))/g,
+        (_m, pre: string, name: string) => `${pre}${slugId(name)}["${name.trim()}"]`
+      );
+      work = work.replace(/\u0000(\d+)\u0000/g, (_m, idx: string) => spans[Number(idx)]);
+      lines[i] = work;
+    }
+  }
+  return lines.join('\n');
+};
+
 /** Lowercase capitalized `Subgraph` headers (the keyword is case-sensitive). */
 const fixSubgraphCase = (processed: string): string => {
   if (!/^(flowchart|graph)\b/im.test(processed)) return processed;
@@ -278,6 +335,7 @@ export function preprocessMermaidContent(raw: string): string {
   processed = fixGitGraphBranches(processed);
   processed = fixGanttPseudoSyntax(processed);
   processed = fixGantt(processed);
+  processed = fixMultiWordNodes(processed);
   processed = fixSubgraphCase(processed);
   processed = quoteParenLabels(processed);
   processed = fixFlowchart(processed);
