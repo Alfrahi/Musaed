@@ -2,6 +2,7 @@
 
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
+import { traceStoreMutation } from '@/lib/store-tracing';
 
 /** Sidebar tab kinds. Lifted out of `Sidebar.tsx`'s local `useState` so
  *  non-sidebar surfaces (notably `RagContextBadge` in `components/ui`) can
@@ -60,7 +61,18 @@ export const useUIStore = createWithEqualityFn<UIState>()(
     setInitialized: (isInitialized) => set({ isInitialized }),
     setHydrated: (isHydrated) => set({ isHydrated }),
     setOllamaConnected: (isOllamaConnected) => set({ isOllamaConnected }),
-    setErrorMessage: (errorMessage) => set({ errorMessage }),
+    setErrorMessage: (errorMessage) =>
+      set(() => {
+        traceStoreMutation({
+          feature: 'ui',
+          action: 'setErrorMessage',
+          level: errorMessage ? 'WARN' : 'DEBUG',
+          message: errorMessage ? `error surfaced: ${errorMessage}` : 'error cleared',
+          context: { hasError: !!errorMessage },
+          throttleMs: 0,
+        });
+        return { errorMessage };
+      }),
     openModal: (kind) => set({ activeModal: kind }),
     closeModal: () => set({ activeModal: null }),
     setSidebarTab: (sidebarTab) => set({ sidebarTab }),

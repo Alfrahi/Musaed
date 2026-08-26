@@ -7,6 +7,7 @@ import { type OllamaModel, ModelStateSchema, DEFAULT_MODEL_STATE } from '@musaed
 import { createTauriStorage } from '@/lib/tauri-storage';
 import { useUIStore } from '@/store/ui-store';
 import { logger } from '@/lib/logger';
+import { traceStoreMutation } from '@/lib/store-tracing';
 
 // Migration for model state: ensure schema integrity on rehydration
 const MODEL_MIGRATIONS: Record<number, (data: unknown) => unknown> = {
@@ -55,7 +56,18 @@ export const useModelStore = createWithEqualityFn<ModelState>()(
       pullStatus: {},
       fetchError: null,
       setModels: (models) => set({ models }),
-      setSelectedModel: (selectedModel) => set({ selectedModel }),
+      setSelectedModel: (selectedModel) =>
+        set((state) => {
+          traceStoreMutation({
+            feature: 'model',
+            action: 'setSelectedModel',
+            level: 'INFO',
+            message: `setSelectedModel ${selectedModel}`,
+            context: { previous: state.selectedModel, next: selectedModel },
+            throttleMs: 0,
+          });
+          return { selectedModel };
+        }),
       updatePullStatus: (name, status) =>
         set((state) => {
           const next = { ...state.pullStatus };

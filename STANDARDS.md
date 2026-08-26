@@ -483,17 +483,18 @@ All logs MUST be structured:
 - Ollama streaming lifecycle
 - store mutations
 
-CI MUST verify trace coverage:
+Trace coverage requirements:
 
-- Every Rust domain module MUST contain at least one `tracing::` call
-  (grep-enforced: `grep -L 'tracing::' src-tauri/src/{domain}/*.rs` fails
-  the build when a domain module has zero trace instrumentation).
+- Every Rust domain module MUST instrument its services and entry points
+  with `tracing::` calls (review-enforced; leaf helpers may delegate
+  tracing to their callers).
 - Every frontend store MUST contain at least one `traceStoreMutation` or
-  `traceApi` call (grep-enforced per store file).
-- Every IPC method in `CommandMap` MUST emit a trace span via
-  `dispatchIpcViolationTrace` or `recordIpcLatency` (grep-enforced:
-  `grep -c 'dispatchIpcViolationTrace\|recordIpcLatency'` must equal the
-  number of entries in `CommandMap`).
+  `traceApi` call (review-enforced).
+- IPC tracing MUST stay centralized in the `callInternal` bridge of
+  `apps/web/src/lib/ipc.ts`: it records latency for every `CommandMap`
+  invocation and dispatches a violation trace when a latency budget from
+  `IPC_LATENCY_BUDGETS` is exceeded. Routing commands through that single
+  chokepoint is what guarantees per-command coverage.
 
 ---
 

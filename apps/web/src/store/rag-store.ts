@@ -9,6 +9,7 @@ import { useUIStore } from '@/store/ui-store';
 import { ragMigrations, validateRag } from '@/lib/migrations';
 import { logger } from '@/lib/logger';
 import { deriveProjectStatus } from '@/lib/rag-status';
+import { traceStoreMutation } from '@/lib/store-tracing';
 
 const RAG_STORE_VERSION = 3;
 
@@ -61,13 +62,31 @@ export const useRagStore = createWithEqualityFn<RagState>()(
         }),
 
       addProject: (project: RagProject) =>
-        set((state: RagState) => ({
-          projects: { ...state.projects, [project.id]: project },
-          projectIds: [...state.projectIds, project.id],
-        })),
+        set((state: RagState) => {
+          traceStoreMutation({
+            feature: 'rag',
+            action: 'addProject',
+            level: 'INFO',
+            message: `addProject ${project.id}`,
+            context: { projectId: project.id, name: project.name },
+            throttleMs: 0,
+          });
+          return {
+            projects: { ...state.projects, [project.id]: project },
+            projectIds: [...state.projectIds, project.id],
+          };
+        }),
 
       removeProject: (projectId: string) =>
         set((state: RagState) => {
+          traceStoreMutation({
+            feature: 'rag',
+            action: 'removeProject',
+            level: 'INFO',
+            message: `removeProject ${projectId}`,
+            context: { projectId, wasActive: state.activeProjectId === projectId },
+            throttleMs: 0,
+          });
           const { [projectId]: _, ...rest } = state.projects;
           return {
             projects: rest,
