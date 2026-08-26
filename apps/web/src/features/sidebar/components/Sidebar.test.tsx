@@ -101,6 +101,9 @@ vi.mock('@/lib/ipc', async () => {
       deleteConversation: vi.fn().mockResolvedValue(undefined),
       updateConversation: vi.fn().mockResolvedValue(undefined),
     },
+    traceApi: {
+      append: vi.fn().mockResolvedValue(undefined),
+    },
   };
 });
 

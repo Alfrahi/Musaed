@@ -12,6 +12,7 @@ import {
 import { createTauriStorage } from '@/lib/tauri-storage';
 import { useUIStore } from '@/store/ui-store';
 import { logger } from '@/lib/logger';
+import { traceStoreMutation } from '@/lib/store-tracing';
 
 /**
  * Snaps an out-of-bounds persisted sampling parameter to the nearest valid
@@ -156,7 +157,21 @@ export const useSettingsStore = createWithEqualityFn<SettingsState>()(
   persist(
     (set) => ({
       globalSettings: DEFAULT_SETTINGS,
-      setGlobalSettings: (globalSettings) => set({ globalSettings }),
+      setGlobalSettings: (globalSettings) =>
+        set((state) => {
+          const changedKeys = (Object.keys(globalSettings) as (keyof ChatSettings)[]).filter(
+            (k) => !Object.is(globalSettings[k], state.globalSettings[k])
+          );
+          traceStoreMutation({
+            feature: 'settings',
+            action: 'setGlobalSettings',
+            level: 'INFO',
+            message: `settings updated: ${changedKeys.join(',') || 'none'}`,
+            context: { changedKeys },
+            throttleMs: 0,
+          });
+          return { globalSettings };
+        }),
     }),
     {
       name: 'musaed-settings-storage',

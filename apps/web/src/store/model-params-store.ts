@@ -15,6 +15,7 @@ import { createTauriStorage } from '@/lib/tauri-storage';
 import { useUIStore } from '@/store/ui-store';
 import { logger } from '@/lib/logger';
 import { resolveModelParams } from '@/lib/token-budget';
+import { traceStoreMutation } from '@/lib/store-tracing';
 
 /**
  * Migration registry for model-params-store. Add handlers as schema evolves.
@@ -61,6 +62,14 @@ export const useModelParamsStore = createWithEqualityFn<ModelParamsState>()(
                 params: { ...DEFAULT_MODEL_PARAMS, [key]: value },
                 overrides: [key],
               };
+          traceStoreMutation({
+            feature: 'model-params',
+            action: 'setParam',
+            level: 'INFO',
+            message: `setParam ${key} for ${modelName}`,
+            context: { modelName, key, value },
+            throttleMs: 0,
+          });
           return { profiles: { ...state.profiles, [modelName]: profile } };
         }),
       resetParam: (modelName, key) =>
