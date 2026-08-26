@@ -158,13 +158,15 @@ mod tests {
 
     #[test]
     fn force_evict_removes_expired_entries() {
-        // Insert a stale entry directly and confirm force_evict drops it.
-        LOG_CLEAR_TOKENS.clear();
+        // Assert per-key, never is_empty(): sibling tests issue live tokens
+        // into the shared process-global map on parallel threads.
         LOG_CLEAR_TOKENS.insert(
             "stale".to_string(),
             Instant::now() - Duration::from_secs(LOG_CLEAR_TOKEN_TTL_SECS + 5),
         );
+        LOG_CLEAR_TOKENS.insert("fresh".to_string(), Instant::now());
         force_evict();
-        assert!(LOG_CLEAR_TOKENS.is_empty());
+        assert!(!LOG_CLEAR_TOKENS.contains_key("stale"));
+        assert!(LOG_CLEAR_TOKENS.contains_key("fresh"));
     }
 }

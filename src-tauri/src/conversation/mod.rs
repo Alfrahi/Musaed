@@ -8,5 +8,6 @@ pub mod connection;
 pub mod models;
 pub mod service;
 pub mod store;
+pub mod validation;
 
 pub use store::ConversationStore;
