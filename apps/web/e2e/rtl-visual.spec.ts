@@ -91,12 +91,11 @@ test.describe('RTL Visual Regression', () => {
 
   test.describe('LTR Baseline Screenshots', () => {
     test.beforeEach(async () => {
+      await navigateTo('/');
       await setLocale('en');
     });
 
     test('should capture LTR homepage baseline', async () => {
-      await navigateTo('/');
-
       // Verify LTR direction
       const dir = await page.evaluate(() => document.documentElement.dir);
       expect(dir).toBe('ltr');
@@ -125,12 +124,11 @@ test.describe('RTL Visual Regression', () => {
 
   test.describe('RTL Visual Verification', () => {
     test.beforeEach(async () => {
+      await navigateTo('/');
       await setLocale('ar');
     });
 
     test('should capture RTL homepage screenshot', async () => {
-      await navigateTo('/');
-
       // Verify RTL direction
       const dir = await page.evaluate(() => document.documentElement.dir);
       expect(dir).toBe('rtl');
@@ -213,13 +211,13 @@ test.describe('RTL Visual Regression', () => {
   test.describe('LTR vs RTL Comparison', () => {
     test('should visually differ between LTR and RTL layouts', async () => {
       // Take LTR screenshot
-      await setLocale('en');
       await navigateTo('/');
+      await setLocale('en');
       const ltrScreenshot = await page.screenshot();
 
       // Take RTL screenshot
-      await setLocale('ar');
       await navigateTo('/');
+      await setLocale('ar');
       const rtlScreenshot = await page.screenshot();
 
       // Screenshots should be different (RTL should have mirrored layout)
