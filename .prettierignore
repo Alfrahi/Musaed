@@ -23,3 +23,5 @@ src-tauri/gen
 apps/web/public/fonts
 apps/web/src/app/favicon.ico
 src-tauri/icons
+
+apps/web/next-env.d.ts
