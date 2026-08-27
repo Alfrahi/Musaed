@@ -71,3 +71,4 @@ src-tauri/**/*.dmg
 src-tauri/**/*.app
 src-tauri/**/*.deb
 src-tauri/**/*.rpm
+

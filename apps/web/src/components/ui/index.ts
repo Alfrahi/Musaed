@@ -1,4 +1,5 @@
 export { default as DirectionProvider } from './DirectionProvider';
+export { default as HydrationProvider } from './HydrationProvider';
 export { default as SkipToContent } from './SkipToContent';
 export { default as ToastProvider } from './ToastProvider';
 export { default as ErrorBoundary } from './ErrorBoundary';

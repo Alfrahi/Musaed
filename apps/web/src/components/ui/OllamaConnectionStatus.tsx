@@ -69,7 +69,10 @@ const OllamaConnectionStatus = () => {
 
   if (isHealthy && !isChecking) {
     return (
-      <div className="text-caption flex items-center gap-2 text-green-600 dark:text-green-400">
+      <div
+        data-testid="ollama-connection-status"
+        className="text-caption flex items-center gap-2 text-green-600 dark:text-green-400"
+      >
         <CheckCircle2 size={14} />
         <span className="hidden sm:inline">{t('chat.localNode')}</span>
         {health && <span className="caption-xs">({health.responseTimeMs}ms)</span>}
@@ -79,7 +82,7 @@ const OllamaConnectionStatus = () => {
 
   if (shouldReduceMotion) {
     return (
-      <div className="flex items-center gap-2">
+      <div data-testid="ollama-connection-status" className="flex items-center gap-2">
         <StatusContent
           isChecking={isChecking}
           connectionState={connectionState}
@@ -94,6 +97,7 @@ const OllamaConnectionStatus = () => {
     <AnimatePresence mode="wait">
       <motion.div
         key={connectionState}
+        data-testid="ollama-connection-status"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}

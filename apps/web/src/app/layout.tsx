@@ -1,6 +1,12 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { DirectionProvider, SkipToContent, ToastProvider, ErrorBoundary } from '@/components/ui';
+import {
+  DirectionProvider,
+  SkipToContent,
+  ToastProvider,
+  ErrorBoundary,
+  HydrationProvider,
+} from '@/components/ui';
 
 export const metadata: Metadata = {
   title: 'Musaed',
@@ -60,10 +66,12 @@ const RootLayout = ({
       >
         <SkipToContent />
         <ErrorBoundary>
-          <DirectionProvider>
-            <ToastProvider />
-            {children}
-          </DirectionProvider>
+          <HydrationProvider>
+            <DirectionProvider>
+              <ToastProvider />
+              {children}
+            </DirectionProvider>
+          </HydrationProvider>
         </ErrorBoundary>
       </body>
     </html>

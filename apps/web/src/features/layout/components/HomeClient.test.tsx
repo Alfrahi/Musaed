@@ -39,10 +39,6 @@ vi.mock('@/store/ui-store', () => ({
   ),
 }));
 
-vi.mock('@/store/coordination', () => ({
-  registerHydrationCoordination: vi.fn(() => vi.fn()),
-}));
-
 vi.mock('@/lib/i18n', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
