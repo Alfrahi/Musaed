@@ -11,18 +11,17 @@
 //! structs and delegate to this service, following the same pattern as
 //! [`super::service::OllamaChatService`].
 
-use super::client::{
-    acquire_global_permit, ollama_endpoint, retry_with_backoff, EVENT_PULL_ERROR,
-    EVENT_PULL_PROGRESS, FAST_HTTP_CLIENT, HTTP_CLIENT, PULL_ABORT_HANDLES,
-    PULL_ABSOLUTE_TIMEOUT_SECS,
-};
 use crate::error_codes;
 use crate::generated_validation::NUM_CTX_RANGE;
 use crate::payloads::{
     BackendError, ModelDefaultParams, ModelValidation, OllamaModel, PullProgress, PullStreamError,
 };
 use crate::rate_limiter::RATE_LIMITER;
-use crate::shared::PULL_PROGRESS_THROTTLE_MS;
+use crate::shared::{
+    acquire_global_permit, ollama_endpoint, retry_with_backoff, EVENT_PULL_ERROR,
+    EVENT_PULL_PROGRESS, FAST_HTTP_CLIENT, HTTP_CLIENT, PULL_ABORT_HANDLES,
+    PULL_ABSOLUTE_TIMEOUT_SECS, PULL_PROGRESS_THROTTLE_MS,
+};
 use crate::validation::is_valid_model_name;
 use futures::StreamExt;
 use serde_json::json;

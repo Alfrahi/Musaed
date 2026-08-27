@@ -5,16 +5,16 @@
 //! Tauri-specific concerns (event emitting, state access) and delegate business
 //! rules to this service.
 
-use super::client::{
+use super::streaming::{process_chat_stream, TauriEmitter};
+use crate::error_codes;
+use crate::payloads::{BackendError, ChatMessage, ChatOptions, OllamaHealth, OllamaOptions};
+use crate::rate_limiter::RATE_LIMITER;
+use crate::shared::{
     acquire_global_permit, ollama_endpoint, request_cache_try_insert, retry_with_backoff,
     ABORT_HANDLES, CONCURRENT_SEMAPHORE, EVENT_OLLAMA_ERROR, FAST_HTTP_CLIENT, HTTP_CLIENT,
     INITIAL_REQUEST_TIMEOUT_SECS, MAX_TOTAL_IMAGE_SIZE_BYTES, REQUEST_CACHE,
     STREAM_ABSOLUTE_TIMEOUT_SECS, STREAM_IDLE_TIMEOUT_SECS,
 };
-use super::streaming::{process_chat_stream, TauriEmitter};
-use crate::error_codes;
-use crate::payloads::{BackendError, ChatMessage, ChatOptions, OllamaHealth, OllamaOptions};
-use crate::rate_limiter::RATE_LIMITER;
 use crate::validation::{
     is_valid_model_name, is_valid_request_id, validate_chat_message, validate_chat_options,
     MAX_MESSAGES_COUNT,

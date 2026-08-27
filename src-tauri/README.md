@@ -30,7 +30,6 @@ src-tauri/
     ├── ollama/           # Ollama engine domain
     │   ├── mod.rs
     │   ├── commands.rs   # chat, abort, check_health commands
-    │   ├── client.rs     # HTTP client for Ollama API
     │   ├── service.rs    # Chat streaming service
     │   ├── streaming.rs   # Stream processing + backpressure
     │   ├── abort_service.rs # Stream cancellation
@@ -38,9 +37,7 @@ src-tauri/
     │   ├── model_service.rs
     │   ├── title_service.rs
     │   ├── title.rs       # Title generation command
-    │   ├── models.rs      # Model management commands (get, pull, delete, validate)
-    │   ├── types.rs       # Ollama types
-    │   └── error.rs
+    │   └── models.rs      # Model management commands (get, pull, delete, validate)
     ├── rag/              # RAG domain
     │   ├── mod.rs
     │   ├── commands.rs   # All cmd_rag_* Tauri commands
@@ -65,9 +62,7 @@ src-tauri/
     │   └── models.rs     # Conversation/message models
     ├── migrations/       # Schema migration framework
     │   ├── mod.rs        # Orchestrator (run_migrations, rollback_to_version)
-    │   ├── traits.rs     # DatabaseMigration trait
     │   ├── version_tracker.rs
-    │   ├── rollback.rs
     │   ├── service.rs
     │   ├── commands.rs   # Tauri commands (run, rollback, status, list)
     │   ├── conversations/ # Conversation DB migrations (v1–v3)

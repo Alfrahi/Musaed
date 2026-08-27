@@ -12,9 +12,7 @@
 //! ```text
 //! src-tauri/src/migrations/
 //! ├── mod.rs               # Main orchestrator and public API
-//! ├── traits.rs            # Migration trait definitions
 //! ├── version_tracker.rs   # Version tracking and persistence
-//! ├── rollback.rs          # Rollback coordination
 //! ├── commands.rs          # Tauri commands for IPC
 //! ├── conversations/       # Conversation database migrations
 //! │   └── mod.rs
@@ -41,19 +39,12 @@
 //! ```
 
 pub mod commands;
-pub mod rollback;
 pub mod service;
-pub mod traits;
 pub mod version_tracker;
 
 // Re-export main types
-pub use crate::define_migration;
 pub use commands::*;
-pub use rollback::create_rollback_plan;
-pub use traits::{DatabaseMigration, MigrationInfoTrait, MigrationMetadata, RollbackMigration};
-pub use version_tracker::{
-    get_current_version, get_migration_history, is_migration_applied, record_migration, set_version,
-};
+pub use version_tracker::{get_current_version, set_version};
 
 use rusqlite::{Connection, Transaction};
 use std::sync::Arc;

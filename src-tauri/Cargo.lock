@@ -51,12 +51,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "allocator-api2"
-version = "0.2.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
-
-[[package]]
 name = "android_system_properties"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1589,7 +1583,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
 dependencies = [
  "ahash",
- "allocator-api2",
 ]
 
 [[package]]
@@ -2326,7 +2319,6 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-single-instance",
  "tauri-plugin-store",
- "tauri-specta",
  "tempfile",
  "thiserror 1.0.69",
  "tokio",
@@ -2345,8 +2337,6 @@ dependencies = [
  "tree-sitter-yaml",
  "url",
  "uuid",
- "walkdir",
- "whatlang",
  "xxhash-rust",
 ]
 
@@ -2768,12 +2758,6 @@ dependencies = [
  "smallvec",
  "windows-link 0.2.1",
 ]
-
-[[package]]
-name = "paste"
-version = "1.0.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
 name = "percent-encoding"
@@ -3795,7 +3779,6 @@ version = "2.0.0-rc.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "38f9a30cbcbb7011f1da7d73483983bf838af123883e45f2b36ed76328df9c50"
 dependencies = [
- "paste",
  "rustc_version",
  "serde_json",
  "specta-macros",
@@ -3811,34 +3794,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
-]
-
-[[package]]
-name = "specta-serde"
-version = "0.0.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee8a72b755ddb8949fd8f17c5db43f0e8a806ea587d9bc602ee3f73240c00029"
-dependencies = [
- "specta",
- "specta-macros",
-]
-
-[[package]]
-name = "specta-typescript"
-version = "0.0.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "639404ee95557f2f8b7e4cb773ffefd45304c7ab8ba21ac83b69051595e083c0"
-dependencies = [
- "specta",
-]
-
-[[package]]
-name = "specta-util"
-version = "0.0.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29b1fc02b446f7244a92924fe68c0555921209f1d342990cd1539e9138e69502"
-dependencies = [
- "specta",
 ]
 
 [[package]]
@@ -4076,7 +4031,6 @@ dependencies = [
  "serde_json",
  "serde_repr",
  "serialize-to-javascript",
- "specta",
  "swift-rs",
  "tauri-build",
  "tauri-macros",
@@ -4316,23 +4270,6 @@ dependencies = [
  "webview2-com",
  "windows",
  "wry",
-]
-
-[[package]]
-name = "tauri-specta"
-version = "2.0.0-rc.25"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee080f36d2ac17ce2f3a82fb53f02d664e8345457de51b56dad3c394dacc41a2"
-dependencies = [
- "heck 0.5.0",
- "serde",
- "serde_json",
- "specta",
- "specta-serde",
- "specta-typescript",
- "specta-util",
- "tauri",
- "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -5314,16 +5251,6 @@ dependencies = [
  "thiserror 2.0.18",
  "windows",
  "windows-core 0.61.2",
-]
-
-[[package]]
-name = "whatlang"
-version = "0.16.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "471d1c1645d361eb782a1650b1786a8fb58dd625e681a04c09f5ff7c8764a7b0"
-dependencies = [
- "hashbrown 0.14.5",
- "once_cell",
 ]
 
 [[package]]

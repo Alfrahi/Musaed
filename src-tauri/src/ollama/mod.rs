@@ -7,14 +7,9 @@
 //! - [`models`]     — Model listing, validation, pulling, deletion, service verification
 //! - [`title`]      — Conversation title generation
 //! - [`streaming`]  — SSE stream processing for chat tokens
-//! - [`client`]     — Re-exports of shared HTTP clients and state
-//! - [`types`]      — Re-exports of payload types
-//! - [`error`]      — Re-exports of error types
 
 pub mod abort_service; // new domain service for abort logic
-pub mod client;
 pub mod commands;
-pub mod error;
 pub mod health_service;
 pub mod model_service;
 pub mod models;
@@ -22,7 +17,6 @@ pub mod service;
 pub mod streaming;
 pub mod title;
 pub mod title_service;
-pub mod types; // placeholder for health refactor
 
 // ---- Public re-exports: every Tauri command is available as `ollama::<name>` ----
 

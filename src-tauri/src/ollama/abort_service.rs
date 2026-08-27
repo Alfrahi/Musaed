@@ -1,8 +1,8 @@
 //! Domain service for handling Ollama chat and pull aborts.
 //! Contains the business logic that was previously inside the Tauri commands.
 
-use crate::ollama::client::{ABORT_HANDLES, PULL_ABORT_HANDLES, REQUEST_CACHE};
 use crate::payloads::ApiResponse;
+use crate::shared::{ABORT_HANDLES, PULL_ABORT_HANDLES, REQUEST_CACHE};
 use crate::validation::{is_valid_model_name, is_valid_request_id, validation_error};
 use tracing;
 

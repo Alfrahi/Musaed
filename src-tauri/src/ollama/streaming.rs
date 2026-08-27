@@ -10,6 +10,7 @@
 
 use crate::error_codes;
 use crate::payloads::{BackendError, OllamaToken};
+use crate::shared::{EVENT_OLLAMA_ERROR, EVENT_OLLAMA_TOKEN};
 use futures::StreamExt;
 use serde_json::json;
 use std::time::Duration;
@@ -18,8 +19,6 @@ use tokio::time;
 use tokio_util::codec::{FramedRead, LinesCodec};
 use tokio_util::sync::CancellationToken;
 use tracing;
-
-use super::client::{EVENT_OLLAMA_ERROR, EVENT_OLLAMA_TOKEN};
 
 /// Sink abstraction for the chat streaming path.
 ///
@@ -67,7 +66,7 @@ impl<R: Runtime> TokenSink for TauriEmitter<'_, R> {
 /// - Cancellation: returns as soon as `cancel_token` fires.
 /// - Idle timeout: if no line arrives within `idle_timeout`, emits a
 ///   `STREAM_IDLE_TIMEOUT` error and returns. Production callers pass
-///   [`STREAM_IDLE_TIMEOUT_SECS`](super::client::STREAM_IDLE_TIMEOUT_SECS);
+///   [`STREAM_IDLE_TIMEOUT_SECS`](crate::shared::STREAM_IDLE_TIMEOUT_SECS);
 ///   passing it as a parameter keeps the function testable without depending
 ///   on a multi-minute constant.
 /// - Stream end (`None`) / read error: returns.
