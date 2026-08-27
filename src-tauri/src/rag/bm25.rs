@@ -1,7 +1,6 @@
 //! BM25 ranking for hybrid search in RAG.
 
 use std::collections::HashMap;
-use whatlang::Lang;
 
 /// BM25 parameters.
 const K1: f32 = 1.5;
@@ -99,11 +98,6 @@ impl BM25 {
 
 /// Tokenize text into terms (words).
 fn tokenize(text: &str) -> Vec<String> {
-    // Detect language for better tokenization (optional)
-    let _lang = whatlang::detect(text)
-        .map(|info| info.lang())
-        .unwrap_or(Lang::Eng);
-
     // Simple tokenization: split on non-alphanumeric characters
     text.split(|c: char| !c.is_alphanumeric() && c != '_')
         .filter(|s| !s.is_empty())

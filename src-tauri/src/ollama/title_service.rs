@@ -14,14 +14,14 @@
 //! request struct and delegates to this service, following the same pattern as
 //! [`super::service::OllamaChatService`] and [`super::model_service::ModelService`].
 
-use super::client::{
-    acquire_global_permit, invalid_ollama_base, ollama_endpoint, FAST_HTTP_CLIENT,
-    FAST_TIMEOUT_SECS,
-};
 use crate::error_codes;
 use crate::generated_validation::MAX_TITLE_INPUT_LEN;
 use crate::payloads::{ApiResponse, BackendError};
 use crate::rate_limiter::RATE_LIMITER;
+use crate::shared::{
+    acquire_global_permit, invalid_ollama_base, ollama_endpoint, FAST_HTTP_CLIENT,
+    FAST_TIMEOUT_SECS,
+};
 use crate::validation::{is_valid_language, is_valid_model_name, validation_error};
 use serde_json::json;
 use std::time::Duration;

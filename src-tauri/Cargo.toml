@@ -11,7 +11,6 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2.0.0-rc.0", features = [] }
-specta = { version = "2.0.0-rc.25", features = ["serde_json", "derive"] }
 
 [dependencies]
 tauri = { version = "2.0.0-rc.0", features = ["tray-icon"] }
@@ -68,7 +67,7 @@ tree-sitter-json = "0.24"
 tree-sitter-yaml = "0.7"
 
 # RAG — Language detection for BM25
-whatlang = "0.16"
+# (removed: whatlang was unused — see bm25.rs tokenize)
 
 # RAG — Hashing for content deduplication
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
@@ -80,12 +79,8 @@ lazy_static = "1.4"
 # RAG — UUID for project/chunk IDs
 uuid = { version = "1", features = ["v4", "serde"] }
 
-# RAG — Directory traversal fallback
-walkdir = "2"
-
 # TypeScript type generation
 specta = { version = "2.0.0-rc.25", features = ["serde_json", "derive"] }
-tauri-specta = { version = "2.0.0-rc.25", features = ["typescript"] }
 
 [profile.release]
 opt-level = 3
