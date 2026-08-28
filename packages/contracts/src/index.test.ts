@@ -9,7 +9,6 @@ import {
   BackendErrorCode,
   IpcError,
   stripThinkingBlocks,
-  stripRedactedThinkingBlocks,
   findThinkingTags,
   PullErrorSchema,
   ModelValidationSchema,
@@ -17,7 +16,6 @@ import {
   REDACTED_THINKING_TAG_END,
   THINK_TAG_START,
   THINK_TAG_END,
-  THINKING_STRIP_TEST_CASES,
 } from './index';
 
 describe('Contracts: Zod Schemas', () => {
@@ -527,11 +525,6 @@ describe('Contracts: thinking blocks & pull errors', () => {
     expect(out).toContain('suffix');
   });
 
-  it('stripRedactedThinkingBlocks is backward-compatible alias', () => {
-    const raw = `${REDACTED_THINKING_TAG_START}x${REDACTED_THINKING_TAG_END}y`;
-    expect(stripRedactedThinkingBlocks(raw)).toBe('y');
-  });
-
   it('findThinkingTags finds <redacted-thinking> blocks', () => {
     const content = `before${REDACTED_THINKING_TAG_START}thinking${REDACTED_THINKING_TAG_END}after`;
     const match = findThinkingTags(content)!;
@@ -574,11 +567,73 @@ describe('Contracts: thinking blocks & pull errors', () => {
   });
 });
 
-describe('Contracts: stripThinkingBlocks parity (THINKING_STRIP_TEST_CASES)', () => {
-  it.each(THINKING_STRIP_TEST_CASES.map((tc) => [tc.description, tc.input, tc.expected] as const))(
-    '%s',
-    (_description, input, expected) => {
-      expect(stripThinkingBlocks(input)).toBe(expected);
-    }
-  );
+describe('Contracts: stripThinkingBlocks parity', () => {
+  const cases: ReadonlyArray<[string, string, string]> = [
+    [
+      'strips <redacted-thinking> block',
+      'Hello<redacted-thinking>secret</redacted-thinking> World',
+      'Hello World',
+    ],
+    [
+      'strips <think> block (DeepSeek-R1)',
+      'Hello<think>reasoning content here</think> World',
+      'Hello World',
+    ],
+    ['strips <thoughts> block', 'Prefix<thoughts>deep thoughts</thoughts>Suffix', 'PrefixSuffix'],
+    ['strips <reasoning> block', 'Start<reasoning>chain of thought</reasoning>End', 'StartEnd'],
+    ['strips <initial_thoughts> block', 'A<initial_thoughts>first idea</initial_thoughts>B', 'AB'],
+    [
+      'strips multiple blocks of different types',
+      'pre<redacted-thinking>a</redacted-thinking> mid<think>b</think> post',
+      'pre mid post',
+    ],
+    [
+      'strips nested/same-type blocks',
+      'X<redacted-thinking>inner1</redacted-thinking>Y<redacted-thinking>inner2</redacted-thinking>Z',
+      'XYZ',
+    ],
+    [
+      'removes unclosed opening tag and everything after (redacted-thinking)',
+      'before<redacted-thinking>no closing tag',
+      'before',
+    ],
+    [
+      'removes unclosed opening tag and everything after (think)',
+      'before<think>no closing tag',
+      'before',
+    ],
+    ['handles empty thinking block', 'A<redacted-thinking></redacted-thinking>B', 'AB'],
+    ['preserves content with no thinking blocks', 'just plain text', 'just plain text'],
+    [
+      'trims whitespace around remaining content',
+      ' <redacted-thinking>hidden</redacted-thinking> visible ',
+      'visible',
+    ],
+    [
+      'handles thinking block at start of string',
+      '<redacted-thinking>reasoning</redacted-thinking>Actual Content',
+      'Actual Content',
+    ],
+    [
+      'handles thinking block at end of string',
+      'Actual Content<redacted-thinking>reasoning</redacted-thinking>',
+      'Actual Content',
+    ],
+    [
+      'handles multiline thinking block content',
+      'before<redacted-thinking>line1\nline2\nline3</redacted-thinking>after',
+      'beforeafter',
+    ],
+    [
+      'handles all five tag formats in one string',
+      'a<redacted-thinking>r1</redacted-thinking>b<think>r2</think>c<thoughts>r3</thoughts>d<reasoning>r4</reasoning>e<initial_thoughts>r5</initial_thoughts>f',
+      'abcdef',
+    ],
+    ['empty string returns empty', '', ''],
+    ['only thinking blocks returns empty', '<redacted-thinking>all hidden</redacted-thinking>', ''],
+  ];
+
+  it.each(cases)('%s', (_description, input, expected) => {
+    expect(stripThinkingBlocks(input)).toBe(expected);
+  });
 });

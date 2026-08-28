@@ -53,7 +53,6 @@ coverage/
 
 # Test artifacts
 playwright-report/
-test-results/
 
 # Optional: If you ever generate these
 **/tauri.conf.json.bak
