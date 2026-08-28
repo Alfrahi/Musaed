@@ -26,9 +26,7 @@ export * from './schemas/context-menu';
 export * from './schemas/tray';
 export * from './schemas/menu-bar';
 export * from './utils/sanitize';
-export * from './utils/thinking-tags';
-export * from './utils/workerUtils';
-export * from './utils/async';
+export * from './redactedThinking';
 
 // API response wrapper
 export interface ApiResponse<T> {

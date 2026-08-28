@@ -7,9 +7,6 @@
  * 3. <thoughts>...</thoughts>
  * 4. <reasoning>...</reasoning>
  * 5. <initial_thoughts>...</initial_thoughts>
- *
- * Both the synchronous path and the Web Worker blob consume these exports
- * so the regex pattern can never drift out of sync with the tag constants.
  */
 
 // ── Tag constants ───────────────────────────────────────────────────
@@ -71,14 +68,10 @@ export const THINKING_UNCLOSED_REGEX_SOURCE = [
   `${escapeRegExp(INITIAL_THOUGHTS_TAG_START)}[\\s\\S]*`,
 ].join('|');
 
-/** @deprecated Use THINKING_REGEX_SOURCE instead. Kept for backward compatibility. */
-export const REDACTED_THINKING_REGEX_SOURCE = `${escapeRegExp(REDACTED_THINKING_TAG_START)}[\\s\\S]*?${escapeRegExp(REDACTED_THINKING_TAG_END)}`;
-
 // ── Strip function ──────────────────────────────────────────────────
 
 /**
  * Strips thinking blocks (all five tag formats) from content.
- * Single source of truth — the async worker variant reuses the same regex pattern.
  *
  * Two-pass strategy:
  * 1. Remove all closed thinking blocks (opening + content + closing tag).
@@ -90,116 +83,6 @@ export function stripThinkingBlocks(content: string): string {
   const both = closed.replace(new RegExp(THINKING_UNCLOSED_REGEX_SOURCE, 'gi'), '');
   return both.trim();
 }
-
-/** @deprecated Use stripThinkingBlocks instead. Kept for backward compatibility. */
-export function stripRedactedThinkingBlocks(content: string): string {
-  return stripThinkingBlocks(content);
-}
-
-// ── Shared test vectors (JS + Rust must produce identical results) ──
-
-/** Canonical test cases for thinking-block stripping parity. */
-export const THINKING_STRIP_TEST_CASES: ReadonlyArray<{
-  /** Human-readable description of what this case verifies */
-  description: string;
-  /** Raw input containing one or more thinking blocks */
-  input: string;
-  /** Expected output after all thinking blocks are stripped and trimmed */
-  expected: string;
-}> = [
-  {
-    description: 'strips <redacted-thinking> block',
-    input: 'Hello<redacted-thinking>secret</redacted-thinking> World',
-    expected: 'Hello World',
-  },
-  {
-    description: 'strips <think> block (DeepSeek-R1)',
-    input: 'Hello<think>reasoning content here</think> World',
-    expected: 'Hello World',
-  },
-  {
-    description: 'strips <thoughts> block',
-    input: 'Prefix<thoughts>deep thoughts</thoughts>Suffix',
-    expected: 'PrefixSuffix',
-  },
-  {
-    description: 'strips <reasoning> block',
-    input: 'Start<reasoning>chain of thought</reasoning>End',
-    expected: 'StartEnd',
-  },
-  {
-    description: 'strips <initial_thoughts> block',
-    input: 'A<initial_thoughts>first idea</initial_thoughts>B',
-    expected: 'AB',
-  },
-  {
-    description: 'strips multiple blocks of different types',
-    input: 'pre<redacted-thinking>a</redacted-thinking> mid<think>b</think> post',
-    expected: 'pre mid post',
-  },
-  {
-    description: 'strips nested/same-type blocks',
-    input:
-      'X<redacted-thinking>inner1</redacted-thinking>Y<redacted-thinking>inner2</redacted-thinking>Z',
-    expected: 'XYZ',
-  },
-  {
-    description: 'removes unclosed opening tag and everything after (redacted-thinking)',
-    input: 'before<redacted-thinking>no closing tag',
-    expected: 'before',
-  },
-  {
-    description: 'removes unclosed opening tag and everything after (think)',
-    input: 'before<think>no closing tag',
-    expected: 'before',
-  },
-  {
-    description: 'handles empty thinking block',
-    input: 'A<redacted-thinking></redacted-thinking>B',
-    expected: 'AB',
-  },
-  {
-    description: 'preserves content with no thinking blocks',
-    input: 'just plain text',
-    expected: 'just plain text',
-  },
-  {
-    description: 'trims whitespace around remaining content',
-    input: ' <redacted-thinking>hidden</redacted-thinking> visible ',
-    expected: 'visible',
-  },
-  {
-    description: 'handles thinking block at start of string',
-    input: '<redacted-thinking>reasoning</redacted-thinking>Actual Content',
-    expected: 'Actual Content',
-  },
-  {
-    description: 'handles thinking block at end of string',
-    input: 'Actual Content<redacted-thinking>reasoning</redacted-thinking>',
-    expected: 'Actual Content',
-  },
-  {
-    description: 'handles multiline thinking block content',
-    input: 'before<redacted-thinking>line1\nline2\nline3</redacted-thinking>after',
-    expected: 'beforeafter',
-  },
-  {
-    description: 'handles all five tag formats in one string',
-    input:
-      'a<redacted-thinking>r1</redacted-thinking>b<think>r2</think>c<thoughts>r3</thoughts>d<reasoning>r4</reasoning>e<initial_thoughts>r5</initial_thoughts>f',
-    expected: 'abcdef',
-  },
-  {
-    description: 'empty string returns empty',
-    input: '',
-    expected: '',
-  },
-  {
-    description: 'only thinking blocks returns empty',
-    input: '<redacted-thinking>all hidden</redacted-thinking>',
-    expected: '',
-  },
-];
 
 // ── Tag finder ──────────────────────────────────────────────────────
 
