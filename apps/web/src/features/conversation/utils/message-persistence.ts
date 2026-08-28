@@ -134,36 +134,3 @@ export async function persistMessage(
 
   return result;
 }
-
-/**
- * Batch persistence for recovery scenarios.
- * Persists multiple messages sequentially with retry logic.
- *
- * @param tasks - Array of persistence tasks
- * @returns Promise< PersistenceResult[] > - Individual results for each task
- */
-export async function persistMessageBatch(
-  tasks: Array<{ conversationId: string; message: Message }>
-): Promise<PersistenceResult[]> {
-  const results: PersistenceResult[] = [];
-
-  logger.info('Starting batch message persistence', {
-    taskCount: tasks.length,
-  });
-
-  for (const task of tasks) {
-    const result = await persistWithRetry(task.conversationId, task.message, 0);
-    results.push(result);
-  }
-
-  const successCount = results.filter((r) => r.success).length;
-  const failCount = results.filter((r) => !r.success).length;
-
-  logger.info('Batch persistence completed', {
-    total: tasks.length,
-    success: successCount,
-    failed: failCount,
-  });
-
-  return results;
-}

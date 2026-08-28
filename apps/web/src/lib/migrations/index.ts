@@ -20,8 +20,6 @@ export {
   runMigrations,
   rollbackMigrations,
   createIdempotentMigration,
-  extractVersion,
-  extractData,
   type StoreMigrationConfig,
 } from './orchestrator';
 
@@ -72,9 +70,4 @@ export type {
   MigrationStatus,
 } from '@musaed/contracts';
 
-export {
-  MigrationError,
-  MigrationErrorCode,
-  createMigrationMetadata,
-  isValidVersionSequence,
-} from '@musaed/contracts';
+export { MigrationError, MigrationErrorCode } from '@musaed/contracts';

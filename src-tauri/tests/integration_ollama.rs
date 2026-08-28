@@ -666,7 +666,7 @@ async fn abort_handles_cleanup_after_stream_completes() {
     )
     .await;
 
-    // After stream completes, simulate what service::chat does via scopeguard::defer!
+    // After stream completes, mirror the cleanup service::chat does at the end of the spawned task
     musaed_lib::shared::ABORT_HANDLES.remove(&request_id);
 
     assert!(

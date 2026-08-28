@@ -19,7 +19,6 @@ use crate::validation::{
     is_valid_model_name, is_valid_request_id, validate_chat_message, validate_chat_options,
     MAX_MESSAGES_COUNT,
 };
-use scopeguard::defer;
 use serde_json::json;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -110,11 +109,6 @@ impl OllamaChatService {
             let _permit = permit;
             let _global = _global_permit;
 
-            defer! {
-                ABORT_HANDLES.remove(&request_id);
-                REQUEST_CACHE.remove(&request_id);
-            }
-
             tracing::debug!("Starting streaming for request_id: {}", request_id);
 
             let stream_start = Instant::now();
@@ -152,6 +146,9 @@ impl OllamaChatService {
                 token_count,
                 stream_start.elapsed()
             );
+
+            ABORT_HANDLES.remove(&request_id);
+            REQUEST_CACHE.remove(&request_id);
         });
 
         tracing::info!(

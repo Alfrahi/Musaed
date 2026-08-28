@@ -33,7 +33,6 @@ Provides Retrieval-Augmented Generation (RAG) capabilities — project managemen
 | --------------------- | -------------------------- | ----------------------------------------- |
 | `fileNameFromPath`    | `utils/project-helpers.ts` | Extract filename from a full path         |
 | `truncateFilePath`    | `utils/project-helpers.ts` | Truncate long file paths with ellipsis    |
-| `getRelativeFilePath` | `utils/project-helpers.ts` | Convert absolute path to project-relative |
 | `deriveProjectStatus` | `utils/project-helpers.ts` | Derive display status from indexing state |
 | `ProjectStatusPatch`  | `utils/project-helpers.ts` | Type for project status patch operations  |
 

@@ -36,12 +36,10 @@ pub use logger::{get_log_path, init_file_logger, ChannelLogger, TracingLayer};
 
 pub use service::emit_trace;
 
-use chrono::{SecondsFormat, Utc};
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::LazyLock;
-use uuid::Uuid;
 
 // ============================================================================
 // Type Definitions
@@ -187,110 +185,3 @@ pub struct TraceEntryInput {
 /// Maps trace_id → (span_id, feature, action)
 static ACTIVE_SPANS: LazyLock<DashMap<String, (String, String, String)>> =
     LazyLock::new(DashMap::new);
-
-/// Active span handle that manages span lifecycle.
-pub struct Span {
-    trace_id: String,
-    span_id: String,
-    feature: String,
-    action: String,
-    start: std::time::Instant,
-}
-
-impl Span {
-    /// Creates a new span and registers it in the global registry.
-    pub fn new(
-        trace_id: String,
-        feature: String,
-        action: String,
-        _parent_span_id: Option<String>,
-    ) -> Self {
-        let span_id = Uuid::new_v4().to_string();
-
-        // Register for context propagation
-        ACTIVE_SPANS.insert(
-            trace_id.clone(),
-            (span_id.clone(), feature.clone(), action.clone()),
-        );
-
-        Self {
-            trace_id,
-            span_id,
-            feature,
-            action,
-            start: std::time::Instant::now(),
-        }
-    }
-
-    /// Gets the span ID for this span.
-    pub fn span_id(&self) -> &str {
-        &self.span_id
-    }
-
-    /// Gets the trace ID for this span.
-    pub fn trace_id(&self) -> &str {
-        &self.trace_id
-    }
-
-    /// Creates a trace context for IPC propagation.
-    pub fn context(&self) -> TraceContext {
-        TraceContext {
-            trace_id: self.trace_id.clone(),
-            parent_span_id: Some(self.span_id.clone()),
-            feature: self.feature.clone(),
-            action: self.action.clone(),
-        }
-    }
-
-    /// Completes the span with success status.
-    pub fn success(
-        self,
-        message: Option<String>,
-        context: Option<HashMap<String, serde_json::Value>>,
-    ) {
-        self.complete(TraceStatus::Success, message, context);
-    }
-
-    /// Completes the span with error status.
-    pub fn error(self, message: String, context: Option<HashMap<String, serde_json::Value>>) {
-        self.complete(TraceStatus::Error, Some(message), context);
-    }
-
-    /// Completes the span with custom status.
-    pub fn complete(
-        self,
-        status: TraceStatus,
-        message: Option<String>,
-        context: Option<HashMap<String, serde_json::Value>>,
-    ) {
-        let latency_ms = self.start.elapsed().as_millis() as u64;
-        let action = self.action.clone();
-        let status_str = format!("{}", status);
-
-        let entry = TraceEntry {
-            timestamp: Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true),
-            trace_id: self.trace_id,
-            span_id: self.span_id,
-            parent_span_id: None, // Already removed from registry
-            feature: self.feature,
-            action: self.action,
-            level: match status {
-                TraceStatus::Success => LogLevel::Info,
-                TraceStatus::Error => LogLevel::Error,
-                TraceStatus::Cancelled => LogLevel::Warn,
-                TraceStatus::Timeout => LogLevel::Debug,
-            },
-            status: Some(status),
-            latency_ms: Some(latency_ms),
-            message: message.unwrap_or_else(|| format!("{} {}", action, status_str)),
-            source: TraceSource::Backend,
-            context,
-        };
-
-        // Remove from registry
-        ACTIVE_SPANS.remove(&entry.trace_id);
-
-        // Emit the trace
-        emit_trace(entry);
-    }
-}
