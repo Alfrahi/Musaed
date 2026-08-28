@@ -17,12 +17,7 @@ fn test_store() -> RagStore {
     let db_path = dir.join("test_rag.sqlite3");
     // Clean up any previous test db
     std::fs::remove_file(&db_path).ok();
-    let store = RagStore::open(&db_path).expect("Failed to open test store");
-    // Clean up temp dir when store goes out of scope (no timing dependency)
-    let _guard = scopeguard::guard(dir, |d| {
-        let _ = std::fs::remove_dir_all(d);
-    });
-    store
+    RagStore::open(&db_path).expect("Failed to open test store")
 }
 
 fn make_test_project(id: &str, name: &str, path: &str) -> RagProject {

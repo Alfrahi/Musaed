@@ -14,7 +14,6 @@ export { RagContextBadge } from './components/RagContextBadge';
 export {
   fileNameFromPath,
   truncateFilePath,
-  getRelativeFilePath,
   deriveProjectStatus,
   type ProjectStatusPatch,
 } from './utils/project-helpers';

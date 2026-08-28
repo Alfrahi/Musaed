@@ -1,14 +1,14 @@
 use crate::error_codes;
 use crate::payloads::{ApiResponse, BackendError};
-use lazy_static::lazy_static;
 use regex::Regex;
+use std::sync::LazyLock;
 use tauri::AppHandle;
 use tauri_plugin_opener::OpenerExt;
 
 // Allowed URL patterns for the opener plugin.
 // Must stay in sync with `apps/web/src/lib/ipc.ts` OPENER_ALLOWED_PATTERNS.
-lazy_static! {
-    static ref OPENER_ALLOWED_PATTERNS: Vec<Regex> = vec![
+static OPENER_ALLOWED_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
+    vec![
         Regex::new(r"^https://github\.com/alfrahi/musaed/.+$").unwrap(),
         Regex::new(r"^https://github\.com/Alfrahi/Musaed/.+$").unwrap(),
         Regex::new(r"^https://github\.com/alfrahi/musaed$").unwrap(),
@@ -18,8 +18,8 @@ lazy_static! {
         Regex::new(r"^https://ollama\.ai/.+$").unwrap(),
         Regex::new(r"^https://ollama\.ai$").unwrap(),
         Regex::new(r"^mailto:/?$").unwrap(),
-    ];
-}
+    ]
+});
 
 /// Checks if a URL matches the allowed patterns for opening.
 ///

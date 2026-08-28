@@ -20,18 +20,3 @@ export function truncateFilePath(path: string, maxLength: number = 50): string {
   const truncatedDir = dirPath.substring(0, maxLength - filename.length - 3) + '...';
   return `${truncatedDir}${filename}`;
 }
-
-/**
- * Converts a file path to a relative path based on the project root.
- * @param fullPath - The full file path.
- * @param projectRoot - The project root path.
- * @returns The relative file path, or the original path if it is not within the project root.
- */
-export function getRelativeFilePath(fullPath: string, projectRoot: string): string {
-  if (!fullPath.startsWith(projectRoot)) return fullPath;
-
-  const relativePath = fullPath.substring(projectRoot.length);
-  return relativePath.startsWith('/') || relativePath.startsWith('\\')
-    ? relativePath.substring(1)
-    : relativePath;
-}

@@ -11,13 +11,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  runMigrations,
-  rollbackMigrations,
-  createIdempotentMigration,
-  extractVersion,
-  extractData,
-} from './orchestrator';
+import { runMigrations, rollbackMigrations, createIdempotentMigration } from './orchestrator';
 import { MigrationErrorCode } from '@musaed/contracts';
 import {
   settingsMigrations,
@@ -242,56 +236,6 @@ describe('Migration Orchestrator', () => {
 
       expect(result.migrated).toBe(true);
       expect(result).toBe(alreadyMigrated.data); // Same reference
-    });
-  });
-
-  describe('extractVersion', () => {
-    it('should extract version from wrapped metadata', () => {
-      const state = {
-        data: {},
-        metadata: { version: 2 },
-      };
-
-      expect(extractVersion(state)).toBe(2);
-    });
-
-    it('should extract version from flat format', () => {
-      const state = { version: 1, theme: 'dark' };
-
-      expect(extractVersion(state)).toBe(1);
-    });
-
-    it('should return 0 when no version exists', () => {
-      const state = { theme: 'dark' };
-
-      expect(extractVersion(state)).toBe(0);
-    });
-
-    it('should return 0 for non-object input', () => {
-      expect(extractVersion(null)).toBe(0);
-      expect(extractVersion(undefined)).toBe(0);
-      expect(extractVersion(123)).toBe(0);
-    });
-  });
-
-  describe('extractData', () => {
-    it('should extract data from wrapped format', () => {
-      const state = {
-        data: { theme: 'dark' },
-        metadata: { version: 1 },
-      };
-
-      expect(extractData(state)).toEqual({ theme: 'dark' });
-    });
-
-    it('should extract data from unwrapped format', () => {
-      const state = { version: 1, theme: 'dark' };
-
-      expect(extractData(state)).toEqual({ theme: 'dark' });
-    });
-
-    it('should return undefined for non-object input', () => {
-      expect(extractData(null)).toBeUndefined();
     });
   });
 });

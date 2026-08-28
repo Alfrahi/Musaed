@@ -24,7 +24,7 @@ const manifest: FeatureManifest = {
       'FileChunkViewer',
       'RagContextBadge',
     ],
-    utils: ['fileNameFromPath', 'truncateFilePath', 'getRelativeFilePath', 'deriveProjectStatus'],
+    utils: ['fileNameFromPath', 'truncateFilePath', 'deriveProjectStatus'],
   },
   ipcEndpoints: [
     'cmd_rag_add_project',

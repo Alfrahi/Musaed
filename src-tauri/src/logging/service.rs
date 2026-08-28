@@ -7,8 +7,7 @@ use crate::generated_validation::{
     MAX_TRACE_CONTEXT_VALUE_LEN, MAX_TRACE_MESSAGE_LEN,
 };
 use crate::logging::{
-    LogLevel, Span, TraceContext, TraceEntry, TraceEntryInput, TraceSource, TraceStatus,
-    ACTIVE_SPANS,
+    LogLevel, TraceContext, TraceEntry, TraceEntryInput, TraceSource, TraceStatus, ACTIVE_SPANS,
 };
 use crate::payloads::{ApiResponse, BackendError};
 use chrono::Utc;
@@ -200,7 +199,8 @@ pub async fn start(trace_id: String, feature: String, action: String) -> ApiResp
     }
 
     // Register the span in the global registry
-    let _span = Span::new(trace_id.clone(), feature.clone(), action.clone(), None);
+    let span_id = Uuid::new_v4().to_string();
+    ACTIVE_SPANS.insert(trace_id.clone(), (span_id, feature.clone(), action.clone()));
 
     let context = TraceContext {
         trace_id,
