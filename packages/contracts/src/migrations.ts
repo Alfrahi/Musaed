@@ -193,7 +193,7 @@ export interface IDbMigrationResult {
  */
 export const RunMigrationsRequestSchema = z.object({
   /** Which database to migrate */
-  target: z.enum(['conversations', 'rag']),
+  target: z.enum(['conversations']),
   /** Target version (use current to apply all) */
   targetVersion: z.number().int().optional(),
   /** Whether to allow rollback on failure */
@@ -224,7 +224,7 @@ export type RunMigrationsResponse = z.infer<typeof RunMigrationsResponseSchema>;
  * Version info returned by migration status queries.
  */
 export const MigrationStatusSchema = z.object({
-  target: z.enum(['conversations', 'rag']),
+  target: z.enum(['conversations']),
   currentVersion: z.number().int(),
   latestVersion: z.number().int(),
   needsMigration: z.boolean(),

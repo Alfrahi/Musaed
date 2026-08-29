@@ -52,13 +52,13 @@ describe('migrationApi', () => {
     });
 
     await migrationApi.run({
-      target: 'rag',
+      target: 'conversations',
       targetVersion: 3,
       allowRollback: false,
     });
 
     expect(invoke).toHaveBeenCalledWith('cmd_run_migrations', {
-      target: 'rag',
+      target: 'conversations',
       targetVersion: 3,
       allowRollback: false,
     });
@@ -108,9 +108,9 @@ describe('migrationApi', () => {
     ];
     vi.mocked(invoke).mockResolvedValue({ success: true, data: steps });
 
-    const result = await migrationApi.list('rag');
+    const result = await migrationApi.list('conversations');
 
-    expect(invoke).toHaveBeenCalledWith('cmd_list_migrations', { target: 'rag' });
+    expect(invoke).toHaveBeenCalledWith('cmd_list_migrations', { target: 'conversations' });
     expect(result).toEqual(steps);
   });
 

@@ -22,13 +22,9 @@ Migration Framework Architecture
 └── Backend (Rust)
     ├── src-tauri/src/migrations/
     │   ├── mod.rs               # Main orchestrator
-    │   ├── traits.rs            # Migration trait definitions
     │   ├── version_tracker.rs   # Version persistence
-    │   ├── rollback.rs          # Rollback planning
     │   ├── commands.rs          # Tauri IPC commands
-    │   └── migrations/          # Database-specific migrations
-    │       ├── conversations/   # Conversation DB migrations
-    │       └── rag/            # RAG DB migrations
+    │   └── conversations/       # Conversation DB migrations
     └── src-tauri/src/migrations/mod.rs tests  # Integration tests
 ```
 
@@ -223,14 +219,14 @@ const result = await migrationApi.run({
 });
 
 // Roll back to a specific version
-const rollbackResult = await migrationApi.rollback('rag', 2);
+const rollbackResult = await migrationApi.rollback('conversations', 2);
 
 // Check migration status (used by the Settings/Diagnostics panel)
 const status = await migrationApi.status('conversations');
 // → { target, currentVersion, latestVersion, needsMigration, lastMigratedAt? }
 
 // List the available migration steps for a target
-const steps = await migrationApi.list('rag');
+const steps = await migrationApi.list('conversations');
 // → Array<{ version, description, isRollbackable }>
 ```
 
@@ -246,7 +242,7 @@ interface RunMigrationsResponse {
 }
 
 interface MigrationStatus {
-  target: 'conversations' | 'rag';
+  target: 'conversations';
   currentVersion: number;
   latestVersion: number;
   needsMigration: boolean;
@@ -427,7 +423,7 @@ Before rollback, request a plan:
 
 ```typescript
 const plan = await ipc.invoke('get_rollback_plan', {
-  target: 'rag',
+  target: 'conversations',
   toVersion: 2,
 });
 

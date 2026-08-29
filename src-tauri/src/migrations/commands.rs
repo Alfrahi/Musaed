@@ -17,7 +17,7 @@ use tokio::sync::Mutex;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RunMigrationsRequest {
-    /// Target database (conversations or rag)
+    /// Target database (conversations)
     pub target: String,
     /// Optional target version (None = latest)
     pub target_version: Option<u32>,
@@ -71,7 +71,6 @@ pub struct MigrationInfo {
 #[tauri::command]
 pub async fn cmd_run_migrations(
     conversation_store: State<'_, Arc<Mutex<Connection>>>,
-    rag_store: State<'_, Arc<Mutex<Connection>>>,
     target: String,
     target_version: Option<u32>,
     allow_rollback: bool,
@@ -81,44 +80,33 @@ pub async fn cmd_run_migrations(
         target_version,
         allow_rollback,
     };
-    Ok(crate::migrations::service::run(
-        conversation_store.inner().clone(),
-        rag_store.inner().clone(),
-        request,
-    )
-    .await)
+    Ok(crate::migrations::service::run(conversation_store.inner().clone(), request).await)
 }
 
 /// Rollback to a previous version
 #[tauri::command]
 pub async fn cmd_rollback_migrations(
     conversation_store: State<'_, Arc<Mutex<Connection>>>,
-    rag_store: State<'_, Arc<Mutex<Connection>>>,
     target: String,
     to_version: u32,
 ) -> Result<ApiResponse<RunMigrationsResponse>, String> {
-    Ok(crate::migrations::service::rollback(
-        conversation_store.inner().clone(),
-        rag_store.inner().clone(),
-        target,
-        to_version,
+    Ok(
+        crate::migrations::service::rollback(
+            conversation_store.inner().clone(),
+            target,
+            to_version,
+        )
+        .await,
     )
-    .await)
 }
 
 /// Get migration status for a target database
 #[tauri::command]
 pub async fn cmd_get_migration_status(
     conversation_store: State<'_, Arc<Mutex<Connection>>>,
-    rag_store: State<'_, Arc<Mutex<Connection>>>,
     target: String,
 ) -> Result<ApiResponse<MigrationStatus>, String> {
-    Ok(crate::migrations::service::status(
-        conversation_store.inner().clone(),
-        rag_store.inner().clone(),
-        target,
-    )
-    .await)
+    Ok(crate::migrations::service::status(conversation_store.inner().clone(), target).await)
 }
 
 /// List available migrations for a target

@@ -65,8 +65,7 @@ src-tauri/
     │   ├── version_tracker.rs
     │   ├── service.rs
     │   ├── commands.rs   # Tauri commands (run, rollback, status, list)
-    │   ├── conversations/ # Conversation DB migrations (v1–v3)
-    │   └── rag/           # RAG DB migrations (v1–v3)
+    │   └── conversations/ # Conversation DB migrations (v1–v5)
     └── logging/         # Structured logging & tracing
         ├── mod.rs
         ├── commands.rs   # Log + trace commands
@@ -110,9 +109,9 @@ Command names follow the `cmd_<domain>_<action>` convention and are mirrored in 
 
 ## Migration system
 
-Musaed uses a code-based (not SQL file) migration framework. Migrations are Rust functions that execute SQL within transactions, with version tracking stored in SQLite metadata tables (`_conversations_migrations`, `_rag_migrations`).
+Musaed uses a code-based (not SQL file) migration framework. Migrations are Rust functions that execute SQL within transactions, with version tracking stored in SQLite metadata tables (`_conversations_migrations`).
 
-Both databases are currently at schema version **3**.
+The conversation database is at schema version **5**. The RAG database manages its own schema inline in `rag/store/connection.rs` (not through this framework).
 
 - Migrations run automatically on app startup
 - Rollback support for rollbackable migrations
