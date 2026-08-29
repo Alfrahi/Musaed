@@ -12,9 +12,8 @@ use tokio::sync::Mutex;
 fn parse_target(target: &str) -> Result<MigrationTarget, String> {
     match target.to_lowercase().as_str() {
         "conversations" | "conversation" => Ok(MigrationTarget::Conversations),
-        "rag" => Ok(MigrationTarget::Rag),
         _ => Err(format!(
-            "Unknown migration target: '{}'. Valid targets: conversations, rag",
+            "Unknown migration target: '{}'. Valid targets: conversations",
             target
         )),
     }
@@ -23,7 +22,6 @@ fn parse_target(target: &str) -> Result<MigrationTarget, String> {
 /// Run migrations for the requested target.
 pub async fn run(
     conversation_store: Arc<Mutex<Connection>>,
-    rag_store: Arc<Mutex<Connection>>,
     request: RunMigrationsRequest,
 ) -> ApiResponse<RunMigrationsResponse> {
     let target = match parse_target(&request.target) {
@@ -38,7 +36,6 @@ pub async fn run(
     };
     let store = match target {
         MigrationTarget::Conversations => conversation_store,
-        MigrationTarget::Rag => rag_store,
     };
     match run_migrations(store, target, request.target_version).await {
         Ok(result) => ApiResponse {
@@ -71,7 +68,6 @@ pub async fn run(
 /// Roll back migrations to a previous version.
 pub async fn rollback(
     conversation_store: Arc<Mutex<Connection>>,
-    rag_store: Arc<Mutex<Connection>>,
     target_str: String,
     to_version: u32,
 ) -> ApiResponse<RunMigrationsResponse> {
@@ -87,7 +83,6 @@ pub async fn rollback(
     };
     let store = match target {
         MigrationTarget::Conversations => conversation_store,
-        MigrationTarget::Rag => rag_store,
     };
     match rollback_to_version(store, target, to_version).await {
         Ok(result) => ApiResponse {
@@ -120,7 +115,6 @@ pub async fn rollback(
 /// Get migration status for a target.
 pub async fn status(
     conversation_store: Arc<Mutex<Connection>>,
-    rag_store: Arc<Mutex<Connection>>,
     target_str: String,
 ) -> ApiResponse<MigrationStatus> {
     let target = match parse_target(&target_str) {
@@ -135,7 +129,6 @@ pub async fn status(
     };
     let store = match target {
         MigrationTarget::Conversations => conversation_store,
-        MigrationTarget::Rag => rag_store,
     };
     let conn_guard = store.lock().await;
     match version_tracker::get_current_version(&conn_guard, target) {

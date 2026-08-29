@@ -1453,24 +1453,24 @@ export const migrationApi = {
   run: (args: CommandMap['cmd_run_migrations']['args']) => callInternal('cmd_run_migrations', args),
   /**
    * Rolls back a target database to a previous version.
-   * @param target - 'conversations' | 'rag'
+   * @param target - 'conversations'
    * @param toVersion - Target version to roll back to
    * @returns Migration result with from/to version and applied steps
    */
-  rollback: (target: 'conversations' | 'rag', toVersion: number) =>
+  rollback: (target: 'conversations', toVersion: number) =>
     callInternal('cmd_rollback_migrations', { target, toVersion }),
   /**
    * Reports current vs latest version for a target database.
-   * @param target - 'conversations' | 'rag'
+   * @param target - 'conversations'
    * @returns Migration status including `needsMigration` flag
    */
-  status: (target: 'conversations' | 'rag') => callInternal('cmd_get_migration_status', { target }),
+  status: (target: 'conversations') => callInternal('cmd_get_migration_status', { target }),
   /**
    * Lists the available migration steps for a target database.
-   * @param target - 'conversations' | 'rag'
+   * @param target - 'conversations'
    * @returns Array of migration info (version, description, isRollbackable)
    */
-  list: (target: 'conversations' | 'rag') => callInternal('cmd_list_migrations', { target }),
+  list: (target: 'conversations') => callInternal('cmd_list_migrations', { target }),
 };
 
 /**

@@ -14,9 +14,7 @@
 //! ├── mod.rs               # Main orchestrator and public API
 //! ├── version_tracker.rs   # Version tracking and persistence
 //! ├── commands.rs          # Tauri commands for IPC
-//! ├── conversations/       # Conversation database migrations
-//! │   └── mod.rs
-//! └── rag/                 # RAG database migrations
+//! └── conversations/       # Conversation database migrations
 //!     └── mod.rs
 //! ```
 //!
@@ -102,7 +100,6 @@ pub struct MigrationExecutionResult {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MigrationTarget {
     Conversations,
-    Rag,
 }
 
 impl MigrationTarget {
@@ -110,7 +107,6 @@ impl MigrationTarget {
     pub fn version_table(&self) -> &'static str {
         match self {
             MigrationTarget::Conversations => "_conversations_migrations",
-            MigrationTarget::Rag => "_rag_migrations",
         }
     }
 
@@ -118,7 +114,6 @@ impl MigrationTarget {
     pub fn as_str(&self) -> &'static str {
         match self {
             MigrationTarget::Conversations => "conversations",
-            MigrationTarget::Rag => "rag",
         }
     }
 }
@@ -465,7 +460,6 @@ pub async fn rollback_to_version(
 fn get_migration(target: MigrationTarget, version: u32) -> Option<MigrationStep> {
     match target {
         MigrationTarget::Conversations => conversations::get_migration(version),
-        MigrationTarget::Rag => rag::get_migration(version),
     }
 }
 
@@ -473,7 +467,6 @@ fn get_migration(target: MigrationTarget, version: u32) -> Option<MigrationStep>
 pub fn get_latest_version(target: MigrationTarget) -> u32 {
     match target {
         MigrationTarget::Conversations => conversations::LATEST_VERSION,
-        MigrationTarget::Rag => rag::LATEST_VERSION,
     }
 }
 
@@ -481,13 +474,11 @@ pub fn get_latest_version(target: MigrationTarget) -> u32 {
 pub fn list_migrations(target: MigrationTarget) -> Vec<MigrationStep> {
     match target {
         MigrationTarget::Conversations => conversations::list_all(),
-        MigrationTarget::Rag => rag::list_all(),
     }
 }
 
 // Sub-modules for specific database migrations
 mod conversations;
-mod rag;
 
 #[cfg(test)]
 mod tests {
@@ -607,30 +598,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_rag_migrations() {
-        let conn = create_test_db(MigrationTarget::Rag);
-
-        let result = run_migrations(conn.clone(), MigrationTarget::Rag, None)
-            .await
-            .expect("Migration failed");
-
-        assert!(result.success);
-        assert_eq!(result.from_version, 0);
-        assert_eq!(result.to_version, 3); // Latest RAG version
-    }
-
-    #[tokio::test]
     async fn test_list_migrations() {
         let conversations_migrations = list_migrations(MigrationTarget::Conversations);
         assert_eq!(conversations_migrations.len(), 5); // v1–v5
-
-        let rag_migrations = list_migrations(MigrationTarget::Rag);
-        assert_eq!(rag_migrations.len(), 3); // v1, v2, and v3
     }
 
     #[tokio::test]
     async fn test_get_latest_version() {
         assert_eq!(get_latest_version(MigrationTarget::Conversations), 5);
-        assert_eq!(get_latest_version(MigrationTarget::Rag), 3);
     }
 }
