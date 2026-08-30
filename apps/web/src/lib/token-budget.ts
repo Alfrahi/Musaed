@@ -19,8 +19,11 @@ import {
  *
  * 1. User override for the field, if present in the model's profile.
  * 2. Model's Modelfile default from `/api/show` (`PARAMETER` directives).
- *    For `numCtx` only: when the Modelfile directive is absent, the model's
- *    `contextLength` from `model_info` is an additional fallback.
+ *    Exception: for `numCtx`, the model's `contextLength` from
+ *    `model_info` (the true max window) wins over the Modelfile directive —
+ *    Ollama ships conservative `num_ctx: 4096` defaults far below what the
+ *    model supports. Modelfile `num_ctx` only applies when the window is
+ *    unknown.
  * 3. `DEFAULT_MODEL_PARAMS` for the field.
  *
  * Every path that yields `numCtx` is clamped against the model's real
@@ -43,7 +46,7 @@ export function resolveModelParams(
   const fitNumCtx = (candidate: number): number =>
     Math.min(window !== null ? Math.min(candidate, window) : candidate, ceiling);
 
-  const baseNumCtx = d?.numCtx ?? window ?? DEFAULT_MODEL_PARAMS.numCtx;
+  const baseNumCtx = window ?? d?.numCtx ?? DEFAULT_MODEL_PARAMS.numCtx;
   if (!profile || profile.overrides.length === 0) {
     return {
       params: {
