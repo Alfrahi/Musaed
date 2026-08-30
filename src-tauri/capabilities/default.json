@@ -57,6 +57,7 @@
     "store:allow-save",
 
     "allow-ollama-commands",
+    "allow-migration-commands",
     "allow-logging-commands",
     "allow-rag-commands",
     "allow-conversation-commands",

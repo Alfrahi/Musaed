@@ -4,5 +4,9 @@ description = "Enables commands for system logging and diagnostics."
 commands.allow = [
     "cmd_logs_append",
     "cmd_logs_request_clear_token",
-    "cmd_logs_clear"
+    "cmd_logs_clear",
+    "cmd_trace_append",
+    "cmd_trace_start",
+    "cmd_trace_complete",
+    "cmd_trace_get_context"
 ]

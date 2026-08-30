@@ -13,5 +13,6 @@ commands.allow = [
     "cmd_rag_assemble_context",
     "cmd_rag_get_file_chunks",
     "cmd_rag_list_files",
-    "cmd_rag_set_embedding_model"
+    "cmd_rag_set_embedding_model",
+    "cmd_rag_retry_index_project"
 ]

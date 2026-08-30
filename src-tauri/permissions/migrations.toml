@@ -1,0 +1,9 @@
+[[permission]]
+identifier = "allow-migration-commands"
+description = "Enables driving the SQLite schema migration framework from the frontend."
+commands.allow = [
+    "cmd_run_migrations",
+    "cmd_rollback_migrations",
+    "cmd_get_migration_status",
+    "cmd_list_migrations"
+]
