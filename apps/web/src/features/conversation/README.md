@@ -51,7 +51,6 @@ Components are **not** exported via `index.ts` (per DDD rules). They are used in
 | `MessageBubble`      | Individual message rendering with avatar, content, stats, inline editing for user messages, and per-message delete with confirmation |
 | `MessageAvatar`      | User/assistant avatar within a message bubble                                                                                        |
 | `MessageContent`     | Markdown/rich content rendering within a message                                                                                     |
-| `MessageStats`       | Token/speed stats display under a message                                                                                            |
 | `InputArea`          | Chat input with attachment preview, send/abort controls                                                                              |
 | `CodeBlock`          | Syntax-highlighted code rendering                                                                                                    |
 | `MarkdownRenderer`   | Full markdown rendering pipeline with Mermaid support                                                                                |
