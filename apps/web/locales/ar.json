@@ -68,8 +68,6 @@
     "assistant": "المساعد",
     "tokens": "الوحدات النصية",
     "outputTokens": "المُولّد",
-    "promptTokens": "المدخل",
-    "totalTokens": "الإجمالي",
     "speed": "السرعة",
     "tokensPerSecond": "{speed} وحدة/ثانية",
     "readyForCommand": "جاهز للمساعدة",

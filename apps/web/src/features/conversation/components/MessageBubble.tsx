@@ -46,8 +46,6 @@ interface MessageBubbleProps {
     copy: string;
     tokens: string;
     outputTokens: string;
-    promptTokens: string;
-    totalTokens: string;
   };
   formatNumber: (num: number, options?: Intl.NumberFormatOptions) => string;
   /** Called when the user selects "Regenerate" from the context menu.
@@ -367,8 +365,6 @@ interface MessageFooterProps {
     copy: string;
     tokens: string;
     outputTokens: string;
-    promptTokens: string;
-    totalTokens: string;
   };
   message: Message;
   tps: number;
@@ -399,33 +395,20 @@ const MessageFooter = ({
   t,
 }: MessageFooterProps) => {
   const evalCount = message.evalCount;
-  const promptTokens = message.promptTokens ?? message.promptEvalCount ?? null;
-  const completionTokens = message.completionTokens ?? evalCount ?? null;
   const hasStats = !isUser && evalCount != null;
 
   return (
     <div className="pbs-4 border-bs border-sidebar-border/50 flex items-center gap-4">
       {hasStats && evalCount != null && (
         <div className="caption-xs flex items-center gap-4 font-bold text-zinc-400">
-          {promptTokens != null && (
-            <span className="flex items-center gap-1.5">
-              <Cpu size={12} />
-              {formatNumber(promptTokens)}
-              {labels.promptTokens}
-            </span>
-          )}
+          {/* Only per-message stats here: `evalCount` is this reply's output.
+              `promptEvalCount` is cumulative (whole context re-tokenized each
+              turn), so it belongs solely in the TokenContextBar. */}
           <span className="flex items-center gap-1.5">
             <Cpu size={12} />
             {formatNumber(evalCount)}
             {labels.outputTokens}
           </span>
-          {promptTokens != null && completionTokens != null && (
-            <span className="flex items-center gap-1.5">
-              <Cpu size={12} />
-              {formatNumber(promptTokens + completionTokens)}
-              {labels.totalTokens}
-            </span>
-          )}
           {tps > 0 && (
             <span className="text-primary flex items-center gap-1.5">
               <Zap size={12} />
@@ -614,8 +597,6 @@ interface MessageBubbleBodyProps {
     copy: string;
     tokens: string;
     outputTokens: string;
-    promptTokens: string;
-    totalTokens: string;
   };
   sourceReferences: SourceReference[];
   isExpanded: boolean;

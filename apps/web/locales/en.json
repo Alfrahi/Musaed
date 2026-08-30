@@ -68,8 +68,6 @@
     "assistant": "Assistant",
     "tokens": "Tokens",
     "outputTokens": "Output",
-    "promptTokens": "Prompt",
-    "totalTokens": "Total",
     "speed": "Speed",
     "tokensPerSecond": "{speed} t/s",
     "readyForCommand": "Ready for your command",
