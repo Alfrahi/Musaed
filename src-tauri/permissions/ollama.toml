@@ -10,5 +10,6 @@ commands.allow = [
     "cmd_ollama_abort_chat",
     "cmd_ollama_check_health",
     "cmd_ollama_verify_service",
+    "cmd_ollama_validate_model",
     "cmd_ollama_generate_title",
 ]
