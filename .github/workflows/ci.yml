@@ -61,6 +61,9 @@ jobs:
       - name: IPC contract validation (strict)
         run: pnpm validate:contracts --strict
 
+      - name: IPC ACL coverage (commands ⇄ permissions)
+        run: pnpm validate:acl
+
       - name: No sub-path imports of @musaed/contracts
         run: |
           matches=$(grep -RE --include='*.ts' --include='*.tsx' --include='*.rs' --include='*.js' --include='*.mjs' "from '@musaed/contracts/[^']+'" apps/ src-tauri/ || true)

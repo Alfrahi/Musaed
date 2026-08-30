@@ -19,6 +19,7 @@
     "codegen:feature-deps": "node scripts/codegen-feature-deps.mjs",
     "codegen:feature-deps:check": "node scripts/codegen-feature-deps.mjs --check",
     "validate:contracts": "node scripts/validate-contracts.mjs",
+    "validate:acl": "node scripts/validate-ipc-acl.mjs",
     "validate:manifests": "node scripts/validate-manifests.mjs",
     "validate:manifests:check": "node scripts/validate-manifests.mjs",
     "test:contracts": "node --test scripts/validate-contracts.test.mjs",
