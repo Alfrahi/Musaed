@@ -256,9 +256,10 @@ describe('model-params-store', () => {
         numCtx: 4096,
         numPredict: -1,
       };
-      // numCtx not overridden; modelfile default 4096 is within contextLength 8192.
+      // numCtx not overridden; the model's true window (8192) wins over the
+      // modelfile's conservative default (4096).
       const params = selectResolvedParams('llama3.1:8b', 8192, defaultParams);
-      expect(params.numCtx).toBe(4096);
+      expect(params.numCtx).toBe(8192);
     });
   });
 

@@ -82,6 +82,24 @@ describe('resolveModelParams', () => {
       expect(r.params.numCtx).toBe(8192);
     });
 
+    it('wins the real context window over a conservative Modelfile num_ctx default', () => {
+      // Ollama ships num_ctx: 4096 Modelfile defaults on models whose
+      // context_length is far larger — the window must win (R-numCtx-max).
+      const r = resolveModelParams(
+        undefined,
+        caps(131072, { temperature: null, topP: null, topK: null, numCtx: 4096, numPredict: null })
+      );
+      expect(r.params.numCtx).toBe(131072);
+    });
+
+    it('falls back to the Modelfile num_ctx only when the window is unknown', () => {
+      const r = resolveModelParams(
+        undefined,
+        caps(null, { temperature: null, topP: null, topK: null, numCtx: 8192, numPredict: null })
+      );
+      expect(r.params.numCtx).toBe(8192);
+    });
+
     it('clamps the hard-default numCtx to a smaller context window (F-9)', () => {
       const r = resolveModelParams(undefined, caps(2048));
       expect(r.params.numCtx).toBe(2048);
