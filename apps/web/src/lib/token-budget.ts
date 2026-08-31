@@ -19,12 +19,14 @@ import {
  *
  * 1. User override for the field, if present in the model's profile.
  * 2. Model's Modelfile default from `/api/show` (`PARAMETER` directives).
- *    Exception: for `numCtx`, the model's `contextLength` from
- *    `model_info` (the true max window) wins over the Modelfile directive —
- *    Ollama ships conservative `num_ctx: 4096` defaults far below what the
- *    model supports. Modelfile `num_ctx` only applies when the window is
- *    unknown.
  * 3. `DEFAULT_MODEL_PARAMS` for the field.
+ *
+ * The model's `contextLength` from `model_info` (the true max window) is
+ * used ONLY as a clamp ceiling, never as the default for `numCtx`: Ollama
+ * sizes the KV cache from `num_ctx`, so defaulting to the full window
+ * (e.g. 131072) makes it fail with memory-allocation errors for large-window
+ * models. Users who want a bigger window can set a `numCtx` override,
+ * which is clamped against the real window.
  *
  * Every path that yields `numCtx` is clamped against the model's real
  * context window when known (so the value sent to Ollama never overshoots
@@ -46,7 +48,7 @@ export function resolveModelParams(
   const fitNumCtx = (candidate: number): number =>
     Math.min(window !== null ? Math.min(candidate, window) : candidate, ceiling);
 
-  const baseNumCtx = window ?? d?.numCtx ?? DEFAULT_MODEL_PARAMS.numCtx;
+  const baseNumCtx = d?.numCtx ?? DEFAULT_MODEL_PARAMS.numCtx;
   if (!profile || profile.overrides.length === 0) {
     return {
       params: {

@@ -42,9 +42,10 @@ describe('resolveModelParams', () => {
       expect(r.numCtxClamped).toBe(false);
     });
 
-    it('uses the model context window for numCtx when the Modelfile default is absent', () => {
+    it('uses the hard default for numCtx when the Modelfile default is absent', () => {
+      // The context window (131072) is only a clamp ceiling, not the default.
       const r = resolveModelParams(undefined, caps(131072));
-      expect(r.params.numCtx).toBe(131072);
+      expect(r.params.numCtx).toBe(DEFAULT_MODEL_PARAMS.numCtx);
     });
 
     it('prefers Modelfile defaults over hard defaults for every field', () => {
@@ -70,7 +71,7 @@ describe('resolveModelParams', () => {
       expect(r.params.topP).toBe(DEFAULT_MODEL_PARAMS.topP);
       expect(r.params.topK).toBe(DEFAULT_MODEL_PARAMS.topK);
       expect(r.params.numPredict).toBe(DEFAULT_MODEL_PARAMS.numPredict);
-      expect(r.params.numCtx).toBe(131072);
+      expect(r.params.numCtx).toBe(DEFAULT_MODEL_PARAMS.numCtx);
     });
 
     it('clamps a Modelfile numCtx that exceeds the real context window (F-9)', () => {
@@ -82,14 +83,15 @@ describe('resolveModelParams', () => {
       expect(r.params.numCtx).toBe(8192);
     });
 
-    it('wins the real context window over a conservative Modelfile num_ctx default', () => {
-      // Ollama ships num_ctx: 4096 Modelfile defaults on models whose
-      // context_length is far larger — the window must win (R-numCtx-max).
+    it('keeps the Modelfile num_ctx default below the real context window', () => {
+      // The context window is only a clamp ceiling, never the default —
+      // allocating the full window as num_ctx makes Ollama OOM on
+      // large-window models.
       const r = resolveModelParams(
         undefined,
         caps(131072, { temperature: null, topP: null, topK: null, numCtx: 4096, numPredict: null })
       );
-      expect(r.params.numCtx).toBe(131072);
+      expect(r.params.numCtx).toBe(4096);
     });
 
     it('falls back to the Modelfile num_ctx only when the window is unknown', () => {

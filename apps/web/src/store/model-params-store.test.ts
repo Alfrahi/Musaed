@@ -70,9 +70,10 @@ describe('model-params-store', () => {
       expect(params).toEqual(DEFAULT_MODEL_PARAMS);
     });
 
-    it('uses model context_length for numCtx when not overridden', () => {
+    it('uses the hard default for numCtx when neither override nor Modelfile default exists', () => {
+      // contextLength is only a clamp ceiling, never the default.
       const params = selectResolvedParams('llama3.1:8b', 131072);
-      expect(params.numCtx).toBe(131072);
+      expect(params.numCtx).toBe(DEFAULT_MODEL_PARAMS.numCtx);
     });
 
     it('prefers user override over model metadata for numCtx', () => {
@@ -181,7 +182,7 @@ describe('model-params-store', () => {
       expect(params.numCtx).toBe(8192);
     });
 
-    it('falls back to contextLength for numCtx when defaultParams.numCtx is null', () => {
+    it('falls back to the hard default for numCtx when defaultParams.numCtx is null', () => {
       const defaultParams = {
         temperature: 0.5,
         topP: null,
@@ -190,7 +191,8 @@ describe('model-params-store', () => {
         numPredict: null,
       };
       const params = selectResolvedParams('unknown-model', 131072, defaultParams);
-      expect(params.numCtx).toBe(131072); // contextLength fallback
+      // contextLength is only a clamp ceiling, never the default.
+      expect(params.numCtx).toBe(DEFAULT_MODEL_PARAMS.numCtx);
       expect(params.temperature).toBe(0.5); // defaultParams
       expect(params.topP).toBe(DEFAULT_MODEL_PARAMS.topP); // final fallback
     });
@@ -256,10 +258,10 @@ describe('model-params-store', () => {
         numCtx: 4096,
         numPredict: -1,
       };
-      // numCtx not overridden; the model's true window (8192) wins over the
-      // modelfile's conservative default (4096).
+      // numCtx not overridden; modelfile default 4096 applies. The context
+      // window (8192) is only a clamp ceiling, never the default.
       const params = selectResolvedParams('llama3.1:8b', 8192, defaultParams);
-      expect(params.numCtx).toBe(8192);
+      expect(params.numCtx).toBe(4096);
     });
   });
 
