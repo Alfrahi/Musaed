@@ -89,7 +89,7 @@ describe('Tauri Storage', () => {
 
   describe('Tauri environment', () => {
     beforeEach(() => {
-      (window as any).__TAURI_INTERNALS__ = {};
+      (window as any).__TAURI_INTERNALS__ = { invoke: () => undefined };
       vi.mocked(checkIsTauri).mockReturnValue(true);
       vi.mocked(storeApi.load).mockResolvedValue(true);
       vi.mocked(storeApi.get).mockResolvedValue(null);

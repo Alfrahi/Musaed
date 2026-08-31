@@ -13,7 +13,7 @@ import { migrationApi } from '@/lib/ipc';
 
 describe('migrationApi', () => {
   beforeEach(() => {
-    (window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {};
+    (window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = { invoke: () => undefined };
     (invoke as unknown as { mockReset: () => void }).mockReset();
   });
 

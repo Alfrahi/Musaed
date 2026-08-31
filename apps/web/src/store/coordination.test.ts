@@ -10,7 +10,7 @@ import { useMessageStore } from '@/store/message-store';
 import { registerHydrationCoordination, stopStream } from './coordination';
 
 beforeEach(() => {
-  (window as any).__TAURI_INTERNALS__ = {};
+  (window as any).__TAURI_INTERNALS__ = { invoke: () => undefined };
   useUIStore.setState({
     isStreaming: false,
     isInitialized: false,

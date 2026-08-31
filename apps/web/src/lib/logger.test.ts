@@ -71,7 +71,7 @@ describe('Logger', () => {
     });
 
     it('should persist via logApi.append when in Tauri environment', async () => {
-      (window as any).__TAURI_INTERNALS__ = {};
+      (window as any).__TAURI_INTERNALS__ = { invoke: () => undefined };
       vi.mocked(checkIsTauri).mockReturnValue(true);
 
       await logger.log('info', 'test message');
@@ -80,7 +80,7 @@ describe('Logger', () => {
     });
 
     it('should handle logApi.append errors gracefully', async () => {
-      (window as any).__TAURI_INTERNALS__ = {};
+      (window as any).__TAURI_INTERNALS__ = { invoke: () => undefined };
       vi.mocked(checkIsTauri).mockReturnValue(true);
       vi.mocked(logApi.append).mockRejectedValue(new Error('IPC error'));
 

@@ -25,7 +25,9 @@ import { IPC_CALLS_HISTORY_MAX } from '@/lib/ipc-latency';
 
 describe('IPC Latency Budgets', () => {
   beforeEach(() => {
-    (window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {};
+    (window as { __TAURI_INTERNALS__?: { invoke?: () => void } }).__TAURI_INTERNALS__ = {
+      invoke: () => undefined,
+    };
     resetIpcViolations();
     (invoke as unknown as { mockReset: () => void }).mockReset();
   });
@@ -102,7 +104,9 @@ describe('IPC Latency Budgets', () => {
     expect(invoke).not.toHaveBeenCalled();
     expect(ipcStats.callCount).toBe(0);
 
-    (window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {};
+    (window as { __TAURI_INTERNALS__?: { invoke?: () => void } }).__TAURI_INTERNALS__ = {
+      invoke: () => undefined,
+    };
   });
 
   it('flags violations when latency exceeds the budget', async () => {
@@ -181,7 +185,9 @@ describe('IPC Latency Budgets', () => {
 
 describe('IPC latency violation trace pipeline', () => {
   beforeEach(() => {
-    (window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {};
+    (window as { __TAURI_INTERNALS__?: { invoke?: () => void } }).__TAURI_INTERNALS__ = {
+      invoke: () => undefined,
+    };
     resetIpcViolations();
     (invoke as unknown as { mockReset: () => void }).mockReset();
   });

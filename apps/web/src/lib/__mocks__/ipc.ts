@@ -10,6 +10,19 @@ export const store = {
   }),
 };
 
+// Command-based store API used by createTauriStorage. Without this export
+// every persisted-store write in component tests throws "No storeApi export
+// is defined on the ipc mock", which tauri-storage logs as a fire-and-forget
+// console.error that can outlive the test file and flake the worker-teardown
+// RPC ("Closing rpc while onUserConsoleLog was pending").
+export const storeApi = {
+  load: vi.fn().mockResolvedValue(true),
+  get: vi.fn().mockResolvedValue(null),
+  set: vi.fn().mockResolvedValue(true),
+  save: vi.fn().mockResolvedValue(true),
+  delete: vi.fn().mockResolvedValue(true),
+};
+
 export const logger = {
   log: vi.fn(),
   error: vi.fn(),
