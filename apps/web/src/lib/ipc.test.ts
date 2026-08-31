@@ -18,8 +18,9 @@ import { BackendErrorCode } from '@musaed/contracts';
 
 describe('IPC Bridge', () => {
   beforeEach(() => {
-    // Mock Tauri environment
-    (window as any).__TAURI_INTERNALS__ = {};
+    // Mock Tauri environment — the detection check requires a working
+    // invoke bridge, not just the internals object.
+    (window as any).__TAURI_INTERNALS__ = { invoke: () => undefined };
     // Reset the invoke mock to a clean state before each test
     (invoke as any).mockReset();
   });

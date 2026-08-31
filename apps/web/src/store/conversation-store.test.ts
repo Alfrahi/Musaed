@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
 
 // Mock Tauri environment
 beforeEach(() => {
-  (window as any).__TAURI_INTERNALS__ = {};
+  (window as any).__TAURI_INTERNALS__ = { invoke: () => undefined };
 });
 
 describe('Conversation Store Exports', () => {

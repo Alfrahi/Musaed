@@ -20,7 +20,7 @@ import {
 
 // Mock Tauri environment
 beforeEach(() => {
-  (window as any).__TAURI_INTERNALS__ = {};
+  (window as any).__TAURI_INTERNALS__ = { invoke: () => undefined };
 });
 
 describe('UI Store Complete', () => {
