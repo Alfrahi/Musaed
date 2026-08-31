@@ -1,0 +1,45 @@
+name: Update Visual Snapshots
+
+# Manual maintenance workflow: regenerates Playwright visual baselines in the
+# CI environment (the same font stack the visual-tests job compares against)
+# and uploads them as an artifact to be committed locally.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update-snapshots:
+    name: Regenerate RTL visual baselines
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install Playwright browsers
+        run: |
+          pnpm install --frozen-lockfile
+          cd apps/web
+          pnpm exec playwright install chromium --with-deps
+
+      - name: Regenerate snapshots
+        run: |
+          cd apps/web
+          pnpm exec playwright test --project=chromium --update-snapshots
+
+      - name: Upload regenerated snapshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: updated-snapshots
+          path: apps/web/e2e/rtl-visual.spec.ts-snapshots/
+          retention-days: 7
