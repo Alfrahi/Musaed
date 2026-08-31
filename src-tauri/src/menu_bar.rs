@@ -28,7 +28,7 @@ use tauri::AppHandle;
 #[cfg(target_os = "macos")]
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 #[cfg(target_os = "macos")]
-use tauri::{Emitter, Manager};
+use tauri::Emitter;
 
 use crate::payloads::BackendError;
 
@@ -111,12 +111,12 @@ fn build_and_install(
     let about_item = MenuItem::with_id(app, menu_ids::ABOUT, &labels.about, true, None::<&str>)?;
     let app_separator_1 = PredefinedMenuItem::separator(app)?;
     // Services submenu is predefined on macOS — gets OS-localized label.
-    let services = PredefinedMenuItem::services(app)?;
+    let services = PredefinedMenuItem::services(app, None)?;
     let app_separator_2 = PredefinedMenuItem::separator(app)?;
     // Hide / Hide Others / Show All — all predefined.
-    let hide = PredefinedMenuItem::hide(app)?;
-    let hide_others = PredefinedMenuItem::hide_others(app)?;
-    let show_all = PredefinedMenuItem::show_all(app)?;
+    let hide = PredefinedMenuItem::hide(app, None)?;
+    let hide_others = PredefinedMenuItem::hide_others(app, None)?;
+    let show_all = PredefinedMenuItem::show_all(app, None)?;
     let app_separator_3 = PredefinedMenuItem::separator(app)?;
     let quit_item = MenuItem::with_id(app, menu_ids::QUIT, &labels.quit, true, Some("Cmd+Q"))?;
 
@@ -139,13 +139,13 @@ fn build_and_install(
 
     // ── Edit menu ────────────────────────────────────────────────────────
     // All predefined items — OS-localized labels for free.
-    let undo = PredefinedMenuItem::undo(app)?;
-    let redo = PredefinedMenuItem::redo(app)?;
+    let undo = PredefinedMenuItem::undo(app, None)?;
+    let redo = PredefinedMenuItem::redo(app, None)?;
     let edit_sep_1 = PredefinedMenuItem::separator(app)?;
-    let cut = PredefinedMenuItem::cut(app)?;
-    let copy = PredefinedMenuItem::copy(app)?;
-    let paste = PredefinedMenuItem::paste(app)?;
-    let select_all = PredefinedMenuItem::select_all(app)?;
+    let cut = PredefinedMenuItem::cut(app, None)?;
+    let copy = PredefinedMenuItem::copy(app, None)?;
+    let paste = PredefinedMenuItem::paste(app, None)?;
+    let select_all = PredefinedMenuItem::select_all(app, None)?;
 
     let edit_menu = Submenu::with_items(
         app,
@@ -202,10 +202,12 @@ fn build_and_install(
 
     // ── Window menu ─────────────────────────────────────────────────────
     // Minimize + Zoom + Bring All to Front — all predefined on macOS.
-    let minimize = PredefinedMenuItem::minimize(app)?;
-    let window_zoom = PredefinedMenuItem::zoom(app)?;
+    let minimize = PredefinedMenuItem::minimize(app, None)?;
+    // Tauri removed `PredefinedMenuItem::zoom`; `maximize` maps to the same
+    // macOS "Zoom" window action via muda.
+    let window_zoom = PredefinedMenuItem::maximize(app, None)?;
     let window_sep = PredefinedMenuItem::separator(app)?;
-    let bring_all_to_front = PredefinedMenuItem::bring_all_to_front(app)?;
+    let bring_all_to_front = PredefinedMenuItem::bring_all_to_front(app, None)?;
 
     let window_menu = Submenu::with_items(
         app,
@@ -215,15 +217,7 @@ fn build_and_install(
     )?;
 
     // ── Assemble top-level menu ──────────────────────────────────────────
-    let menu = Menu::with_items(
-        app,
-        &[
-            app_menu.as_ref(),
-            edit_menu.as_ref(),
-            view_menu.as_ref(),
-            window_menu.as_ref(),
-        ],
-    )?;
+    let menu = Menu::with_items(app, &[&app_menu, &edit_menu, &view_menu, &window_menu])?;
 
     app.set_menu(menu)?;
 
