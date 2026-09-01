@@ -1,8 +1,12 @@
 //! Database connection management, schema, and migrations.
 
 use crate::rag::error::{RagError, RagResult};
-use rusqlite::{ffi, Connection};
+use rusqlite::{ffi, Connection, Transaction};
 use std::path::Path;
+
+/// Highest schema version this build understands. Bump when adding a
+/// migration and append a matching `migrate_v*_to_v*` function.
+const LATEST_SCHEMA_VERSION: u32 = 2;
 
 /// Default embedding vector dimension. Will be overridden per-project after
 /// the first embedding call detects the actual dimension.
@@ -115,7 +119,7 @@ pub(super) fn open_connection(db_path: &Path) -> RagResult<Connection> {
     // Load sqlite-vec extension globally BEFORE opening the connection
     load_vec_extension()?;
 
-    let conn = Connection::open(db_path)?;
+    let mut conn = Connection::open(db_path)?;
 
     // Apply pragmas
     conn.execute_batch(PRAGMAS_SQL)?;
@@ -143,7 +147,7 @@ pub(super) fn open_connection(db_path: &Path) -> RagResult<Connection> {
     conn.execute_batch(SCHEMA_SQL)?;
 
     // Run migrations
-    run_migrations(&conn)?;
+    run_migrations(&mut conn)?;
 
     Ok(conn)
 }
@@ -161,65 +165,86 @@ pub(super) fn open_read_connection(db_path: &Path) -> RagResult<Connection> {
     Ok(conn)
 }
 
-/// Run database migrations for schema changes across versions.
-pub(super) fn run_migrations(conn: &Connection) -> RagResult<()> {
-    // Migration 1: Add `status` column to projects table.
-    let has_status_column: bool = conn.prepare("SELECT status FROM projects LIMIT 0").is_ok();
-    if !has_status_column {
-        conn.execute(
+/// Run database migrations, advancing `PRAGMA user_version` from its current
+/// value to [`LATEST_SCHEMA_VERSION`]. Each step runs inside its own
+/// transaction; if a step fails the transaction auto-rolls back and the
+/// database remains at the last successfully-applied version.
+pub(super) fn run_migrations(conn: &mut Connection) -> RagResult<()> {
+    let mut current: u32 = conn.query_row("PRAGMA user_version", [], |row| row.get::<_, u32>(0))?;
+
+    if current > LATEST_SCHEMA_VERSION {
+        tracing::warn!(
+            current_version = current,
+            latest_version = LATEST_SCHEMA_VERSION,
+            "Database user_version is newer than this build understands; skipping migrations"
+        );
+        return Ok(());
+    }
+
+    while current < LATEST_SCHEMA_VERSION {
+        let tx = conn.transaction()?;
+        match current {
+            0 => migrate_v0_to_v1(&tx)?,
+            1 => migrate_v1_to_v2(&tx)?,
+            v => {
+                return Err(RagError::Config(format!(
+                    "No migration path from schema version {v} (latest is {LATEST_SCHEMA_VERSION})"
+                )));
+            }
+        }
+        // Bump user_version inside the same transaction so a crash between
+        // commit and the PRAGMA never leaves a gap.
+        tx.execute_batch(&format!("PRAGMA user_version = {}", current + 1))?;
+        tx.commit()?;
+        tracing::info!("Migration: schema version {} -> {}", current, current + 1);
+        current += 1;
+    }
+
+    Ok(())
+}
+
+/// Migration v0 → v1: add the `status` column to the `projects` table.
+///
+/// On a fresh database the schema SQL already includes the column, so
+/// `ALTER TABLE … ADD COLUMN` will error with "duplicate column name". We
+/// guard against that by checking `PRAGMA table_info` first.
+fn migrate_v0_to_v1(tx: &Transaction) -> RagResult<()> {
+    let has_status: bool = tx.prepare("SELECT status FROM projects LIMIT 0").is_ok();
+    if !has_status {
+        tx.execute(
             "ALTER TABLE projects ADD COLUMN status TEXT NOT NULL DEFAULT 'idle'",
             [],
         )?;
-        tracing::info!("Migration: added status column to projects table");
+        tracing::info!("Migration v0→v1: added status column to projects");
     }
+    Ok(())
+}
 
-    // Migration 2: Recreate vec_chunks with cosine distance metric.
-    let needs_vec_rebuild: bool = {
-        let vec_exists: bool = conn
-            .prepare("SELECT chunk_id, embedding FROM vec_chunks LIMIT 1")
-            .is_ok();
-        if !vec_exists {
-            false
-        } else {
-            let migrated: bool = conn
-                .query_row(
-                    "SELECT value FROM _rag_migrations WHERE name = 'vec_cosine_metric'",
-                    [],
-                    |row| row.get::<_, String>(0),
-                )
-                .ok()
-                .map(|v| v == "1")
-                .unwrap_or(false);
-            !migrated
-        }
-    };
+/// Migration v1 → v2: rebuild `vec_chunks` with the cosine distance metric.
+///
+/// The original `vec0` table shipped with the default (Euclidean) distance
+/// metric. Rebuilding with `distance_metric=cosine` drops existing
+/// embeddings and resets `chunk_count`/`indexed_at` so the index can be
+/// rebuilt on the next indexing pass.
+fn migrate_v1_to_v2(tx: &Transaction) -> RagResult<()> {
+    tracing::warn!(
+        "Migration v1→v2: rebuilding vec_chunks with cosine distance metric; existing embeddings will be lost"
+    );
 
-    if needs_vec_rebuild {
-        tracing::warn!("Migration: rebuilding vec_chunks with cosine distance metric. Existing embeddings will be lost.");
-        conn.execute_batch(
-            "DROP TABLE IF EXISTS vec_chunks;
-             CREATE VIRTUAL TABLE vec_chunks USING vec0(
-                 chunk_id  INTEGER PRIMARY KEY,
-                 embedding float[4096] distance_metric=cosine
-             );
-             CREATE TABLE IF NOT EXISTS _rag_migrations (name TEXT PRIMARY KEY, value TEXT);
-             INSERT OR REPLACE INTO _rag_migrations (name, value) VALUES ('vec_cosine_metric', '1');",
-        )?;
-
-        conn.execute(
-            "UPDATE projects SET chunk_count = 0, indexed_at = NULL WHERE 1",
-            [],
-        )?;
-
-        tracing::info!("Migration: vec_chunks rebuilt with cosine metric");
-    }
-
-    // Ensure the migration tracking table exists for future migrations
-    conn.execute_batch(
-        "CREATE TABLE IF NOT EXISTS _rag_migrations (name TEXT PRIMARY KEY, value TEXT);
-         INSERT OR IGNORE INTO _rag_migrations (name, value) VALUES ('vec_cosine_metric', '1');",
+    tx.execute_batch(
+        "DROP TABLE IF EXISTS vec_chunks;
+         CREATE VIRTUAL TABLE vec_chunks USING vec0(
+             chunk_id  INTEGER PRIMARY KEY,
+             embedding float[4096] distance_metric=cosine
+         );",
     )?;
 
+    tx.execute(
+        "UPDATE projects SET chunk_count = 0, indexed_at = NULL WHERE 1",
+        [],
+    )?;
+
+    tracing::info!("Migration v1→v2: vec_chunks rebuilt with cosine metric");
     Ok(())
 }
 
@@ -236,5 +261,83 @@ mod tests {
             .query_row("PRAGMA journal_mode", [], |row| row.get(0))
             .unwrap();
         assert_eq!(mode.to_ascii_lowercase(), "wal");
+    }
+
+    #[test]
+    fn fresh_db_reaches_latest_schema_version() {
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("rag.db");
+        let conn = open_connection(&db_path).unwrap();
+        let version: u32 = conn
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(
+            version, LATEST_SCHEMA_VERSION,
+            "fresh database should be at latest schema version after migrations"
+        );
+    }
+
+    #[test]
+    fn migrations_are_idempotent() {
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("rag.db");
+        let mut conn = open_connection(&db_path).unwrap();
+        // Running migrations on an already-migrated database should not error.
+        run_migrations(&mut conn).unwrap();
+        let version: u32 = conn
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(version, LATEST_SCHEMA_VERSION);
+    }
+
+    #[test]
+    fn migration_v0_to_v1_adds_status_column() {
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("rag.db");
+
+        // Manually create a v0 schema (no status column) and set user_version=0
+        {
+            let conn = Connection::open(&db_path).unwrap();
+            conn.execute_batch(PRAGMAS_SQL).unwrap();
+            conn.execute_batch(
+                r#"
+                CREATE TABLE IF NOT EXISTS projects (
+                    id              TEXT PRIMARY KEY,
+                    name            TEXT NOT NULL,
+                    path            TEXT NOT NULL UNIQUE,
+                    embedding_model TEXT NOT NULL,
+                    ignore_patterns TEXT NOT NULL DEFAULT '[]',
+                    created_at      TEXT NOT NULL,
+                    updated_at      TEXT NOT NULL,
+                    indexed_at      TEXT,
+                    file_count      INTEGER NOT NULL DEFAULT 0,
+                    chunk_count     INTEGER NOT NULL DEFAULT 0,
+                    total_bytes     INTEGER NOT NULL DEFAULT 0,
+                    embedding_dimension INTEGER NOT NULL DEFAULT 0
+                );
+                CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(
+                    chunk_id  INTEGER PRIMARY KEY,
+                    embedding float[4096]
+                );
+                "#,
+            )
+            .unwrap();
+            // user_version defaults to 0 on a fresh DB
+        }
+
+        // Run migrations — should reach version 2
+        let conn = open_connection(&db_path).unwrap();
+        let version: u32 = conn
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(version, LATEST_SCHEMA_VERSION);
+
+        // status column should now exist
+        assert!(conn.prepare("SELECT status FROM projects LIMIT 0").is_ok());
+        // vec_chunks should have cosine metric (rebuild)
+        // We verify indirectly by checking the table exists and is queryable
+        assert!(conn
+            .prepare("SELECT chunk_id, embedding FROM vec_chunks LIMIT 0")
+            .is_ok());
     }
 }
