@@ -78,6 +78,13 @@ pub async fn cmd_rag_index_project<R: Runtime>(
     state: State<'_, Arc<RwLock<RagStore>>>,
     app_handle: AppHandle,
 ) -> Result<ApiResponse<bool>, String> {
+    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_rag_index_project") {
+        return Ok(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        });
+    }
     let req = IndexRequest {
         window,
         project_id,

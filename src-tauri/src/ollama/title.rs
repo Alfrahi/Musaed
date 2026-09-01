@@ -19,6 +19,13 @@ pub async fn cmd_ollama_generate_title(
     assistant_message: String,
     language: String,
 ) -> ApiResponse<String> {
+    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_ollama_generate_title") {
+        return ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        };
+    }
     let service = TitleService;
     let req = GenerateTitleRequest {
         window_label: window.label().to_string(),
