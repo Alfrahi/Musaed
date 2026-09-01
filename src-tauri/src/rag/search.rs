@@ -90,7 +90,19 @@ impl RagSearchEngine {
         // Compute BM25 scores and find min/max for normalization
         let bm25_scores: Vec<f32> = candidates
             .iter()
-            .map(|c| bm25.score(query, c.chunk_id as usize))
+            .map(|c| {
+                let score = bm25.score(query, c.chunk_id as usize);
+                if score.is_finite() {
+                    score
+                } else {
+                    tracing::warn!(
+                        "RAG Search: non-finite BM25 score ({}) for chunk {}, falling back to 0.0",
+                        score,
+                        c.chunk_id
+                    );
+                    0.0
+                }
+            })
             .collect();
 
         let bm25_min = bm25_scores.iter().cloned().fold(f32::INFINITY, f32::min);
@@ -107,20 +119,36 @@ impl RagSearchEngine {
             .map(|(i, mut candidate)| {
                 // Min-max normalize BM25 score to [0, 1]
                 let normalized_bm25 = (bm25_scores[i] - bm25_min) / bm25_range;
+                let normalized_bm25 = if normalized_bm25.is_finite() {
+                    normalized_bm25
+                } else {
+                    tracing::warn!(
+                        "RAG Search: non-finite normalized BM25 score for chunk {}, falling back to 0.0",
+                        candidate.chunk_id
+                    );
+                    0.0
+                };
                 // Combine scores with weights
-                candidate.score = VECTOR_WEIGHT * candidate.score + BM25_WEIGHT * normalized_bm25;
+                let hybrid = VECTOR_WEIGHT * candidate.score + BM25_WEIGHT * normalized_bm25;
+                candidate.score = if hybrid.is_finite() {
+                    hybrid
+                } else {
+                    tracing::warn!(
+                        "RAG Search: non-finite hybrid score for chunk {}, falling back to 0.0",
+                        candidate.chunk_id
+                    );
+                    0.0
+                };
                 candidate
             })
             .collect::<Vec<_>>();
 
-        // Filter NaN scores before sorting to prevent panic
-        reranked.retain(|c| !c.score.is_nan());
-
-        // Sort by hybrid score (treat NaN comparisons as equal)
+        // Sort by hybrid score with deterministic tiebreaker
         reranked.sort_by(|a, b| {
             b.score
                 .partial_cmp(&a.score)
                 .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| a.chunk_id.cmp(&b.chunk_id))
         });
 
         // Return top_k results
