@@ -53,7 +53,7 @@ export interface FeatureManifest {
   /** Public API surface — hooks, components, and utils exported from the barrel */
   publicApi: FeaturePublicApi;
 
-  /** IPC command names this feature invokes (must exist in CommandMap in ipc.ts) */
+  /** IPC command names this feature invokes (must exist in CommandMap in command-versions.ts) */
   ipcEndpoints: readonly string[];
 
   /**
