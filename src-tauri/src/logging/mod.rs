@@ -107,7 +107,9 @@ impl std::fmt::Display for TraceSource {
 }
 
 /// Context for propagating trace metadata across IPC boundaries.
+/// Serialized as camelCase to match the frontend `TraceContextSchema` contract.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TraceContext {
     pub trace_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -117,7 +119,9 @@ pub struct TraceContext {
 }
 
 /// A completed structured trace entry for observability.
+/// Serialized as camelCase to match the frontend `TraceEntrySchema` contract.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TraceEntry {
     /// ISO 8601 timestamp of when the entry was created.
     pub timestamp: String,
@@ -157,7 +161,9 @@ impl TraceEntry {
 }
 
 /// Input for creating a new trace entry.
+/// Deserialized from camelCase to match the frontend `TraceEntryInputSchema` contract.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TraceEntryInput {
     pub trace_id: String,
     #[serde(default)]
