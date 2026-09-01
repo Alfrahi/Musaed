@@ -3,6 +3,7 @@ import { useCallback, useMemo } from 'react';
 import IntlMessageFormat from 'intl-messageformat';
 import en from '../../locales/en.json';
 import ar from '../../locales/ar.json';
+import { config } from './config';
 
 const translations = { en, ar };
 
@@ -42,6 +43,17 @@ export const setActiveLanguageResolver = (resolver: () => Language): void => {
  */
 export const getActiveLanguage = (): Language => activeLanguageResolver();
 
+const missingKeyWarned = new Set<string>();
+const warnMissingKey = (key: string, lang: Language): void => {
+  if (config.isProd) return;
+  const id = `${lang}:${key}`;
+  if (missingKeyWarned.has(id)) return;
+  missingKeyWarned.add(id);
+  console.warn(
+    `[i18n] Missing translation key "${key}" for "${lang}" and fallback "en"; rendering the key itself.`
+  );
+};
+
 /**
  * Resolve a translation key for the given language.
  *
@@ -74,7 +86,10 @@ export const translate = (
   };
 
   const value = resolve(dict, keys) || resolve(defaultDict, keys);
-  if (!value) return key;
+  if (!value) {
+    warnMissingKey(key, lang);
+    return key;
+  }
 
   if (!values) return value;
 
@@ -177,7 +192,10 @@ export const useTranslation = (lang: Language) => {
 
       const value = resolve(dict, keys) || resolve(defaultDict, keys);
 
-      if (!value) return key;
+      if (!value) {
+        warnMissingKey(key, lang);
+        return key;
+      }
 
       if (!values) return value;
 
