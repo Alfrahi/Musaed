@@ -791,6 +791,43 @@ function createIpcTimeout(command: string, budgetMs: number): Promise<never> {
  * @returns The validated return value from the Rust backend, or null if call was blocked
  * @throws {Error} If the backend returns an error or validation fails
  */
+function invalidResponseError(command: string, raw: unknown): IpcError {
+  console.error(`[IPC] Invalid response from "${command}":`, raw);
+  return new IpcError({
+    code: BackendErrorCode.InvalidResponse,
+    message: `Backend returned invalid data for "${command}": ${raw instanceof Error ? raw.message : String(raw)}`,
+    requestId: undefined,
+    context: undefined,
+    isRetryable: false,
+  });
+}
+
+async function awaitIpcResponse<K extends keyof CommandMap>(
+  command: K,
+  invokePromise: Promise<ApiResponse<CommandMap[K]['return']>>,
+  callStart: number,
+  budgetMs: number
+): Promise<ApiResponse<CommandMap[K]['return']>> {
+  let response: ApiResponse<CommandMap[K]['return']>;
+  try {
+    response = await Promise.race([invokePromise, createIpcTimeout(command, budgetMs)]);
+  } catch (parseErr) {
+    // Invoke-layer rejections (backend argument errors, transport failures)
+    // are not malformed responses — surface them unchanged so the outer
+    // catch sanitizes them exactly as before. Only record latency + log.
+    if (!(parseErr instanceof IpcError)) {
+      recordIpcLatency(command, Math.round(performance.now() - callStart), budgetMs);
+      console.error(`[IPC] invoke rejected for "${command}":`, parseErr);
+    }
+    throw parseErr;
+  }
+  if (response === null || typeof response !== 'object') {
+    recordIpcLatency(command, Math.round(performance.now() - callStart), budgetMs);
+    throw invalidResponseError(command, response);
+  }
+  return response;
+}
+
 async function callInternal<K extends keyof CommandMap>(
   command: K,
   args: CommandMap[K]['args'],
@@ -842,7 +879,7 @@ async function callInternal<K extends keyof CommandMap>(
   try {
     const { invoke: tauriInvoke } = await import('@tauri-apps/api/core');
     const invokePromise = tauriInvoke<ApiResponse<CommandMap[K]['return']>>(command, args);
-    const response = await Promise.race([invokePromise, createIpcTimeout(command, budgetMs)]);
+    const response = await awaitIpcResponse(command, invokePromise, callStart, budgetMs);
 
     const schema = CommandReturnSchemas[command];
     const latencyMs = Math.round(performance.now() - callStart);
