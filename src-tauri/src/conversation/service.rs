@@ -1,5 +1,6 @@
 use crate::conversation::models::{Conversation, Message, MessageSearchResult};
 use crate::conversation::store::ConversationStore;
+use crate::conversation::write_batch::WriteBatcher;
 use crate::error_codes;
 use crate::payloads::{ApiResponse, BackendError};
 use std::sync::Arc;
@@ -84,8 +85,12 @@ pub async fn create_conversation(
 }
 
 /// Append a message to an existing conversation.
+///
+/// The write goes through the batch writer: this call still resolves only
+/// after the message is durably committed, but under load multiple appends
+/// share one transaction and one lock acquisition.
 pub async fn append_message(
-    store: Arc<Mutex<ConversationStore>>,
+    batcher: WriteBatcher,
     conversation_id: String,
     message: Message,
 ) -> ApiResponse<()> {
@@ -94,8 +99,7 @@ pub async fn append_message(
         conversation_id,
         message.role
     );
-    let guard = store.lock().await;
-    match guard.add_message(&conversation_id, &message).await {
+    match batcher.append(conversation_id.clone(), message).await {
         Ok(_) => {
             tracing::info!("Appended message to conversation: {}", conversation_id);
             ApiResponse {

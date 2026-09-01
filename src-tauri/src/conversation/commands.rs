@@ -4,6 +4,7 @@ use crate::conversation::models::{Conversation, Message, MessageSearchResult};
 use crate::conversation::service;
 use crate::conversation::store::ConversationStore;
 use crate::conversation::validation::{self, reject};
+use crate::conversation::write_batch;
 use crate::payloads::ApiResponse;
 use tauri::State;
 use tokio::sync::Mutex;
@@ -39,7 +40,7 @@ pub async fn cmd_conversation_create(
 
 #[tauri::command]
 pub async fn cmd_message_append(
-    state: State<'_, Arc<Mutex<ConversationStore>>>,
+    state: State<'_, write_batch::WriteBatcher>,
     conversation_id: String,
     message: Message,
 ) -> Result<ApiResponse<()>, String> {

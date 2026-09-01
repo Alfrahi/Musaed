@@ -93,7 +93,11 @@ pub fn run() -> Result<(), tauri::Error> {
 
         let conversation_store = crate::conversation::store::ConversationStore::new(&db_path)
             .map_err(|e| format!("Failed to initialize conversation store: {}", e))?;
-        app.manage(Arc::new(Mutex::new(conversation_store)));
+        let conversation_store = Arc::new(Mutex::new(conversation_store));
+        let write_batcher =
+            conversation::write_batch::WriteBatcher::spawn(conversation_store.clone());
+        app.manage(conversation_store);
+        app.manage(write_batcher);
 
         let app_data_dir = app
             .path()

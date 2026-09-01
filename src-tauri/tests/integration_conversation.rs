@@ -1,4 +1,5 @@
 use musaed_lib::conversation::service;
+use musaed_lib::conversation::write_batch::WriteBatcher;
 use musaed_lib::conversation::{
     models::{ChatSettings, Conversation, Message, RagSource},
     store::ConversationStore,
@@ -618,7 +619,8 @@ async fn test_service_layer_append_message() {
         error: None,
     };
 
-    let response = service::append_message(store.clone(), "svc-msg".into(), msg).await;
+    let batcher = WriteBatcher::spawn(store.clone());
+    let response = service::append_message(batcher, "svc-msg".into(), msg).await;
     assert!(response.success);
     assert!(response.error.is_none());
 
