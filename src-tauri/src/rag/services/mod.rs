@@ -159,7 +159,11 @@ pub async fn reindex_project<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiRes
 
 pub async fn start_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResponse<bool> {
     if let Err(e) = RATE_LIMITER.check_rate_limit(req.window.label(), "cmd_rag_index_project") {
-        return rag_validation_error(e.message.clone());
+        return ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        };
     }
     if let Err(e) = validate_project_id(&req.project_id) {
         return rag_validation_error(e);
