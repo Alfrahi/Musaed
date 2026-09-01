@@ -139,6 +139,28 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn abort_chat_leaves_registries_empty() {
+        let _guard = crate::shared::test_cache_lock().await;
+        crate::shared::clear_request_cache();
+        let req_id = "test-abort-cleanup".to_string();
+        ABORT_HANDLES.insert(req_id.clone(), Arc::new(CancellationToken::new()));
+        REQUEST_CACHE.insert(req_id.clone(), Instant::now());
+
+        let result = abort_service::abort_chat(req_id.clone()).await;
+
+        assert!(result.success);
+        assert!(
+            !ABORT_HANDLES.contains_key(&req_id),
+            "abort must evict the cancel-token entry"
+        );
+        assert!(
+            !REQUEST_CACHE.contains_key(&req_id),
+            "abort must evict the dedup-cache entry"
+        );
+        crate::shared::clear_request_cache();
+    }
+
+    #[tokio::test]
     async fn cmd_ollama_abort_pull_handles_nonexistent_model() {
         let result = models::cmd_ollama_abort_pull("nonexistent".to_string()).await;
         assert!(result.success);

@@ -8,6 +8,7 @@ export { useConversationActions } from './hooks/useConversationActions';
 export { useConversationInitialization } from './hooks/useConversationInitialization';
 export { useAttachmentManager } from './hooks/useAttachmentManager';
 export { useTauriEvents } from './hooks/useTauriEvents';
+export { useAbortStreamsOnUnmount } from './hooks/useAbortStreamsOnUnmount';
 export { useAutoTitle, triggerAutoTitle } from './hooks/useAutoTitle';
 export { useConversationMessages } from './hooks/useConversationMessages';
 export { usePersistActiveConversation } from './hooks/usePersistActiveConversation';
