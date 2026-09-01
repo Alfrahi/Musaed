@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 
 import {
   useTauriEvents,
+  useAbortStreamsOnUnmount,
   useConversationMessages,
   usePersistActiveConversation,
 } from '@/features/conversation';
@@ -149,6 +150,7 @@ const HomeClient = () => {
   const { t, isRtl } = useTranslation(globalSettings.language);
 
   useTauriEvents();
+  useAbortStreamsOnUnmount();
   useLibraryTauriEvents();
   useGlobalShortcuts();
   useAutoCollapseSidebar();
