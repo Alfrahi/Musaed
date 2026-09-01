@@ -1,11 +1,6 @@
 import { z } from 'zod';
 import {
   type ApiResponse,
-  type OllamaModel,
-  type ChatMessage,
-  type ChatOptions,
-  type OllamaHealth,
-  type ModelValidation,
   OllamaModelSchema,
   OllamaHealthSchema,
   ModelValidationSchema,
@@ -29,18 +24,16 @@ import {
   COMMAND_VERSIONS,
   MessageSchema,
   type CommandName,
+  type CommandMap,
   AssembledContextSchema,
   type Conversation,
   type Message,
   ConversationSchema,
   MessageSearchResultSchema,
-  type MessageSearchResult,
   // Structured logging types
   TraceEntryInputSchema,
   TraceContextSchema,
   type TraceEntryInput,
-  type TraceContext,
-  type TraceStatus,
   IPC_LATENCY_BUDGETS,
   type IpcCallStat,
   type IpcStats,
@@ -49,30 +42,16 @@ import {
   RunMigrationsResponseSchema,
   MigrationStatusSchema,
   MigrationInfoSchema,
-  type RunMigrationsResponse,
-  type MigrationStatus,
-  type MigrationInfo,
   // Context menu contracts
   ContextMenuKindSchema,
   ContextMenuResponseSchema,
   ContextMenuLabelsSchema,
-  type ContextMenuKind,
   type ContextMenuRequest,
-  type ContextMenuResponse,
   type ContextMenuLabels,
   // System tray contracts
   BackgroundTasksResponseSchema,
-  type BackgroundTasksResponse,
   MenuBarLabelsSchema,
   type MenuBarLabels,
-} from '@musaed/contracts';
-import type {
-  RagProject,
-  SearchResult,
-  ChunkRecord,
-  FileRecord,
-  AssembledContext,
-  FileFilter,
 } from '@musaed/contracts';
 import toast from 'react-hot-toast';
 import { translate, getActiveLanguage } from '@/lib/i18n';
@@ -100,6 +79,7 @@ import {
 // Re-export for backward compatibility
 export { isValidOllamaUrl, sanitizeOllamaUrl };
 export { checkIsTauri };
+export type { CommandMap };
 export {
   ipcStats,
   snapshotIpcStats,
@@ -210,201 +190,9 @@ if (typeof window !== 'undefined') {
  * - Contract registry guard (COMMAND_VERSIONS) — development-mode check that
  *   every invoked command is registered. Breaking-change detection itself is
  *   delegated to `pnpm validate:contracts --strict`, which cross-checks Rust
- *   #[tauri::command] signatures against this CommandMap at CI time.
+ *   #[tauri::command] signatures against the CommandMap declared in
+ *   `packages/contracts/src/command-versions.ts` at CI time.
  */
-export interface CommandMap {
-  cmd_ollama_get_models: { args: { baseUrl: string }; return: OllamaModel[] };
-  cmd_ollama_chat: {
-    args: {
-      baseUrl: string;
-      model: string;
-      messages: ChatMessage[];
-      options: ChatOptions;
-      requestId: string;
-    };
-    return: boolean;
-  };
-  cmd_ollama_abort_chat: { args: { requestId: string }; return: void };
-  cmd_ollama_delete_model: { args: { baseUrl: string; name: string }; return: boolean };
-  cmd_ollama_pull_model: { args: { baseUrl: string; name: string }; return: void };
-  cmd_ollama_abort_pull: { args: { name: string }; return: void };
-  cmd_ollama_check_health: { args: { baseUrl: string }; return: OllamaHealth };
-  cmd_ollama_verify_service: { args: { baseUrl: string }; return: string };
-  cmd_ollama_validate_model: { args: { baseUrl: string; name: string }; return: ModelValidation };
-  cmd_ollama_generate_title: {
-    args: {
-      baseUrl: string;
-      model: string;
-      userMessage: string;
-      assistantMessage: string;
-      language: string;
-    };
-    return: string;
-  };
-  cmd_logs_append: { args: { entry: string }; return: void };
-  cmd_logs_request_clear_token: { args: Record<string, never>; return: string };
-  cmd_logs_clear: { args: { token: string }; return: void };
-
-  // Tracing commands
-  cmd_trace_append: { args: { input: TraceEntryInput }; return: void };
-  cmd_trace_start: {
-    args: { traceId: string; feature: string; action: string };
-    return: TraceContext;
-  };
-  cmd_trace_complete: {
-    args: {
-      traceId: string;
-      status: TraceStatus;
-      message?: string;
-      context?: Record<string, unknown>;
-    };
-    return: void;
-  };
-  cmd_trace_get_context: { args: { traceId: string }; return: TraceContext };
-
-  // Dialog commands
-  cmd_dialog_ask: { args: { title: string; message: string; kind?: string }; return: boolean };
-
-  // Opener commands
-  cmd_opener_open_url: { args: { url: string }; return: boolean };
-
-  // File dialog commands
-  cmd_dialog_open_file: {
-    args: {
-      filters?: FileFilter[];
-      multiple?: boolean;
-      directory?: boolean;
-      defaultPath?: string;
-    };
-    return: string[] | null;
-  };
-  cmd_dialog_save_file: {
-    args: {
-      filters?: FileFilter[];
-      defaultPath?: string;
-    };
-    return: string | null;
-  };
-
-  // Store commands
-  cmd_store_load: { args: { file: string }; return: boolean };
-  cmd_store_get: { args: { file: string; key: string }; return: unknown };
-  cmd_store_set: { args: { file: string; key: string; value: unknown }; return: boolean };
-  cmd_store_save: { args: { file: string }; return: boolean };
-  cmd_store_delete: { args: { file: string; key: string }; return: boolean };
-
-  // Filesystem commands
-  cmd_fs_read_text_file: { args: { path: string }; return: string };
-  cmd_fs_read_file: { args: { path: string }; return: string };
-  cmd_fs_write_text_file: { args: { path: string; content: string }; return: boolean };
-
-  // RAG commands
-  cmd_rag_add_project: {
-    args: { name: string; path: string; embeddingModel: string; ignorePatterns: string[] };
-    return: RagProject;
-  };
-  cmd_rag_remove_project: { args: { projectId: string }; return: boolean };
-  cmd_rag_update_project: {
-    args: { projectId: string; name?: string; ignorePatterns?: string[] };
-    return: RagProject;
-  };
-  cmd_rag_list_projects: { args: Record<string, never>; return: RagProject[] };
-  cmd_rag_index_project: {
-    args: { projectId: string; force?: boolean; baseUrl?: string };
-    return: boolean;
-  };
-  cmd_rag_abort_index: { args: { projectId: string }; return: boolean };
-  cmd_rag_reindex_project: { args: { projectId: string; baseUrl?: string }; return: boolean };
-  cmd_rag_retry_index_project: { args: { projectId: string; baseUrl?: string }; return: boolean };
-  cmd_rag_search: {
-    args: { projectId: string; query: string; topK?: number; threshold?: number; baseUrl?: string };
-    return: SearchResult[];
-  };
-  cmd_rag_get_file_chunks: { args: { projectId: string; filePath: string }; return: ChunkRecord[] };
-  cmd_rag_list_files: { args: { projectId: string }; return: FileRecord[] };
-  cmd_rag_set_embedding_model: { args: { projectId: string; modelName: string }; return: boolean };
-  cmd_rag_assemble_context: {
-    args: {
-      projectId: string;
-      query: string;
-      topK?: number;
-      threshold?: number;
-      maxChars?: number;
-      baseUrl?: string;
-    };
-    return: AssembledContext;
-  };
-  cmd_conversations_list: { args: Record<string, never>; return: Conversation[] };
-  cmd_conversation_get: { args: { id: string }; return: Conversation };
-  cmd_conversation_create: { args: { conversation: Conversation }; return: string };
-  cmd_message_append: { args: { conversationId: string; message: Message }; return: void };
-  cmd_message_delete: { args: { conversationId: string; messageId: string }; return: void };
-  cmd_conversation_delete: { args: { id: string }; return: void };
-  cmd_conversations_clear: { args: Record<string, never>; return: void };
-  cmd_conversation_update: { args: { id: string; title: string; updatedAt: number }; return: void };
-
-  // Message search — full-text search across all conversation messages.
-  // Returns results grouped by conversation with matching message snippets.
-  cmd_conversation_search: {
-    args: { query: string; limit: number };
-    return: MessageSearchResult[];
-  };
-
-  // Migration commands — backend SQLite schema migrations. Exposed so the
-  // Settings/Diagnostics UI can run, roll back, and report on migrations.
-  cmd_run_migrations: {
-    args: { target: string; targetVersion?: number; allowRollback: boolean };
-    return: RunMigrationsResponse;
-  };
-  cmd_rollback_migrations: {
-    args: { target: string; toVersion: number };
-    return: RunMigrationsResponse;
-  };
-  cmd_get_migration_status: { args: { target: string }; return: MigrationStatus };
-  cmd_list_migrations: { args: { target: string }; return: MigrationInfo[] };
-
-  // Context menu — native Tauri popup menu for right-click surfaces
-  // The frontend sends the surface kind, screen
-  // coordinates, and translated labels; the backend builds a native menu
-  // and returns the selected action id (or null if dismissed).
-  // Args are declared inline (not via ContextMenuRequest) so the CI
-  // contract validator can cross-check field names against the Rust
-  // `cmd_context_menu_show` signature (STANDARDS §10).
-  cmd_context_menu_show: {
-    args: {
-      kind: ContextMenuKind;
-      labels: Partial<ContextMenuLabels>;
-      x: number;
-      y: number;
-    };
-    return: ContextMenuResponse;
-  };
-
-  // App metadata — canonical version string sourced from tauri.conf.json
-  // via the compile-time embedded PackageInfo. The Rust
-  // command takes only the Tauri-injected `AppHandle`, so its user-facing
-  // argument shape is empty. Declared as a SHARED_COMMAND so any feature
-  // can fetch the version without declaring an IPC endpoint in its manifest.
-  cmd_get_app_version: { args: Record<string, never>; return: string };
-
-  // System tray — query active background tasks (chat streams, model pulls,
-  // RAG indexing) so the frontend and tray close handler can decide between
-  // minimize-to-tray and normal exit. Declared as a SHARED_COMMAND so any
-  // feature can consume it without a manifest dependency.
-  cmd_tray_get_background_status: {
-    args: Record<string, never>;
-    return: BackgroundTasksResponse;
-  };
-
-  // Menu bar — rebuild the native macOS menu bar with translated labels.
-  // Called by the frontend after locale hydration/change. Declared as a
-  // SHARED_COMMAND so any feature can trigger a rebuild without a manifest
-  // dependency.
-  cmd_menu_rebuild: {
-    args: { labels: MenuBarLabels };
-    return: boolean;
-  };
-}
 
 const voidSchema = z.preprocess((val) => (val === null ? undefined : val), z.void());
 

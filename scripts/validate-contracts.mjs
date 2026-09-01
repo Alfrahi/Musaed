@@ -4,7 +4,7 @@
  * Contract Validation: Rust commands ↔ TypeScript CommandMap
  *
  * Parses every `#[tauri::command]` function from the Rust backend and every
- * entry in `CommandMap` from `apps/web/src/lib/ipc.ts`, then cross-references
+ * entry in `CommandMap` from `packages/contracts/src/command-versions.ts`, then cross-references
  * them to detect:
  *
  *  1. Rust commands with no TypeScript counterpart (unreachable from frontend)
@@ -40,7 +40,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 
 const RUST_SRC_DIR = resolve(ROOT, 'src-tauri/src');
-const IPC_TS = resolve(ROOT, 'apps/web/src/lib/ipc.ts');
+const COMMAND_VERSIONS_TS = resolve(ROOT, 'packages/contracts/src/command-versions.ts');
 
 // ---------------------------------------------------------------------------
 // 1. Parse Rust commands
@@ -251,19 +251,19 @@ function parseRustCommands() {
 // ---------------------------------------------------------------------------
 
 /**
- * Parse the `CommandMap` interface from ipc.ts.
+ * Parse the `CommandMap` interface from command-versions.ts.
  *
  * Returns a Map of command_name → { argCount, argNames }
  */
 function parseTsCommandMap() {
-  const content = readFileSync(IPC_TS, 'utf-8');
+  const content = readFileSync(COMMAND_VERSIONS_TS, 'utf-8');
 
   // Extract the CommandMap interface block — find the opening brace
   // after "export interface CommandMap" and extract everything up to
   // the matching closing brace.
   const ifaceStart = content.indexOf('export interface CommandMap {');
   if (ifaceStart === -1) {
-    console.error('❌ Could not find CommandMap interface in ipc.ts');
+    console.error('❌ Could not find CommandMap interface in command-versions.ts');
     process.exit(1);
   }
 
