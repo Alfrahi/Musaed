@@ -297,6 +297,7 @@ mod tests {
 
         // Manually create a v0 schema (no status column) and set user_version=0
         {
+            load_vec_extension().unwrap();
             let conn = Connection::open(&db_path).unwrap();
             conn.execute_batch(PRAGMAS_SQL).unwrap();
             conn.execute_batch(
