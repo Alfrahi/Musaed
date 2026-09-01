@@ -1,6 +1,6 @@
 //! Database connection management, schema, and migrations.
 
-use crate::rag::error::RagResult;
+use crate::rag::error::{RagError, RagResult};
 use rusqlite::{ffi, Connection};
 use std::path::Path;
 
@@ -120,6 +120,25 @@ pub(super) fn open_connection(db_path: &Path) -> RagResult<Connection> {
     // Apply pragmas
     conn.execute_batch(PRAGMAS_SQL)?;
 
+    // Verify WAL actually activated. On filesystems without shared-memory /
+    // locking support (NFS, SMB, some network mounts), SQLite silently falls
+    // back to DELETE mode, breaking the concurrent readers this store relies
+    // on. Fail loudly instead of degrading.
+    let journal_mode: String = conn.query_row("PRAGMA journal_mode", [], |row| row.get(0))?;
+    if !journal_mode.eq_ignore_ascii_case("wal") {
+        tracing::error!(
+            path = %db_path.display(),
+            journal_mode = %journal_mode,
+            "WAL journal mode not activated for RAG database"
+        );
+        return Err(RagError::Config(format!(
+            "WAL journal mode is required but the database reports '{journal_mode}' after setup. \
+             WAL is not supported on this filesystem for '{}'. Move the database to a local SSD, \
+             check file permissions, and verify the filesystem supports WAL (not NFS/SMB).",
+            db_path.display(),
+        )));
+    }
+
     // Create schema
     conn.execute_batch(SCHEMA_SQL)?;
 
@@ -202,4 +221,20 @@ pub(super) fn run_migrations(conn: &Connection) -> RagResult<()> {
     )?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wal_mode_activates_on_local_filesystem() {
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("rag.db");
+        let conn = open_connection(&db_path).unwrap();
+        let mode: String = conn
+            .query_row("PRAGMA journal_mode", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(mode.to_ascii_lowercase(), "wal");
+    }
 }
