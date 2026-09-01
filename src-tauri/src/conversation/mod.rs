@@ -9,5 +9,6 @@ pub mod models;
 pub mod service;
 pub mod store;
 pub mod validation;
+pub mod write_batch;
 
 pub use store::ConversationStore;

@@ -4,6 +4,60 @@ use rusqlite::{params, Connection, Result as SqlResult};
 use std::path::Path;
 use tokio::sync::Mutex;
 
+/// Insert-or-replace a single message row. Shared by `add_message` and
+/// `add_message_batch` so the column list and upsert clause live in one place.
+fn upsert_message(conn: &Connection, conversation_id: &str, msg: &Message) -> SqlResult<()> {
+    conn.execute(
+        "INSERT INTO messages (id, conversation_id, role, content, timestamp, model, done,
+                              request_id, images, eval_count, prompt_eval_count,
+                              completion_tokens, prompt_tokens, total_tokens,
+                              total_duration, eval_duration, rag_sources, error)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)
+         ON CONFLICT(id) DO UPDATE SET
+             content = excluded.content,
+             model = excluded.model,
+             done = excluded.done,
+             request_id = excluded.request_id,
+             images = excluded.images,
+             eval_count = excluded.eval_count,
+             prompt_eval_count = excluded.prompt_eval_count,
+             completion_tokens = excluded.completion_tokens,
+             prompt_tokens = excluded.prompt_tokens,
+             total_tokens = excluded.total_tokens,
+             total_duration = excluded.total_duration,
+             eval_duration = excluded.eval_duration,
+             rag_sources = excluded.rag_sources,
+             error = excluded.error",
+        params![
+            &msg.id,
+            conversation_id,
+            &msg.role,
+            &msg.content,
+            &msg.timestamp,
+            &msg.model,
+            &msg.done,
+            &msg.request_id,
+            &msg.images
+                .as_ref()
+                .map(|v| serde_json::to_string(v).unwrap_or_default()),
+            &msg.eval_count,
+            &msg.prompt_eval_count,
+            &msg.completion_tokens,
+            &msg.prompt_tokens,
+            &msg.total_tokens,
+            &msg.total_duration,
+            &msg.eval_duration,
+            &msg.rag_sources
+                .as_ref()
+                .map(|v| serde_json::to_string(v).unwrap_or_default()),
+            &msg.error
+                .as_ref()
+                .map(|e| serde_json::to_string(e).unwrap_or_default()),
+        ],
+    )?;
+    Ok(())
+}
+
 pub struct ConversationStore {
     conn: Mutex<Connection>,
 }
@@ -196,54 +250,19 @@ impl ConversationStore {
 
     pub async fn add_message(&self, conversation_id: &str, msg: &Message) -> SqlResult<()> {
         let conn = self.lock_conn().await;
-        conn.execute(
-            "INSERT INTO messages (id, conversation_id, role, content, timestamp, model, done,
-                                  request_id, images, eval_count, prompt_eval_count,
-                                  completion_tokens, prompt_tokens, total_tokens,
-                                  total_duration, eval_duration, rag_sources, error)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)
-             ON CONFLICT(id) DO UPDATE SET
-                 content = excluded.content,
-                 model = excluded.model,
-                 done = excluded.done,
-                 request_id = excluded.request_id,
-                 images = excluded.images,
-                 eval_count = excluded.eval_count,
-                 prompt_eval_count = excluded.prompt_eval_count,
-                 completion_tokens = excluded.completion_tokens,
-                 prompt_tokens = excluded.prompt_tokens,
-                 total_tokens = excluded.total_tokens,
-                 total_duration = excluded.total_duration,
-                 eval_duration = excluded.eval_duration,
-                 rag_sources = excluded.rag_sources,
-                 error = excluded.error",
-            params![
-                &msg.id,
-                conversation_id,
-                &msg.role,
-                &msg.content,
-                &msg.timestamp,
-                &msg.model,
-                &msg.done,
-                &msg.request_id,
-                &msg.images
-                    .as_ref()
-                    .map(|v| serde_json::to_string(v).unwrap_or_default()),
-                &msg.eval_count,
-                &msg.prompt_eval_count,
-                &msg.completion_tokens,
-                &msg.prompt_tokens,
-                &msg.total_tokens,
-                &msg.total_duration,
-                &msg.eval_duration,
-                &msg.rag_sources
-                    .as_ref()
-                    .map(|v| serde_json::to_string(v).unwrap_or_default()),
-                &msg.error
-                    .as_ref()
-                    .map(|e| serde_json::to_string(e).unwrap_or_default()),
-            ],
-        )?;
+        upsert_message(&conn, conversation_id, msg)
+    }
+
+    /// Upsert many messages in one transaction. Used by the write batcher so a
+    /// burst of IPC appends costs one lock acquisition and one commit instead
+    /// of one of each per message.
+    pub async fn add_message_batch(&self, items: &[(String, Message)]) -> SqlResult<()> {
+        let conn = self.lock_conn().await;
+        let tx = conn.unchecked_transaction()?;
+        for (conversation_id, msg) in items {
+            upsert_message(&tx, conversation_id, msg)?;
+        }
+        tx.commit()?;
         Ok(())
     }
 
