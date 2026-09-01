@@ -124,6 +124,13 @@ impl RateLimiter {
 pub static RATE_LIMITER: std::sync::LazyLock<RateLimiter> =
     std::sync::LazyLock::new(RateLimiter::new);
 
+/// Checks the global limiter for a command invoked from a window.
+/// Returns `Err(BackendError)` with [`crate::error_codes::RATE_LIMITED`]
+/// when the window's quota for the command is exhausted.
+pub fn check(window_label: &str, command: &str) -> Result<(), BackendError> {
+    RATE_LIMITER.check_rate_limit(window_label, command)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

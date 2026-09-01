@@ -4,7 +4,6 @@
 //! an active chat session or when probing server status.
 
 use crate::payloads::{ApiResponse, ChatMessage, ChatOptions, OllamaHealth};
-// RATE_LIMITER moved into service; removed from command
 use tauri::{AppHandle, Runtime};
 
 use super::service::{OllamaChatRequest, OllamaChatService};
@@ -21,6 +20,13 @@ pub async fn cmd_ollama_chat<R: Runtime>(
     options: ChatOptions,
     request_id: String,
 ) -> ApiResponse<bool> {
+    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_ollama_chat") {
+        return ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        };
+    }
     let service = OllamaChatService;
     let req = OllamaChatRequest {
         app,

@@ -43,6 +43,13 @@ pub async fn cmd_ollama_pull_model<R: Runtime>(
     base_url: String,
     name: String,
 ) -> ApiResponse<()> {
+    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_ollama_pull_model") {
+        return ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        };
+    }
     let service = ModelService;
     let req = PullModelRequest {
         app,
