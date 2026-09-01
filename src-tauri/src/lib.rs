@@ -25,7 +25,7 @@ pub mod tray;
 pub mod validation;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
+pub fn run() -> Result<(), tauri::Error> {
     log::info!("Starting Musaed application");
 
     let mut builder = tauri::Builder::default()
@@ -188,5 +188,8 @@ pub fn run() {
             fs_commands::cmd_fs_write_text_file,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .inspect_err(|e| {
+            log::error!("error while running tauri application: {e}");
+            eprintln!("error while running tauri application: {e}");
+        })
 }
