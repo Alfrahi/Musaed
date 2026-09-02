@@ -28,6 +28,8 @@ pub async fn cmd_ollama_chat<R: Runtime>(
         };
     }
     let service = OllamaChatService;
+    crate::metrics::begin_chat(&request_id);
+    let metrics_request_id = request_id.clone();
     let req = OllamaChatRequest {
         app,
         window_label: window.label().to_string(),
@@ -43,11 +45,14 @@ pub async fn cmd_ollama_chat<R: Runtime>(
             data: Some(true),
             error: None,
         },
-        Err(e) => ApiResponse {
-            success: false,
-            data: None,
-            error: Some(e),
-        },
+        Err(e) => {
+            crate::metrics::abandon_chat(&metrics_request_id);
+            ApiResponse {
+                success: false,
+                data: None,
+                error: Some(e),
+            }
+        }
     }
 }
 

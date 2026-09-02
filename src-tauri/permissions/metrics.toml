@@ -1,0 +1,6 @@
+[[permission]]
+identifier = "allow-metrics-commands"
+description = "Enables performance metrics snapshot polling (rolling latency stats)."
+commands.allow = [
+    "cmd_metrics_snapshot",
+]

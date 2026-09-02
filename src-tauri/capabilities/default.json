@@ -68,6 +68,7 @@
     "allow-context-menu-commands",
     "allow-app-info-commands",
     "allow-tray-commands",
-    "allow-menu-commands"
+    "allow-menu-commands",
+    "allow-metrics-commands"
   ]
 }

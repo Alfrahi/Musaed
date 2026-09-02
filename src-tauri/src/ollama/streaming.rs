@@ -51,10 +51,16 @@ impl<'a, R: Runtime> TauriEmitter<'a, R> {
 
 impl<R: Runtime> TokenSink for TauriEmitter<'_, R> {
     fn emit_token(&self, token: &OllamaToken) {
+        // chat_first_token consumes the registered start, so only the first
+        // token per request is measured.
+        crate::metrics::chat_first_token(&token.request_id);
         let _ = self.app.emit(EVENT_OLLAMA_TOKEN, token);
     }
 
     fn emit_error(&self, error: &BackendError) {
+        if let Some(request_id) = &error.request_id {
+            crate::metrics::abandon_chat(request_id);
+        }
         let _ = self.app.emit(EVENT_OLLAMA_ERROR, error);
     }
 }
