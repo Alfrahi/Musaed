@@ -47,7 +47,7 @@
     "focus-trap-react": "^12.0.0",
     "framer-motion": "^12.38.0",
     "unified": "^11.0.5",
-    "zod": "^4.3.6"
+    "zod": "^4.5.4"
   },
   "lint-staged": {
     "apps/**/*.{js,jsx,ts,tsx}": [
