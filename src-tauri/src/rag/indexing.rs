@@ -28,10 +28,10 @@ use xxhash_rust::xxh3::xxh3_64;
 /// emission, and the original [`IndexOptions`].  The write guard on the
 /// store is dropped between phases so long-running operations (embedding,
 /// chunking) do not hold it.
-pub struct PhaseContext<'a> {
+pub struct PhaseContext<'a, R: tauri::Runtime = tauri::Wry> {
     pub store: Arc<RwLock<RagStore>>,
     pub cancel_token: Arc<CancellationToken>,
-    pub app_handle: tauri::AppHandle,
+    pub app_handle: tauri::AppHandle<R>,
     pub project_id: &'a str,
     pub project_path: &'a Path,
     pub embedding_model: &'a str,
@@ -40,7 +40,7 @@ pub struct PhaseContext<'a> {
     pub force: bool,
 }
 
-impl PhaseContext<'_> {
+impl<R: tauri::Runtime> PhaseContext<'_, R> {
     fn check_cancelled(&self) -> RagResult<()> {
         if self.cancel_token.is_cancelled() {
             Err(RagError::Cancelled("by user request".to_string()))
@@ -105,11 +105,11 @@ pub struct IndexOptions<'a> {
 /// On failure (including cancellation), the project status is set to `Error` so the
 /// UI can offer a retry. Without this, a cancelled or failed index would leave the
 /// project stuck in `Indexing` status permanently.
-pub async fn index_project(
+pub async fn index_project<R: tauri::Runtime>(
     store: Arc<RwLock<RagStore>>,
     opts: IndexOptions<'_>,
     cancel_token: Arc<CancellationToken>,
-    app_handle: tauri::AppHandle,
+    app_handle: tauri::AppHandle<R>,
 ) -> RagResult<()> {
     let ctx = PhaseContext {
         store,
@@ -152,7 +152,7 @@ pub async fn index_project(
     result
 }
 
-async fn run_pipeline(ctx: PhaseContext<'_>) -> RagResult<()> {
+async fn run_pipeline<R: tauri::Runtime>(ctx: PhaseContext<'_, R>) -> RagResult<()> {
     let discovered = phase_discover(&ctx)?;
     let diff = phase_diff(&ctx, &discovered).await?;
     phase_delete_stale(&ctx, &diff.files_to_delete).await?;
@@ -167,7 +167,9 @@ async fn run_pipeline(ctx: PhaseContext<'_>) -> RagResult<()> {
 // ====================== PHASE 1: DISCOVER ======================
 
 /// Discover files in the project directory, respecting ignore patterns.
-fn phase_discover(ctx: &PhaseContext) -> RagResult<Vec<crate::rag::ignore::DiscoveredFile>> {
+fn phase_discover<R: tauri::Runtime>(
+    ctx: &PhaseContext<'_, R>,
+) -> RagResult<Vec<crate::rag::ignore::DiscoveredFile>> {
     ctx.emit(
         IndexPhase::DiscoveringFiles,
         0,
@@ -193,8 +195,8 @@ fn phase_discover(ctx: &PhaseContext) -> RagResult<Vec<crate::rag::ignore::Disco
 /// Diff discovered files against tracked files to find new, modified, and
 /// deleted files.  Reads file content once and caches it for the chunking
 /// phase to avoid re-reading from disk.
-async fn phase_diff(
-    ctx: &PhaseContext<'_>,
+async fn phase_diff<R: tauri::Runtime>(
+    ctx: &PhaseContext<'_, R>,
     discovered: &[crate::rag::ignore::DiscoveredFile],
 ) -> RagResult<DiffOutput> {
     let total_files = discovered.len();
@@ -279,7 +281,10 @@ async fn phase_diff(
 /// Delete stale file records (files that exist in the index but no longer
 /// on disk).  Drops the write guard between batches so other operations
 /// are not starved.
-async fn phase_delete_stale(ctx: &PhaseContext<'_>, files_to_delete: &[i64]) -> RagResult<()> {
+async fn phase_delete_stale<R: tauri::Runtime>(
+    ctx: &PhaseContext<'_, R>,
+    files_to_delete: &[i64],
+) -> RagResult<()> {
     ctx.emit(
         IndexPhase::DeletingStale,
         0,
@@ -310,7 +315,10 @@ async fn phase_delete_stale(ctx: &PhaseContext<'_>, files_to_delete: &[i64]) -> 
 
 /// Read cached file content and split into chunks.  Uses the content
 /// cached during the diff phase to avoid re-reading files from disk.
-async fn phase_chunk(ctx: &PhaseContext<'_>, diff: &DiffOutput) -> RagResult<ChunkOutput> {
+async fn phase_chunk<R: tauri::Runtime>(
+    ctx: &PhaseContext<'_, R>,
+    diff: &DiffOutput,
+) -> RagResult<ChunkOutput> {
     let file_count = diff.files_to_index.len();
     ctx.emit(
         IndexPhase::ReadingFiles,
@@ -367,7 +375,10 @@ async fn phase_chunk(ctx: &PhaseContext<'_>, diff: &DiffOutput) -> RagResult<Chu
 
 /// Generate embeddings for all chunks via the Ollama embedder.
 /// Detects the embedding dimension on the first run and stores it.
-async fn phase_embed(ctx: &PhaseContext<'_>, chunked: &ChunkOutput) -> RagResult<EmbedOutput> {
+async fn phase_embed<R: tauri::Runtime>(
+    ctx: &PhaseContext<'_, R>,
+    chunked: &ChunkOutput,
+) -> RagResult<EmbedOutput> {
     ctx.emit(
         IndexPhase::EmbeddingChunks,
         0,
@@ -439,8 +450,8 @@ async fn phase_embed(ctx: &PhaseContext<'_>, chunked: &ChunkOutput) -> RagResult
 /// Cancellation is checked at the top of each file iteration **and** every
 /// 100 chunks inside the inner loop, so a very large file (e.g. 10 000+
 /// chunks) does not keep running for minutes after the user clicks cancel.
-async fn phase_store(
-    ctx: &PhaseContext<'_>,
+async fn phase_store<R: tauri::Runtime>(
+    ctx: &PhaseContext<'_, R>,
     discovered: &[crate::rag::ignore::DiscoveredFile],
     chunked: &ChunkOutput,
     embedded: &EmbedOutput,
@@ -556,8 +567,8 @@ async fn phase_store(
 // ====================== PHASE 7: COMPLETE ======================
 
 /// Mark the project as ready and emit the completion event.
-async fn phase_complete(
-    ctx: &PhaseContext<'_>,
+async fn phase_complete<R: tauri::Runtime>(
+    ctx: &PhaseContext<'_, R>,
     discovered: &[crate::rag::ignore::DiscoveredFile],
     total_chunks: usize,
 ) -> RagResult<()> {
@@ -586,8 +597,8 @@ async fn phase_complete(
 // ====================== PROGRESS EMISSION ======================
 
 /// Emit an indexing progress event to the frontend.
-fn emit_progress(
-    app_handle: &tauri::AppHandle,
+fn emit_progress<R: tauri::Runtime>(
+    app_handle: &tauri::AppHandle<R>,
     project_id: &str,
     phase: IndexPhase,
     current: usize,
