@@ -60,7 +60,7 @@
     "@vitejs/plugin-react": "^4.7.0",
     "@vitest/coverage-v8": "^4.1.9",
     "@vitest/ui": "^3.2.4",
-    "jsdom": "^26.1.0",
+    "jsdom": "^30.0.1",
     "prettier": "^3.4.2",
     "remark-parse": "^11.0.0",
     "remark-stringify": "^11.0.0",
