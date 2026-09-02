@@ -52,6 +52,8 @@ import {
   BackgroundTasksResponseSchema,
   MenuBarLabelsSchema,
   type MenuBarLabels,
+  // Metrics contracts
+  MetricsSnapshotSchema,
 } from '@musaed/contracts';
 import toast from 'react-hot-toast';
 import { translate, getActiveLanguage } from '@/lib/i18n';
@@ -445,6 +447,9 @@ const CommandInputSchemas: {
 
   // Menu bar — translated labels for the custom menu items.
   cmd_menu_rebuild: z.object({ labels: MenuBarLabelsSchema }),
+
+  // Metrics — no user-facing args; drains in-process latency samples.
+  cmd_metrics_snapshot: undefined,
 };
 
 /**
@@ -537,6 +542,9 @@ const CommandReturnSchemas: {
 
   // Menu bar return schema — boolean success flag.
   cmd_menu_rebuild: z.boolean(),
+
+  // Metrics return schema — rolling latency snapshot.
+  cmd_metrics_snapshot: MetricsSnapshotSchema,
 };
 
 // ============================================================================
@@ -1404,4 +1412,23 @@ export const menuBarApi = {
    * @returns `true` on success, `null` if running outside Tauri.
    */
   rebuild: (labels: MenuBarLabels) => callInternal('cmd_menu_rebuild', { labels }),
+};
+
+/**
+ * Metrics API — rolling performance snapshot.
+ *
+ * Each call drains the backend's recorded samples, so callers get a
+ * "since last snapshot" window. Declared as a SHARED_COMMAND so any
+ * settings/diagnostics surface can poll it.
+ *
+ * @see STANDARDS.md §5  IPC System
+ */
+export const metricsApi = {
+  /**
+   * Returns mean/p95/p99 latency stats for chat (time-to-first-token),
+   * RAG search, and RAG indexing, then clears the recorded samples.
+   *
+   * @returns The snapshot, or `null` when running outside Tauri.
+   */
+  snapshot: () => callInternal('cmd_metrics_snapshot', {}),
 };

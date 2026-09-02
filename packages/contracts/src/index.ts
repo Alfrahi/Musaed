@@ -25,6 +25,7 @@ export * from './schemas/validation';
 export * from './schemas/context-menu';
 export * from './schemas/tray';
 export * from './schemas/menu-bar';
+export * from './schemas/metrics';
 export * from './utils/sanitize';
 export * from './redactedThinking';
 

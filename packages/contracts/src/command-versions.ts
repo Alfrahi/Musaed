@@ -40,6 +40,7 @@ import type {
 } from './schemas/context-menu';
 import type { BackgroundTasksResponse } from './schemas/tray';
 import type { MenuBarLabels } from './schemas/menu-bar';
+import type { MetricsSnapshot } from './schemas/metrics';
 
 /**
  * Latest RAG SQLite schema version. Mirrors the Rust `LATEST_SCHEMA_VERSION`
@@ -147,6 +148,11 @@ export const COMMAND_VERSIONS = {
   // honours the user's language preference. Cross-cutting infrastructure,
   // declared shared so any feature can trigger a rebuild.
   cmd_menu_rebuild: true,
+
+  // Metrics — rolling latency snapshot (chat/search/RAG indexing). Read-only
+  // drain of in-process samples; carries no domain state, declared shared so
+  // any settings/diagnostics surface can poll it.
+  cmd_metrics_snapshot: true,
 } as const;
 
 /**
@@ -160,6 +166,7 @@ export const SHARED_COMMANDS = {
   cmd_get_app_version: true,
   cmd_tray_get_background_status: true,
   cmd_menu_rebuild: true,
+  cmd_metrics_snapshot: true,
 } as const;
 
 export type CommandName = keyof typeof COMMAND_VERSIONS;
@@ -358,6 +365,12 @@ export interface CommandMap {
   cmd_menu_rebuild: {
     args: { labels: MenuBarLabels };
     return: boolean;
+  };
+
+  // Metrics — rolling latency snapshot; each call drains the recorded samples.
+  cmd_metrics_snapshot: {
+    args: Record<string, never>;
+    return: MetricsSnapshot;
   };
 }
 

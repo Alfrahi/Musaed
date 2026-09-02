@@ -155,7 +155,10 @@ pub async fn cmd_rag_search(
         base_url,
         state,
     };
-    Ok(search(req).await)
+    let start = std::time::Instant::now();
+    let res = search(req).await;
+    crate::metrics::record_search(start.elapsed().as_millis() as u64);
+    Ok(res)
 }
 
 #[tauri::command]

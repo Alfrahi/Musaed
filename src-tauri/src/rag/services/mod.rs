@@ -158,6 +158,13 @@ pub async fn reindex_project<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiRes
 }
 
 pub async fn start_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResponse<bool> {
+    let start = std::time::Instant::now();
+    let res = run_indexing(req).await;
+    crate::metrics::record_rag_index(start.elapsed().as_millis() as u64);
+    res
+}
+
+async fn run_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResponse<bool> {
     if let Err(e) = RATE_LIMITER.check_rate_limit(req.window.label(), "cmd_rag_index_project") {
         return ApiResponse {
             success: false,

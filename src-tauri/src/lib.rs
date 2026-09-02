@@ -12,6 +12,7 @@ pub mod fs_commands;
 pub mod generated_validation;
 pub mod logging;
 pub mod menu_bar;
+pub mod metrics;
 pub mod migrations;
 pub mod ollama;
 pub mod ollama_url;
@@ -153,6 +154,7 @@ pub fn run() -> Result<(), tauri::Error> {
             migrations::cmd_rollback_migrations,
             migrations::cmd_get_migration_status,
             migrations::cmd_list_migrations,
+            metrics::cmd_metrics_snapshot,
             rag::commands::cmd_rag_add_project,
             rag::commands::cmd_rag_remove_project,
             rag::commands::cmd_rag_update_project,
