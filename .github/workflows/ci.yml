@@ -100,6 +100,10 @@ jobs:
       - name: Install JS dependencies
         run: pnpm install --frozen-lockfile
 
+      # Security: audit JS deps against the GitHub advisory DB; fails on moderate+ vulnerabilities
+      - name: pnpm audit
+        run: pnpm audit --audit-level=moderate
+
       - name: Run unit tests
         run: pnpm test
 
@@ -135,6 +139,13 @@ jobs:
 
       - name: Cargo clippy
         run: cargo clippy --all-targets --all-features --manifest-path src-tauri/Cargo.toml -- -D warnings
+
+      # Security: audit Rust deps against RustSec advisories; fails on known vulnerabilities
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Cargo audit
+        run: cargo audit --manifest-path src-tauri/Cargo.toml
 
       - name: Cargo test
         run: cargo test --manifest-path src-tauri/Cargo.toml
