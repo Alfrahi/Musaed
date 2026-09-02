@@ -76,6 +76,7 @@ vi.mock('@/hooks/useOllamaConnection', () => ({
 
 vi.mock('@/features/conversation', () => ({
   useTauriEvents: vi.fn(),
+  useAbortStreamsOnUnmount: vi.fn(),
   useConversationMessages: vi.fn(),
   usePersistActiveConversation: vi.fn(),
 }));
