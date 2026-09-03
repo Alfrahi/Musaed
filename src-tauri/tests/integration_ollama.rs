@@ -138,12 +138,14 @@ async fn cmd_ollama_delete_model_success() {
         .create_async()
         .await;
 
-    let result: ApiResponse<bool> =
-        musaed_lib::ollama::cmd_ollama_delete_model(url, "llama3".to_string()).await;
+    // Calls the service directly: the command wrapper takes a Tauri Window
+    // (IPC-injected) that cannot be constructed in integration tests.
+    let result = musaed_lib::ollama::model_service::ModelService
+        .delete_model("test-delete-ok", &url, "llama3")
+        .await;
 
     mock.assert_async().await;
-    assert!(result.success);
-    assert_eq!(result.data, Some(true));
+    assert!(matches!(result, Ok(true)));
 }
 
 #[tokio::test]
@@ -158,12 +160,12 @@ async fn cmd_ollama_delete_model_not_found() {
         .create_async()
         .await;
 
-    let result: ApiResponse<bool> =
-        musaed_lib::ollama::cmd_ollama_delete_model(url, "missing-model".to_string()).await;
+    let result = musaed_lib::ollama::model_service::ModelService
+        .delete_model("test-delete-missing", &url, "missing-model")
+        .await;
 
     mock.assert_async().await;
-    assert!(!result.success);
-    assert_eq!(result.data, Some(false));
+    assert!(result.is_err());
 }
 
 // ==================== cmd_ollama_verify_service ====================

@@ -20,13 +20,8 @@ pub async fn cmd_ollama_chat<R: Runtime>(
     options: ChatOptions,
     request_id: String,
 ) -> ApiResponse<bool> {
-    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_ollama_chat") {
-        return ApiResponse {
-            success: false,
-            data: None,
-            error: Some(e),
-        };
-    }
+    // Rate limit enforced once in OllamaChatService::chat; checking here too
+    // would consume two slots per request against the quota.
     let service = OllamaChatService;
     crate::metrics::begin_chat(&request_id);
     let metrics_request_id = request_id.clone();

@@ -345,6 +345,28 @@ mod tests {
     }
 
     #[test]
+    fn test_parent_dir_in_missing_tail_is_denied() {
+        // `Path::file_name` returns None for a trailing `..`, so any
+        // ".." in the unresolved tail makes lenient_canonicalize give up
+        // and the access check fails before the OS ever sees the path.
+        // Without that, `<root>/missing/../../outside` would pass the
+        // literal starts_with prefix check while kernel resolution of
+        // `..` escapes the granted root.
+        let dir = tempfile::tempdir().unwrap();
+        let escape = dir
+            .path()
+            .join("missing")
+            .join("..")
+            .join("..")
+            .join("evil.txt");
+        assert!(lenient_canonicalize(&escape).is_none());
+
+        let grants = grant(&[dir.path()]);
+        let resp = write_text_file_impl(&grants, &escape.to_string_lossy(), "x".to_string());
+        assert!(!resp.success);
+    }
+
+    #[test]
     fn test_lenient_canonicalize_resolves_missing_tail() {
         let dir = tempfile::tempdir().unwrap();
         let target = dir.path().join("new-sub").join("f.txt");
