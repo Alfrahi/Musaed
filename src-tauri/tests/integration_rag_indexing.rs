@@ -557,3 +557,106 @@ async fn test_index_with_ignore_patterns() {
     assert!(!paths.iter().any(|p| p.contains("node_modules")));
     assert!(!paths.iter().any(|p| p.ends_with(".pem")));
 }
+
+// ==================== 7. EMBED SERVER UNREACHABLE ====================
+
+/// When no Ollama server answers the embed endpoint, the pipeline must fail
+/// with an error and leave the project in `Error` status (not stuck in
+/// `Indexing` forever).
+#[tokio::test]
+async fn test_embed_server_down_marks_project_error() {
+    let tmp = TempDir::new().unwrap();
+    let path_str = tmp.path().to_str().unwrap().to_string();
+    let store = test_store(&tmp);
+    let proj_id = create_project(&store, "down", &path_str, "test-model", &[]).await;
+    create_text_files(tmp.path(), 2, "doc");
+
+    // Bind-then-drop to get a port nothing listens on.
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    drop(listener);
+    let dead_url = format!("http://127.0.0.1:{port}");
+
+    let result = run_pipeline(
+        &store,
+        &proj_id,
+        &path_str,
+        "test-model",
+        &dead_url,
+        false,
+        &[],
+        Arc::new(CancellationToken::new()),
+    )
+    .await;
+
+    assert!(result.is_err(), "pipeline must fail when Ollama is down");
+    assert_eq!(
+        project_status(&store, &proj_id).await,
+        ProjectStatus::Error,
+        "failed indexing must mark the project as Error, not leave it Indexing"
+    );
+}
+
+// ==================== 8. CONCURRENT DUPLICATE INDEXING ====================
+
+/// Two overlapping `index_project` runs on the same project must both drive
+/// to completion without panicking, deadlocking, or leaving the store in an
+/// inconsistent state. The service layer normally de-dupes via
+/// `RAG_INDEX_ABORT_HANDLES`; this pins the pipeline-level behavior when that
+/// gate is bypassed.
+#[tokio::test]
+async fn test_concurrent_duplicate_indexing_completes_consistently() {
+    let tmp = TempDir::new().unwrap();
+    let path_str = tmp.path().to_str().unwrap().to_string();
+    let store = test_store(&tmp);
+    let proj_id = create_project(&store, "dup", &path_str, "test-model", &[]).await;
+    create_text_files(tmp.path(), 5, "doc");
+
+    let counter = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let (server, _mock) = mock_embed_server_counting(768, counter.clone()).await;
+    let url = mock_url(&server);
+
+    let first = tokio::spawn({
+        let store = store.clone();
+        let proj_id = proj_id.clone();
+        let path_str = path_str.clone();
+        let url = url.clone();
+        async move {
+            run_pipeline(
+                &store,
+                &proj_id,
+                &path_str,
+                "test-model",
+                &url,
+                false,
+                &[],
+                Arc::new(CancellationToken::new()),
+            )
+            .await
+        }
+    });
+
+    let second = run_pipeline(
+        &store,
+        &proj_id,
+        &path_str,
+        "test-model",
+        &url,
+        false,
+        &[],
+        Arc::new(CancellationToken::new()),
+    )
+    .await;
+
+    let first = first.await.expect("concurrent run must not panic");
+
+    assert!(
+        first.is_ok() || second.is_ok(),
+        "at least one run must succeed (first: {first:?}, second: {second:?})"
+    );
+    assert_eq!(
+        project_status(&store, &proj_id).await,
+        ProjectStatus::Ready,
+        "a surviving successful run must leave the project Ready"
+    );
+}
