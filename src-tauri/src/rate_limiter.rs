@@ -74,6 +74,22 @@ impl RateLimiter {
             },
         );
 
+        limiter.set_command_config(
+            "cmd_ollama_delete_model",
+            RateLimitConfig {
+                max_requests: 3,
+                window_ms: 60000, // 3 requests per minute — destructive
+            },
+        );
+
+        limiter.set_command_config(
+            "cmd_rollback_migrations",
+            RateLimitConfig {
+                max_requests: 2,
+                window_ms: 60000, // 2 requests per minute — destructive
+            },
+        );
+
         limiter
     }
 

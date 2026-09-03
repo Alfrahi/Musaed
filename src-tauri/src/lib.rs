@@ -36,8 +36,8 @@ pub fn run() -> Result<(), tauri::Error> {
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
             log::info!(
-                "Second instance attempted with args: {:?} and cwd: {:?}",
-                args,
+                "Second instance attempted ({} args) with cwd: {:?}",
+                args.len(),
                 cwd
             );
 

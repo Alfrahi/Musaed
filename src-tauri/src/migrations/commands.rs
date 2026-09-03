@@ -86,10 +86,18 @@ pub async fn cmd_run_migrations(
 /// Rollback to a previous version
 #[tauri::command]
 pub async fn cmd_rollback_migrations(
+    window: tauri::Window,
     conversation_store: State<'_, Arc<Mutex<Connection>>>,
     target: String,
     to_version: u32,
 ) -> Result<ApiResponse<RunMigrationsResponse>, String> {
+    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_rollback_migrations") {
+        return Ok(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        });
+    }
     Ok(
         crate::migrations::service::rollback(
             conversation_store.inner().clone(),
