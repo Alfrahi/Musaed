@@ -40,7 +40,7 @@ dashmap = "6"
 log = { version = "0.4", features = ["std"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
-thiserror = "1.0"
+thiserror = "2.0"
 
 # Utilities
 chrono = { version = "0.4", features = ["serde"] }
@@ -60,7 +60,7 @@ tree-sitter-typescript = "0.23"
 tree-sitter-python = "0.23"
 tree-sitter-java = "0.23"
 tree-sitter-go = "0.25"
-tree-sitter-c = "0.23"
+tree-sitter-c = "0.24"
 tree-sitter-cpp = "0.23"
 tree-sitter-json = "0.24"
 tree-sitter-yaml = "0.7"
