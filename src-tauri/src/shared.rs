@@ -77,7 +77,12 @@ pub static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
         .timeout(Duration::from_secs(DEFAULT_TIMEOUT_SECS))
         .pool_max_idle_per_host(10)
         .build()
-        .expect("Failed to build HTTP client")
+        .unwrap_or_else(|err| {
+            tracing::warn!(
+                "Failed to build configured HTTP client ({err}); falling back to default client"
+            );
+            reqwest::Client::new()
+        })
 });
 
 /// Fast HTTP client for short-lived discovery / health-check calls.
@@ -87,7 +92,12 @@ pub static FAST_HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
         .connect_timeout(Duration::from_secs(5))
         .pool_max_idle_per_host(4)
         .build()
-        .expect("Failed to build fast HTTP client")
+        .unwrap_or_else(|err| {
+            tracing::warn!(
+                "Failed to build fast HTTP client ({err}); falling back to default client"
+            );
+            reqwest::Client::new()
+        })
 });
 
 /// Acquires a permit from the global semaphore, returning a typed error on
