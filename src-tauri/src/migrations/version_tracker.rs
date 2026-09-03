@@ -14,14 +14,13 @@ pub fn get_current_version(conn: &Connection, target: MigrationTarget) -> Migrat
 
     let table_name = target.version_table();
 
-    // Get the highest applied version
-    let version: Option<u32> = conn
-        .query_row(
-            &format!("SELECT MAX(version) FROM {}", table_name),
-            [],
-            |row| row.get(0),
-        )
-        .unwrap_or(None);
+    // Get the highest applied version. Propagate DB errors instead of
+    // swallowing them via unwrap_or (misdiagnosis) or panicking on Err.
+    let version: Option<u32> = conn.query_row(
+        &format!("SELECT MAX(version) FROM {}", table_name),
+        [],
+        |row| row.get(0),
+    )?;
 
     Ok(version.unwrap_or(0))
 }

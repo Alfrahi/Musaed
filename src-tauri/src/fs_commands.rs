@@ -217,10 +217,18 @@ pub async fn cmd_fs_read_file(
 /// Writes text content to a file inside a user-granted location.
 #[tauri::command]
 pub async fn cmd_fs_write_text_file(
+    window: tauri::Window,
     grants: State<'_, FsAccessGrants>,
     path: String,
     content: String,
 ) -> Result<ApiResponse<bool>, String> {
+    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_fs_write_text_file") {
+        return Ok(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        });
+    }
     Ok(write_text_file_impl(grants.inner(), &path, content))
 }
 
