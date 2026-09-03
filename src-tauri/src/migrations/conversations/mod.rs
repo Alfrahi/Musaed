@@ -5,7 +5,7 @@
 use crate::migrations::MigrationStep;
 
 /// Latest migration version for conversations database
-pub const LATEST_VERSION: u32 = 5;
+pub const LATEST_VERSION: u32 = 6;
 
 /// Gets the migration step for a specific version
 pub fn get_migration(version: u32) -> Option<MigrationStep> {
@@ -100,6 +100,39 @@ pub fn get_migration(version: u32) -> Option<MigrationStep> {
                 "ALTER TABLE messages DROP COLUMN completion_tokens",
                 "ALTER TABLE messages DROP COLUMN prompt_tokens",
                 "ALTER TABLE messages DROP COLUMN total_tokens",
+            ],
+        )),
+        6 => Some(MigrationStep::new(
+            6,
+            "Add FTS5 trigram index over message content for search",
+            // Same DDL as connection.rs SCHEMA_SQL — keep in sync. The
+            // rebuild backfills the index from existing message rows.
+            &[
+                "CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
+                    content,
+                    content='messages',
+                    content_rowid='rowid',
+                    tokenize='trigram'
+                )",
+                "CREATE TRIGGER IF NOT EXISTS messages_fts_ai AFTER INSERT ON messages BEGIN
+                    INSERT INTO messages_fts(rowid, content) VALUES (new.rowid, new.content);
+                 END",
+                "CREATE TRIGGER IF NOT EXISTS messages_fts_ad AFTER DELETE ON messages BEGIN
+                    INSERT INTO messages_fts(messages_fts, rowid, content)
+                    VALUES ('delete', old.rowid, old.content);
+                 END",
+                "CREATE TRIGGER IF NOT EXISTS messages_fts_au AFTER UPDATE ON messages BEGIN
+                    INSERT INTO messages_fts(messages_fts, rowid, content)
+                    VALUES ('delete', old.rowid, old.content);
+                    INSERT INTO messages_fts(rowid, content) VALUES (new.rowid, new.content);
+                 END",
+                "INSERT INTO messages_fts(messages_fts) VALUES ('rebuild')",
+            ],
+            &[
+                "DROP TRIGGER IF EXISTS messages_fts_ai",
+                "DROP TRIGGER IF EXISTS messages_fts_ad",
+                "DROP TRIGGER IF EXISTS messages_fts_au",
+                "DROP TABLE IF EXISTS messages_fts",
             ],
         )),
         _ => None,

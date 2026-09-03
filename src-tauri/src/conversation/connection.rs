@@ -39,6 +39,33 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_messages_id ON messages(id);
+
+-- Full-text search over message content. External-content FTS5 table keyed by
+-- messages.rowid, kept in sync by the triggers below. The trigram tokenizer
+-- gives substring matching (equivalent to the old LIKE '%...%' semantics)
+-- without a full table scan. Gated by migration v6 in
+-- migrations/conversations/mod.rs — both places must stay in sync.
+CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
+    content,
+    content='messages',
+    content_rowid='rowid',
+    tokenize='trigram'
+);
+
+CREATE TRIGGER IF NOT EXISTS messages_fts_ai AFTER INSERT ON messages BEGIN
+    INSERT INTO messages_fts(rowid, content) VALUES (new.rowid, new.content);
+END;
+
+CREATE TRIGGER IF NOT EXISTS messages_fts_ad AFTER DELETE ON messages BEGIN
+    INSERT INTO messages_fts(messages_fts, rowid, content)
+    VALUES ('delete', old.rowid, old.content);
+END;
+
+CREATE TRIGGER IF NOT EXISTS messages_fts_au AFTER UPDATE ON messages BEGIN
+    INSERT INTO messages_fts(messages_fts, rowid, content)
+    VALUES ('delete', old.rowid, old.content);
+    INSERT INTO messages_fts(rowid, content) VALUES (new.rowid, new.content);
+END;
 "#;
 
 /// Database pragmas

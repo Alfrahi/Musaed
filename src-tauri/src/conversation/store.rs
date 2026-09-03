@@ -7,7 +7,9 @@ use tokio::sync::Mutex;
 /// Insert-or-replace a single message row. Shared by `add_message` and
 /// `add_message_batch` so the column list and upsert clause live in one place.
 fn upsert_message(conn: &Connection, conversation_id: &str, msg: &Message) -> SqlResult<()> {
-    conn.execute(
+    // prepare_cached: this upsert runs on the streaming append hot path;
+    // re-preparing the 18-parameter statement per call is wasted work.
+    let mut stmt = conn.prepare_cached(
         "INSERT INTO messages (id, conversation_id, role, content, timestamp, model, done,
                               request_id, images, eval_count, prompt_eval_count,
                               completion_tokens, prompt_tokens, total_tokens,
@@ -28,35 +30,40 @@ fn upsert_message(conn: &Connection, conversation_id: &str, msg: &Message) -> Sq
              eval_duration = excluded.eval_duration,
              rag_sources = excluded.rag_sources,
              error = excluded.error",
-        params![
-            &msg.id,
-            conversation_id,
-            &msg.role,
-            &msg.content,
-            &msg.timestamp,
-            &msg.model,
-            &msg.done,
-            &msg.request_id,
-            &msg.images
-                .as_ref()
-                .map(|v| serde_json::to_string(v).unwrap_or_default()),
-            &msg.eval_count,
-            &msg.prompt_eval_count,
-            &msg.completion_tokens,
-            &msg.prompt_tokens,
-            &msg.total_tokens,
-            &msg.total_duration,
-            &msg.eval_duration,
-            &msg.rag_sources
-                .as_ref()
-                .map(|v| serde_json::to_string(v).unwrap_or_default()),
-            &msg.error
-                .as_ref()
-                .map(|e| serde_json::to_string(e).unwrap_or_default()),
-        ],
     )?;
+    stmt.execute(params![
+        &msg.id,
+        conversation_id,
+        &msg.role,
+        &msg.content,
+        &msg.timestamp,
+        &msg.model,
+        &msg.done,
+        &msg.request_id,
+        &msg.images
+            .as_ref()
+            .map(|v| serde_json::to_string(v).unwrap_or_default()),
+        &msg.eval_count,
+        &msg.prompt_eval_count,
+        &msg.completion_tokens,
+        &msg.prompt_tokens,
+        &msg.total_tokens,
+        &msg.total_duration,
+        &msg.eval_duration,
+        &msg.rag_sources
+            .as_ref()
+            .map(|v| serde_json::to_string(v).unwrap_or_default()),
+        &msg.error
+            .as_ref()
+            .map(|e| serde_json::to_string(e).unwrap_or_default()),
+    ])?;
     Ok(())
 }
+
+/// Minimum query length the FTS5 trigram tokenizer can match. Shorter
+/// queries fall back to the LIKE path — the scan is cheap enough at that
+/// length and 1–2 character searches keep working.
+const FTS_MIN_QUERY_LEN: usize = 3;
 
 pub struct ConversationStore {
     conn: Mutex<Connection>,
@@ -279,31 +286,58 @@ impl ConversationStore {
         limit: usize,
     ) -> SqlResult<Vec<MessageSearchResult>> {
         let conn = self.lock_conn().await;
-        // Escape LIKE pattern metacharacters so the user query is matched
-        // literally. Order matters: backslash must be escaped first so we
-        // don't double-escape the escape characters we add for `%` and `_`.
-        let escaped = query
-            .replace('\\', "\\\\")
-            .replace('%', "\\%")
-            .replace('_', "\\_");
-        let like_pattern = format!("%{}%", escaped);
         let limit_i64 = limit as i64;
 
-        let mut stmt = conn.prepare(
-            "SELECT m.id, m.role, m.content, m.timestamp, m.model, m.done,
-                    m.request_id, m.images, m.eval_count, m.prompt_eval_count,
-                    m.completion_tokens, m.prompt_tokens, m.total_tokens,
-                    m.total_duration, m.eval_duration, m.rag_sources, m.error,
-                    c.id AS conv_id, c.title AS conv_title
-             FROM messages m
-             JOIN conversations c ON m.conversation_id = c.id
-             WHERE m.content LIKE ?1 ESCAPE '\\'
-             ORDER BY m.timestamp DESC
-             LIMIT ?2",
-        )?;
+        // Two paths with identical substring-match semantics:
+        // - queries of >= FTS_MIN_QUERY_LEN chars go through the trigram FTS
+        //   index instead of scanning every message row;
+        // - shorter queries keep the LIKE scan (trigram needs >= 3 chars).
+        let (sql, pattern) = if query.chars().count() >= FTS_MIN_QUERY_LEN {
+            // FTS5 trigram MATCH: wrap in double quotes for literal phrase
+            // matching (preserves LIKE substring semantics); `"` inside the
+            // query is doubled to escape it.
+            let fts_pattern = format!("\"{}\"", query.replace('"', "\"\""));
+            (
+                "SELECT m.id, m.role, m.content, m.timestamp, m.model, m.done,
+                        m.request_id, m.images, m.eval_count, m.prompt_eval_count,
+                        m.completion_tokens, m.prompt_tokens, m.total_tokens,
+                        m.total_duration, m.eval_duration, m.rag_sources, m.error,
+                        c.id AS conv_id, c.title AS conv_title
+                 FROM messages_fts
+                 JOIN messages m ON m.rowid = messages_fts.rowid
+                 JOIN conversations c ON m.conversation_id = c.id
+                 WHERE messages_fts MATCH ?1
+                 ORDER BY m.timestamp DESC
+                 LIMIT ?2",
+                fts_pattern,
+            )
+        } else {
+            // Escape LIKE pattern metacharacters so the user query is matched
+            // literally. Order matters: backslash must be escaped first so we
+            // don't double-escape the escape characters we add for `%`/`_`.
+            let escaped = query
+                .replace('\\', "\\\\")
+                .replace('%', "\\%")
+                .replace('_', "\\_");
+            (
+                "SELECT m.id, m.role, m.content, m.timestamp, m.model, m.done,
+                        m.request_id, m.images, m.eval_count, m.prompt_eval_count,
+                        m.completion_tokens, m.prompt_tokens, m.total_tokens,
+                        m.total_duration, m.eval_duration, m.rag_sources, m.error,
+                        c.id AS conv_id, c.title AS conv_title
+                 FROM messages m
+                 JOIN conversations c ON m.conversation_id = c.id
+                 WHERE m.content LIKE ?1 ESCAPE '\\'
+                 ORDER BY m.timestamp DESC
+                 LIMIT ?2",
+                format!("%{}%", escaped),
+            )
+        };
+
+        let mut stmt = conn.prepare(sql)?;
 
         let results = stmt
-            .query_map(params![like_pattern, limit_i64], |row| {
+            .query_map(params![pattern, limit_i64], |row| {
                 Ok(MessageSearchResult {
                     message: Message {
                         id: row.get(0)?,
@@ -576,6 +610,65 @@ mod tests {
 
         // Searching for the literal backslash sequence should find it.
         let results = store.search_messages("C:\\Users", 50).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].message.id, "msg-1");
+    }
+
+    #[tokio::test]
+    async fn test_search_finds_upserted_content() {
+        let store = make_store().await;
+        seed_message(
+            &store,
+            "conv-1",
+            "Chat",
+            "msg-1",
+            "user",
+            "alpha content",
+            1000,
+        )
+        .await;
+
+        // Upsert the same message id with new content — the FTS triggers must
+        // move the index entry so the old text no longer matches.
+        let updated = Message {
+            id: "msg-1".to_string(),
+            role: "user".to_string(),
+            content: "replacement zebra".to_string(),
+            images: None,
+            timestamp: 1000,
+            model: None,
+            done: None,
+            request_id: None,
+            eval_count: None,
+            completion_tokens: None,
+            prompt_eval_count: None,
+            prompt_tokens: None,
+            total_tokens: None,
+            total_duration: None,
+            eval_duration: None,
+            rag_sources: None,
+            error: None,
+        };
+        store.add_message("conv-1", &updated).await.unwrap();
+
+        assert!(store
+            .search_messages("alpha content", 50)
+            .await
+            .unwrap()
+            .is_empty());
+        let hits = store.search_messages("zebra", 50).await.unwrap();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].message.id, "msg-1");
+    }
+
+    #[tokio::test]
+    async fn test_search_short_query_uses_like_fallback() {
+        let store = make_store().await;
+        seed_message(&store, "conv-1", "Chat", "msg-1", "user", "ok fine", 1000).await;
+
+        // 2-char query is below the trigram minimum — must still match via
+        // the LIKE fallback path.
+        let results = store.search_messages("ok", 50).await.unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].message.id, "msg-1");
     }

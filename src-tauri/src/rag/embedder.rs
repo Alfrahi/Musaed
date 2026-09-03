@@ -6,7 +6,22 @@ use crate::rag::error::RagResult;
 use crate::rag::types::RagModelValidation;
 use crate::shared::{acquire_global_permit, ollama_endpoint, retry_with_backoff, HTTP_CLIENT};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
 use tracing;
+
+/// Query-embedding cache. A RAG search is bounded below by the Ollama
+/// round-trip in `embed_query`; repeat searches for the same text (retries,
+/// context assembly right after a search) skip it entirely.
+static QUERY_EMBED_CACHE: OnceLock<Mutex<HashMap<String, Vec<f32>>>> = OnceLock::new();
+
+// ponytail: eviction is clear-at-cap, not per-entry LRU — adequate for a
+// single-user desktop app. If hit rate matters, swap in the `lru` crate.
+const QUERY_EMBED_CACHE_CAP: usize = 128;
+
+fn query_embed_cache() -> &'static Mutex<HashMap<String, Vec<f32>>> {
+    QUERY_EMBED_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
 
 /// Known embedding models that require a task-specific prefix (`search_query:`
 /// for queries, `search_document:` for documents).  This is an **exact-match
@@ -84,7 +99,35 @@ impl OllamaEmbedder {
         } else {
             text.to_string()
         };
-        let results = self.embed_batch_internal(vec![input]).await?;
+
+        // \x1f separates key fields so model/base_url text can never collide.
+        let cache_key = format!("{}\u{1f}{}\u{1f}{}", self.base_url, self.model, input);
+        if let Some(hit) = query_embed_cache()
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .get(&cache_key)
+        {
+            return Ok(hit.clone());
+        }
+
+        let embedding = self.embed_query_uncached(&input).await?;
+
+        let mut cache = query_embed_cache()
+            .lock()
+            .unwrap_or_else(|p| p.into_inner());
+        if cache.len() >= QUERY_EMBED_CACHE_CAP {
+            cache.clear();
+        }
+        cache.insert(cache_key, embedding.clone());
+
+        Ok(embedding)
+    }
+
+    /// Embed a query text without touching the cache. Used by
+    /// `detect_dimension` and `validate`, which exist to probe the server —
+    /// answering those from cache would report a dead model as healthy.
+    async fn embed_query_uncached(&self, input: &str) -> RagResult<Vec<f32>> {
+        let results = self.embed_batch_internal(vec![input.to_string()]).await?;
         results.into_iter().next().ok_or_else(|| {
             crate::rag::error::RagError::EmbedFailed("No embedding returned".to_string())
         })
@@ -224,7 +267,12 @@ impl OllamaEmbedder {
             return Ok(dim);
         }
 
-        let embedding = self.embed_query("test").await?;
+        // Deliberately uncached: this probes the model, so it must hit the
+        // server even if an identical query embedding was cached.
+        let embedding = self.embed_batch(vec!["test".to_string()]).await?;
+        let embedding = embedding.into_iter().next().ok_or_else(|| {
+            crate::rag::error::RagError::EmbedFailed("No embedding returned".to_string())
+        })?;
         let dim = embedding.len();
         self.dimension = Some(dim);
         Ok(dim)
@@ -237,7 +285,14 @@ impl OllamaEmbedder {
 
     /// Validate that the model supports embeddings by trying to embed a test string.
     pub async fn validate(&self) -> RagResult<RagModelValidation> {
-        match self.embed_query("validation test").await {
+        // Deliberately uncached: validation exists to prove the server and
+        // model are responsive right now; a cached hit would lie.
+        let probe = if needs_prefix(&self.model) {
+            "search_query: validation test".to_string()
+        } else {
+            "validation test".to_string()
+        };
+        match self.embed_query_uncached(&probe).await {
             Ok(embedding) => Ok(RagModelValidation {
                 is_valid: true,
                 model_name: self.model.clone(),
