@@ -517,7 +517,7 @@ mod tests {
         // Set initial version to latest
         {
             let conn_guard = conn.lock().await;
-            version_tracker::set_version(&conn_guard, MigrationTarget::Conversations, 5)
+            version_tracker::set_version(&conn_guard, MigrationTarget::Conversations, 6)
                 .expect("Failed to set version");
         }
 
@@ -526,8 +526,8 @@ mod tests {
             .expect("Migration failed");
 
         assert!(result.success);
-        assert_eq!(result.from_version, 5);
-        assert_eq!(result.to_version, 5);
+        assert_eq!(result.from_version, 6);
+        assert_eq!(result.to_version, 6);
         assert!(result.applied_migrations.is_empty());
     }
 
@@ -541,8 +541,8 @@ mod tests {
 
         assert!(result.success);
         assert_eq!(result.from_version, 0);
-        assert_eq!(result.to_version, 5); // Latest version
-        assert_eq!(result.applied_migrations, vec![1, 2, 3, 4, 5]);
+        assert_eq!(result.to_version, 6); // Latest version
+        assert_eq!(result.applied_migrations, vec![1, 2, 3, 4, 5, 6]);
     }
 
     #[tokio::test]
@@ -560,7 +560,7 @@ mod tests {
             .expect("Rollback failed");
 
         assert!(result.success);
-        assert_eq!(result.from_version, 5);
+        assert_eq!(result.from_version, 6);
         assert_eq!(result.to_version, 4);
     }
 
@@ -573,8 +573,8 @@ mod tests {
             .await
             .expect("Migration failed");
 
-        // Try to rollback to v6 (invalid - higher than current)
-        let result = rollback_to_version(conn.clone(), MigrationTarget::Conversations, 6).await;
+        // Try to rollback to v7 (invalid - higher than current)
+        let result = rollback_to_version(conn.clone(), MigrationTarget::Conversations, 7).await;
 
         assert!(result.is_err());
     }
@@ -600,11 +600,11 @@ mod tests {
     #[tokio::test]
     async fn test_list_migrations() {
         let conversations_migrations = list_migrations(MigrationTarget::Conversations);
-        assert_eq!(conversations_migrations.len(), 5); // v1–v5
+        assert_eq!(conversations_migrations.len(), 6); // v1–v6
     }
 
     #[tokio::test]
     async fn test_get_latest_version() {
-        assert_eq!(get_latest_version(MigrationTarget::Conversations), 5);
+        assert_eq!(get_latest_version(MigrationTarget::Conversations), 6);
     }
 }
