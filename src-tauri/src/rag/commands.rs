@@ -30,10 +30,18 @@ pub async fn cmd_rag_add_project(
 }
 
 #[tauri::command]
-pub async fn cmd_rag_remove_project(
+pub async fn cmd_rag_remove_project<R: Runtime>(
+    window: tauri::Window<R>,
     project_id: String,
     state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<bool>, String> {
+    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_rag_remove_project") {
+        return Ok(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        });
+    }
     let req = projects::RemoveProjectRequest {
         project_id,
         store: state.inner().clone(),

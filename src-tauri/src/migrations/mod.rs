@@ -25,15 +25,15 @@
 //! use musaed_lib::migrations::{run_migrations, MigrationTarget};
 //! use rusqlite::Connection;
 //!
-//! let conn = Connection::open("path/to/conversations.db")?;
-//! let result = run_migrations(&conn, MigrationTarget::Conversations, None)?;
+//! let mut conn = Connection::open("path/to/conversations.db")?;
+//! let result = run_migrations(&mut conn, MigrationTarget::Conversations, None)?;
 //!
 //! // Run migrations up to a specific version
-//! let result = run_migrations(&conn, MigrationTarget::Conversations, Some(5))?;
+//! let result = run_migrations(&mut conn, MigrationTarget::Conversations, Some(5))?;
 //!
 //! // Rollback to a previous version
 //! use musaed_lib::migrations::{rollback_to_version};
-//! let result = rollback_to_version(&conn, MigrationTarget::Conversations, 3)?;
+//! let result = rollback_to_version(&mut conn, MigrationTarget::Conversations, 3)?;
 //! ```
 
 pub mod commands;
@@ -45,8 +45,6 @@ pub use commands::*;
 pub use version_tracker::{get_current_version, set_version};
 
 use rusqlite::{Connection, Transaction};
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 /// Migration error types
 #[derive(Debug, thiserror::Error)]
@@ -161,16 +159,16 @@ impl MigrationStep {
     }
 }
 
-/// Runs migrations for the specified target database
-pub async fn run_migrations(
-    conn: Arc<Mutex<Connection>>,
+/// Runs migrations for the specified target database.
+///
+/// Synchronous: callers must already hold exclusive access to the connection.
+pub fn run_migrations(
+    conn: &mut Connection,
     target: MigrationTarget,
     target_version: Option<u32>,
 ) -> MigrationResult<MigrationExecutionResult> {
-    let mut conn_guard = conn.lock().await;
-
     // Get current version
-    let from_version = version_tracker::get_current_version(&conn_guard, target)?;
+    let from_version = version_tracker::get_current_version(conn, target)?;
     let target_version = target_version.unwrap_or(get_latest_version(target));
 
     // No migration needed
@@ -201,7 +199,7 @@ pub async fn run_migrations(
     let mut current_version = from_version;
 
     // Run migrations sequentially within a transaction
-    let tx = conn_guard.transaction()?;
+    let tx = conn.transaction()?;
 
     for next_version in (from_version + 1)..=target_version {
         let migration = get_migration(target, next_version).ok_or_else(|| {
@@ -265,12 +263,11 @@ fn apply_migration_step(
     Ok(())
 }
 
-/// Runs migrations synchronously on a `&Connection`.
+/// Runs migrations synchronously on a `&mut Connection` at connection time.
 ///
-/// This is the synchronous counterpart to [`run_migrations`], intended for
-/// connection-time schema evolution where an async runtime is not available.
-/// It reuses the same canonical [`MigrationStep`] definitions and
-/// [`version_tracker`] infrastructure so there is a single migration owner.
+/// Intended for connection-time schema evolution. It reuses the same
+/// canonical [`MigrationStep`] definitions and [`version_tracker`]
+/// infrastructure as [`run_migrations`] so there is a single migration owner.
 ///
 /// On a fresh database (version 0) the caller is expected to have already
 /// executed the full current schema DDL. This function stamps the version
@@ -374,15 +371,15 @@ pub fn run_migrations_sync(
     })
 }
 
-/// Rolls back to a previous version
-pub async fn rollback_to_version(
-    conn: Arc<Mutex<Connection>>,
+/// Rolls back to a previous version.
+///
+/// Synchronous: callers must already hold exclusive access to the connection.
+pub fn rollback_to_version(
+    conn: &mut Connection,
     target: MigrationTarget,
     to_version: u32,
 ) -> MigrationResult<MigrationExecutionResult> {
-    let mut conn_guard = conn.lock().await;
-
-    let from_version = version_tracker::get_current_version(&conn_guard, target)?;
+    let from_version = version_tracker::get_current_version(conn, target)?;
 
     // Validate rollback sequence
     if to_version >= from_version {
@@ -402,7 +399,7 @@ pub async fn rollback_to_version(
     let mut applied_rollbacks = Vec::new();
     let mut current_version = from_version;
 
-    let tx = conn_guard.transaction()?;
+    let tx = conn.transaction()?;
 
     // Rollback in reverse order
     for version in (to_version + 1..=from_version).rev() {
@@ -484,11 +481,9 @@ mod conversations;
 mod tests {
     use super::*;
     use rusqlite::Connection;
-    use std::sync::Arc;
-    use tokio::sync::Mutex;
 
     /// Creates an in-memory test database for the specified target
-    fn create_test_db(target: MigrationTarget) -> Arc<Mutex<Connection>> {
+    fn create_test_db(target: MigrationTarget) -> Connection {
         let conn = Connection::open(":memory:").expect("Failed to create in-memory DB");
 
         // Initialize version table
@@ -507,89 +502,77 @@ mod tests {
         )
         .expect("Failed to create version table");
 
-        Arc::new(Mutex::new(conn))
+        conn
     }
 
-    #[tokio::test]
-    async fn test_run_migrations_already_at_target() {
-        let conn = create_test_db(MigrationTarget::Conversations);
+    #[test]
+    fn test_run_migrations_already_at_target() {
+        let mut conn = create_test_db(MigrationTarget::Conversations);
 
         // Set initial version to latest
-        {
-            let conn_guard = conn.lock().await;
-            version_tracker::set_version(&conn_guard, MigrationTarget::Conversations, 5)
-                .expect("Failed to set version");
-        }
+        version_tracker::set_version(&conn, MigrationTarget::Conversations, 6)
+            .expect("Failed to set version");
 
-        let result = run_migrations(conn.clone(), MigrationTarget::Conversations, None)
-            .await
+        let result = run_migrations(&mut conn, MigrationTarget::Conversations, None)
             .expect("Migration failed");
 
         assert!(result.success);
-        assert_eq!(result.from_version, 5);
-        assert_eq!(result.to_version, 5);
+        assert_eq!(result.from_version, 6);
+        assert_eq!(result.to_version, 6);
         assert!(result.applied_migrations.is_empty());
     }
 
-    #[tokio::test]
-    async fn test_run_migrations_from_scratch() {
-        let conn = create_test_db(MigrationTarget::Conversations);
+    #[test]
+    fn test_run_migrations_from_scratch() {
+        let mut conn = create_test_db(MigrationTarget::Conversations);
 
-        let result = run_migrations(conn.clone(), MigrationTarget::Conversations, None)
-            .await
+        let result = run_migrations(&mut conn, MigrationTarget::Conversations, None)
             .expect("Migration failed");
 
         assert!(result.success);
         assert_eq!(result.from_version, 0);
-        assert_eq!(result.to_version, 5); // Latest version
-        assert_eq!(result.applied_migrations, vec![1, 2, 3, 4, 5]);
+        assert_eq!(result.to_version, 6); // Latest version
+        assert_eq!(result.applied_migrations, vec![1, 2, 3, 4, 5, 6]);
     }
 
-    #[tokio::test]
-    async fn test_rollback_success() {
-        let conn = create_test_db(MigrationTarget::Conversations);
+    #[test]
+    fn test_rollback_success() {
+        let mut conn = create_test_db(MigrationTarget::Conversations);
 
         // Migrate to latest
-        run_migrations(conn.clone(), MigrationTarget::Conversations, None)
-            .await
-            .expect("Migration failed");
+        run_migrations(&mut conn, MigrationTarget::Conversations, None).expect("Migration failed");
 
         // Rollback to v4
-        let result = rollback_to_version(conn.clone(), MigrationTarget::Conversations, 4)
-            .await
+        let result = rollback_to_version(&mut conn, MigrationTarget::Conversations, 4)
             .expect("Rollback failed");
 
         assert!(result.success);
-        assert_eq!(result.from_version, 5);
+        assert_eq!(result.from_version, 6);
         assert_eq!(result.to_version, 4);
     }
 
-    #[tokio::test]
-    async fn test_rollback_invalid_sequence() {
-        let conn = create_test_db(MigrationTarget::Conversations);
+    #[test]
+    fn test_rollback_invalid_sequence() {
+        let mut conn = create_test_db(MigrationTarget::Conversations);
 
         // Migrate to latest
-        run_migrations(conn.clone(), MigrationTarget::Conversations, None)
-            .await
-            .expect("Migration failed");
+        run_migrations(&mut conn, MigrationTarget::Conversations, None).expect("Migration failed");
 
-        // Try to rollback to v6 (invalid - higher than current)
-        let result = rollback_to_version(conn.clone(), MigrationTarget::Conversations, 6).await;
+        // Try to rollback to v7 (invalid - higher than current)
+        let result = rollback_to_version(&mut conn, MigrationTarget::Conversations, 7);
 
         assert!(result.is_err());
     }
 
-    #[tokio::test]
-    async fn test_idempotent_migration() {
-        let conn = create_test_db(MigrationTarget::Conversations);
+    #[test]
+    fn test_idempotent_migration() {
+        let mut conn = create_test_db(MigrationTarget::Conversations);
 
         // Run migrations twice - should succeed both times
-        let result1 = run_migrations(conn.clone(), MigrationTarget::Conversations, None)
-            .await
+        let result1 = run_migrations(&mut conn, MigrationTarget::Conversations, None)
             .expect("First migration failed");
 
-        let result2 = run_migrations(conn.clone(), MigrationTarget::Conversations, None)
-            .await
+        let result2 = run_migrations(&mut conn, MigrationTarget::Conversations, None)
             .expect("Second migration failed");
 
         assert!(result1.success);
@@ -597,14 +580,14 @@ mod tests {
         assert_eq!(result2.applied_migrations.len(), 0); // No migrations applied second time
     }
 
-    #[tokio::test]
-    async fn test_list_migrations() {
+    #[test]
+    fn test_list_migrations() {
         let conversations_migrations = list_migrations(MigrationTarget::Conversations);
-        assert_eq!(conversations_migrations.len(), 5); // v1–v5
+        assert_eq!(conversations_migrations.len(), 6); // v1–v6
     }
 
-    #[tokio::test]
-    async fn test_get_latest_version() {
-        assert_eq!(get_latest_version(MigrationTarget::Conversations), 5);
+    #[test]
+    fn test_get_latest_version() {
+        assert_eq!(get_latest_version(MigrationTarget::Conversations), 6);
     }
 }
