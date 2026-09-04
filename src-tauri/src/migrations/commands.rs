@@ -6,8 +6,8 @@
 //! - Checking migration status
 //! - Listing available migrations
 
+use crate::conversation::store::ConversationStore;
 use crate::payloads::ApiResponse;
-use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tauri::State;
@@ -70,7 +70,7 @@ pub struct MigrationInfo {
 /// Run migrations for a target database
 #[tauri::command]
 pub async fn cmd_run_migrations(
-    conversation_store: State<'_, Arc<Mutex<Connection>>>,
+    conversation_store: State<'_, Arc<Mutex<ConversationStore>>>,
     target: String,
     target_version: Option<u32>,
     allow_rollback: bool,
@@ -86,24 +86,42 @@ pub async fn cmd_run_migrations(
 /// Rollback to a previous version
 #[tauri::command]
 pub async fn cmd_rollback_migrations(
-    conversation_store: State<'_, Arc<Mutex<Connection>>>,
+    window: tauri::Window,
+    conversation_store: State<'_, Arc<Mutex<ConversationStore>>>,
     target: String,
     to_version: u32,
 ) -> Result<ApiResponse<RunMigrationsResponse>, String> {
-    Ok(
-        crate::migrations::service::rollback(
-            conversation_store.inner().clone(),
-            target,
-            to_version,
-        )
-        .await,
+    Ok(rollback_migrations_impl(
+        conversation_store.inner().clone(),
+        window.label(),
+        target,
+        to_version,
     )
+    .await)
+}
+
+/// Rollback body, decoupled from the `tauri::Window` so it is callable in
+/// tests with managed state alone.
+pub async fn rollback_migrations_impl(
+    conversation_store: Arc<Mutex<ConversationStore>>,
+    window_label: &str,
+    target: String,
+    to_version: u32,
+) -> ApiResponse<RunMigrationsResponse> {
+    if let Err(e) = crate::rate_limiter::check(window_label, "cmd_rollback_migrations") {
+        return ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        };
+    }
+    crate::migrations::service::rollback(conversation_store, target, to_version).await
 }
 
 /// Get migration status for a target database
 #[tauri::command]
 pub async fn cmd_get_migration_status(
-    conversation_store: State<'_, Arc<Mutex<Connection>>>,
+    conversation_store: State<'_, Arc<Mutex<ConversationStore>>>,
     target: String,
 ) -> Result<ApiResponse<MigrationStatus>, String> {
     Ok(crate::migrations::service::status(conversation_store.inner().clone(), target).await)
