@@ -55,9 +55,17 @@ pub async fn cmd_message_append(
 
 #[tauri::command]
 pub async fn cmd_conversation_delete(
+    window: tauri::Window,
     state: State<'_, Arc<Mutex<ConversationStore>>>,
     id: String,
 ) -> Result<ApiResponse<()>, String> {
+    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_conversation_delete") {
+        return Ok(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        });
+    }
     if let Err(msg) = validation::validate_conversation_id(&id) {
         return Ok(reject("cmd_conversation_delete", msg));
     }
@@ -66,10 +74,18 @@ pub async fn cmd_conversation_delete(
 
 #[tauri::command]
 pub async fn cmd_message_delete(
+    window: tauri::Window,
     state: State<'_, Arc<Mutex<ConversationStore>>>,
     conversation_id: String,
     message_id: String,
 ) -> Result<ApiResponse<()>, String> {
+    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_message_delete") {
+        return Ok(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        });
+    }
     if let Err(msg) = validation::validate_conversation_id(&conversation_id) {
         return Ok(reject("cmd_message_delete", msg));
     }
@@ -81,8 +97,16 @@ pub async fn cmd_message_delete(
 
 #[tauri::command]
 pub async fn cmd_conversations_clear(
+    window: tauri::Window,
     state: State<'_, Arc<Mutex<ConversationStore>>>,
 ) -> Result<ApiResponse<()>, String> {
+    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_conversations_clear") {
+        return Ok(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        });
+    }
     Ok(service::clear_all_conversations(state.inner().clone()).await)
 }
 
