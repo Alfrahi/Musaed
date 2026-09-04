@@ -74,6 +74,62 @@ impl RateLimiter {
             },
         );
 
+        limiter.set_command_config(
+            "cmd_ollama_delete_model",
+            RateLimitConfig {
+                max_requests: 3,
+                window_ms: 60000, // 3 requests per minute — destructive
+            },
+        );
+
+        limiter.set_command_config(
+            "cmd_rollback_migrations",
+            RateLimitConfig {
+                max_requests: 2,
+                window_ms: 60000, // 2 requests per minute — destructive
+            },
+        );
+
+        limiter.set_command_config(
+            "cmd_conversations_clear",
+            RateLimitConfig {
+                max_requests: 3,
+                window_ms: 60000, // 3 requests per minute — destructive
+            },
+        );
+
+        limiter.set_command_config(
+            "cmd_conversation_delete",
+            RateLimitConfig {
+                max_requests: 10,
+                window_ms: 60000, // 10 requests per minute — destructive
+            },
+        );
+
+        limiter.set_command_config(
+            "cmd_message_delete",
+            RateLimitConfig {
+                max_requests: 10,
+                window_ms: 60000, // 10 requests per minute — destructive
+            },
+        );
+
+        limiter.set_command_config(
+            "cmd_rag_remove_project",
+            RateLimitConfig {
+                max_requests: 5,
+                window_ms: 60000, // 5 requests per minute — index teardown
+            },
+        );
+
+        limiter.set_command_config(
+            "cmd_fs_write_text_file",
+            RateLimitConfig {
+                max_requests: 30,
+                window_ms: 1000, // 30 writes per second — disk hammering guard
+            },
+        );
+
         limiter
     }
 

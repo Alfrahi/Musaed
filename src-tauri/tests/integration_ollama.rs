@@ -1,12 +1,14 @@
 //! Integration tests for Ollama IPC commands using mockito.
 
+use musaed_lib::ollama::service::{OllamaChatRequest, OllamaChatService};
 use musaed_lib::ollama::streaming::{process_chat_stream, TokenSink};
 use musaed_lib::payloads::{
-    ApiResponse, BackendError, ModelValidation, OllamaHealth, OllamaModel, OllamaToken,
+    ApiResponse, BackendError, ChatMessage, ChatOptions, ModelValidation, OllamaHealth,
+    OllamaModel, OllamaToken,
 };
 use musaed_lib::shared::{
-    clear_request_cache, request_cache_try_insert, test_cache_lock, CONCURRENT_SEMAPHORE,
-    MAX_CONCURRENT_CHATS, REQUEST_CACHE,
+    clear_request_cache, request_cache_try_insert, test_cache_lock, ABORT_HANDLES,
+    CONCURRENT_SEMAPHORE, MAX_CONCURRENT_CHATS, PULL_ABORT_HANDLES, REQUEST_CACHE,
 };
 use std::sync::Arc;
 use std::time::Duration;
@@ -138,12 +140,14 @@ async fn cmd_ollama_delete_model_success() {
         .create_async()
         .await;
 
-    let result: ApiResponse<bool> =
-        musaed_lib::ollama::cmd_ollama_delete_model(url, "llama3".to_string()).await;
+    // Calls the service directly: the command wrapper takes a Tauri Window
+    // (IPC-injected) that cannot be constructed in integration tests.
+    let result = musaed_lib::ollama::model_service::ModelService
+        .delete_model("test-delete-ok", &url, "llama3")
+        .await;
 
     mock.assert_async().await;
-    assert!(result.success);
-    assert_eq!(result.data, Some(true));
+    assert!(matches!(result, Ok(true)));
 }
 
 #[tokio::test]
@@ -158,12 +162,12 @@ async fn cmd_ollama_delete_model_not_found() {
         .create_async()
         .await;
 
-    let result: ApiResponse<bool> =
-        musaed_lib::ollama::cmd_ollama_delete_model(url, "missing-model".to_string()).await;
+    let result = musaed_lib::ollama::model_service::ModelService
+        .delete_model("test-delete-missing", &url, "missing-model")
+        .await;
 
     mock.assert_async().await;
-    assert!(!result.success);
-    assert_eq!(result.data, Some(false));
+    assert!(result.is_err());
 }
 
 // ==================== cmd_ollama_verify_service ====================
@@ -1018,4 +1022,122 @@ async fn context_length_no_family_falls_back_to_max() {
     let validation = result.data.unwrap();
     // No family → fall back to max(8192, 32768) = 32768.
     assert_eq!(validation.context_length, Some(32768));
+}
+
+// ── error-path cleanup: ABORT_HANDLES / REQUEST_CACHE ───────────
+
+/// Build a minimal valid chat request against the given base URL, backed by
+/// a MockRuntime AppHandle.
+fn chat_req(base_url: &str, request_id: &str) -> OllamaChatRequest<tauri::test::MockRuntime> {
+    let app = tauri::test::mock_app();
+    OllamaChatRequest {
+        app: app.handle().clone(),
+        window_label: "cleanup-test-window".to_string(),
+        base_url: base_url.to_string(),
+        model: "llama3".to_string(),
+        messages: vec![ChatMessage {
+            role: "user".to_string(),
+            content: "hi".to_string(),
+            images: None,
+        }],
+        options: ChatOptions::default(),
+        request_id: request_id.to_string(),
+    }
+}
+
+#[tokio::test]
+async fn chat_http_error_removes_abort_handle_and_cache_entry() {
+    let _guard = setup().await;
+    let mut server = mockito::Server::new_async().await;
+
+    server
+        .mock("POST", "/api/chat")
+        .with_status(500)
+        .with_body("model exploded")
+        .create_async()
+        .await;
+
+    let req_id = "cleanup-http-500";
+    let result = OllamaChatService
+        .chat(chat_req(&mock_base_url(&server), req_id))
+        .await;
+
+    assert!(result.is_err(), "500 from Ollama must surface as an error");
+    assert!(
+        !ABORT_HANDLES.contains_key(req_id),
+        "ABORT_HANDLES entry leaked after HTTP error"
+    );
+    assert!(
+        !REQUEST_CACHE.contains_key(req_id),
+        "REQUEST_CACHE entry leaked after HTTP error"
+    );
+}
+
+#[tokio::test]
+async fn chat_unreachable_server_removes_abort_handle_and_cache_entry() {
+    let _guard = setup().await;
+
+    // Bind-then-drop to get a port nothing listens on.
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    drop(listener);
+    let base_url = format!("http://127.0.0.1:{port}");
+
+    let req_id = "cleanup-unreachable";
+    let result = OllamaChatService.chat(chat_req(&base_url, req_id)).await;
+
+    assert!(
+        result.is_err(),
+        "connection refused must surface as an error"
+    );
+    assert!(
+        !ABORT_HANDLES.contains_key(req_id),
+        "ABORT_HANDLES entry leaked after connection failure"
+    );
+    assert!(
+        !REQUEST_CACHE.contains_key(req_id),
+        "REQUEST_CACHE entry leaked after connection failure"
+    );
+}
+
+// ── abort_service: handle + cache removal ───────────────────────
+
+#[tokio::test]
+async fn abort_chat_removes_handle_and_cache_and_cancels_token() {
+    let _guard = setup().await;
+    let req_id = "abort-chat-cleanup";
+    let token = CancellationToken::new();
+
+    ABORT_HANDLES.insert(req_id.to_string(), Arc::new(token.clone()));
+    assert!(request_cache_try_insert(req_id.to_string()));
+
+    let result = musaed_lib::ollama::abort_service::abort_chat(req_id.to_string()).await;
+
+    assert!(result.success);
+    assert!(token.is_cancelled(), "abort must cancel the stored token");
+    assert!(
+        !ABORT_HANDLES.contains_key(req_id),
+        "handle must be removed"
+    );
+    assert!(
+        !REQUEST_CACHE.contains_key(req_id),
+        "cache entry must be removed"
+    );
+}
+
+#[tokio::test]
+async fn abort_pull_removes_handle_and_cancels_token() {
+    let model = "abort-pull-cleanup-model";
+    let token = CancellationToken::new();
+
+    PULL_ABORT_HANDLES.insert(model.to_string(), Arc::new(token.clone()));
+
+    let result = musaed_lib::ollama::abort_service::abort_pull(model.to_string()).await;
+
+    assert!(result.success);
+    assert!(token.is_cancelled(), "abort must cancel the stored token");
+    assert!(
+        !PULL_ABORT_HANDLES.contains_key(model),
+        "pull handle must be removed"
+    );
 }

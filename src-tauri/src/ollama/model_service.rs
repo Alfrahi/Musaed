@@ -373,7 +373,13 @@ impl ModelService {
     }
 
     /// Deletes a model from the Ollama server.
-    pub async fn delete_model(&self, base_url: &str, name: &str) -> Result<bool, BackendError> {
+    pub async fn delete_model(
+        &self,
+        window_label: &str,
+        base_url: &str,
+        name: &str,
+    ) -> Result<bool, BackendError> {
+        RATE_LIMITER.check_rate_limit(window_label, "cmd_ollama_delete_model")?;
         tracing::info!("Deleting model: {}", name);
 
         if !is_valid_model_name(name) {
