@@ -43,13 +43,8 @@ pub async fn cmd_ollama_pull_model<R: Runtime>(
     base_url: String,
     name: String,
 ) -> ApiResponse<()> {
-    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_ollama_pull_model") {
-        return ApiResponse {
-            success: false,
-            data: None,
-            error: Some(e),
-        };
-    }
+    // Rate limit enforced once in ModelService::pull_model; checking here too
+    // would consume two slots per request against the quota.
     let service = ModelService;
     let req = PullModelRequest {
         app,
@@ -79,9 +74,13 @@ pub async fn cmd_ollama_abort_pull(name: String) -> ApiResponse<()> {
 // ==================== MODEL DELETION ====================
 
 #[tauri::command]
-pub async fn cmd_ollama_delete_model(base_url: String, name: String) -> ApiResponse<bool> {
+pub async fn cmd_ollama_delete_model<R: Runtime>(
+    window: tauri::Window<R>,
+    base_url: String,
+    name: String,
+) -> ApiResponse<bool> {
     let service = ModelService;
-    match service.delete_model(&base_url, &name).await {
+    match service.delete_model(window.label(), &base_url, &name).await {
         Ok(deleted) => ApiResponse {
             success: true,
             data: Some(deleted),

@@ -34,12 +34,9 @@ pub fn run() -> Result<(), tauri::Error> {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
-        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
-            log::info!(
-                "Second instance attempted with args: {:?} and cwd: {:?}",
-                args,
-                cwd
-            );
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            // Deliberately not logged: cwd can contain the user's home path.
+            log::info!("Second instance attempted ({} args)", args.len());
 
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_focus();
