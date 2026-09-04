@@ -212,6 +212,7 @@ function parseRustCommands() {
 
         const userArgs = [];
         const userArgTypes = [];
+        const stateTypes = [];
         for (const arg of args) {
           // Extract parameter name (first token) and type (rest after the colon).
           // Handles patterns like `name: String`, `name: Option<String>`,
@@ -223,6 +224,10 @@ function parseRustCommands() {
           }
           const paramName = arg.substring(0, colonIdx).trim();
           const paramType = arg.substring(colonIdx + 1).trim();
+          if (paramType.startsWith('State<')) {
+            const stateMatch = paramType.match(/^State<\s*'[^,]+,\s*([\s\S]+)>$/);
+            if (stateMatch) stateTypes.push(stateMatch[1].replace(/\s+/g, ''));
+          }
           if (!isInjectedParam(paramName) && !isInjectedType(paramType)) {
             userArgs.push(paramName);
             userArgTypes.push(paramType);
@@ -234,6 +239,7 @@ function parseRustCommands() {
           argCount: userArgs.length,
           argNames: userArgs,
           argTypes: userArgTypes,
+          stateTypes,
           returnType,
         });
 
@@ -244,6 +250,95 @@ function parseRustCommands() {
 
   walk(RUST_SRC_DIR);
   return commands;
+}
+
+// ---------------------------------------------------------------------------
+// 1b. Parse app.manage(...) state types from lib.rs
+// ---------------------------------------------------------------------------
+
+/**
+ * Reduce a `let` binding expression or `app.manage(...)` argument to a
+ * canonical token list, e.g. `Arc::new(Mutex::new(foo))` where
+ * `let foo = ConversationStore::new(...)` → ['Arc', 'Mutex', 'ConversationStore'].
+ * Bare expressions like `FsAccessGrants::default()` → ['FsAccessGrants'].
+ */
+function resolveManagedTokens(expr, bindings, depth = 0, visited = new Set()) {
+  if (depth > 8 || !expr) return null;
+  let e = expr.trim();
+  const wrapper = e.match(/^(Arc|Mutex|RwLock)::new\(([\s\S]*?)\)\s*$/);
+  if (wrapper) {
+    const inner = resolveManagedTokens(wrapper[2], bindings, depth + 1, visited);
+    return inner ? [wrapper[1], ...inner] : null;
+  }
+  if (/^\w+$/.test(e) && bindings.has(e)) {
+    if (visited.has(e)) return null; // cycle
+    const next = new Set(visited);
+    next.add(e);
+    const list = bindings.get(e);
+    // Shadowed-rebinding pattern: last binding only wraps the same identifier,
+    // e.g. `let s = Arc::new(Mutex::new(s));` — extract the wrapper chain,
+    // then continue from the FIRST binding (the constructor expression).
+    const last = list[list.length - 1].trim();
+    if (last.endsWith(e) || last.includes(`(${e})`)) {
+      const wrappers = [];
+      const re = /(Arc|Mutex|RwLock)::new\(/g;
+      let m;
+      while ((m = re.exec(last)) !== null) wrappers.push(m[1]);
+      const first = list[0];
+      const leaf = resolveManagedTokens(first, bindings, depth + 1, next);
+      return leaf ? [...wrappers, ...leaf] : null;
+    }
+    for (let i = list.length - 1; i >= 0; i--) {
+      const resolved = resolveManagedTokens(list[i], bindings, depth + 1, next);
+      if (resolved) return resolved;
+    }
+    return null;
+  }
+  const ctor = e.match(/\b([A-Z]\w*)::(?:new|default|spawn|open)\b/);
+  if (ctor) return [ctor[1]];
+  return null;
+}
+
+/**
+ * Parse every `app.manage(...)` call in lib.rs and return a Set of canonical
+ * type-token keys (e.g. `Arc<Mutex<ConversationStore>>`).
+ */
+function parseManagedStates() {
+  const libPath = resolve(RUST_SRC_DIR, 'lib.rs');
+  const content = readFileSync(libPath, 'utf-8');
+
+  const bindings = new Map();
+  for (const m of content.matchAll(/let\s+(\w+)(?:\s*:\s*[^=]+)?\s*=\s*([^;]+);/g)) {
+    if (!bindings.has(m[1])) bindings.set(m[1], []);
+    bindings.get(m[1]).push(m[2]);
+  }
+
+  const managed = new Set();
+  for (const m of content.matchAll(/app\.manage\(([^;]+?)\)\s*;/gs)) {
+    const tokens = resolveManagedTokens(m[1], bindings);
+    if (tokens) {
+      // Rebuild proper nesting: ['Arc','Mutex','X'] → 'Arc<Mutex<X>>'
+      let key = tokens[tokens.length - 1];
+      for (let i = tokens.length - 2; i >= 0; i--) key = `${tokens[i]}<${key}>`;
+      managed.add(key);
+    }
+  }
+  return managed;
+}
+
+/**
+ * Canonicalize a `State<'_, T>` inner type to the same key format used by
+ * parseManagedStates: strips lifetimes, whitespace, and module paths
+ * (keeps last path segment). e.g. `Arc<Mutex<ConversationStore>>` stays
+ * identical; `fs_commands::FsAccessGrants` → `FsAccessGrants`;
+ * `write_batch::WriteBatcher` → `WriteBatcher`.
+ */
+function canonicalStateType(raw) {
+  return raw
+    .replace(/\s+/g, '')
+    .replace(/'[^,]+,/g, '') // strip State lifetime args if any leaked in
+    .replace(/\w+::/g, '') // drop module path prefixes
+    .replace(/^&/, '');
 }
 
 // ---------------------------------------------------------------------------
@@ -802,6 +897,24 @@ const INTERNAL_ONLY_COMMANDS = new Set([]);
 
 function validate(rustCommands, tsCommands, { strict = false } = {}) {
   const issues = [];
+  const managedStates = parseManagedStates();
+
+  // 4a.0. Managed-state check: every State<'_, T> parameter must resolve to a
+  // type that is actually managed in lib.rs. Covers CRITICAL-1/2 class bugs
+  // where commands request Arc<Mutex<Connection>> but only
+  // Arc<Mutex<ConversationStore>> is managed → "state not managed" at runtime.
+  for (const [name, rust] of rustCommands) {
+    for (const stateType of rust.stateTypes) {
+      const canonical = canonicalStateType(stateType);
+      if (!managedStates.has(canonical)) {
+        issues.push({
+          type: 'UNMANAGED_STATE',
+          severity: 'error',
+          message: `"${name}": parameter type State<'_, ${stateType}> is not managed in lib.rs (found: ${[...managedStates].join(', ')}). Command will fail at runtime with "state not managed".`,
+        });
+      }
+    }
+  }
 
   // 4a. Rust commands missing from TypeScript
   for (const [name, rust] of rustCommands) {

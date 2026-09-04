@@ -1,10 +1,10 @@
+use crate::conversation::store::ConversationStore;
 use crate::error_codes;
 use crate::migrations::{
     get_latest_version, list_migrations, rollback_to_version, run_migrations, version_tracker,
     MigrationInfo, MigrationStatus, MigrationTarget, RunMigrationsRequest, RunMigrationsResponse,
 };
 use crate::payloads::{ApiResponse, BackendError};
-use rusqlite::Connection;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -21,7 +21,7 @@ fn parse_target(target: &str) -> Result<MigrationTarget, String> {
 
 /// Run migrations for the requested target.
 pub async fn run(
-    conversation_store: Arc<Mutex<Connection>>,
+    conversation_store: Arc<Mutex<ConversationStore>>,
     request: RunMigrationsRequest,
 ) -> ApiResponse<RunMigrationsResponse> {
     let target = match parse_target(&request.target) {
@@ -34,10 +34,9 @@ pub async fn run(
             }
         }
     };
-    let store = match target {
-        MigrationTarget::Conversations => conversation_store,
-    };
-    match run_migrations(store, target, request.target_version).await {
+    let store = conversation_store.lock().await;
+    let mut conn = store.lock_conn().await;
+    match run_migrations(&mut conn, target, request.target_version) {
         Ok(result) => ApiResponse {
             success: result.success,
             data: Some(RunMigrationsResponse {
@@ -67,7 +66,7 @@ pub async fn run(
 
 /// Roll back migrations to a previous version.
 pub async fn rollback(
-    conversation_store: Arc<Mutex<Connection>>,
+    conversation_store: Arc<Mutex<ConversationStore>>,
     target_str: String,
     to_version: u32,
 ) -> ApiResponse<RunMigrationsResponse> {
@@ -81,10 +80,9 @@ pub async fn rollback(
             }
         }
     };
-    let store = match target {
-        MigrationTarget::Conversations => conversation_store,
-    };
-    match rollback_to_version(store, target, to_version).await {
+    let store = conversation_store.lock().await;
+    let mut conn = store.lock_conn().await;
+    match rollback_to_version(&mut conn, target, to_version) {
         Ok(result) => ApiResponse {
             success: result.success,
             data: Some(RunMigrationsResponse {
@@ -114,7 +112,7 @@ pub async fn rollback(
 
 /// Get migration status for a target.
 pub async fn status(
-    conversation_store: Arc<Mutex<Connection>>,
+    conversation_store: Arc<Mutex<ConversationStore>>,
     target_str: String,
 ) -> ApiResponse<MigrationStatus> {
     let target = match parse_target(&target_str) {
@@ -127,10 +125,8 @@ pub async fn status(
             }
         }
     };
-    let store = match target {
-        MigrationTarget::Conversations => conversation_store,
-    };
-    let conn_guard = store.lock().await;
+    let store = conversation_store.lock().await;
+    let conn_guard = store.lock_conn().await;
     match version_tracker::get_current_version(&conn_guard, target) {
         Ok(current_version) => {
             let latest_version = get_latest_version(target);
