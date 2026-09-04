@@ -660,3 +660,113 @@ async fn test_concurrent_duplicate_indexing_completes_consistently() {
         "a surviving successful run must leave the project Ready"
     );
 }
+
+// ==================== 6. COMPLETION EVENT ====================
+
+#[tokio::test]
+async fn test_index_emits_index_complete_event() {
+    use tauri::Listener;
+
+    let tmp = TempDir::new().unwrap();
+    let path_str = tmp.path().to_str().unwrap().to_string();
+    let store = test_store(&tmp);
+    let proj_id = create_project(&store, "complete", &path_str, "test-model", &[]).await;
+    create_text_files(tmp.path(), 3, "doc");
+
+    let (server, _mock) = mock_embed_server(768).await;
+
+    let app = tauri::test::mock_app();
+    let handle = app.handle().clone();
+    let (tx, rx) = std::sync::mpsc::channel::<serde_json::Value>();
+    handle.listen_any("rag-index-complete", move |event| {
+        let _ = tx.send(serde_json::from_str(event.payload()).unwrap());
+    });
+
+    let result = index_project(
+        store.clone(),
+        IndexOptions {
+            project_id: &proj_id,
+            project_path: &path_str,
+            embedding_model: "test-model",
+            base_url: &mock_url(&server),
+            ignore_patterns: &[],
+            force: false,
+        },
+        Arc::new(CancellationToken::new()),
+        handle.clone(),
+    )
+    .await;
+    assert!(result.is_ok(), "indexing failed: {:?}", result.err());
+
+    let payload = rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("rag-index-complete event must be emitted");
+    assert_eq!(payload["projectId"], proj_id);
+    assert_eq!(payload["fileCount"], 3);
+    assert!(payload["chunkCount"].as_u64().unwrap() >= 3);
+    assert!(payload["indexedAt"].is_string());
+}
+
+// ==================== 7. MODEL CHANGE RESETS INDEX ====================
+
+#[tokio::test]
+async fn test_embedding_model_change_wipes_index() {
+    let tmp = TempDir::new().unwrap();
+    let path_str = tmp.path().to_str().unwrap().to_string();
+    let store = test_store(&tmp);
+    let proj_id = create_project(&store, "model-change", &path_str, "model-a", &[]).await;
+    create_text_files(tmp.path(), 3, "doc");
+
+    let (server, _mock) = mock_embed_server(768).await;
+    let result = run_pipeline(
+        &store,
+        &proj_id,
+        &path_str,
+        "model-a",
+        &mock_url(&server),
+        false,
+        &[],
+        Arc::new(CancellationToken::new()),
+    )
+    .await;
+    assert!(result.is_ok(), "indexing failed: {:?}", result.err());
+
+    let s = store.read().await;
+    assert!(s.get_project_stats(&proj_id).await.unwrap().chunk_count > 0);
+    drop(s);
+
+    // Same model → no reset
+    let reset = store
+        .read()
+        .await
+        .update_embedding_model(&proj_id, "model-a")
+        .await
+        .unwrap();
+    assert!(!reset, "same model must not wipe the index");
+    {
+        let s = store.read().await;
+        assert!(s.get_project_stats(&proj_id).await.unwrap().chunk_count > 0);
+    }
+
+    // Different model → vectors are incompatible; index must be wiped
+    let reset = store
+        .read()
+        .await
+        .update_embedding_model(&proj_id, "model-b")
+        .await
+        .unwrap();
+    assert!(reset, "model change must trigger an index reset");
+
+    let s = store.read().await;
+    let project = s.get_project(&proj_id).await.unwrap().unwrap();
+    assert_eq!(project.embedding_model, "model-b");
+    assert_eq!(project.status, ProjectStatus::Idle);
+    assert_eq!(project.chunk_count, 0);
+    assert_eq!(project.file_count, 0);
+    assert!(project.indexed_at.is_none());
+    assert!(s.get_project_files(&proj_id).await.unwrap().is_empty());
+
+    // Zero orphan vectors left behind
+    let stats = s.get_project_stats(&proj_id).await.unwrap();
+    assert_eq!(stats.chunk_count, 0);
+}

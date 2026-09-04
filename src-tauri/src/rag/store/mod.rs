@@ -205,7 +205,9 @@ impl RagStore {
         set_status(self, id, status).await
     }
 
-    pub async fn update_embedding_model(&self, id: &str, model: &str) -> RagResult<()> {
+    /// Change the embedding model, wiping all index data when the model
+    /// actually changed. Returns whether a reset happened.
+    pub async fn update_embedding_model(&self, id: &str, model: &str) -> RagResult<bool> {
         update_embedding_model(self, id, model).await
     }
 

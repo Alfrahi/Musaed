@@ -214,16 +214,56 @@ pub(super) async fn set_status(
 }
 
 /// Update the embedding model for a project.
+///
+/// When the model actually changes, ALL index data for the project is wiped
+/// (embeddings, chunks, files, stats, indexed_at) and the status is reset to
+/// `idle`, forcing a full reindex. Embeddings from different models are not
+/// comparable — keeping old vectors under a new model silently corrupts
+/// search results.
+///
+/// Returns `true` when the model changed and the index was reset.
 pub(super) async fn update_embedding_model(
     store: &super::RagStore,
     id: &str,
     model: &str,
-) -> RagResult<()> {
-    let conn = store.write_conn().await;
+) -> RagResult<bool> {
+    let mut conn = store.write_conn().await;
     let now = Utc::now().to_rfc3339();
-    conn.execute(
-        "UPDATE projects SET embedding_model = ?1, updated_at = ?2 WHERE id = ?3",
+
+    let current: String = conn.query_row(
+        "SELECT embedding_model FROM projects WHERE id = ?1",
+        rusqlite::params![id],
+        |row| row.get(0),
+    )?;
+
+    if current == model {
+        return Ok(false);
+    }
+
+    let tx = conn.transaction()?;
+
+    // Wipe vectors (no FK on vec_chunks — must go first)
+    tx.execute(
+        "DELETE FROM vec_chunks WHERE chunk_id IN (SELECT id FROM chunks WHERE project_id = ?1)",
+        rusqlite::params![id],
+    )?;
+    // Chunk + file rows (the diff map must be emptied or a subsequent index
+    // would see unchanged hashes and store zero new chunks)
+    tx.execute(
+        "DELETE FROM chunks WHERE project_id = ?1",
+        rusqlite::params![id],
+    )?;
+    tx.execute(
+        "DELETE FROM files WHERE project_id = ?1",
+        rusqlite::params![id],
+    )?;
+    // Reset model + index state so a reindex is forced
+    tx.execute(
+        "UPDATE projects SET embedding_model = ?1, file_count = 0, chunk_count = 0, \
+         total_bytes = 0, indexed_at = NULL, status = 'idle', updated_at = ?2 WHERE id = ?3",
         rusqlite::params![model, now, id],
     )?;
-    Ok(())
+
+    tx.commit()?;
+    Ok(true)
 }

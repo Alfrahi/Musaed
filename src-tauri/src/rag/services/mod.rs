@@ -521,23 +521,32 @@ pub async fn set_embedding_model<'a>(req: SetEmbeddingModelRequest<'a>) -> ApiRe
     }
     let store = req.state.inner();
     let s = store.write().await;
-    if let Err(e) = s
+    match s
         .update_embedding_model(&req.project_id, &req.model_name)
         .await
     {
-        return ApiResponse {
+        Ok(reset) => {
+            if reset {
+                tracing::info!(
+                    project_id = %req.project_id,
+                    model = %req.model_name,
+                    "Embedding model changed — index data wiped, reindex required"
+                );
+            }
+            ApiResponse {
+                success: true,
+                data: Some(true),
+                error: None,
+            }
+        }
+        Err(e) => ApiResponse {
             success: false,
             data: None,
             error: Some(
                 BackendError::new(error_codes::RAG_UPDATE_ERROR, e.to_string())
                     .with_context("Failed to update RAG embedding model".to_string()),
             ),
-        };
-    }
-    ApiResponse {
-        success: true,
-        data: Some(true),
-        error: None,
+        },
     }
 }
 

@@ -579,9 +579,28 @@ async fn phase_complete<R: tauri::Runtime>(
         "Indexing complete!".to_string(),
     );
 
-    {
+    let (file_count, chunk_count, total_bytes) = {
         let s = ctx.store.write().await;
         s.set_status(ctx.project_id, &ProjectStatus::Ready).await?;
+        let stats = s.get_project_stats(ctx.project_id).await?;
+        (stats.file_count, stats.chunk_count, stats.total_bytes)
+    };
+
+    // Dedicated completion event — the frontend listener on
+    // `rag-index-complete` (useRagIndexing) refreshes the project card from
+    // this payload; the progress event alone never flips the card state.
+    let complete = crate::rag::types::IndexComplete {
+        project_id: ctx.project_id.to_string(),
+        indexed_at: chrono::Utc::now().to_rfc3339(),
+        file_count,
+        chunk_count,
+        total_bytes,
+    };
+    if let Err(e) = ctx
+        .app_handle
+        .emit(crate::shared::EVENT_RAG_INDEX_COMPLETE, &complete)
+    {
+        tracing::debug!("Failed to emit index complete: {}", e);
     }
 
     tracing::info!(
