@@ -84,6 +84,10 @@ export enum BackendErrorCode {
   // ── Migration ─────────────────────────────────────────
   MigrationError = 'MIGRATION_ERROR',
 
+  // ── Confirmation tokens (destructive ops: log clear) ──
+  InvalidToken = 'INVALID_TOKEN',
+  TokenExpired = 'TOKEN_EXPIRED',
+
   // ── Generic ───────────────────────────────────────────
   InternalError = 'INTERNAL_ERROR',
   Aborted = 'ABORTED',

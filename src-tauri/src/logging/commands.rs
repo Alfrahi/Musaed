@@ -12,6 +12,7 @@ use super::{
     tokens::{self, TokenValidation},
     TraceContext, TraceEntryInput, TraceStatus,
 };
+use crate::error_codes;
 use crate::payloads::ApiResponse;
 use crate::validation::{validation_error, MAX_LOG_CLEAR_TOKEN_LEN, MAX_LOG_ENTRY_LEN};
 use std::collections::HashMap;
@@ -78,7 +79,10 @@ pub async fn cmd_logs_clear<R: tauri::Runtime>(
 ) -> ApiResponse<()> {
     // Validate token format before lookup
     if token.is_empty() || token.len() > MAX_LOG_CLEAR_TOKEN_LEN {
-        return validation_error("INVALID_TOKEN", "Clear token is missing or malformed");
+        return validation_error(
+            error_codes::INVALID_TOKEN,
+            "Clear token is missing or malformed",
+        );
     }
 
     match tokens::validate_token(&token) {
@@ -91,13 +95,13 @@ pub async fn cmd_logs_clear<R: tauri::Runtime>(
         TokenValidation::Expired => {
             // validate_token already logs the rejection; return the IPC error.
             return validation_error(
-                "TOKEN_EXPIRED",
+                error_codes::TOKEN_EXPIRED,
                 "Confirmation token has expired. Request a new token and try again.",
             );
         }
         TokenValidation::NotFound => {
             return validation_error(
-                "INVALID_TOKEN",
+                error_codes::INVALID_TOKEN,
                 "Invalid confirmation token. Request a new token and try again.",
             );
         }

@@ -97,6 +97,10 @@ pub const INVALID_FEATURE: &str = "INVALID_FEATURE";
 pub const INVALID_ACTION: &str = "INVALID_ACTION";
 pub const SPAN_NOT_FOUND: &str = "SPAN_NOT_FOUND";
 
+// ── Confirmation tokens (destructive ops: log clear) ──
+pub const INVALID_TOKEN: &str = "INVALID_TOKEN";
+pub const TOKEN_EXPIRED: &str = "TOKEN_EXPIRED";
+
 // ── Generic ───────────────────────────────────────────
 pub const INTERNAL_ERROR: &str = "INTERNAL_ERROR";
 pub const ABORTED: &str = "ABORTED";
@@ -168,6 +172,8 @@ mod tests {
             INVALID_FEATURE,
             INVALID_ACTION,
             SPAN_NOT_FOUND,
+            INVALID_TOKEN,
+            TOKEN_EXPIRED,
         ];
         let mut seen = std::collections::HashSet::new();
         for &code in &codes {
