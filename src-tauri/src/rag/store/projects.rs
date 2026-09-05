@@ -44,10 +44,11 @@ pub(super) async fn create_project_with_params(
     ignore_patterns: &[String],
 ) -> RagResult<RagProject> {
     // Resolve and validate the project path
-    let p = Path::new(path);
-    let canonical_path = p.canonicalize().map_err(|e| {
-        RagError::Config(format!("Path does not exist or is not accessible: {}", e))
-    })?;
+    let canonical_path = crate::path_guard::canonicalize(
+        Path::new(path),
+        "Path does not exist or is not accessible",
+    )
+    .map_err(RagError::Config)?;
     if !canonical_path.is_dir() {
         return Err(RagError::Config(format!(
             "Path is not a directory: {:?}",

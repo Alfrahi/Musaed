@@ -1,3 +1,4 @@
+use crate::fs_commands::FsAccessGrants;
 use crate::payloads::ApiResponse;
 use crate::rag::services::projects;
 use crate::rag::services::*;
@@ -17,6 +18,7 @@ pub async fn cmd_rag_add_project(
     embedding_model: String,
     ignore_patterns: Vec<String>,
     state: State<'_, Arc<RwLock<RagStore>>>,
+    grants: State<'_, FsAccessGrants>,
     _app_handle: AppHandle,
 ) -> Result<ApiResponse<RagProject>, String> {
     let req = projects::AddProjectRequest {
@@ -25,6 +27,7 @@ pub async fn cmd_rag_add_project(
         embedding_model,
         ignore_patterns,
         store: state.inner().clone(),
+        grants: grants.inner(),
     };
     Ok(projects::add_project(req).await)
 }

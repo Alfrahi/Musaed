@@ -9,12 +9,17 @@ use crate::rag::types::RagProject;
 use crate::rag::validation::{rag_validation_error, validate_add_project, validate_project_id};
 use tokio::sync::RwLock;
 
-pub struct AddProjectRequest {
+pub struct AddProjectRequest<'a> {
     pub name: String,
     pub path: String,
     pub embedding_model: String,
     pub ignore_patterns: Vec<String>,
     pub store: Arc<RwLock<RagStore>>,
+    /// Dialog-granted paths (STANDARDS §16): only directories the user
+    /// explicitly picked via a native dialog may become RAG project roots.
+    /// Without this, the webview could register `/home/user` or `~/.ssh`
+    /// and exfiltrate contents via `cmd_rag_get_file_chunks`.
+    pub grants: &'a crate::fs_commands::FsAccessGrants,
 }
 
 pub struct RemoveProjectRequest {
@@ -33,7 +38,7 @@ pub struct ListProjectsRequest {
     pub store: Arc<RwLock<RagStore>>,
 }
 
-pub async fn add_project(req: AddProjectRequest) -> ApiResponse<RagProject> {
+pub async fn add_project(req: AddProjectRequest<'_>) -> ApiResponse<RagProject> {
     if let Err(e) = validate_add_project(
         &req.name,
         &req.path,
@@ -48,6 +53,13 @@ pub async fn add_project(req: AddProjectRequest) -> ApiResponse<RagProject> {
     };
     if !canonical_path.is_dir() {
         return rag_validation_error("Project path must be a valid directory".to_string());
+    }
+    // Trust anchor: the path must have been surfaced by a native directory
+    // dialog this session — never accept a webview-typed path directly.
+    if !req.grants.is_granted(&canonical_path) {
+        return rag_validation_error(
+            "Project path must be selected via the native folder picker".to_string(),
+        );
     }
     let s = req.store.write().await;
     match s
@@ -160,5 +172,61 @@ pub async fn list_projects(req: ListProjectsRequest) -> ApiResponse<Vec<RagProje
                     .with_context("Failed to list RAG projects".to_string()),
             ),
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::fs_commands::FsAccessGrants;
+
+    fn test_store(dir: &std::path::Path) -> Arc<RwLock<RagStore>> {
+        let s = RagStore::open(&dir.join("rag_test.sqlite3")).expect("open RagStore");
+        Arc::new(RwLock::new(s))
+    }
+
+    fn grants_with(paths: &[&std::path::Path]) -> FsAccessGrants {
+        let g = FsAccessGrants::default();
+        g.grant_paths(paths.iter().map(|p| p.to_string_lossy().into_owned()));
+        g
+    }
+
+    #[tokio::test]
+    async fn add_project_rejects_path_not_dialog_granted() {
+        let tmp = tempfile::tempdir().unwrap();
+        let target = tempfile::tempdir().unwrap();
+        let store = test_store(tmp.path());
+        let grants = FsAccessGrants::default(); // empty — no dialog flow ever ran
+
+        let req = AddProjectRequest {
+            name: "proj".into(),
+            path: target.path().to_string_lossy().into_owned(),
+            embedding_model: "m".into(),
+            ignore_patterns: vec![],
+            store,
+            grants: &grants,
+        };
+        let resp = add_project(req).await;
+        assert!(!resp.success);
+        assert_eq!(resp.error.unwrap().code, error_codes::RAG_VALIDATION_ERROR);
+    }
+
+    #[tokio::test]
+    async fn add_project_accepts_dialog_granted_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        let target = tempfile::tempdir().unwrap();
+        let store = test_store(tmp.path());
+        let grants = grants_with(&[target.path()]);
+
+        let req = AddProjectRequest {
+            name: "proj".into(),
+            path: target.path().to_string_lossy().into_owned(),
+            embedding_model: "m".into(),
+            ignore_patterns: vec![],
+            store,
+            grants: &grants,
+        };
+        let resp = add_project(req).await;
+        assert!(resp.success, "expected success, got {:?}", resp.error);
     }
 }

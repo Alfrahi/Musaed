@@ -1,4 +1,5 @@
 use crate::error_codes;
+pub(crate) use crate::path_guard::lenient_canonicalize;
 use crate::payloads::{ApiResponse, BackendError};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -27,7 +28,7 @@ impl FsAccessGrants {
         }
     }
 
-    fn is_granted(&self, resolved: &Path) -> bool {
+    pub(crate) fn is_granted(&self, resolved: &Path) -> bool {
         self.lock().iter().any(|root| resolved.starts_with(root))
     }
 
@@ -36,35 +37,6 @@ impl FsAccessGrants {
         self.0
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
-    }
-}
-
-/// Canonicalizes `path`, resolving symlinks down to the deepest existing
-/// ancestor and re-appending any not-yet-existing tail components, so that
-/// fresh save-dialog targets still compare correctly against granted roots.
-///
-/// Both grant-time and access-time go through this function, keeping the
-/// Windows verbatim-path prefix (`\\?\`) consistent on both sides of the
-/// prefix comparison.
-fn lenient_canonicalize(path: &Path) -> Option<PathBuf> {
-    let mut base = path.to_path_buf();
-    let mut missing_tail: Vec<std::ffi::OsString> = Vec::new();
-    loop {
-        match base.canonicalize() {
-            Ok(mut resolved) => {
-                for part in missing_tail.iter().rev() {
-                    resolved.push(part);
-                }
-                return Some(resolved);
-            }
-            Err(_) => {
-                let name = base.file_name()?.to_os_string();
-                missing_tail.push(name);
-                if !base.pop() {
-                    return None;
-                }
-            }
-        }
     }
 }
 

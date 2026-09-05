@@ -17,6 +17,7 @@ pub mod migrations;
 pub mod ollama;
 pub mod ollama_url;
 pub mod opener;
+pub mod path_guard;
 pub mod payloads;
 pub mod rag;
 pub mod rate_limiter;

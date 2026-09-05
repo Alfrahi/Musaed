@@ -38,24 +38,7 @@ pub(crate) fn canonicalize_path_within_project(
     project_root: &Path,
     target_path: &Path,
 ) -> Result<PathBuf, RagError> {
-    let canonical_root = project_root
-        .canonicalize()
-        .map_err(|e| RagError::Config(format!("Failed to resolve project root: {}", e)))?;
-    let canonical_target = target_path.canonicalize().map_err(|e| {
-        RagError::Config(format!(
-            "Target path does not exist or is inaccessible: {}",
-            e
-        ))
-    })?;
-    let root_with_sep = format!("{}/", canonical_root.to_string_lossy());
-    let target_with_sep = format!("{}/", canonical_target.to_string_lossy());
-    if !target_with_sep.starts_with(&root_with_sep) {
-        return Err(RagError::Config(format!(
-            "Path escapes project boundary: {:?} is not within {:?}",
-            canonical_target, canonical_root
-        )));
-    }
-    Ok(canonical_target)
+    crate::path_guard::resolve_within(project_root, target_path).map_err(RagError::Config)
 }
 
 /// Validates a relative file path and returns the canonical path within the project.
