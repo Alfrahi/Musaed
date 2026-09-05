@@ -16,7 +16,7 @@
  * `HomeClient.tsx` (the layout composition root) is the only consumer; it
  * invokes `initializeApp()` once on mount.
  */
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useUIStore } from '@/store/ui-store';
 import { useSetInitialized, useSetUIError } from '@/store/hooks';
 import { useSettingsInitialization } from '@/features/settings';
@@ -31,8 +31,15 @@ export function useAppInitialization() {
   const { initialize: initLibrary } = useLibraryInitialization();
   const { initialize: initConversation } = useConversationInitialization();
 
+  // In-flight guard: the `isInitialized` store check is not atomic, so two
+  // concurrent `initializeApp` calls could both pass it before either sets
+  // the flag, double-initializing (Senior F5). A synchronous ref set before
+  // the first `await` makes the guard re-entrant within a single render.
+  const inFlightRef = useRef(false);
+
   const initializeApp = useCallback(async () => {
-    if (useUIStore.getState().isInitialized) return;
+    if (inFlightRef.current || useUIStore.getState().isInitialized) return;
+    inFlightRef.current = true;
 
     try {
       await initSettings();
@@ -46,6 +53,8 @@ export function useAppInitialization() {
       logger.error('Initialization failed', { error: errorMessage });
       setInitialized(true);
       setError('error.initializationFailed');
+    } finally {
+      inFlightRef.current = false;
     }
   }, [initSettings, initLibrary, initConversation, setInitialized, setError]);
 

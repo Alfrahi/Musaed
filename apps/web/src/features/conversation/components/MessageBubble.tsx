@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import {
   Copy,
@@ -690,6 +690,64 @@ const MessageBubbleBody = ({
   </div>
 );
 
+const MemoizedMessageBubbleBody = React.memo(MessageBubbleBody);
+
+/**
+ * Builds the memoized `MessageBubbleBody` props. Extracted so `MessageBubble`
+ * stays under the `max-lines-per-function` lint gate (STANDARDS §11) while
+ * keeping `bodyProps` stable across renders — the inline callbacks
+ * (`onToggleExpand`/`onOpenSource`/`onImageClick`) are `useCallback`'d and the
+ * object is `useMemo`'d so the memoized body skips re-render on content churn
+ * (React H4).
+ */
+const useMessageBubbleState = (
+  message: Message,
+  onEditMessage: MessageBubbleProps['onEditMessage'],
+  onDeleteMessage: MessageBubbleProps['onDeleteMessage']
+) => {
+  const isUser = message.role === 'user';
+  const { copied, handleCopy, tps } = useMessageActions(message);
+  const sourceReferences = useMemo(
+    () => (message.ragSources ?? []) as SourceReference[],
+    [message.ragSources]
+  );
+  const [isExpanded, setIsExpanded] = useState(sourceReferences.length > 0);
+  const [openSource, setOpenSource] = useState<SourceReference | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const { isEditing, startEdit, cancelEdit, saveEdit } = useInlineEdit(message.id, onEditMessage);
+  const language = useSettingsStore((s) => s.globalSettings.language);
+  const { t } = useTranslation(language);
+  const handleDelete = useMessageDelete(message.id, onDeleteMessage, t);
+  const isStopped = message.stopped === true && message.role === 'assistant';
+
+  const onToggleExpand = useCallback(() => setIsExpanded((prev) => !prev), []);
+  const onOpenSource = useCallback((source: SourceReference) => setOpenSource(source), []);
+  const onImageClick = useCallback((src: string) => setLightboxImage(src), []);
+
+  return {
+    isUser,
+    isStopped,
+    isEditing,
+    sourceReferences,
+    isExpanded,
+    openSource,
+    setOpenSource,
+    lightboxImage,
+    setLightboxImage,
+    startEdit,
+    saveEdit,
+    cancelEdit,
+    onToggleExpand,
+    onOpenSource,
+    onImageClick,
+    tps,
+    copied,
+    handleCopy,
+    handleDelete,
+    t,
+  };
+};
+
 /**
  * Renders a single message bubble in the chat window.
  */
@@ -703,12 +761,7 @@ const MessageBubble = ({
   onDeleteMessage,
 }: MessageBubbleProps) => {
   const isUser = message.role === 'user';
-  const { copied, handleCopy, tps } = useMessageActions(message);
-  const sourceReferences = (message.ragSources ?? []) as SourceReference[];
-  const [isExpanded, setIsExpanded] = useState(sourceReferences.length > 0);
-  const [openSource, setOpenSource] = useState<SourceReference | null>(null);
-  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
-  const { isEditing, startEdit, cancelEdit, saveEdit } = useInlineEdit(message.id, onEditMessage);
+  const { handleCopy } = useMessageActions(message);
   const language = useSettingsStore((s) => s.globalSettings.language);
   const { t } = useTranslation(language);
   const titleId = 'rag-source-title';
@@ -720,7 +773,6 @@ const MessageBubble = ({
     handleDelete,
     t
   );
-  const isStopped = message.stopped === true && message.role === 'assistant';
   const shouldReduceMotion = useReducedMotion() ?? false;
 
   const bubbleClassName = cn(
@@ -730,45 +782,51 @@ const MessageBubble = ({
       : 'border-s-2 border-blue-500/30 bg-zinc-50 dark:bg-zinc-900/30'
   );
 
-  const bodyProps = {
-    isUser,
-    isStopped,
-    isEditing,
+  const s = useMessageBubbleState(message, onEditMessage, onDeleteMessage);
+
+  // Built inline (not `useMemo`'d): `MemoizedMessageBubbleBody` does a shallow
+  // prop comparison, so a fresh wrapper with stable callback/primitive values
+  // still skips re-render. The `useCallback`'d handlers are what keep the
+  // comparison passing across content churn (React H4).
+  const bodyProps: MessageBubbleBodyProps = {
+    isUser: s.isUser,
+    isStopped: s.isStopped,
+    isEditing: s.isEditing,
     message,
     labels,
-    sourceReferences,
-    isExpanded,
-    onToggleExpand: () => setIsExpanded(!isExpanded),
-    onOpenSource: (source: SourceReference) => setOpenSource(source),
-    onImageClick: setLightboxImage,
-    tps,
+    sourceReferences: s.sourceReferences,
+    isExpanded: s.isExpanded,
+    onToggleExpand: s.onToggleExpand,
+    onOpenSource: s.onOpenSource,
+    onImageClick: s.onImageClick,
+    tps: s.tps,
     formatNumber,
-    copied,
-    handleCopy,
+    copied: s.copied,
+    handleCopy: s.handleCopy,
     onRegenerate,
     onContinue,
-    onStartEdit: isUser && onEditMessage ? startEdit : undefined,
-    onSaveEdit: saveEdit,
-    onCancelEdit: cancelEdit,
-    handleDelete: onDeleteMessage ? handleDelete : undefined,
-    t,
+    onStartEdit: s.isUser && onEditMessage ? s.startEdit : undefined,
+    onSaveEdit: s.saveEdit,
+    onCancelEdit: s.cancelEdit,
+    handleDelete: onDeleteMessage ? s.handleDelete : undefined,
+    t: s.t,
   };
 
   const overlays = (
     <>
-      {openSource && (
+      {s.openSource && (
         <SourceViewerModal
-          source={openSource}
+          source={s.openSource}
           titleId={titleId}
-          onClose={() => setOpenSource(null)}
+          onClose={() => s.setOpenSource(null)}
           t={t}
         />
       )}
-      {lightboxImage && (
+      {s.lightboxImage && (
         <AttachmentLightbox
           isOpen
-          onClose={() => setLightboxImage(null)}
-          imageSrc={lightboxImage}
+          onClose={() => s.setLightboxImage(null)}
+          imageSrc={s.lightboxImage}
         />
       )}
     </>
@@ -776,7 +834,7 @@ const MessageBubble = ({
 
   return shouldReduceMotion ? (
     <div onContextMenu={handleContextMenu} className={bubbleClassName}>
-      <MessageBubbleBody {...bodyProps} />
+      <MemoizedMessageBubbleBody {...bodyProps} />
       {overlays}
     </div>
   ) : (
@@ -787,7 +845,7 @@ const MessageBubble = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
     >
-      <MessageBubbleBody {...bodyProps} />
+      <MemoizedMessageBubbleBody {...bodyProps} />
       {overlays}
     </motion.div>
   );

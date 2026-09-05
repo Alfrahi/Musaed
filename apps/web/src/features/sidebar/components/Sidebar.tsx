@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Eraser,
   MessageSquare,
@@ -293,14 +293,21 @@ const CollapsedConversationList = ({
     aria-label={ariaLabel}
     className="flex w-full flex-1 flex-col items-center overflow-y-auto px-0 pb-2"
   >
-    {conversations.map((conversation) => (
-      <ConversationIcon
-        key={conversation.id}
-        conversation={conversation}
-        isActive={conversation.id === currentConversationId}
-        onSelect={setCurrentConversationId}
-      />
-    ))}
+    {/* Virtualize the collapsed rail: a large conversation set would otherwise
+        render every letter-icon at once (React H7). */}
+    <Virtuoso
+      style={{ width: '100%' }}
+      data={conversations}
+      itemContent={(_index, conversation) => (
+        <div className="flex justify-center">
+          <ConversationIcon
+            conversation={conversation}
+            isActive={conversation.id === currentConversationId}
+            onSelect={setCurrentConversationId}
+          />
+        </div>
+      )}
+    />
   </nav>
 );
 
@@ -508,6 +515,24 @@ const ExpandedSidebar = ({
   </div>
 );
 
+/** Memoizes the `useSidebarGrouping` inputs so the hook's internal `useMemo`
+ *  isn't defeated by fresh `reduce`/`map` results on every render (React C2). */
+const useSidebarGroupingInputs = (filteredConversations: ConversationMetadata[]) => {
+  const conversations = useMemo(
+    () =>
+      filteredConversations.reduce(
+        (acc, conv) => ({ ...acc, [conv.id]: conv }),
+        {} as Record<string, ConversationMetadata>
+      ),
+    [filteredConversations]
+  );
+  const conversationIds = useMemo(
+    () => filteredConversations.map((conv: ConversationMetadata) => conv.id),
+    [filteredConversations]
+  );
+  return [conversations, conversationIds] as const;
+};
+
 const Sidebar = () => {
   const activeTab = useSidebarTab();
   const setActiveTab = useSetSidebarTab();
@@ -533,14 +558,8 @@ const Sidebar = () => {
   const { t } = useTranslation(language);
   const { handleClearAll } = useSidebarActions();
 
-  const [virtualItems, loadMore] = useSidebarGrouping(
-    filteredConversations.reduce(
-      (acc, conv) => ({ ...acc, [conv.id]: conv }),
-      {} as Record<string, ConversationMetadata>
-    ),
-    filteredConversations.map((conv: ConversationMetadata) => conv.id),
-    searchQuery
-  );
+  const [conversations, conversationIds] = useSidebarGroupingInputs(filteredConversations);
+  const [virtualItems, loadMore] = useSidebarGrouping(conversations, conversationIds, searchQuery);
 
   // Arrow-key navigation across the listbox (WAI-ARIA listbox pattern).
   // See `moveActiveConversation` above for the pure helper and rationale

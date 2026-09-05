@@ -237,6 +237,56 @@ function useVirtualizedMessages(
 }
 
 /**
+ * Builds the Virtuoso `itemContent` renderer. Extracted so `ChatWindow` stays
+ * under the `max-lines-per-function` lint gate (STANDARDS §11) while keeping
+ * the renderer a stable `useCallback` reference (M9).
+ */
+const useMessageItemRenderer = (
+  messages: Message[],
+  lastMessageContent: string,
+  messageLabels: MessageLabels,
+  formatNumber: (num: number, options?: Intl.NumberFormatOptions) => string,
+  regenerateMessage: (msgId: string) => void,
+  handleContinue: (msgId: string) => void,
+  handleEditMessage: (msgId: string, newContent: string) => void,
+  handleDeleteMessage: (msgId: string) => void
+) =>
+  useCallback(
+    (index: number, msg: Message) => {
+      // Merge the live stream buffer into the last message only. Every other
+      // message renders from the stable stored object, so memoized bubbles
+      // skip re-render during streaming.
+      const displayMsg =
+        index === messages.length - 1 && lastMessageContent !== msg.content
+          ? { ...msg, content: lastMessageContent }
+          : msg;
+      return (
+        <div className={cn(index === messages.length - 1 && 'pbe-32')}>
+          <MessageBubble
+            message={displayMsg}
+            labels={messageLabels}
+            formatNumber={formatNumber}
+            onRegenerate={regenerateMessage}
+            onContinue={handleContinue}
+            onEditMessage={handleEditMessage}
+            onDeleteMessage={handleDeleteMessage}
+          />
+        </div>
+      );
+    },
+    [
+      messages,
+      lastMessageContent,
+      messageLabels,
+      formatNumber,
+      regenerateMessage,
+      handleContinue,
+      handleEditMessage,
+      handleDeleteMessage,
+    ]
+  );
+
+/**
  * Main chat window with virtualized messages.
  *
  * Accepts onboarding callbacks so the parent composition root (HomeClient)
@@ -288,6 +338,27 @@ const ChatWindow = ({
   const { handleRetry, handleContinue, handleEditMessage, handleDeleteMessage } =
     useMessageBubbleActions(currentConversationId, messages, sendMessage, editAndResend);
 
+  // Stable Virtuoso callbacks: `atBottomStateChange` fires on scroll, not per
+  // token, so a stable reference avoids re-subscribing the virtualizer (M9).
+  const handleAtBottomStateChange = useCallback(
+    (atBottom: boolean) => {
+      isAtBottomRef.current = atBottom;
+      setShowScrollButton(!atBottom);
+    },
+    [isAtBottomRef, setShowScrollButton]
+  );
+
+  const renderItem = useMessageItemRenderer(
+    messages,
+    lastMessageContent,
+    messageLabels,
+    formatNumber,
+    regenerateMessage,
+    handleContinue,
+    handleEditMessage,
+    handleDeleteMessage
+  );
+
   const onboarding = getOnboardingState(
     currentConversation,
     models.length,
@@ -306,32 +377,8 @@ const ChatWindow = ({
         className="h-full"
         data={messages}
         atBottomThreshold={60}
-        atBottomStateChange={(atBottom) => {
-          isAtBottomRef.current = atBottom;
-          setShowScrollButton(!atBottom);
-        }}
-        itemContent={(index, msg) => {
-          // Merge the live stream buffer into the last message only. Every
-          // other message renders from the stable stored object, so memoized
-          // bubbles skip re-render during streaming.
-          const displayMsg =
-            index === messages.length - 1 && lastMessageContent !== msg.content
-              ? { ...msg, content: lastMessageContent }
-              : msg;
-          return (
-            <div className={cn(index === messages.length - 1 && 'pbe-32')}>
-              <MessageBubble
-                message={displayMsg}
-                labels={messageLabels}
-                formatNumber={formatNumber}
-                onRegenerate={regenerateMessage}
-                onContinue={handleContinue}
-                onEditMessage={handleEditMessage}
-                onDeleteMessage={handleDeleteMessage}
-              />
-            </div>
-          );
-        }}
+        atBottomStateChange={handleAtBottomStateChange}
+        itemContent={renderItem}
         followOutput="smooth"
       />
       <ScrollShadow visible={showScrollButton && messages.length > 0} />
