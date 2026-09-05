@@ -712,3 +712,92 @@ async fn test_delete_project_leaves_no_orphan_embeddings() {
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].content, "fn keeper() {}");
 }
+
+// ---------------------------------------------------------------------------
+// RAG R1: corpus-wide lexical search via chunks_fts.
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_search_lexical_finds_keyword_matches_corpus_wide() {
+    let store = test_store();
+    store
+        .create_project(&make_test_project("lex", "Lex", "/tmp/lex"))
+        .await
+        .unwrap();
+
+    // Two files, three chunks; only one contains the rare term.
+    let mut file_ids = Vec::new();
+    for (path, chunks) in [
+        ("a.rs", vec!["fn alpha() {}", "fn beta() {}"]),
+        ("b.rs", vec!["fn handle_zephyr_shutdown() {}"]),
+    ] {
+        let file = FileRecord {
+            id: None,
+            project_id: "lex".to_string(),
+            relative_path: path.to_string(),
+            file_hash: "h".to_string(),
+            file_size: 10,
+            modified_at: "2024-01-01".to_string(),
+            chunk_count: chunks.len(),
+        };
+        let file_id = store.upsert_file(&file).await.unwrap();
+        file_ids.push(file_id);
+        for (i, content) in chunks.iter().enumerate() {
+            store
+                .insert_chunk(&ChunkRow {
+                    id: None,
+                    project_id: "lex".to_string(),
+                    file_id,
+                    chunk_index: i,
+                    content: content.to_string(),
+                    chunk_type: "code".to_string(),
+                    language: Some("rust".to_string()),
+                    start_line: 1,
+                    end_line: 1,
+                    metadata: serde_json::json!({}),
+                })
+                .await
+                .unwrap();
+        }
+    }
+
+    // Lexical match surfaces the chunk regardless of any vector window.
+    let hits = store.search_lexical("lex", "zephyr", 10).await.unwrap();
+    assert_eq!(hits.len(), 1);
+    assert_eq!(hits[0].file_path, "b.rs");
+    assert!(hits[0].content.contains("zephyr"));
+    assert!(hits[0].score > 0.0 && hits[0].score <= 1.0);
+
+    // Project scoping: no hits from another project.
+    store
+        .create_project(&make_test_project("other", "Other", "/tmp/other"))
+        .await
+        .unwrap();
+    let other_hits = store.search_lexical("other", "zephyr", 10).await.unwrap();
+    assert!(other_hits.is_empty());
+
+    // Trigger sync check: deleting the file's chunks removes them from FTS.
+    store.delete_file_chunks(file_ids[1]).await.unwrap();
+    let post_delete = store.search_lexical("lex", "zephyr", 10).await.unwrap();
+    assert!(post_delete.is_empty());
+}
+
+#[tokio::test]
+async fn test_search_lexical_safe_against_match_syntax() {
+    let store = test_store();
+    store
+        .create_project(&make_test_project("inj", "Inj", "/tmp/inj"))
+        .await
+        .unwrap();
+
+    // FTS5 syntax characters must not error out the query path.
+    let hits = store
+        .search_lexical("inj", "\" OR * (column: NEAR/", 10)
+        .await
+        .unwrap();
+    assert!(hits.is_empty());
+
+    // Whitespace-only query short-circuits.
+    let empty = store.search_lexical("inj", "   ", 10).await.unwrap();
+    assert!(empty.is_empty());
+}

@@ -67,3 +67,87 @@ pub(super) async fn search_similar(
 
     Ok(results)
 }
+
+/// Lexical (full-text) search over the *entire* project corpus via the
+/// `chunks_fts` FTS5 index — not just the vector top-k window (RAG R1).
+///
+/// Returned scores map SQLite's built-in BM25 rank (more-negative-is-better)
+/// into (0, 1]. Callers fuse these with vector scores; pure keyword matches
+/// the embedding model missed surface here.
+pub(super) async fn search_lexical(
+    store: &super::RagStore,
+    project_id: &str,
+    query: &str,
+    limit: usize,
+) -> RagResult<Vec<SearchResult>> {
+    let match_query = fts_query(query);
+    if match_query.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let conn = store.read_conn().await;
+    let sql = r#"
+        SELECT
+            c.id,
+            c.content,
+            c.chunk_type,
+            c.language,
+            c.start_line,
+            c.end_line,
+            c.metadata,
+            f.relative_path,
+            bm25(chunks_fts) AS rank
+        FROM chunks_fts
+        JOIN chunks c ON c.rowid = chunks_fts.rowid
+        JOIN files f ON f.id = c.file_id
+        WHERE chunks_fts MATCH ?1
+          AND c.project_id = ?2
+        ORDER BY rank
+        LIMIT ?3
+    "#;
+
+    let mut stmt = conn.prepare(sql)?;
+    let results: Vec<SearchResult> = stmt
+        .query_map(
+            rusqlite::params![match_query, project_id, limit as i64],
+            |row| {
+                let metadata_str: String = row.get(6)?;
+                let rank: f64 = row.get(8)?;
+                Ok(SearchResult {
+                    chunk_id: row.get(0)?,
+                    content: row.get(1)?,
+                    chunk_type: row.get(2)?,
+                    language: row.get(3)?,
+                    start_line: row.get::<_, i64>(4)? as usize,
+                    end_line: row.get::<_, i64>(5)? as usize,
+                    metadata: serde_json::from_str(&metadata_str).unwrap_or(serde_json::json!({})),
+                    file_path: row.get(7)?,
+                    score: 1.0 / (1.0 + rank.abs() as f32),
+                })
+            },
+        )?
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(results)
+}
+
+/// Build a safe FTS5 MATCH expression: one double-quoted term per whitespace
+/// word, OR'd together. Quoting each term neutralizes MATCH syntax chars.
+fn fts_query(query: &str) -> String {
+    query
+        .split_whitespace()
+        .map(|w| {
+            let cleaned: String = w
+                .chars()
+                .filter(|c| c.is_alphanumeric() || *c == '_')
+                .collect();
+            if cleaned.is_empty() {
+                String::new()
+            } else {
+                format!("\"{}\"", cleaned.replace('"', "\"\""))
+            }
+        })
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join(" OR ")
+}

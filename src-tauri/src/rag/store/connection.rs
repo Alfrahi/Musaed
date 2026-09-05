@@ -6,15 +6,17 @@ use std::path::Path;
 
 /// Highest schema version this build understands. Bump when adding a
 /// migration and append a matching `migrate_v*_to_v*` function.
-const LATEST_SCHEMA_VERSION: u32 = 2;
+const LATEST_SCHEMA_VERSION: u32 = 3;
 
 /// Default embedding vector dimension. Will be overridden per-project after
 /// the first embedding call detects the actual dimension.
 pub const DEFAULT_EMBEDDING_DIMENSION: usize = 768;
 
-/// Maximum embedding dimension supported by the vec_chunks virtual table.
-/// Shorter vectors are zero-padded to this length.
-pub(crate) const MAX_EMBEDDING_DIMENSION: usize = 4096;
+/// Dimension of the `vec_chunks` vector column. Shorter vectors are
+/// zero-padded, longer are truncated. 1024 covers the embedding models
+/// Musaed ships with (768-dim) without the ~4× storage bloat the old 4096
+/// cap imposed on every row (RAG P1).
+pub(crate) const MAX_EMBEDDING_DIMENSION: usize = 1024;
 
 pub(super) const SCHEMA_SQL: &str = r#"
 CREATE TABLE IF NOT EXISTS projects (
@@ -60,8 +62,32 @@ CREATE TABLE IF NOT EXISTS chunks (
 
 CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(
     chunk_id  INTEGER PRIMARY KEY,
-    embedding float[4096] distance_metric=cosine
+    embedding float[1024] distance_metric=cosine
 );
+
+-- Corpus-wide full-text index over chunk content, kept in sync by triggers.
+-- Powers the lexical leg of hybrid search so pure keyword matches can be
+-- rescued even when the embedding model ranks them poorly (RAG R1).
+CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
+    content,
+    content='chunks',
+    content_rowid='rowid'
+);
+
+CREATE TRIGGER IF NOT EXISTS chunks_fts_ai AFTER INSERT ON chunks BEGIN
+    INSERT INTO chunks_fts(rowid, content) VALUES (new.rowid, new.content);
+END;
+
+CREATE TRIGGER IF NOT EXISTS chunks_fts_ad AFTER DELETE ON chunks BEGIN
+    INSERT INTO chunks_fts(chunks_fts, rowid, content)
+    VALUES ('delete', old.rowid, old.content);
+END;
+
+CREATE TRIGGER IF NOT EXISTS chunks_fts_au AFTER UPDATE ON chunks BEGIN
+    INSERT INTO chunks_fts(chunks_fts, rowid, content)
+    VALUES ('delete', old.rowid, old.content);
+    INSERT INTO chunks_fts(rowid, content) VALUES (new.rowid, new.content);
+END;
 
 CREATE INDEX IF NOT EXISTS idx_chunks_project_id ON chunks(project_id);
 CREATE INDEX IF NOT EXISTS idx_chunks_file_id ON chunks(file_id);
@@ -186,6 +212,7 @@ pub(super) fn run_migrations(conn: &mut Connection) -> RagResult<()> {
         match current {
             0 => migrate_v0_to_v1(&tx)?,
             1 => migrate_v1_to_v2(&tx)?,
+            2 => migrate_v2_to_v3(&tx)?,
             v => {
                 return Err(RagError::Config(format!(
                     "No migration path from schema version {v} (latest is {LATEST_SCHEMA_VERSION})"
@@ -235,7 +262,7 @@ fn migrate_v1_to_v2(tx: &Transaction) -> RagResult<()> {
         "DROP TABLE IF EXISTS vec_chunks;
          CREATE VIRTUAL TABLE vec_chunks USING vec0(
              chunk_id  INTEGER PRIMARY KEY,
-             embedding float[4096] distance_metric=cosine
+             embedding float[1024] distance_metric=cosine
          );",
     )?;
 
@@ -245,6 +272,59 @@ fn migrate_v1_to_v2(tx: &Transaction) -> RagResult<()> {
     )?;
 
     tracing::info!("Migration v1→v2: vec_chunks rebuilt with cosine metric");
+    Ok(())
+}
+
+/// Migration v2 → v3: shrink `vec_chunks` to 1024 dimensions and add the
+/// corpus-wide `chunks_fts` full-text index.
+///
+/// The 4096-dim table padded every embedding ~4× (768-dim models stored 4 KB
+/// of zeros per row, RAG P1). Rebuilding drops stored embeddings — like the
+/// v1→v2 rebuild — so `chunk_count`/`indexed_at` reset and the next indexing
+/// pass re-populates. The FTS table is backfilled from existing chunk text
+/// so lexical search works immediately, even before reindexing.
+fn migrate_v2_to_v3(tx: &Transaction) -> RagResult<()> {
+    tracing::warn!(
+        "Migration v2→v3: rebuilding vec_chunks at 1024 dimensions and adding chunks_fts; existing embeddings will be lost"
+    );
+
+    tx.execute_batch(
+        "DROP TABLE IF EXISTS vec_chunks;
+         CREATE VIRTUAL TABLE vec_chunks USING vec0(
+             chunk_id  INTEGER PRIMARY KEY,
+             embedding float[1024] distance_metric=cosine
+         );",
+    )?;
+
+    tx.execute_batch(
+        "CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
+             content,
+             content='chunks',
+             content_rowid='rowid'
+         );
+         CREATE TRIGGER IF NOT EXISTS chunks_fts_ai AFTER INSERT ON chunks BEGIN
+             INSERT INTO chunks_fts(rowid, content) VALUES (new.rowid, new.content);
+         END;
+         CREATE TRIGGER IF NOT EXISTS chunks_fts_ad AFTER DELETE ON chunks BEGIN
+             INSERT INTO chunks_fts(chunks_fts, rowid, content)
+             VALUES ('delete', old.rowid, old.content);
+         END;
+         CREATE TRIGGER IF NOT EXISTS chunks_fts_au AFTER UPDATE ON chunks BEGIN
+             INSERT INTO chunks_fts(chunks_fts, rowid, content)
+             VALUES ('delete', old.rowid, old.content);
+             INSERT INTO chunks_fts(rowid, content) VALUES (new.rowid, new.content);
+         END;
+         INSERT INTO chunks_fts(chunks_fts) VALUES('rebuild');",
+    )?;
+
+    tx.execute(
+        "UPDATE projects SET chunk_count = 0, indexed_at = NULL WHERE 1",
+        [],
+    )?;
+
+    tracing::info!(
+        "Migration v2→v3: vec_chunks shrunk to 1024 dims, chunks_fts created and rebuilt"
+    );
     Ok(())
 }
 
@@ -316,6 +396,29 @@ mod tests {
                     total_bytes     INTEGER NOT NULL DEFAULT 0,
                     embedding_dimension INTEGER NOT NULL DEFAULT 0
                 );
+                CREATE TABLE IF NOT EXISTS files (
+                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                    project_id      TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                    relative_path   TEXT NOT NULL,
+                    file_hash       TEXT NOT NULL,
+                    file_size       INTEGER NOT NULL,
+                    modified_at     TEXT NOT NULL,
+                    chunk_count     INTEGER NOT NULL DEFAULT 0,
+                    UNIQUE(project_id, relative_path)
+                );
+                CREATE TABLE IF NOT EXISTS chunks (
+                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                    project_id      TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                    file_id         INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+                    chunk_index     INTEGER NOT NULL,
+                    content         TEXT NOT NULL,
+                    chunk_type      TEXT NOT NULL DEFAULT 'text',
+                    language        TEXT,
+                    start_line      INTEGER,
+                    end_line        INTEGER,
+                    metadata        TEXT DEFAULT '{}',
+                    UNIQUE(file_id, chunk_index)
+                );
                 CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(
                     chunk_id  INTEGER PRIMARY KEY,
                     embedding float[4096]
@@ -326,7 +429,7 @@ mod tests {
             // user_version defaults to 0 on a fresh DB
         }
 
-        // Run migrations — should reach version 2
+        // Run migrations — should reach the latest version
         let conn = open_connection(&db_path).unwrap();
         let version: u32 = conn
             .query_row("PRAGMA user_version", [], |row| row.get(0))
@@ -335,10 +438,108 @@ mod tests {
 
         // status column should now exist
         assert!(conn.prepare("SELECT status FROM projects LIMIT 0").is_ok());
-        // vec_chunks should have cosine metric (rebuild)
-        // We verify indirectly by checking the table exists and is queryable
+        // vec_chunks should have cosine metric (rebuilt at v2, shrunk at v3)
         assert!(conn
             .prepare("SELECT chunk_id, embedding FROM vec_chunks LIMIT 0")
             .is_ok());
+        // chunks_fts should exist and be backfilled from chunk content
+        assert!(conn
+            .prepare("SELECT rowid FROM chunks_fts WHERE chunks_fts MATCH '\"x\"' LIMIT 0")
+            .is_ok());
+    }
+
+    /// Old v2 database with a populated chunk must upgrade to v3: embeddings
+    /// are dropped (dimension shrink), project stats reset, and the new FTS
+    /// index is backfilled with the *existing* chunk text so lexical search
+    /// works before reindexing (RAG P1/R1 migration-proofness).
+    #[test]
+    fn migration_v2_to_v3_preserves_chunks_backfills_fts_drops_embeddings() {
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("rag.db");
+
+        // Hand-build a v2 database with one project/file/chunk and one
+        // 4096-dim embedding, as a pre-upgrade database would have.
+        {
+            load_vec_extension().unwrap();
+            let conn = Connection::open(&db_path).unwrap();
+            conn.execute_batch(PRAGMAS_SQL).unwrap();
+            conn.execute_batch(SCHEMA_SQL).unwrap();
+            // Force the old 4096-dim table (SCHEMA_SQL now creates 1024).
+            conn.execute_batch(
+                "DROP TABLE vec_chunks;
+                 CREATE VIRTUAL TABLE vec_chunks USING vec0(
+                     chunk_id  INTEGER PRIMARY KEY,
+                     embedding float[4096] distance_metric=cosine
+                 );",
+            )
+            .unwrap();
+            conn.execute_batch("PRAGMA user_version = 2").unwrap();
+
+            conn.execute(
+                "INSERT INTO projects (id, name, path, embedding_model, created_at, updated_at, chunk_count)
+                 VALUES ('p', 'P', '/x', 'm', 't', 't', 1)",
+                [],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO files (project_id, relative_path, file_hash, file_size, modified_at)
+                 VALUES ('p', 'a.rs', 'h', 1, 't')",
+                [],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO chunks (project_id, file_id, chunk_index, content)
+                 VALUES ('p', 1, 0, 'fn tokenize_query() {}')",
+                [],
+            )
+            .unwrap();
+            let chunk_id = conn.last_insert_rowid();
+            let embedding = vec![0.5f32; 4096];
+            let bytes: Vec<u8> = embedding.iter().flat_map(|f| f.to_le_bytes()).collect();
+            conn.execute(
+                "INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?1, ?2)",
+                rusqlite::params![chunk_id, bytes],
+            )
+            .unwrap();
+        }
+
+        let conn = open_connection(&db_path).unwrap();
+        let version: u32 = conn
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(version, LATEST_SCHEMA_VERSION);
+
+        // Chunk rows survived the upgrade.
+        let chunk_count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM chunks", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(chunk_count, 1);
+
+        // Embeddings were dropped with the 4096-dim table.
+        let vec_count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM vec_chunks", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(vec_count, 0);
+
+        // Project stats were reset so a reindex is forced.
+        let (chunk_stat, indexed_at): (i64, Option<String>) = conn
+            .query_row(
+                "SELECT chunk_count, indexed_at FROM projects WHERE id = 'p'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(chunk_stat, 0);
+        assert!(indexed_at.is_none());
+
+        // FTS backfilled from existing chunk text: lexical match works.
+        let fts_hits: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM chunks_fts WHERE chunks_fts MATCH '\"tokenize\"'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(fts_hits, 1);
     }
 }

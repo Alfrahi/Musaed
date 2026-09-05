@@ -60,10 +60,33 @@ impl RagSearchEngine {
         // Vector search in SQLite — brief read guard only for the vector
         // lookup; the BM25 rerank below runs on the owned candidate list
         // without holding the lock so the pool slot is released.
+        //
+        // Also pull corpus-wide lexical (FTS5) candidates under the same
+        // guard: pure keyword matches the embedding model ranked below the
+        // vector window are rescued into the hybrid pool here (RAG R1).
         let candidates = {
             let s = store.read().await;
-            s.search_similar(project_id, &query_embedding, top_k * 2, threshold)
-                .await?
+            let mut pool = s
+                .search_similar(project_id, &query_embedding, top_k * 2, threshold)
+                .await?;
+
+            match s.search_lexical(project_id, query, top_k * 2).await {
+                Ok(lexical) => {
+                    for hit in lexical {
+                        // Keep the strong vector score on overlap; lexical-only
+                        // candidates enter with score 0 so the BM25 leg
+                        // decides their hybrid placement.
+                        if !pool.iter().any(|c| c.chunk_id == hit.chunk_id) {
+                            pool.push(SearchResult { score: 0.0, ..hit });
+                        }
+                    }
+                }
+                Err(e) => {
+                    // Lexical leg is additive — vector-only search still works.
+                    tracing::warn!("RAG Search: lexical candidate lookup failed: {}", e);
+                }
+            }
+            pool
         };
 
         tracing::debug!("RAG Search: found {} vector candidates", candidates.len());

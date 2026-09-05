@@ -331,6 +331,16 @@ impl RagStore {
         search_similar(self, project_id, query_embedding, top_k, threshold).await
     }
 
+    /// Lexical full-text search over the whole project corpus (chunks_fts).
+    pub async fn search_lexical(
+        &self,
+        project_id: &str,
+        query: &str,
+        limit: usize,
+    ) -> RagResult<Vec<SearchResult>> {
+        search_lexical(self, project_id, query, limit).await
+    }
+
     // ====================== STATS ======================
 
     pub async fn get_project_stats(&self, project_id: &str) -> RagResult<ProjectStats> {
