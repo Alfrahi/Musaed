@@ -647,3 +647,139 @@ async fn test_migration_version_recorded() {
         version
     );
 }
+
+// ---------------------------------------------------------------------------
+// Testing §4 gap 3: persistence recovery.
+// ---------------------------------------------------------------------------
+
+/// Fresh store on a real temp file (not in-memory) so we can drop and reopen
+/// the same path across test phases.
+fn temp_db_path() -> (tempfile::TempDir, PathBuf) {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("conversations.db");
+    (dir, path)
+}
+
+#[tokio::test]
+async fn test_reopen_recover_data_after_clean_close() {
+    let (_dir, path) = temp_db_path();
+
+    {
+        let store = ConversationStore::new(&path).expect("open");
+        let conv = Conversation {
+            id: "keep-me".into(),
+            title: "Persist across restarts".into(),
+            model: "m".into(),
+            settings: ChatSettings::default(),
+            created_at: 1,
+            updated_at: 1,
+            messages: vec![],
+        };
+        store.create_conversation(&conv).expect("create");
+        store
+            .add_message(
+                "keep-me",
+                &Message {
+                    id: "msg-1".into(),
+                    role: "user".into(),
+                    content: "hello".into(),
+                    images: None,
+                    timestamp: 5,
+                    model: None,
+                    done: Some(true),
+                    request_id: None,
+                    eval_count: None,
+                    completion_tokens: None,
+                    prompt_eval_count: None,
+                    prompt_tokens: None,
+                    total_tokens: None,
+                    total_duration: None,
+                    eval_duration: None,
+                    rag_sources: None,
+                    error: None,
+                },
+            )
+            .expect("append");
+        // store dropped here (clean close)
+    }
+
+    let store = ConversationStore::new(&path).expect("reopen must succeed");
+    let conv = store
+        .get_conversation_with_messages("keep-me")
+        .expect("conversation survives reopen");
+    assert_eq!(conv.title, "Persist across restarts");
+    assert_eq!(conv.messages.len(), 1);
+    assert_eq!(conv.messages[0].content, "hello");
+}
+
+#[tokio::test]
+async fn test_reopen_on_corrupt_db_returns_clean_error_not_panic() {
+    let (_dir, path) = temp_db_path();
+
+    // Write garbage that is not a valid SQLite database header.
+    std::fs::write(&path, b"this is definitely not sqlite").expect("seed garbage");
+
+    // Opening must fail with an Err (clean error message), never panic.
+    let result = ConversationStore::new(&path);
+    assert!(result.is_err(), "corrupt DB must yield Err, got Ok");
+    let msg = result.err().unwrap_or_default();
+    assert!(
+        msg.contains("conversations") || msg.contains("database") || msg.contains("schema"),
+        "error should identify the failing layer, got: {msg}"
+    );
+}
+
+#[tokio::test]
+async fn test_reopen_on_truncated_db_never_panics() {
+    let (_dir, path) = temp_db_path();
+
+    // Create a valid DB with content, then truncate the file mid-way to
+    // simulate an interrupted write / crash.
+    {
+        let store = ConversationStore::new(&path).expect("open");
+        let conv = Conversation {
+            id: "will-lose".into(),
+            title: "data".into(),
+            model: "m".into(),
+            settings: ChatSettings::default(),
+            created_at: 1,
+            updated_at: 1,
+            messages: vec![],
+        };
+        store.create_conversation(&conv).expect("create");
+    }
+
+    // Truncate to a tiny prefix — guaranteed to break the SQLite header/page.
+    let f = std::fs::OpenOptions::new()
+        .write(true)
+        .open(&path)
+        .expect("open for truncate");
+    f.set_len(16).expect("truncate");
+
+    // Reopen must return Err (or succeed via clean recovery), but must never panic.
+    let result = ConversationStore::new(&path);
+    match result {
+        Ok(store) => {
+            // SQLite self-healed to an empty DB — list must work and return none.
+            let convs = store.list_conversations().expect("list after recovery");
+            assert!(convs.is_empty(), "recovered DB should start empty");
+        }
+        Err(e) => {
+            // Clean error is acceptable — panic/UB is not.
+            assert!(!e.is_empty());
+        }
+    }
+}
+
+/// Empty file (zero bytes) is a valid "fresh DB" — SQLite treats it as a new
+/// database and the schema is created. This is the cleanest recovery path and
+/// must succeed end-to-end.
+#[tokio::test]
+async fn test_reopen_on_zero_byte_db_treats_as_fresh() {
+    let (_dir, path) = temp_db_path();
+    std::fs::write(&path, b"").expect("write empty");
+
+    let store = ConversationStore::new(&path).expect("zero-byte DB must open as fresh");
+    let convs = store.list_conversations().expect("list on fresh DB");
+    assert!(convs.is_empty());
+}

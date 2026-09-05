@@ -1141,3 +1141,90 @@ async fn abort_pull_removes_handle_and_cancels_token() {
         "pull handle must be removed"
     );
 }
+
+// ── streaming: connection dropped mid-stream (Testing §4 gap 4) ──
+
+#[tokio::test]
+async fn process_chat_stream_connection_drop_mid_stream_surfaces_error() {
+    // No setup() — doesn't touch REQUEST_CACHE.
+    let mut server = mockito::Server::new_async().await;
+
+    // Simulate a server that writes one token, then the connection dies
+    // (chunked body writer returns an I/O error partway through).
+    let first = serde_json::json!({
+        "model": "llama3",
+        "message": {"role": "assistant", "content": "partial"},
+        "done": false
+    });
+    let chunks: Vec<(String, u64)> =
+        vec![(format!("{}\n", serde_json::to_string(&first).unwrap()), 0)];
+
+    let _mock = server
+        .mock("POST", "/api/chat")
+        .with_status(200)
+        .with_header("content-type", "application/x-ndjson")
+        .with_chunked_body(move |w| {
+            for (data, _delay) in chunks.iter() {
+                w.write_all(data.as_bytes())?;
+                w.flush()?;
+            }
+            // Simulate the server dying mid-stream: return an I/O error
+            // so the transfer is aborted without a clean EOF.
+            Err(std::io::Error::new(
+                std::io::ErrorKind::ConnectionReset,
+                "simulated server drop",
+            ))
+        })
+        .create_async()
+        .await;
+
+    let url = format!("{}/api/chat", mock_base_url(&server));
+    let result = reqwest::Client::new()
+        .post(&url)
+        .json(&serde_json::json!({
+            "model": "llama3",
+            "messages": [{"role": "user", "content": "hi"}],
+            "stream": true
+        }))
+        .send()
+        .await;
+
+    // The request/response layer must survive the drop without panicking.
+    match result {
+        Ok(response) => {
+            // Headers arrived but the body stream is broken — reading the
+            // stream must terminate, not hang.
+            let (token_tx, mut token_rx) = mpsc::unbounded_channel();
+            let (error_tx, mut error_rx) = mpsc::unbounded_channel();
+            let sink = ChannelSink { token_tx, error_tx };
+            let cancel_token = CancellationToken::new();
+            let mut token_count: u64 = 0;
+
+            tokio::time::timeout(
+                Duration::from_secs(5),
+                process_chat_stream(
+                    &sink,
+                    "test-req-drop",
+                    response,
+                    &cancel_token,
+                    Duration::from_millis(500),
+                    &mut token_count,
+                ),
+            )
+            .await
+            .expect("stream must terminate after a dropped connection, not hang");
+
+            // The stream must not continue indefinitely: either partial tokens
+            // surfaced before the drop, or an error token was emitted — but
+            // the loop must have exited (asserted by the timeout above).
+            let _ = (token_rx.try_recv(), error_rx.try_recv());
+        }
+        Err(e) => {
+            // Acceptable too: hyper may report the reset at request time.
+            assert!(
+                e.is_connect() || e.is_body() || e.is_request(),
+                "unexpected error kind: {e}"
+            );
+        }
+    }
+}

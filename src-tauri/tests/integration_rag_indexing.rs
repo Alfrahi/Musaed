@@ -770,3 +770,118 @@ async fn test_embedding_model_change_wipes_index() {
     let stats = s.get_project_stats(&proj_id).await.unwrap();
     assert_eq!(stats.chunk_count, 0);
 }
+
+// ==================== ERROR PATHS (Testing §4 gap 5) ====================
+
+#[tokio::test]
+async fn test_index_skips_non_utf8_file_and_succeeds() {
+    let tmp = TempDir::new().unwrap();
+    let path_str = tmp.path().to_str().unwrap().to_string();
+    let store = test_store(&tmp);
+    let proj_id = create_project(&store, "binary-mix", &path_str, "test-model", &[]).await;
+
+    // One valid text file + one binary (invalid UTF-8) file.
+    create_text_files(tmp.path(), 3, "ok");
+    std::fs::write(
+        tmp.path().join("blob.bin"),
+        [0xffu8, 0xfe, 0x00, 0xf0, 0x9f],
+    )
+    .expect("write binary");
+
+    let (server, _mock) = mock_embed_server(768).await;
+    let result = run_pipeline(
+        &store,
+        &proj_id,
+        &path_str,
+        "test-model",
+        &mock_url(&server),
+        false,
+        &[],
+        Arc::new(CancellationToken::new()),
+    )
+    .await;
+
+    assert!(
+        result.is_ok(),
+        "binary file must not fail indexing: {:?}",
+        result.err()
+    );
+    assert_eq!(project_status(&store, &proj_id).await, ProjectStatus::Ready);
+}
+
+#[tokio::test]
+async fn test_index_skips_oversized_file_and_succeeds() {
+    let tmp = TempDir::new().unwrap();
+    let path_str = tmp.path().to_str().unwrap().to_string();
+    let store = test_store(&tmp);
+    let proj_id = create_project(&store, "oversize-mix", &path_str, "test-model", &[]).await;
+
+    // One well-formed file + one file exceeding the 1 MiB skip threshold in
+    // ignore.rs (MAX_FILE_SIZE).
+    create_text_files(tmp.path(), 2, "ok");
+    let big = "x".repeat(2 * 1024 * 1024);
+    std::fs::write(tmp.path().join("huge.txt"), big).expect("write oversized");
+
+    let (server, _mock) = mock_embed_server(768).await;
+    let result = run_pipeline(
+        &store,
+        &proj_id,
+        &path_str,
+        "test-model",
+        &mock_url(&server),
+        false,
+        &[],
+        Arc::new(CancellationToken::new()),
+    )
+    .await;
+
+    assert!(
+        result.is_ok(),
+        "oversized file must not fail indexing: {:?}",
+        result.err()
+    );
+    assert_eq!(project_status(&store, &proj_id).await, ProjectStatus::Ready);
+
+    // Only the two small files were indexed; the >1 MiB file was skipped.
+    let s = store.read().await;
+    let files = s.get_project_files(&proj_id).await.unwrap();
+    assert_eq!(
+        files.len(),
+        2,
+        "expected 2 indexed files, got {:?}",
+        files.len()
+    );
+}
+
+#[tokio::test]
+async fn test_embed_server_http_500_marks_project_error() {
+    let tmp = TempDir::new().unwrap();
+    let path_str = tmp.path().to_str().unwrap().to_string();
+    let store = test_store(&tmp);
+    let proj_id = create_project(&store, "embed500", &path_str, "test-model", &[]).await;
+    create_text_files(tmp.path(), 2, "doc");
+
+    // /api/embed answers with HTTP 500 for every request.
+    let mut server = mockito::Server::new_async().await;
+    let _mock = server
+        .mock("POST", "/api/embed")
+        .with_status(500)
+        .with_body(r#"{"error":"model unavailable"}"#)
+        .create_async()
+        .await;
+
+    let result = run_pipeline(
+        &store,
+        &proj_id,
+        &path_str,
+        "test-model",
+        &mock_url(&server),
+        false,
+        &[],
+        Arc::new(CancellationToken::new()),
+    )
+    .await;
+
+    assert!(result.is_err(), "embed 500 must fail indexing");
+    assert_eq!(project_status(&store, &proj_id).await, ProjectStatus::Error);
+}
