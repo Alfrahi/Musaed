@@ -515,7 +515,7 @@ async fn process_pull_stream<R: Runtime>(
     let stream = response.bytes_stream();
     let mut lines = FramedRead::new(
         tokio_util::io::StreamReader::new(stream.map(|res| res.map_err(std::io::Error::other))),
-        LinesCodec::new(),
+        LinesCodec::new_with_max_length(1_048_576),
     );
 
     loop {

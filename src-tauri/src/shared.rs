@@ -60,6 +60,16 @@ pub static PULL_ABORT_HANDLES: LazyLock<DashMap<String, Arc<CancellationToken>>>
 pub static RAG_INDEX_ABORT_HANDLES: LazyLock<DashMap<String, Arc<CancellationToken>>> =
     LazyLock::new(DashMap::new);
 
+/// Removes abort-handle entries whose token is already cancelled. A cancelled
+/// token means the owning stream has finished or been aborted, so the handle
+/// is dead weight — sweeping it prevents a panicked/leaked stream from
+/// accumulating entries over a long session (Rust #6).
+pub fn sweep_stale_abort_handles() {
+    ABORT_HANDLES.retain(|_, token| !token.is_cancelled());
+    PULL_ABORT_HANDLES.retain(|_, token| !token.is_cancelled());
+    RAG_INDEX_ABORT_HANDLES.retain(|_, token| !token.is_cancelled());
+}
+
 /// Map of request_id -> Instant for deduplicating chat requests.
 pub static REQUEST_CACHE: LazyLock<DashMap<String, Instant>> = LazyLock::new(DashMap::new);
 
@@ -220,6 +230,10 @@ pub fn spawn_cache_eviction_task() {
                     REQUEST_CACHE_TTL_SECS,
                 );
             }
+
+            // Also sweep abort-handle registries for tokens whose owning
+            // stream has already finished/aborted (Rust #6).
+            sweep_stale_abort_handles();
         }
     });
 }
@@ -271,7 +285,12 @@ where
             }
         }
     }
-    unreachable!()
+    // Total return path for `RetryError`: reqwest::Error has no public
+    // constructor, so fall through to one final attempt and return its
+    // result. This branch is unreachable in practice — the loop above runs
+    // at least once and every iteration returns — but it keeps the function
+    // total without panicking if the loop semantics ever change.
+    f().await
 }
 
 // ====================== TEST UTILITIES ======================

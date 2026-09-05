@@ -65,49 +65,48 @@ pub(crate) fn sanitize_log_entry(entry: &str) -> String {
 
 /// Removes ANSI escape sequences from a string.
 /// Handles: SGR sequences (colors, bold, etc.), cursor movement, clear screen, etc.
+///
+/// Iterates over `char` boundaries so multi-byte UTF-8 (e.g. Arabic) is
+/// preserved intact — the previous byte-wise `bytes[i] as char` mangled every
+/// non-ASCII byte into a lone replacement character.
 fn strip_ansi_escapes(input: &str) -> String {
     let mut result = String::with_capacity(input.len());
-    let bytes = input.as_bytes();
-    let mut i = 0;
+    let mut chars = input.chars().peekable();
 
-    while i < bytes.len() {
-        // Check for CSI sequence: ESC [ ...
-        if bytes[i] == 0x1b && i + 1 < bytes.len() && bytes[i + 1] == b'[' {
-            // Find the end of the escape sequence: CSI ends with a byte in 0x40-0x7E
-            let mut j = i + 2;
-            while j < bytes.len() {
-                let b = bytes[j];
-                if (0x40..=0x7E).contains(&b) {
-                    j += 1;
-                    break;
+    while let Some(&c) = chars.peek() {
+        if c != '\u{1b}' {
+            result.push(c);
+            chars.next();
+            continue;
+        }
+        // ESC consumed; inspect the following chars.
+        chars.next();
+        match chars.peek() {
+            // CSI: ESC [ ... final byte 0x40-0x7E
+            Some('[') => {
+                chars.next();
+                for b in chars.by_ref() {
+                    if ('\u{40}'..='\u{7e}').contains(&b) {
+                        break;
+                    }
                 }
-                j += 1;
             }
-            i = j;
-        }
-        // Check for OSC sequence: ESC ] (operating system command)
-        else if bytes[i] == 0x1b && i + 1 < bytes.len() && bytes[i + 1] == b']' {
-            let mut j = i + 2;
-            // OSC sequences end with BEL (0x07) or ESC \
-            while j < bytes.len() {
-                if bytes[j] == 0x07
-                    || (bytes[j] == 0x1b && j + 1 < bytes.len() && bytes[j + 1] == b'\\')
-                {
-                    j += if bytes[j] == 0x07 { 1 } else { 2 };
-                    break;
+            // OSC: ESC ] ... BEL (0x07) or ESC \
+            Some(']') => {
+                chars.next();
+                let mut prev_esc = false;
+                for b in chars.by_ref() {
+                    if b == '\u{07}' || (prev_esc && b == '\\') {
+                        break;
+                    }
+                    prev_esc = b == '\u{1b}';
                 }
-                j += 1;
             }
-            i = j;
-        }
-        // Check for two-character escape sequence (ESC X)
-        else if bytes[i] == 0x1b && i + 1 < bytes.len() {
-            i += 2;
-        }
-        // Regular character
-        else {
-            result.push(bytes[i] as char);
-            i += 1;
+            // Two-character escape: ESC X
+            Some(_) => {
+                chars.next();
+            }
+            None => {}
         }
     }
 
@@ -197,5 +196,19 @@ mod tests {
     fn preserves_plain_ascii() {
         let sanitized = sanitize_log_entry("hello world");
         assert_eq!(sanitized, "hello world");
+    }
+
+    #[test]
+    fn preserves_non_ascii_utf8() {
+        // Arabic + emoji must survive byte-wise iteration intact.
+        let input = "مرحبا بالعالم 🎉";
+        assert_eq!(strip_ansi_escapes(input), input);
+        assert_eq!(sanitize_log_entry(input), input);
+    }
+
+    #[test]
+    fn strips_ansi_around_non_ascii() {
+        let input = "\x1b[31mمرحبا\x1b[0m";
+        assert_eq!(strip_ansi_escapes(input), "مرحبا");
     }
 }

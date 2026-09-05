@@ -7,7 +7,7 @@ use chrono;
 use log::LevelFilter;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::sync::OnceLock;
 use tauri::Manager;
@@ -16,6 +16,17 @@ use tracing::{self, Event, Subscriber};
 use tracing_subscriber::layer::Layer;
 
 static LOGGER: OnceLock<ChannelLogger> = OnceLock::new();
+
+/// Bounded channel capacity for log messages. When the writer thread falls
+/// behind, new messages are dropped rather than queued unboundedly — lossy
+/// logging must never OOM the app (Rust #14).
+const LOG_CHANNEL_CAPACITY: usize = 4096;
+
+/// Roll the log file once it exceeds this many bytes (5 MiB).
+const LOG_MAX_FILE_BYTES: u64 = 5 * 1024 * 1024;
+
+/// Number of rotated log files to retain (musaed.log, musaed.log.1, ...).
+const LOG_ROTATION_KEEP: usize = 3;
 
 /// Envelope for log messages sent through the channel.
 pub enum LogMsg {
@@ -49,12 +60,12 @@ impl Visit for Fields {
 
 /// A tracing layer that forwards events to the ChannelLogger's channel.
 pub struct TracingLayer {
-    tx: mpsc::Sender<LogMsg>,
+    tx: mpsc::SyncSender<LogMsg>,
 }
 
 impl TracingLayer {
     /// Create a new TracingLayer with a sender.
-    pub fn new(tx: mpsc::Sender<LogMsg>) -> Self {
+    pub fn new(tx: mpsc::SyncSender<LogMsg>) -> Self {
         Self { tx }
     }
 }
@@ -78,11 +89,11 @@ where
 }
 
 pub struct ChannelLogger {
-    tx: mpsc::Sender<LogMsg>,
+    tx: mpsc::SyncSender<LogMsg>,
 }
 
 impl ChannelLogger {
-    fn new(tx: mpsc::Sender<LogMsg>) -> Self {
+    fn new(tx: mpsc::SyncSender<LogMsg>) -> Self {
         Self { tx }
     }
 
@@ -130,21 +141,62 @@ impl log::Log for ChannelLogger {
     }
 }
 
+/// Rotates the log file: `musaed.log` → `musaed.log.1` → `musaed.log.2` …
+/// keeping at most [`LOG_ROTATION_KEEP`] backups. Returns a fresh append
+/// handle to the (now empty) primary log path.
+fn rotate_log_file(log_path: &Path) -> std::io::Result<std::fs::File> {
+    // Shift existing backups up by one, oldest first.
+    for i in (1..LOG_ROTATION_KEEP).rev() {
+        let from = log_path.with_extension(format!("log.{}", i));
+        let to = log_path.with_extension(format!("log.{}", i + 1));
+        if from.exists() {
+            let _ = std::fs::remove_file(&to);
+            let _ = std::fs::rename(&from, &to);
+        }
+    }
+    // Move the current file to .1, then reopen a fresh primary.
+    let backup = log_path.with_extension("log.1");
+    let _ = std::fs::remove_file(&backup);
+    if log_path.exists() {
+        let _ = std::fs::rename(log_path, &backup);
+    }
+    OpenOptions::new().create(true).append(true).open(log_path)
+}
+
 /// Background writer thread: owns the file handle, drains the channel, and
-/// flushes periodically to avoid per-write syscall overhead.
-fn writer_thread(mut file: std::fs::File, rx: mpsc::Receiver<LogMsg>) {
+/// flushes periodically to avoid per-write syscall overhead. Rolls the file
+/// once it exceeds [`LOG_MAX_FILE_BYTES`] so a single unbounded musaed.log
+/// can't fill the disk (Tauri F4).
+fn writer_thread(mut file: std::fs::File, log_path: PathBuf, rx: mpsc::Receiver<LogMsg>) {
     // Flush every N messages to amortize syscall cost.
     const FLUSH_INTERVAL: usize = 64;
     let mut unflushed: usize = 0;
+    let mut bytes_written: u64 = 0;
 
     for msg in rx.iter() {
         match msg {
             LogMsg::Line(line) => {
                 let _ = file.write_all(line.as_bytes());
+                bytes_written += line.len() as u64;
                 unflushed += 1;
                 if unflushed >= FLUSH_INTERVAL {
                     let _ = file.flush();
                     unflushed = 0;
+                }
+                if bytes_written >= LOG_MAX_FILE_BYTES {
+                    let _ = file.flush();
+                    match rotate_log_file(&log_path) {
+                        Ok(fresh) => {
+                            file = fresh;
+                            bytes_written = 0;
+                            unflushed = 0;
+                        }
+                        Err(e) => {
+                            // Rotation failed — keep writing to the current
+                            // handle rather than dropping logs entirely.
+                            tracing::warn!("Log rotation failed: {}", e);
+                        }
+                    }
                 }
             }
             LogMsg::Flush => {
@@ -171,7 +223,7 @@ pub fn get_log_path<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<Path
 /// This sender can be used to create a tracing layer.
 pub fn init_file_logger<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
-) -> Result<mpsc::Sender<LogMsg>, String> {
+) -> Result<mpsc::SyncSender<LogMsg>, String> {
     let log_path = get_log_path(app)?;
 
     let file = OpenOptions::new()
@@ -180,11 +232,12 @@ pub fn init_file_logger<R: tauri::Runtime>(
         .open(&log_path)
         .map_err(|e| format!("Failed to create log file: {}", e))?;
 
-    let (tx, rx) = mpsc::channel::<LogMsg>();
+    let (tx, rx) = mpsc::sync_channel::<LogMsg>(LOG_CHANNEL_CAPACITY);
+    let log_path_display = log_path.display().to_string();
 
     std::thread::Builder::new()
         .name("musaed-log-writer".into())
-        .spawn(move || writer_thread(file, rx))
+        .spawn(move || writer_thread(file, log_path, rx))
         .map_err(|e| format!("Failed to spawn log writer thread: {}", e))?;
 
     let logger = ChannelLogger::new(tx);
@@ -205,7 +258,7 @@ pub fn init_file_logger<R: tauri::Runtime>(
         log::set_max_level(LevelFilter::Info);
     }
 
-    log::info!("✅ File logger initialized at: {}", log_path.display());
+    log::info!("✅ File logger initialized at: {}", log_path_display);
 
     Ok(LOGGER.get().unwrap().tx.clone())
 }

@@ -130,6 +130,22 @@ impl RateLimiter {
             },
         );
 
+        limiter.set_command_config(
+            "cmd_logs_append",
+            RateLimitConfig {
+                max_requests: 20,
+                window_ms: 1000, // 20 log entries per second — log-flood guard
+            },
+        );
+
+        limiter.set_command_config(
+            "cmd_trace_append",
+            RateLimitConfig {
+                max_requests: 20,
+                window_ms: 1000, // 20 trace entries per second — log-flood guard
+            },
+        );
+
         limiter
     }
 

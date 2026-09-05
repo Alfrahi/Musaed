@@ -34,7 +34,14 @@ fn append_log_entry(entry: String) {
 
 /// Append a log entry from the frontend.
 #[tauri::command]
-pub async fn cmd_logs_append(entry: String) -> ApiResponse<()> {
+pub async fn cmd_logs_append(window: tauri::Window, entry: String) -> ApiResponse<()> {
+    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_logs_append") {
+        return ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        };
+    }
     if entry.len() > MAX_LOG_ENTRY_LEN {
         return validation_error(
             "INVALID_INPUT",
@@ -132,7 +139,14 @@ pub async fn cmd_logs_clear<R: tauri::Runtime>(
 
 /// Append a structured trace entry (frontend entry point).
 #[tauri::command]
-pub async fn cmd_trace_append(input: TraceEntryInput) -> ApiResponse<()> {
+pub async fn cmd_trace_append(window: tauri::Window, input: TraceEntryInput) -> ApiResponse<()> {
+    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_trace_append") {
+        return ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        };
+    }
     crate::logging::service::append(input).await
 }
 
