@@ -14,41 +14,13 @@
     "dialog:allow-save",
     "dialog:allow-message",
     {
-      "identifier": "fs:allow-read-file",
-      "allow": [
-        { "path": "$PICTURE/Musaed/**/*" },
-        { "path": "$DOCUMENT/Musaed/**/*" },
-        { "path": "$DESKTOP/Musaed/**/*" },
-        { "path": "$DOWNLOAD/Musaed/**/*" },
-        { "path": "$APP_DATA/musaed/**/*" }
-      ]
-    },
-    {
-      "identifier": "fs:allow-read-text-file",
-      "allow": [
-        { "path": "$APP_DATA/musaed/**/*" },
-        { "path": "$DOCUMENT/Musaed/**/*" },
-        { "path": "$DESKTOP/Musaed/**/*" },
-        { "path": "$DOWNLOAD/Musaed/**/*" }
-      ]
-    },
-    {
-      "identifier": "fs:allow-write-text-file",
-      "allow": [
-        { "path": "$APP_DATA/musaed/**/*" },
-        { "path": "$DOCUMENT/Musaed/**/*" },
-        { "path": "$DESKTOP/Musaed/**/*" },
-        { "path": "$DOWNLOAD/Musaed/**/*" }
-      ]
-    },
-    {
       "identifier": "opener:allow-open-url",
       "allow": [
         { "url": "https://github.com/alfrahi/musaed/**" },
         { "url": "https://github.com/Alfrahi/Musaed/**" },
         { "url": "https://ollama.com/**" },
         { "url": "https://ollama.ai/**" },
-        { "url": "mailto:*" }
+        { "url": "mailto:" }
       ]
     },
     "store:allow-load",

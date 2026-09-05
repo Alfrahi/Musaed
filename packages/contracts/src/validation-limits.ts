@@ -138,6 +138,9 @@ export const MAX_FILE_CHUNKS_QUERY = 100;
 /** Maximum length for a file path in chunk queries. */
 export const MAX_FILE_PATH_LEN = 4096;
 
+/** Maximum length for a single file write via `cmd_fs_write_text_file` (10 MiB). */
+export const MAX_FILE_WRITE_LEN = 10 * 1024 * 1024;
+
 /** Default maximum character budget for assembled RAG context. */
 export const MAX_RAG_CONTEXT_CHARS = 20_000;
 
@@ -192,5 +195,6 @@ export const RAG_VALIDATION_LIMITS = {
   MIN_THRESHOLD,
   MAX_FILE_CHUNKS_QUERY,
   MAX_FILE_PATH_LEN,
+  MAX_FILE_WRITE_LEN,
   MAX_RAG_CONTEXT_CHARS,
 } as const;

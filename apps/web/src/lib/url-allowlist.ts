@@ -51,7 +51,9 @@ export const OPENER_ALLOWED_PATTERNS: readonly RegExp[] = [
   /^https:\/\/github\.com\/[Aa]lfrahi\/[Mm]usaed(?:\/.+)?$/,
   /^https:\/\/ollama\.com(?:\/.+)?$/,
   /^https:\/\/ollama\.ai(?:\/.+)?$/,
-  /^mailto:/,
+  // Bare mailto only — matches the Rust allowlist `^mailto:/?$` in
+  // src-tauri/src/opener.rs. A mailto with a recipient is not opened.
+  /^mailto:\/?$/,
 ];
 
 /**

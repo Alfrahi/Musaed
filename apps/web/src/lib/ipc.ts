@@ -330,7 +330,7 @@ const CommandInputSchemas: {
   }),
   cmd_fs_write_text_file: z.object({
     path: z.string().min(1).max(MAX_FILE_PATH_LEN),
-    content: z.string(),
+    content: z.string().max(RAG_VALIDATION_LIMITS.MAX_FILE_WRITE_LEN),
   }),
 
   // RAG command input schemas

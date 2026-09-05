@@ -1,0 +1,7 @@
+[[permission]]
+identifier = "allow-migration-destructive-commands"
+description = "Destructive schema migration commands. Intentionally NOT referenced by any capability — the frontend never drives migrations, so these are registered for the ACL validator but unreachable from the webview."
+commands.allow = [
+    "cmd_run_migrations",
+    "cmd_rollback_migrations"
+]

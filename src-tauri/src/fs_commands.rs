@@ -95,7 +95,14 @@ fn io_failure<T>(action: &str, path: &str, err: std::io::Error) -> ApiResponse<T
 
 /// Authorization for read operations: grants plus the historical error
 /// surface (missing files report not-found, directories report not-a-file).
-fn require_granted_file(grants: &FsAccessGrants, raw: &str) -> Result<PathBuf, FsAccessError> {
+///
+/// Opens the `File` handle here so the subsequent read operates on the exact
+/// inode that was authorized — closing the TOCTOU window where the path is
+/// re-resolved between the grant check and `std::fs::read` (B3).
+fn require_granted_file(
+    grants: &FsAccessGrants,
+    raw: &str,
+) -> Result<std::fs::File, FsAccessError> {
     let resolved = authorize(grants, raw)?;
     if !resolved.exists() {
         return Err(FsAccessError::Unresolvable(raw.to_string()));
@@ -103,17 +110,19 @@ fn require_granted_file(grants: &FsAccessGrants, raw: &str) -> Result<PathBuf, F
     if !resolved.is_file() {
         return Err(FsAccessError::NotAFile(raw.to_string()));
     }
-    Ok(resolved)
+    std::fs::File::open(&resolved).map_err(|_| FsAccessError::Unresolvable(raw.to_string()))
 }
 
 fn read_text_file_impl(grants: &FsAccessGrants, path: &str) -> ApiResponse<String> {
-    let resolved = match require_granted_file(grants, path) {
-        Ok(p) => p,
+    let file = match require_granted_file(grants, path) {
+        Ok(f) => f,
         Err(e) => return failure(e),
     };
 
-    match std::fs::read_to_string(&resolved) {
-        Ok(content) => ApiResponse {
+    use std::io::Read;
+    let mut content = String::new();
+    match std::io::BufReader::new(file).read_to_string(&mut content) {
+        Ok(_) => ApiResponse {
             success: true,
             data: Some(content),
             error: None,
@@ -123,13 +132,15 @@ fn read_text_file_impl(grants: &FsAccessGrants, path: &str) -> ApiResponse<Strin
 }
 
 fn read_file_base64_impl(grants: &FsAccessGrants, path: &str) -> ApiResponse<String> {
-    let resolved = match require_granted_file(grants, path) {
-        Ok(p) => p,
+    let file = match require_granted_file(grants, path) {
+        Ok(f) => f,
         Err(e) => return failure(e),
     };
 
-    match std::fs::read(&resolved) {
-        Ok(bytes) => {
+    use std::io::Read;
+    let mut bytes = Vec::new();
+    match std::io::BufReader::new(file).read_to_end(&mut bytes) {
+        Ok(_) => {
             use base64::Engine;
             let encoded = base64::engine::general_purpose::STANDARD.encode(&bytes);
             ApiResponse {
@@ -143,6 +154,23 @@ fn read_file_base64_impl(grants: &FsAccessGrants, path: &str) -> ApiResponse<Str
 }
 
 fn write_text_file_impl(grants: &FsAccessGrants, path: &str, content: String) -> ApiResponse<bool> {
+    // Bound the write size before touching the filesystem (defense against a
+    // compromised frontend flooding disk).
+    if content.len() > crate::generated_validation::MAX_FILE_WRITE_LEN {
+        return ApiResponse {
+            success: false,
+            data: None,
+            error: Some(BackendError::new(
+                error_codes::FILE_SYSTEM_ERROR,
+                format!(
+                    "Write exceeds {} bytes (got {})",
+                    crate::generated_validation::MAX_FILE_WRITE_LEN,
+                    content.len()
+                ),
+            )),
+        };
+    }
+
     // Authorization precedes parent-directory creation so a denied write
     // never leaves directories behind.
     let resolved = match authorize(grants, path) {
@@ -156,7 +184,14 @@ fn write_text_file_impl(grants: &FsAccessGrants, path: &str, content: String) ->
         }
     }
 
-    match std::fs::write(&resolved, content) {
+    // Open the handle here and write through it — no second path resolution
+    // between the grant check and the write (B3).
+    use std::io::Write;
+    let file = match std::fs::File::create(&resolved) {
+        Ok(f) => f,
+        Err(e) => return io_failure("write file", path, e),
+    };
+    match std::io::BufWriter::new(file).write_all(content.as_bytes()) {
         Ok(()) => ApiResponse {
             success: true,
             data: Some(true),

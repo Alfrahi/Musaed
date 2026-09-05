@@ -1,9 +1,7 @@
 [[permission]]
 identifier = "allow-migration-commands"
-description = "Enables driving the SQLite schema migration framework from the frontend."
+description = "Enables read-only migration status inspection from the frontend. Destructive run/rollback commands are intentionally NOT exposed — the frontend never drives schema migrations."
 commands.allow = [
-    "cmd_run_migrations",
-    "cmd_rollback_migrations",
     "cmd_get_migration_status",
     "cmd_list_migrations"
 ]

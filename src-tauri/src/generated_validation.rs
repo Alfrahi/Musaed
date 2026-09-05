@@ -124,5 +124,8 @@ pub const MAX_FILE_CHUNKS_QUERY: usize = 100;
 /// Maximum length for a file path in chunk queries.
 pub const MAX_FILE_PATH_LEN: usize = 4096;
 
+/// Maximum length for a single file write via `cmd_fs_write_text_file` (10 MiB).
+pub const MAX_FILE_WRITE_LEN: usize = 10485760;
+
 /// Default maximum character budget for assembled RAG context.
 pub const MAX_RAG_CONTEXT_CHARS: usize = 20000;
