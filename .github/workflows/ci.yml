@@ -103,6 +103,9 @@ jobs:
       - name: Run unit tests
         run: pnpm test
 
+      - name: Run integration tests
+        run: pnpm --filter web test:integration
+
   # ── Job 3: Rust checks ─────────────────────────────────
   rust:
     name: Rust · Format · Clippy · Test

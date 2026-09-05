@@ -1,0 +1,11 @@
+# Code owners for high-trust / cross-cutting paths.
+# Order matters: the last matching pattern takes precedence.
+
+# Shared IPC contracts — changes ripple into both Rust and TypeScript.
+/packages/contracts/ @musaed/core
+
+# Rust backend (Tauri commands, persistence, RAG, migrations).
+/src-tauri/ @musaed/core
+
+# Architecture and compliance standards.
+/STANDARDS.md @musaed/core

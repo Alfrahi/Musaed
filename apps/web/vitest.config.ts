@@ -20,6 +20,15 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       exclude: ['node_modules/', 'src/tests/setup.ts'],
+      // Ratchet up as coverage improves. Baseline (2026-09): ~70% stmts,
+      // ~64% branch, ~63% funcs, ~72% lines. Thresholds sit below baseline to
+      // avoid flaky CI while still catching a wholesale coverage collapse.
+      thresholds: {
+        statements: 65,
+        branches: 55,
+        functions: 55,
+        lines: 65,
+      },
     },
   },
 });

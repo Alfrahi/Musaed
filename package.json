@@ -3,6 +3,10 @@
   "private": true,
   "packageManager": "pnpm@11.25.0",
   "license": "MIT",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=11"
+  },
   "scripts": {
     "dev": "tauri dev",
     "build": "tauri build",
@@ -25,6 +29,7 @@
     "validate:manifests:check": "node scripts/validate-manifests.mjs",
     "test:contracts": "node --test scripts/validate-contracts.test.mjs",
     "test:arch": "node --test scripts/dep-cruiser-guard.test.mjs",
+    "gate": "pnpm validate && pnpm validate:contracts --strict && pnpm validate:acl && pnpm codegen:validation:check && pnpm codegen:feature-deps:check && pnpm test && pnpm --filter web test:integration && cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check && cargo clippy --all-targets --all-features --manifest-path src-tauri/Cargo.toml -- -D warnings && cargo test --manifest-path src-tauri/Cargo.toml",
     "prepare": "husky"
   },
   "devDependencies": {
