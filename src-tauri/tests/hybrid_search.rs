@@ -578,3 +578,137 @@ async fn test_maj3_concurrent_reads_run_in_parallel() {
         parallel_cap,
     );
 }
+
+// ---------------------------------------------------------------------------
+// RAG P2: per-file batch store must be a single atomic transaction.
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_insert_chunks_with_embeddings_batch() {
+    let store = test_store();
+    store
+        .create_project(&make_test_project("batch", "Batch", "/tmp/batch"))
+        .await
+        .unwrap();
+
+    let file = FileRecord {
+        id: None,
+        project_id: "batch".to_string(),
+        relative_path: "src/lib.rs".to_string(),
+        file_hash: "hash".to_string(),
+        file_size: 42,
+        modified_at: "2024-01-01".to_string(),
+        chunk_count: 2,
+    };
+    let file_id = store.upsert_file(&file).await.unwrap();
+
+    let chunks: Vec<ChunkRow> = (0..2)
+        .map(|i| ChunkRow {
+            id: None,
+            project_id: "batch".to_string(),
+            file_id,
+            chunk_index: i,
+            content: format!("fn part_{i}() {{}}"),
+            chunk_type: "code".to_string(),
+            language: Some("rust".to_string()),
+            start_line: 1,
+            end_line: 2,
+            metadata: serde_json::json!({}),
+        })
+        .collect();
+
+    let mut e0 = vec![0.0f32; 768];
+    e0[0] = 1.0;
+    let mut e1 = vec![0.0f32; 768];
+    e1[1] = 1.0;
+    let embeddings = vec![e0, e1];
+
+    store
+        .insert_chunks_with_embeddings(&chunks, &embeddings)
+        .await
+        .unwrap();
+
+    let stored = store.get_file_chunks(file_id).await.unwrap();
+    assert_eq!(stored.len(), 2);
+    assert_eq!(stored[0].content, "fn part_0() {}");
+    assert_eq!(stored[1].content, "fn part_1() {}");
+
+    // Embeddings landed: searching for the first embedding returns part_0.
+    let mut query = vec![0.0f32; 768];
+    query[0] = 1.0;
+    let results = store
+        .search_similar("batch", &query, 10, 0.0)
+        .await
+        .unwrap();
+    assert!(!results.is_empty());
+    assert_eq!(results[0].content, "fn part_0() {}");
+}
+
+// ---------------------------------------------------------------------------
+// RAG R7: delete_project must not orphan vec_chunks rows.
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_delete_project_leaves_no_orphan_embeddings() {
+    let store = test_store();
+    for (pid, path) in [("victim", "/tmp/victim"), ("keeper", "/tmp/keeper")] {
+        store
+            .create_project(&make_test_project(pid, pid, path))
+            .await
+            .unwrap();
+        let file = FileRecord {
+            id: None,
+            project_id: pid.to_string(),
+            relative_path: "a.rs".to_string(),
+            file_hash: "h".to_string(),
+            file_size: 1,
+            modified_at: "2024-01-01".to_string(),
+            chunk_count: 1,
+        };
+        let file_id = store.upsert_file(&file).await.unwrap();
+        let chunk = ChunkRow {
+            id: None,
+            project_id: pid.to_string(),
+            file_id,
+            chunk_index: 0,
+            content: format!("fn {pid}() {{}}"),
+            chunk_type: "code".to_string(),
+            language: Some("rust".to_string()),
+            start_line: 1,
+            end_line: 1,
+            metadata: serde_json::json!({}),
+        };
+        let chunk_id = store.insert_chunk(&chunk).await.unwrap();
+        let mut embedding = vec![0.0f32; 768];
+        embedding[0] = 1.0;
+        store.insert_embedding(chunk_id, &embedding).await.unwrap();
+    }
+
+    store.delete_project("victim").await.unwrap();
+
+    // Zero orphan vec rows may remain: every vec_chunks row must belong to
+    // a chunk that still exists.
+    let orphans: i64 = {
+        let conn = store.read_conn().await;
+        conn.query_row(
+            "SELECT COUNT(*) FROM vec_chunks v WHERE NOT EXISTS \
+             (SELECT 1 FROM chunks c WHERE c.id = v.chunk_id)",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap()
+    };
+    assert_eq!(orphans, 0, "delete_project left orphan vec_chunks rows");
+
+    // The surviving project is intact.
+    let keeper_stats = store.get_project_stats("keeper").await.unwrap();
+    assert_eq!(keeper_stats.chunk_count, 1);
+    let mut query = vec![0.0f32; 768];
+    query[0] = 1.0;
+    let results = store
+        .search_similar("keeper", &query, 10, 0.0)
+        .await
+        .unwrap();
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].content, "fn keeper() {}");
+}

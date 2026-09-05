@@ -247,6 +247,26 @@ impl RagStore {
         insert_chunks_batch(self, chunks).await
     }
 
+    /// Inserts a file's chunks and optionally their embeddings in a single
+    /// transaction (atomic per-file store; RAG P2).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the sqlite-vec extension is not loaded and
+    /// `embeddings` is non-empty.
+    pub async fn insert_chunks_with_embeddings(
+        &self,
+        chunks: &[ChunkRow],
+        embeddings: &[Vec<f32>],
+    ) -> RagResult<()> {
+        if !embeddings.is_empty() && !self.rag_enabled {
+            return Err(RagError::VecDisabled(
+                "sqlite-vec extension not loaded".to_string(),
+            ));
+        }
+        insert_chunks_with_embeddings(self, chunks, embeddings).await
+    }
+
     pub async fn get_file_chunks(&self, file_id: i64) -> RagResult<Vec<ChunkRecord>> {
         get_file_chunks(self, file_id).await
     }

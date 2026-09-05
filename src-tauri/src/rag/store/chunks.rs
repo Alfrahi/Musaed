@@ -1,5 +1,6 @@
 //! Chunk CRUD operations.
 
+use super::connection::MAX_EMBEDDING_DIMENSION;
 use crate::rag::error::RagResult;
 use crate::rag::types::ChunkRow;
 use rusqlite::params;
@@ -47,6 +48,53 @@ pub(super) async fn insert_chunks_batch(
                 chunk.end_line as i64,
                 serde_json::to_string(&chunk.metadata)?,
             ])?;
+        }
+    }
+    tx.commit()?;
+    Ok(())
+}
+
+/// Insert a file's chunks and their embeddings in a single transaction.
+///
+/// `embeddings` aligns index-for-index with `chunks`; pass an empty slice to
+/// skip embedding writes. Chunk IDs come from `last_insert_rowid` inside the
+/// transaction, so a failure rolls back the whole file — no partial chunk
+/// state can be persisted (RAG P2, atomic per-file store).
+pub(super) async fn insert_chunks_with_embeddings(
+    store: &super::RagStore,
+    chunks: &[ChunkRow],
+    embeddings: &[Vec<f32>],
+) -> RagResult<()> {
+    let conn = store.write_conn().await;
+    let tx = conn.unchecked_transaction()?;
+    {
+        let mut chunk_stmt = tx.prepare(
+            "INSERT INTO chunks (project_id, file_id, chunk_index, content, chunk_type, language, start_line, end_line, metadata) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        )?;
+        let mut embed_stmt =
+            tx.prepare("INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?1, ?2)")?;
+
+        for (i, chunk) in chunks.iter().enumerate() {
+            chunk_stmt.execute(params![
+                chunk.project_id,
+                chunk.file_id,
+                chunk.chunk_index as i64,
+                chunk.content,
+                chunk.chunk_type,
+                chunk.language,
+                chunk.start_line as i64,
+                chunk.end_line as i64,
+                serde_json::to_string(&chunk.metadata)?,
+            ])?;
+
+            if let Some(embedding) = embeddings.get(i) {
+                let chunk_id = tx.last_insert_rowid();
+                let mut padded = vec![0.0f32; MAX_EMBEDDING_DIMENSION];
+                let copy_len = embedding.len().min(MAX_EMBEDDING_DIMENSION);
+                padded[..copy_len].copy_from_slice(&embedding[..copy_len]);
+                let bytes: Vec<u8> = padded.iter().flat_map(|f| f.to_le_bytes()).collect();
+                embed_stmt.execute(params![chunk_id, bytes])?;
+            }
         }
     }
     tx.commit()?;

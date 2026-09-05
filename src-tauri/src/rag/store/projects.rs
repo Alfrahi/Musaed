@@ -111,18 +111,23 @@ pub(super) async fn list_projects(store: &super::RagStore) -> RagResult<Vec<RagP
 }
 
 /// Delete a project and all its associated data.
+///
+/// Both statements run in a single transaction: `vec_chunks` has no foreign
+/// key, so an untransacted pair could leave orphan embeddings if the app
+/// dies between the two deletes (RAG R7).
 pub(super) async fn delete_project(store: &super::RagStore, id: &str) -> RagResult<()> {
     let conn = store.write_conn().await;
+    let tx = conn.unchecked_transaction()?;
 
-    // Delete embeddings using subquery
-    conn.execute(
+    tx.execute(
         "DELETE FROM vec_chunks WHERE chunk_id IN (SELECT id FROM chunks WHERE project_id = ?1)",
         rusqlite::params![id],
     )?;
 
     // CASCADE will handle chunks and files
-    conn.execute("DELETE FROM projects WHERE id = ?1", rusqlite::params![id])?;
+    tx.execute("DELETE FROM projects WHERE id = ?1", rusqlite::params![id])?;
 
+    tx.commit()?;
     Ok(())
 }
 

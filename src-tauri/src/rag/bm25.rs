@@ -97,12 +97,42 @@ impl BM25 {
 }
 
 /// Tokenize text into terms (words).
+///
+/// Identifier-aware: `camelCase` and `snake_case` identifiers contribute both
+/// their full lowercase form and their sub-tokens, so a query for
+/// "get user by id" matches a chunk containing `getUserById` (RAG R3).
 fn tokenize(text: &str) -> Vec<String> {
-    // Simple tokenization: split on non-alphanumeric characters
-    text.split(|c: char| !c.is_alphanumeric() && c != '_')
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_lowercase())
-        .collect()
+    let mut tokens = Vec::new();
+    for raw in text.split(|c: char| !c.is_alphanumeric() && c != '_') {
+        if raw.is_empty() {
+            continue;
+        }
+        let lower = raw.to_lowercase();
+        tokens.push(lower.clone());
+        let subtokens: Vec<String> = raw.split('_').flat_map(split_camel).collect();
+        // Add sub-tokens only when they carry information beyond the whole.
+        if subtokens.len() > 1 || subtokens.first().is_some_and(|s| *s != lower) {
+            tokens.extend(subtokens);
+        }
+    }
+    tokens
+}
+
+/// Split one `_`-free piece on lowercase→UPPERCASE boundaries, lowercased.
+fn split_camel(piece: &str) -> Vec<String> {
+    let chars: Vec<char> = piece.chars().collect();
+    let mut out = Vec::new();
+    let mut cur = String::new();
+    for (i, &c) in chars.iter().enumerate() {
+        if c.is_uppercase() && i > 0 && !chars[i - 1].is_uppercase() {
+            out.push(std::mem::take(&mut cur));
+        }
+        cur.extend(c.to_lowercase());
+    }
+    if !cur.is_empty() {
+        out.push(cur);
+    }
+    out
 }
 
 #[cfg(test)]
@@ -112,7 +142,38 @@ mod tests {
     #[test]
     fn test_tokenize() {
         let tokens = tokenize("hello world! rust_2023");
-        assert_eq!(tokens, vec!["hello", "world", "rust_2023"]);
+        assert_eq!(tokens, vec!["hello", "world", "rust_2023", "rust", "2023"]);
+    }
+
+    #[test]
+    fn test_tokenize_camel_case_identifier() {
+        let tokens = tokenize("getUserById");
+        assert_eq!(
+            tokens,
+            vec!["getuserbyid", "get", "user", "by", "id"],
+            "camelCase must contribute the full identifier plus sub-tokens"
+        );
+    }
+
+    #[test]
+    fn test_tokenize_plain_words_unchanged() {
+        // Plain lowercase words produce exactly one token (no duplication).
+        assert_eq!(tokenize("hello"), vec!["hello"]);
+    }
+
+    #[test]
+    fn test_identifier_query_matches_camel_doc() {
+        // The R3 acceptance case: query "get user by id" must match a
+        // document containing `getUserById`.
+        let documents = vec![
+            (1, "pub fn getUserById(id: i64)".to_string()),
+            (2, "fn login(username: &str)".to_string()),
+        ];
+        let bm25 = BM25::new(&documents);
+        let code_score = bm25.score("get user by id", 1);
+        let other_score = bm25.score("get user by id", 2);
+        assert!(code_score > 0.0);
+        assert!(code_score > other_score);
     }
 
     #[test]
@@ -129,8 +190,13 @@ mod tests {
 
     #[test]
     fn test_tokenize_mixed_case() {
+        // Case-folding still unifies plain words; `carelessCamel` shapes like
+        // `HeLLo` additionally contribute identifier sub-tokens.
         let tokens = tokenize("Hello HELLO hello HeLLo");
-        assert_eq!(tokens, vec!["hello", "hello", "hello", "hello"]);
+        assert_eq!(
+            tokens,
+            vec!["hello", "hello", "hello", "hello", "he", "llo"]
+        );
     }
 
     #[test]

@@ -16,7 +16,9 @@ use tracing;
 const DEFAULT_TOP_K: usize = 10;
 
 /// Default minimum cosine similarity threshold.
-const DEFAULT_THRESHOLD: f32 = 0.1;
+/// 0.1 let near-random chunks through; 0.3 keeps weak matches out of the
+/// assembled context so they stop eating the char budget (RAG R2).
+const DEFAULT_THRESHOLD: f32 = 0.3;
 
 /// Weight for vector similarity in hybrid scoring.
 const VECTOR_WEIGHT: f32 = 0.6;

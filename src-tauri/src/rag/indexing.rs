@@ -549,14 +549,13 @@ async fn phase_store<R: tauri::Runtime>(
             let file_id = s.upsert_file(&file_record).await?;
             let _ = s.delete_file_chunks(file_id).await;
 
-            for (chunk_idx, chunk) in chunks.iter().enumerate() {
-                // Check cancellation every 100 chunks so a very large file
-                // does not block the cancel token between file boundaries.
-                if chunk_idx > 0 && chunk_idx % 100 == 0 {
-                    ctx.check_cancelled()?;
-                }
-
-                let chunk_row = ChunkRow {
+            // Build all rows for this file, then persist chunks + embeddings
+            // in one transaction — a failure mid-file rolls back everything,
+            // so no partial file state can be observed (RAG P2).
+            let chunk_rows: Vec<ChunkRow> = chunks
+                .iter()
+                .enumerate()
+                .map(|(chunk_idx, chunk)| ChunkRow {
                     id: None,
                     project_id: ctx.project_id.to_string(),
                     file_id,
@@ -567,26 +566,31 @@ async fn phase_store<R: tauri::Runtime>(
                     start_line: chunk.start_line,
                     end_line: chunk.end_line,
                     metadata: chunk.metadata.clone(),
-                };
+                })
+                .collect();
 
-                let chunk_id = s.insert_chunk(&chunk_row).await?;
+            let end = (embedding_idx + chunks.len()).min(embedded.all_embeddings.len());
+            let embeddings: Vec<Vec<f32>> = if embedding_idx < end {
+                embedded.all_embeddings[embedding_idx..end].to_vec()
+            } else {
+                Vec::new()
+            };
+            embedding_idx += chunks.len();
 
-                if embedding_idx < embedded.all_embeddings.len() {
-                    s.insert_embedding(chunk_id, &embedded.all_embeddings[embedding_idx])
-                        .await?;
-                }
+            s.insert_chunks_with_embeddings(&chunk_rows, &embeddings)
+                .await?;
 
-                embedding_idx += 1;
-                total_stored += 1;
+            total_stored += chunks.len();
 
-                if total_stored.is_multiple_of(100) {
-                    ctx.emit(
-                        IndexPhase::StoringChunks,
-                        total_stored,
-                        chunked.total_chunks,
-                        format!("Stored {}/{} chunks", total_stored, chunked.total_chunks),
-                    );
-                }
+            if total_stored / 100 != (total_stored - chunks.len()) / 100
+                || total_stored == chunked.total_chunks
+            {
+                ctx.emit(
+                    IndexPhase::StoringChunks,
+                    total_stored,
+                    chunked.total_chunks,
+                    format!("Stored {}/{} chunks", total_stored, chunked.total_chunks),
+                );
             }
         }
     }
