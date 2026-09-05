@@ -153,15 +153,24 @@ const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
 
   const components = useMarkdownComponents(globalSettings.enableMermaid, handleLinkClick, t);
 
-  return (
-    <ReactMarkdown
-      remarkPlugins={remarkPlugins}
-      rehypePlugins={rehypePlugins}
-      components={components}
-    >
-      {content}
-    </ReactMarkdown>
+  // Memoize the parsed markdown element keyed on content + settings. When a
+  // finished message re-renders due to unrelated state churn (another message
+  // streaming, scroll, theme), unchanged content skips the full remark/rehype
+  // re-parse (React C3).
+  const rendered = useMemo(
+    () => (
+      <ReactMarkdown
+        remarkPlugins={remarkPlugins}
+        rehypePlugins={rehypePlugins}
+        components={components}
+      >
+        {content}
+      </ReactMarkdown>
+    ),
+    [content, remarkPlugins, rehypePlugins, components]
   );
+
+  return rendered;
 };
 
 export default React.memo(MarkdownRenderer);

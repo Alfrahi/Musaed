@@ -42,3 +42,16 @@ export function cn(...inputs: ClassValue[]) {
 export function fileNameFromPath(path: string): string {
   return path.split(/[/\\]/).pop() || path;
 }
+
+/**
+ * FNV-1a 32-bit content hash, returned as a hex string. Used to key render
+ * caches (Mermaid SVG, Markdown AST) so unchanged content skips re-render.
+ */
+export function contentHash(str: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = (hash * 0x01000193) >>> 0;
+  }
+  return hash.toString(16);
+}

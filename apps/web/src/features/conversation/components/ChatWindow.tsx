@@ -169,14 +169,22 @@ function useVirtualizedMessages(
     currentConversationId ? selectLiveContent(currentConversationId) : () => null
   );
 
-  const messages: Message[] = useMemo(() => {
-    if (!storedMessages || storedMessages.length === 0) return [];
-    if (!isStreaming || !liveContent) return storedMessages;
-    const lastIdx = storedMessages.length - 1;
-    return storedMessages.map((msg, i) =>
-      i === lastIdx ? { ...msg, content: msg.content + liveContent } : msg
-    );
-  }, [storedMessages, isStreaming, liveContent]);
+  // Keep the message array reference stable during streaming. Rebuilding the
+  // whole array via `.map` on every token produced a fresh object for every
+  // message, defeating `React.memo(MessageBubble)` and re-rendering the entire
+  // list per token (React C1). Instead we pass the stored array through
+  // unchanged and merge `liveContent` only for the last item at render time,
+  // so every bubble except the active one skips re-render.
+  const messages: Message[] = storedMessages ?? [];
+
+  // The last message's display content, merged with the live stream buffer.
+  // Only the active bubble depends on this; all others render from the stable
+  // `messages` array.
+  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : undefined;
+  const lastMessageContent = useMemo(() => {
+    if (!isStreaming || !liveContent || !lastMessage) return lastMessage?.content ?? '';
+    return lastMessage.content + liveContent;
+  }, [isStreaming, liveContent, lastMessage]);
 
   const lastMsgCount = messages.length;
 
@@ -219,6 +227,7 @@ function useVirtualizedMessages(
   return {
     virtuosoRef,
     messages,
+    lastMessageContent,
     showScrollButton,
     setShowScrollButton,
     scrollToBottom,
@@ -257,6 +266,7 @@ const ChatWindow = ({
   const {
     virtuosoRef,
     messages,
+    lastMessageContent,
     showScrollButton,
     setShowScrollButton,
     scrollToBottom,
@@ -300,19 +310,28 @@ const ChatWindow = ({
           isAtBottomRef.current = atBottom;
           setShowScrollButton(!atBottom);
         }}
-        itemContent={(index, msg) => (
-          <div className={cn(index === messages.length - 1 && 'pbe-32')}>
-            <MessageBubble
-              message={msg}
-              labels={messageLabels}
-              formatNumber={formatNumber}
-              onRegenerate={regenerateMessage}
-              onContinue={handleContinue}
-              onEditMessage={handleEditMessage}
-              onDeleteMessage={handleDeleteMessage}
-            />
-          </div>
-        )}
+        itemContent={(index, msg) => {
+          // Merge the live stream buffer into the last message only. Every
+          // other message renders from the stable stored object, so memoized
+          // bubbles skip re-render during streaming.
+          const displayMsg =
+            index === messages.length - 1 && lastMessageContent !== msg.content
+              ? { ...msg, content: lastMessageContent }
+              : msg;
+          return (
+            <div className={cn(index === messages.length - 1 && 'pbe-32')}>
+              <MessageBubble
+                message={displayMsg}
+                labels={messageLabels}
+                formatNumber={formatNumber}
+                onRegenerate={regenerateMessage}
+                onContinue={handleContinue}
+                onEditMessage={handleEditMessage}
+                onDeleteMessage={handleDeleteMessage}
+              />
+            </div>
+          );
+        }}
         followOutput="smooth"
       />
       <ScrollShadow visible={showScrollButton && messages.length > 0} />

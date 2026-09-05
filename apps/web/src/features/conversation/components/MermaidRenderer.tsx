@@ -15,17 +15,8 @@ import {
 } from '@/features/conversation/utils/mermaid-service';
 import { useSettingsStore, useGlobalSettings } from '@/store';
 import { useTranslation } from '@/lib/i18n';
+import { contentHash } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-
-/** Simple content hash for caching (FNV-1a 32-bit). */
-function contentHash(str: string): string {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) {
-    hash ^= str.charCodeAt(i);
-    hash = (hash * 0x01000193) >>> 0;
-  }
-  return hash.toString(16);
-}
 
 /** Per-session render cache: contentHash -> { svg, errorMessage }. */
 const renderCache = new Map<string, { svg: string; errorMessage: string | null }>();
@@ -198,7 +189,26 @@ const useMermaidRender = (
       initOnce(theme, isDark);
       const id = nextDiagramId();
       const processedContent = preprocessMermaidContent(mermaidContent);
-      const { svg: renderedSvg } = await mermaid.render(id, processedContent);
+
+      // Defer the heavy synchronous `mermaid.render` until the main thread is
+      // idle so a large diagram can't block streaming token rendering (React
+      // C3). `requestIdleCallback` yields between frames; the `setTimeout`
+      // fallback covers environments without it (SSR, older WebViews).
+      const renderedSvg = await new Promise<string>((resolve, reject) => {
+        const run = async () => {
+          try {
+            const { svg: out } = await mermaid.render(id, processedContent);
+            resolve(out);
+          } catch (e) {
+            reject(e);
+          }
+        };
+        if (typeof requestIdleCallback === 'function') {
+          requestIdleCallback(() => void run(), { timeout: 2000 });
+        } else {
+          void run();
+        }
+      });
 
       if (generation !== generationRef.current) return;
 
