@@ -46,6 +46,17 @@ export const MAX_TITLE_INPUT_LEN = 10 * 1024;
 /** Maximum length for a role string. */
 export const MAX_ROLE_LEN = 32;
 
+// ====================== STORE LIMITS ======================
+
+/** Maximum length for a store filename (key-value persistence layer). */
+export const MAX_STORE_FILENAME_LEN = 256;
+
+/** Maximum length for a store key. */
+export const MAX_STORE_KEY_LEN = 256;
+
+/** Maximum length for a serialized store value (1 MiB). */
+export const MAX_STORE_VALUE_LEN = 1024 * 1024;
+
 // ====================== STRUCTURED LOGGING LIMITS ======================
 
 /** Maximum length for a feature name in structured logging. */
@@ -147,6 +158,10 @@ export const VALIDATION_LIMITS = {
   MAX_LOG_CLEAR_TOKEN_LEN,
   MAX_TITLE_INPUT_LEN,
   MAX_ROLE_LEN,
+  // Key-value store
+  MAX_STORE_FILENAME_LEN,
+  MAX_STORE_KEY_LEN,
+  MAX_STORE_VALUE_LEN,
   // Structured logging
   MAX_FEATURE_NAME_LEN,
   MAX_ACTION_NAME_LEN,

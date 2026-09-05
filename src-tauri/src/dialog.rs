@@ -4,13 +4,37 @@ use serde::Deserialize;
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 
+/// Dialog kinds accepted by `cmd_dialog_ask`. Serde deserialization rejects
+/// unknown kinds at the IPC boundary — no silent coercion to a default kind
+/// (an "error" dialog must never silently degrade into an "info" dialog).
+///
+/// Mirrors `DialogKindSchema` in `packages/contracts/src/schemas/dialog.ts`.
+#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum DialogKind {
+    Info,
+    Warning,
+    Error,
+    Confirm,
+}
+
+impl DialogKind {
+    fn to_message_kind(self) -> tauri_plugin_dialog::MessageDialogKind {
+        match self {
+            DialogKind::Info | DialogKind::Confirm => tauri_plugin_dialog::MessageDialogKind::Info,
+            DialogKind::Warning => tauri_plugin_dialog::MessageDialogKind::Warning,
+            DialogKind::Error => tauri_plugin_dialog::MessageDialogKind::Error,
+        }
+    }
+}
+
 /// Shows a native confirmation dialog to the user and returns their response.
 ///
 /// # Arguments
 /// * `app` - Tauri app handle for accessing the dialog plugin
 /// * `title` - The dialog title
 /// * `message` - The dialog message
-/// * `kind` - Optional dialog kind ("alert", "confirm", "info", "warning", "error")
+/// * `kind` - Optional dialog kind (info|warning|error|confirm)
 ///
 /// # Returns
 /// `ApiResponse<bool>` - true if user confirmed, false if cancelled
@@ -19,16 +43,15 @@ pub async fn cmd_dialog_ask(
     app: AppHandle,
     title: String,
     message: String,
-    kind: Option<String>,
+    kind: Option<DialogKind>,
 ) -> ApiResponse<bool> {
-    // Map kind to dialog type — default to confirm for boolean response
-    let dialog_kind = kind.as_deref().unwrap_or("confirm");
+    let dialog_kind = kind.unwrap_or(DialogKind::Confirm);
 
     let confirmed = app
         .dialog()
         .message(message)
         .title(title)
-        .kind(to_dialog_kind(dialog_kind))
+        .kind(dialog_kind.to_message_kind())
         .buttons(MessageDialogButtons::OkCancel)
         .blocking_show();
 
@@ -36,16 +59,6 @@ pub async fn cmd_dialog_ask(
         success: true,
         data: Some(confirmed),
         error: None,
-    }
-}
-
-/// Maps string kind to tauri_plugin_dialog::MessageDialogKind
-fn to_dialog_kind(kind: &str) -> tauri_plugin_dialog::MessageDialogKind {
-    match kind {
-        "alert" | "info" => tauri_plugin_dialog::MessageDialogKind::Info,
-        "warning" => tauri_plugin_dialog::MessageDialogKind::Warning,
-        "error" => tauri_plugin_dialog::MessageDialogKind::Error,
-        _ => tauri_plugin_dialog::MessageDialogKind::Info,
     }
 }
 
@@ -205,43 +218,51 @@ mod tests {
     use crate::payloads::BackendError;
 
     #[test]
-    fn test_to_dialog_kind_info() {
+    fn test_dialog_kind_deserializes_known_kinds() {
         assert_eq!(
-            to_dialog_kind("info"),
-            tauri_plugin_dialog::MessageDialogKind::Info
+            serde_json::from_str::<DialogKind>("\"info\"").unwrap(),
+            DialogKind::Info
         );
         assert_eq!(
-            to_dialog_kind("alert"),
-            tauri_plugin_dialog::MessageDialogKind::Info
+            serde_json::from_str::<DialogKind>("\"warning\"").unwrap(),
+            DialogKind::Warning
+        );
+        assert_eq!(
+            serde_json::from_str::<DialogKind>("\"error\"").unwrap(),
+            DialogKind::Error
+        );
+        assert_eq!(
+            serde_json::from_str::<DialogKind>("\"confirm\"").unwrap(),
+            DialogKind::Confirm
         );
     }
 
     #[test]
-    fn test_to_dialog_kind_warning() {
+    fn test_dialog_kind_rejects_unknown_kinds() {
+        // Unknown kinds must fail deserialization — no coercion to Info.
+        assert!(serde_json::from_str::<DialogKind>("\"alert\"").is_err());
+        assert!(serde_json::from_str::<DialogKind>("\"unknown\"").is_err());
+        assert!(serde_json::from_str::<DialogKind>("\"INFO\"").is_err());
+        assert!(serde_json::from_str::<DialogKind>("42").is_err());
+    }
+
+    #[test]
+    fn test_dialog_kind_maps_to_message_kind() {
         assert_eq!(
-            to_dialog_kind("warning"),
+            DialogKind::Info.to_message_kind(),
+            tauri_plugin_dialog::MessageDialogKind::Info
+        );
+        assert_eq!(
+            DialogKind::Confirm.to_message_kind(),
+            tauri_plugin_dialog::MessageDialogKind::Info
+        );
+        assert_eq!(
+            DialogKind::Warning.to_message_kind(),
             tauri_plugin_dialog::MessageDialogKind::Warning
         );
-    }
-
-    #[test]
-    fn test_to_dialog_kind_error() {
         assert_eq!(
-            to_dialog_kind("error"),
+            DialogKind::Error.to_message_kind(),
             tauri_plugin_dialog::MessageDialogKind::Error
-        );
-    }
-
-    #[test]
-    fn test_to_dialog_kind_default_info() {
-        // Unknown or confirm types default to Info (no Question variant exists)
-        assert_eq!(
-            to_dialog_kind("confirm"),
-            tauri_plugin_dialog::MessageDialogKind::Info
-        );
-        assert_eq!(
-            to_dialog_kind("unknown"),
-            tauri_plugin_dialog::MessageDialogKind::Info
         );
     }
 

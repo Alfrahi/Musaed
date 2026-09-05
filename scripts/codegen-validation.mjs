@@ -171,6 +171,10 @@ const CHAT_CONSTS = [
   'MAX_LOG_CLEAR_TOKEN_LEN',
   'MAX_TITLE_INPUT_LEN',
   'MAX_ROLE_LEN',
+  // Key-value store
+  'MAX_STORE_FILENAME_LEN',
+  'MAX_STORE_KEY_LEN',
+  'MAX_STORE_VALUE_LEN',
   // Structured logging
   'MAX_FEATURE_NAME_LEN',
   'MAX_ACTION_NAME_LEN',

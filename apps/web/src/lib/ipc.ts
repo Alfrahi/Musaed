@@ -54,6 +54,9 @@ import {
   type MenuBarLabels,
   // Metrics contracts
   MetricsSnapshotSchema,
+  // Dialog contracts
+  DialogKindSchema,
+  type DialogKind,
 } from '@musaed/contracts';
 import toast from 'react-hot-toast';
 import { translate, getActiveLanguage } from '@/lib/i18n';
@@ -256,7 +259,7 @@ const CommandInputSchemas: {
   cmd_dialog_ask: z.object({
     title: z.string().min(1).max(VALIDATION_LIMITS.MAX_TITLE_INPUT_LEN),
     message: z.string().min(1).max(VALIDATION_LIMITS.MAX_MESSAGE_CONTENT_LEN),
-    kind: z.string().optional(),
+    kind: DialogKindSchema.optional(),
   }),
 
   // Opener command input schemas
@@ -291,15 +294,32 @@ const CommandInputSchemas: {
   }),
 
   // Store command input schemas
-  cmd_store_load: z.object({ file: z.string().min(1) }),
-  cmd_store_get: z.object({ file: z.string().min(1), key: z.string().min(1) }),
-  cmd_store_set: z.object({
-    file: z.string().min(1),
-    key: z.string().min(1),
-    value: z.unknown(),
+  cmd_store_load: z.object({
+    file: z.string().min(1).max(VALIDATION_LIMITS.MAX_STORE_FILENAME_LEN),
   }),
-  cmd_store_save: z.object({ file: z.string().min(1) }),
-  cmd_store_delete: z.object({ file: z.string().min(1), key: z.string().min(1) }),
+  cmd_store_get: z.object({
+    file: z.string().min(1).max(VALIDATION_LIMITS.MAX_STORE_FILENAME_LEN),
+    key: z.string().min(1).max(VALIDATION_LIMITS.MAX_STORE_KEY_LEN),
+  }),
+  cmd_store_set: z.object({
+    file: z.string().min(1).max(VALIDATION_LIMITS.MAX_STORE_FILENAME_LEN),
+    key: z.string().min(1).max(VALIDATION_LIMITS.MAX_STORE_KEY_LEN),
+    // Cap the serialized size of the value, not just its shape, so a
+    // compromised frontend can't flood the key-value store with huge blobs.
+    value: z
+      .unknown()
+      .refine(
+        (v) => JSON.stringify(v)?.length <= VALIDATION_LIMITS.MAX_STORE_VALUE_LEN,
+        `value exceeds ${VALIDATION_LIMITS.MAX_STORE_VALUE_LEN} bytes when serialized`
+      ),
+  }),
+  cmd_store_save: z.object({
+    file: z.string().min(1).max(VALIDATION_LIMITS.MAX_STORE_FILENAME_LEN),
+  }),
+  cmd_store_delete: z.object({
+    file: z.string().min(1).max(VALIDATION_LIMITS.MAX_STORE_FILENAME_LEN),
+    key: z.string().min(1).max(VALIDATION_LIMITS.MAX_STORE_KEY_LEN),
+  }),
 
   // Filesystem command input schemas
   cmd_fs_read_text_file: z.object({
@@ -931,7 +951,7 @@ export const dialogApi = {
    * @param kind - Optional dialog kind (e.g., 'info', 'warning', 'error')
    * @returns true if user confirmed, false if cancelled
    */
-  ask: (title: string, message: string, kind?: string) =>
+  ask: (title: string, message: string, kind?: DialogKind) =>
     callInternal('cmd_dialog_ask', { title, message, kind }),
 
   /**

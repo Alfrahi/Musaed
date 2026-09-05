@@ -33,6 +33,7 @@ import type {
 import type { Conversation, Message } from './types/conversation';
 import type { MessageSearchResult } from './schemas/conversation';
 import type { RunMigrationsResponse, MigrationStatus, MigrationInfo } from './migrations';
+import type { DialogKind } from './schemas/dialog';
 import type {
   ContextMenuKind,
   ContextMenuLabels,
@@ -232,7 +233,10 @@ export interface CommandMap {
   cmd_trace_get_context: { args: { traceId: string }; return: TraceContext };
 
   // Dialog commands
-  cmd_dialog_ask: { args: { title: string; message: string; kind?: string }; return: boolean };
+  cmd_dialog_ask: {
+    args: { title: string; message: string; kind?: DialogKind };
+    return: boolean;
+  };
 
   // Opener commands
   cmd_opener_open_url: { args: { url: string }; return: boolean };

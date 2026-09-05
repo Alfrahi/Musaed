@@ -158,6 +158,70 @@ pub fn validate_chat_message(msg: &crate::payloads::ChatMessage) -> Result<(), S
     Ok(())
 }
 
+// ====================== STORE FILENAME VALIDATION ======================
+
+/// Validates a store filename for the key-value persistence layer.
+///
+/// Rejects path separators, `..`, control characters, empty names, and
+/// overlong names so a webview cannot point the store plugin at files
+/// outside the app's data directory (e.g. `../../.ssh/authorized_keys`).
+pub fn validate_store_filename(file: &str) -> Result<(), String> {
+    if file.is_empty() {
+        return Err("store filename must not be empty".to_string());
+    }
+    if file.len() > MAX_STORE_FILENAME_LEN {
+        return Err(format!(
+            "store filename exceeds {} bytes (got {})",
+            MAX_STORE_FILENAME_LEN,
+            file.len()
+        ));
+    }
+    if file.contains("..") {
+        return Err("store filename must not contain '..'".to_string());
+    }
+    if file.contains('/') || file.contains('\\') {
+        return Err("store filename must not contain path separators".to_string());
+    }
+    if file.chars().any(char::is_control) {
+        return Err("store filename must not contain control characters".to_string());
+    }
+    Ok(())
+}
+
+/// Validates a store key used by the key-value layer.
+pub fn validate_store_key(key: &str) -> Result<(), String> {
+    if key.is_empty() {
+        return Err("store key must not be empty".to_string());
+    }
+    if key.len() > MAX_STORE_KEY_LEN {
+        return Err(format!(
+            "store key exceeds {} bytes (got {})",
+            MAX_STORE_KEY_LEN,
+            key.len()
+        ));
+    }
+    if key.chars().any(char::is_control) {
+        return Err("store key must not contain control characters".to_string());
+    }
+    Ok(())
+}
+
+/// Enforces the serialized-size cap on a store value (defense against a
+/// buggy/compromised frontend writing arbitrarily large blobs to disk).
+pub fn validate_store_value(value: &serde_json::Value) -> Result<(), String> {
+    let len = match serde_json::to_vec(value) {
+        Ok(bytes) => bytes.len(),
+        Err(e) => return Err(format!("store value is not serializable: {}", e)),
+    };
+    if len > MAX_STORE_VALUE_LEN {
+        return Err(format!(
+            "store value exceeds {} bytes (got {})",
+            MAX_STORE_VALUE_LEN, len
+        ));
+    }
+    Ok(())
+}
+
 // ====================== TESTS ======================
 
 #[cfg(test)]
@@ -428,5 +492,47 @@ mod tests {
         assert_eq!(MAX_STOP_SEQUENCE_LEN, 256);
         assert_eq!(VALID_ROLES, &["system", "user", "assistant"]);
         assert_eq!(VALID_LANGUAGES, &["en", "ar"]);
+        assert_eq!(MAX_STORE_FILENAME_LEN, 256);
+        assert_eq!(MAX_STORE_KEY_LEN, 256);
+        assert_eq!(MAX_STORE_VALUE_LEN, 1024 * 1024);
+    }
+
+    // --- store validation ---
+
+    #[test]
+    fn store_filename_rejects_path_traversal() {
+        assert!(validate_store_filename("../evil.json").is_err());
+        assert!(validate_store_filename("../../.ssh/config").is_err());
+        assert!(validate_store_filename("/abs/path.json").is_err());
+        assert!(validate_store_filename("a\\b.json").is_err());
+    }
+
+    #[test]
+    fn store_filename_rejects_control_and_empty_and_long() {
+        assert!(validate_store_filename("").is_err());
+        assert!(validate_store_filename("bad\u{1}.json").is_err());
+        assert!(validate_store_filename(&"x".repeat(MAX_STORE_FILENAME_LEN + 1)).is_err());
+    }
+
+    #[test]
+    fn store_filename_accepts_plain_names() {
+        assert!(validate_store_filename("settings.json").is_ok());
+        assert!(validate_store_filename("logs.backup.json").is_ok());
+    }
+
+    #[test]
+    fn store_key_rejects_empty_control_long() {
+        assert!(validate_store_key("").is_err());
+        assert!(validate_store_key("bad\u{7}key").is_err());
+        assert!(validate_store_key(&"k".repeat(MAX_STORE_KEY_LEN + 1)).is_err());
+        assert!(validate_store_key("preferences.theme").is_ok());
+    }
+
+    #[test]
+    fn store_value_over_limit_rejected() {
+        let big = serde_json::json!({ "blob": "x".repeat(MAX_STORE_VALUE_LEN) });
+        assert!(validate_store_value(&big).is_err());
+        let small = serde_json::json!({ "a": 1 });
+        assert!(validate_store_value(&small).is_ok());
     }
 }

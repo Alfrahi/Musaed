@@ -1,8 +1,29 @@
 use crate::error_codes;
 use crate::payloads::{ApiResponse, BackendError};
+use crate::validation::{
+    validate_store_filename, validate_store_key, validate_store_value, validation_error,
+};
 use serde_json::Value;
 use tauri::AppHandle;
 use tauri_plugin_store::StoreExt;
+
+fn store_failure<T>(action: &str, file: &str, err: impl std::fmt::Display) -> ApiResponse<T> {
+    ApiResponse {
+        success: false,
+        data: None,
+        error: Some(BackendError::new(
+            error_codes::FILE_SYSTEM_ERROR,
+            format!("Failed to {} store '{}': {}", action, file, err),
+        )),
+    }
+}
+
+/// Validates the shared `file` argument of all store commands.
+fn check_file(file: &str) -> Option<ApiResponse<bool>> {
+    validate_store_filename(file)
+        .err()
+        .map(|msg| validation_error(error_codes::INVALID_INPUT, format!("store file: {}", msg)))
+}
 
 /// Loads a store file and returns a session token (the filename).
 /// The store is managed by tauri-plugin-store; subsequent get/set/save/delete
@@ -16,76 +37,61 @@ use tauri_plugin_store::StoreExt;
 /// `ApiResponse<bool>` — true if the store was loaded successfully
 #[tauri::command]
 pub async fn cmd_store_load(app: AppHandle, file: String) -> ApiResponse<bool> {
-    match app.store(&file) {
-        Ok(_store) => ApiResponse {
+    if let Some(err) = check_file(&file) {
+        return err;
+    }
+    match tokio::task::spawn_blocking(move || {
+        app.store(&file).map(|_| ()).map_err(|e| e.to_string()) // registers with the plugin
+    })
+    .await
+    {
+        Ok(Ok(())) => ApiResponse {
             success: true,
             data: Some(true),
             error: None,
         },
-        Err(e) => ApiResponse {
-            success: false,
-            data: Some(false),
-            error: Some(BackendError::new(
-                error_codes::FILE_SYSTEM_ERROR,
-                format!("Failed to load store '{}': {}", file, e),
-            )),
-        },
+        Ok(Err(e)) => store_failure("load", "", e),
+        Err(join_err) => store_failure("spawn blocking task for", "store", join_err),
     }
 }
 
 /// Gets a value from a store by key.
-///
-/// # Arguments
-/// * `app` - Tauri app handle
-/// * `file` - Store filename
-/// * `key` - The key to retrieve
-///
-/// # Returns
-/// `ApiResponse<Option<Value>>` — the value if found, null otherwise
 #[tauri::command]
 pub async fn cmd_store_get(
     app: AppHandle,
     file: String,
     key: String,
 ) -> ApiResponse<Option<Value>> {
-    let store = match app.store(&file) {
-        Ok(s) => s,
-        Err(e) => {
-            return ApiResponse {
-                success: false,
-                data: None,
-                error: Some(BackendError::new(
-                    error_codes::FILE_SYSTEM_ERROR,
-                    format!("Failed to access store: {}", e),
-                )),
-            };
-        }
-    };
-
-    match store.get(&key) {
-        Some(value) => ApiResponse {
+    if let Some(err) = check_file(&file) {
+        return ApiResponse {
+            success: false,
+            data: None,
+            error: err.error,
+        };
+    }
+    if let Err(msg) = validate_store_key(&key) {
+        return validation_error(error_codes::INVALID_INPUT, format!("store key: {}", msg));
+    }
+    let res = tokio::task::spawn_blocking(move || -> Result<Option<Value>, String> {
+        let store = match app.store(&file) {
+            Ok(s) => s,
+            Err(e) => return Err(e.to_string()),
+        };
+        Ok(store.get(&key))
+    })
+    .await;
+    match res {
+        Ok(Ok(value)) => ApiResponse {
             success: true,
-            data: Some(Some(value.clone())),
+            data: Some(value),
             error: None,
         },
-        None => ApiResponse {
-            success: true,
-            data: Some(None),
-            error: None,
-        },
+        Ok(Err(e)) => store_failure("access", "", e),
+        Err(join_err) => store_failure("spawn blocking task for", "store", join_err),
     }
 }
 
 /// Sets a value in a store by key.
-///
-/// # Arguments
-/// * `app` - Tauri app handle
-/// * `file` - Store filename
-/// * `key` - The key to set
-/// * `value` - JSON value to store
-///
-/// # Returns
-/// `ApiResponse<bool>` — true if the value was set
 #[tauri::command]
 pub async fn cmd_store_set(
     app: AppHandle,
@@ -93,164 +99,75 @@ pub async fn cmd_store_set(
     key: String,
     value: Value,
 ) -> ApiResponse<bool> {
-    let store = match app.store(&file) {
-        Ok(s) => s,
-        Err(e) => {
-            return ApiResponse {
-                success: false,
-                data: Some(false),
-                error: Some(BackendError::new(
-                    error_codes::FILE_SYSTEM_ERROR,
-                    format!("Failed to access store: {}", e),
-                )),
-            };
-        }
-    };
-
-    store.set(&key, value);
-
-    ApiResponse {
-        success: true,
-        data: Some(true),
-        error: None,
+    if let Some(err) = check_file(&file) {
+        return err;
+    }
+    if let Err(msg) = validate_store_key(&key) {
+        return validation_error(error_codes::INVALID_INPUT, format!("store key: {}", msg));
+    }
+    if let Err(msg) = validate_store_value(&value) {
+        return validation_error(error_codes::INVALID_INPUT, format!("store value: {}", msg));
+    }
+    match tokio::task::spawn_blocking(move || -> Result<(), String> {
+        let store = app.store(&file).map_err(|e| e.to_string())?;
+        store.set(&key, value);
+        Ok(())
+    })
+    .await
+    {
+        Ok(Ok(())) => ApiResponse {
+            success: true,
+            data: Some(true),
+            error: None,
+        },
+        Ok(Err(e)) => store_failure("access", "", e),
+        Err(join_err) => store_failure("spawn blocking task for", "store", join_err),
     }
 }
 
 /// Saves a store to disk.
-///
-/// # Arguments
-/// * `app` - Tauri app handle
-/// * `file` - Store filename
-///
-/// # Returns
-/// `ApiResponse<bool>` — true if saved successfully
 #[tauri::command]
 pub async fn cmd_store_save(app: AppHandle, file: String) -> ApiResponse<bool> {
-    let store = match app.store(&file) {
-        Ok(s) => s,
-        Err(e) => {
-            return ApiResponse {
-                success: false,
-                data: Some(false),
-                error: Some(BackendError::new(
-                    error_codes::FILE_SYSTEM_ERROR,
-                    format!("Failed to access store: {}", e),
-                )),
-            };
-        }
-    };
-
-    match store.save() {
-        Ok(()) => ApiResponse {
+    if let Some(err) = check_file(&file) {
+        return err;
+    }
+    match tokio::task::spawn_blocking(move || -> Result<(), String> {
+        let store = app.store(&file).map_err(|e| e.to_string())?;
+        store.save().map_err(|e| e.to_string())
+    })
+    .await
+    {
+        Ok(Ok(())) => ApiResponse {
             success: true,
             data: Some(true),
             error: None,
         },
-        Err(e) => ApiResponse {
-            success: false,
-            data: Some(false),
-            error: Some(BackendError::new(
-                error_codes::FILE_SYSTEM_ERROR,
-                format!("Failed to save store: {}", e),
-            )),
-        },
+        Ok(Err(e)) => store_failure("save", "", e),
+        Err(join_err) => store_failure("spawn blocking task for", "store", join_err),
     }
 }
 
 /// Deletes a key from a store.
-///
-/// # Arguments
-/// * `app` - Tauri app handle
-/// * `file` - Store filename
-/// * `key` - The key to delete
-///
-/// # Returns
-/// `ApiResponse<bool>` — true if the key was deleted
 #[tauri::command]
 pub async fn cmd_store_delete(app: AppHandle, file: String, key: String) -> ApiResponse<bool> {
-    let store = match app.store(&file) {
-        Ok(s) => s,
-        Err(e) => {
-            return ApiResponse {
-                success: false,
-                data: Some(false),
-                error: Some(BackendError::new(
-                    error_codes::FILE_SYSTEM_ERROR,
-                    format!("Failed to access store: {}", e),
-                )),
-            };
-        }
-    };
-
-    let deleted = store.delete(&key);
-
-    ApiResponse {
-        success: true,
-        data: Some(deleted),
-        error: None,
+    if let Some(err) = check_file(&file) {
+        return err;
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::error_codes;
-
-    #[test]
-    fn test_store_load_error_response() {
-        let resp: ApiResponse<bool> = ApiResponse {
-            success: false,
-            data: Some(false),
-            error: Some(BackendError::new(
-                error_codes::FILE_SYSTEM_ERROR,
-                "Failed to load store 'test.json': not found",
-            )),
-        };
-        assert!(!resp.success);
-        assert_eq!(resp.data, Some(false));
-        assert!(resp.error.is_some());
+    if let Err(msg) = validate_store_key(&key) {
+        return validation_error(error_codes::INVALID_INPUT, format!("store key: {}", msg));
     }
-
-    #[test]
-    fn test_store_get_success_response() {
-        let resp: ApiResponse<Option<serde_json::Value>> = ApiResponse {
+    match tokio::task::spawn_blocking(move || -> Result<bool, String> {
+        let store = app.store(&file).map_err(|e| e.to_string())?;
+        Ok(store.delete(&key))
+    })
+    .await
+    {
+        Ok(Ok(deleted)) => ApiResponse {
             success: true,
-            data: Some(Some(serde_json::json!({"key": "value"}))),
+            data: Some(deleted),
             error: None,
-        };
-        assert!(resp.success);
-        assert!(resp.data.unwrap().is_some());
-    }
-
-    #[test]
-    fn test_store_set_success_response() {
-        let resp: ApiResponse<bool> = ApiResponse {
-            success: true,
-            data: Some(true),
-            error: None,
-        };
-        assert!(resp.success);
-        assert_eq!(resp.data, Some(true));
-    }
-
-    #[test]
-    fn test_store_save_success_response() {
-        let resp: ApiResponse<bool> = ApiResponse {
-            success: true,
-            data: Some(true),
-            error: None,
-        };
-        assert!(resp.success);
-    }
-
-    #[test]
-    fn test_store_delete_success_response() {
-        let resp: ApiResponse<bool> = ApiResponse {
-            success: true,
-            data: Some(true),
-            error: None,
-        };
-        assert!(resp.success);
-        assert_eq!(resp.data, Some(true));
+        },
+        Ok(Err(e)) => store_failure("access", "", e),
+        Err(join_err) => store_failure("spawn blocking task for", "store", join_err),
     }
 }
