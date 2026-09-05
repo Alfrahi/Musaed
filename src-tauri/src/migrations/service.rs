@@ -34,9 +34,14 @@ pub async fn run(
             }
         }
     };
-    let store = conversation_store.lock().await;
-    let mut conn = store.lock_conn().await;
-    match run_migrations(&mut conn, target, request.target_version) {
+    let res = tokio::task::spawn_blocking(move || {
+        let store = conversation_store.blocking_lock();
+        let mut conn = store.lock_conn();
+        run_migrations(&mut conn, target, request.target_version).map_err(|e| e.to_string())
+    })
+    .await
+    .unwrap_or_else(|e| Err(e.to_string()));
+    match res {
         Ok(result) => ApiResponse {
             success: result.success,
             data: Some(RunMigrationsResponse {
@@ -81,7 +86,7 @@ pub async fn rollback(
         }
     };
     let store = conversation_store.lock().await;
-    let mut conn = store.lock_conn().await;
+    let mut conn = store.lock_conn();
     match rollback_to_version(&mut conn, target, to_version) {
         Ok(result) => ApiResponse {
             success: result.success,
@@ -126,7 +131,7 @@ pub async fn status(
         }
     };
     let store = conversation_store.lock().await;
-    let conn_guard = store.lock_conn().await;
+    let conn_guard = store.lock_conn();
     match version_tracker::get_current_version(&conn_guard, target) {
         Ok(current_version) => {
             let latest_version = get_latest_version(target);

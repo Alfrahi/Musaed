@@ -2,7 +2,25 @@ use crate::conversation::connection::open_connection;
 use crate::conversation::models::{Conversation, Message, MessageError, MessageSearchResult};
 use rusqlite::{params, Connection, Result as SqlResult};
 use std::path::Path;
-use tokio::sync::Mutex;
+use std::sync::Mutex;
+
+/// Serialize a JSON column for writing; failure returns Err rather than
+/// persisting `{}`-shaped corruption that surfaces later as data loss.
+fn serde_json_column<T: serde::Serialize>(v: &T) -> Result<String, rusqlite::Error> {
+    serde_json::to_string(v).map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))
+}
+
+/// Deserialize a JSON column on read; logs the raw value before defaulting
+/// so corrupt data is diagnosable (never silently dropped).
+fn serde_read_json<T: serde::de::DeserializeOwned + Default>(column: &str, raw: String) -> T {
+    match serde_json::from_str(&raw) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::warn!(column, raw = %raw, error = %e, "corrupt JSON column; using default");
+            T::default()
+        }
+    }
+}
 
 /// Insert-or-replace a single message row. Shared by `add_message` and
 /// `add_message_batch` so the column list and upsert clause live in one place.
@@ -31,6 +49,18 @@ fn upsert_message(conn: &Connection, conversation_id: &str, msg: &Message) -> Sq
              rag_sources = excluded.rag_sources,
              error = excluded.error",
     )?;
+    let images_json = match &msg.images {
+        Some(v) => Some(serde_json_column(v)?),
+        None => None,
+    };
+    let rag_sources_json = match &msg.rag_sources {
+        Some(v) => Some(serde_json_column(v)?),
+        None => None,
+    };
+    let error_json = match &msg.error {
+        Some(v) => Some(serde_json_column(v)?),
+        None => None,
+    };
     stmt.execute(params![
         &msg.id,
         conversation_id,
@@ -40,9 +70,7 @@ fn upsert_message(conn: &Connection, conversation_id: &str, msg: &Message) -> Sq
         &msg.model,
         &msg.done,
         &msg.request_id,
-        &msg.images
-            .as_ref()
-            .map(|v| serde_json::to_string(v).unwrap_or_default()),
+        &images_json,
         &msg.eval_count,
         &msg.prompt_eval_count,
         &msg.completion_tokens,
@@ -50,12 +78,8 @@ fn upsert_message(conn: &Connection, conversation_id: &str, msg: &Message) -> Sq
         &msg.total_tokens,
         &msg.total_duration,
         &msg.eval_duration,
-        &msg.rag_sources
-            .as_ref()
-            .map(|v| serde_json::to_string(v).unwrap_or_default()),
-        &msg.error
-            .as_ref()
-            .map(|e| serde_json::to_string(e).unwrap_or_default()),
+        &rag_sources_json,
+        &error_json,
     ])?;
     Ok(())
 }
@@ -64,6 +88,48 @@ fn upsert_message(conn: &Connection, conversation_id: &str, msg: &Message) -> Sq
 /// queries fall back to the LIKE path — the scan is cheap enough at that
 /// length and 1–2 character searches keep working.
 const FTS_MIN_QUERY_LEN: usize = 3;
+
+/// Map a `messages` row (the canonical 17-column projection shared by every
+/// query below) to a `Message`. JSON columns go through [`serde_read_json`]
+/// so corrupt rows log the raw payload instead of silently defaulting.
+fn row_to_message(row: &rusqlite::Row<'_>) -> rusqlite::Result<Message> {
+    Ok(Message {
+        id: row.get(0)?,
+        role: row.get(1)?,
+        content: row.get(2)?,
+        timestamp: row.get(3)?,
+        model: row.get(4)?,
+        done: row.get(5)?,
+        request_id: row.get(6)?,
+        images: row
+            .get::<_, Option<String>>(7)?
+            .map(|s| serde_read_json("messages.images", s)),
+        eval_count: row.get(8)?,
+        prompt_eval_count: row.get(9)?,
+        completion_tokens: row.get(10)?,
+        prompt_tokens: row.get(11)?,
+        total_tokens: row.get(12)?,
+        total_duration: row.get(13)?,
+        eval_duration: row.get(14)?,
+        rag_sources: row
+            .get::<_, Option<String>>(15)?
+            .map(|s| serde_read_json("messages.rag_sources", s)),
+        error: row.get::<_, Option<String>>(16)?.and_then(|s| {
+            match serde_json::from_str::<MessageError>(&s) {
+                Ok(e) => Some(e),
+                Err(err) => {
+                    tracing::warn!(
+                        column = "messages.error",
+                        raw = %s,
+                        error = %err,
+                        "corrupt JSON column; using None"
+                    );
+                    None
+                }
+            }
+        }),
+    })
+}
 
 pub struct ConversationStore {
     conn: Mutex<Connection>,
@@ -78,12 +144,15 @@ impl ConversationStore {
         })
     }
 
-    pub async fn lock_conn(&self) -> tokio::sync::MutexGuard<'_, Connection> {
-        self.conn.lock().await
+    /// Synchronous connection access for callers that already hold the
+    /// store lock (e.g. migrations). Poisoned mutex is recovered rather than
+    /// panicking into the UI.
+    pub fn lock_conn(&self) -> std::sync::MutexGuard<'_, Connection> {
+        self.conn.lock().unwrap_or_else(|p| p.into_inner())
     }
 
-    pub async fn list_conversations(&self) -> SqlResult<Vec<Conversation>> {
-        let conn = self.lock_conn().await;
+    pub fn list_conversations(&self) -> SqlResult<Vec<Conversation>> {
+        let conn = self.lock_conn();
         let mut stmt = conn.prepare(
             "SELECT id, title, model, settings, created_at, updated_at FROM conversations \
              ORDER BY updated_at DESC",
@@ -94,7 +163,7 @@ impl ConversationStore {
                     id: row.get(0)?,
                     title: row.get(1)?,
                     model: row.get(2)?,
-                    settings: serde_json::from_str(&row.get::<_, String>(3)?).unwrap_or_default(),
+                    settings: serde_read_json("conversations.settings", row.get::<_, String>(3)?),
                     created_at: row.get(4)?,
                     updated_at: row.get(5)?,
                     messages: vec![],
@@ -105,8 +174,8 @@ impl ConversationStore {
         Ok(conversations)
     }
 
-    pub async fn get_conversation(&self, id: &str) -> SqlResult<Conversation> {
-        let conn = self.lock_conn().await;
+    pub fn get_conversation(&self, id: &str) -> SqlResult<Conversation> {
+        let conn = self.lock_conn();
         let mut stmt = conn.prepare(
             "SELECT id, title, model, settings, created_at, updated_at FROM conversations WHERE id = ?1",
         )?;
@@ -115,7 +184,7 @@ impl ConversationStore {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 model: row.get(2)?,
-                settings: serde_json::from_str(&row.get::<_, String>(3)?).unwrap_or_default(),
+                settings: serde_read_json("conversations.settings", row.get::<_, String>(3)?),
                 created_at: row.get(4)?,
                 updated_at: row.get(5)?,
                 messages: vec![],
@@ -123,8 +192,9 @@ impl ConversationStore {
         })
     }
 
-    pub async fn create_conversation(&self, conv: &Conversation) -> SqlResult<()> {
-        let conn = self.lock_conn().await;
+    pub fn create_conversation(&self, conv: &Conversation) -> SqlResult<()> {
+        let settings_json = serde_json_column(&conv.settings)?;
+        let conn = self.lock_conn();
         conn.execute(
             "INSERT INTO conversations (id, title, model, settings, created_at, updated_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
@@ -132,7 +202,7 @@ impl ConversationStore {
                 &conv.id,
                 &conv.title,
                 &conv.model,
-                &serde_json::to_string(&conv.settings).unwrap_or_default(),
+                &settings_json,
                 conv.created_at,
                 conv.updated_at,
             ],
@@ -140,8 +210,8 @@ impl ConversationStore {
         Ok(())
     }
 
-    pub async fn get_conversation_with_messages(&self, id: &str) -> SqlResult<Conversation> {
-        let conn = self.lock_conn().await;
+    pub fn get_conversation_with_messages(&self, id: &str) -> SqlResult<Conversation> {
+        let conn = self.lock_conn();
         let mut stmt = conn.prepare(
             "SELECT id, title, model, settings, created_at, updated_at FROM conversations WHERE id = ?1",
         )?;
@@ -150,7 +220,7 @@ impl ConversationStore {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 model: row.get(2)?,
-                settings: serde_json::from_str(&row.get::<_, String>(3)?).unwrap_or_default(),
+                settings: serde_read_json("conversations.settings", row.get::<_, String>(3)?),
                 created_at: row.get(4)?,
                 updated_at: row.get(5)?,
                 messages: vec![],
@@ -164,33 +234,7 @@ impl ConversationStore {
              FROM messages WHERE conversation_id = ?1 ORDER BY timestamp ASC",
         )?;
         let msgs = stmt_msg
-            .query_map(params![id], |row| {
-                Ok(Message {
-                    id: row.get(0)?,
-                    role: row.get(1)?,
-                    content: row.get(2)?,
-                    timestamp: row.get(3)?,
-                    model: row.get(4)?,
-                    done: row.get(5)?,
-                    request_id: row.get(6)?,
-                    images: row
-                        .get::<_, Option<String>>(7)?
-                        .map(|s| serde_json::from_str(&s).unwrap_or_default()),
-                    eval_count: row.get(8)?,
-                    prompt_eval_count: row.get(9)?,
-                    completion_tokens: row.get(10)?,
-                    prompt_tokens: row.get(11)?,
-                    total_tokens: row.get(12)?,
-                    total_duration: row.get(13)?,
-                    eval_duration: row.get(14)?,
-                    rag_sources: row
-                        .get::<_, Option<String>>(15)?
-                        .map(|s| serde_json::from_str(&s).unwrap_or_default()),
-                    error: row
-                        .get::<_, Option<String>>(16)?
-                        .and_then(|s| serde_json::from_str::<MessageError>(&s).ok()),
-                })
-            })?
+            .query_map(params![id], row_to_message)?
             .collect::<Result<Vec<_>, _>>()?;
 
         conv.messages = msgs;
@@ -206,9 +250,9 @@ impl ConversationStore {
     /// DELETEs bypass the cascade and statements are applied independently;
     /// the transaction makes the operation atomic. Mirrors the pattern used
     /// by `rag::store::files::delete_file`.
-    pub async fn delete_conversation(&self, id: &str) -> SqlResult<()> {
-        let conn = self.lock_conn().await;
-        let tx = conn.unchecked_transaction()?;
+    pub fn delete_conversation(&self, id: &str) -> SqlResult<()> {
+        let mut conn = self.lock_conn();
+        let tx = conn.transaction()?;
         tx.execute(
             "DELETE FROM messages WHERE conversation_id = ?1",
             params![id],
@@ -218,8 +262,8 @@ impl ConversationStore {
         Ok(())
     }
 
-    pub async fn delete_message(&self, conversation_id: &str, message_id: &str) -> SqlResult<()> {
-        let conn = self.lock_conn().await;
+    pub fn delete_message(&self, conversation_id: &str, message_id: &str) -> SqlResult<()> {
+        let conn = self.lock_conn();
         conn.execute(
             "DELETE FROM messages WHERE id = ?1 AND conversation_id = ?2",
             params![message_id, conversation_id],
@@ -232,22 +276,17 @@ impl ConversationStore {
     /// Wrapped in a transaction for the same reason as `delete_conversation`:
     /// a crash between the two DELETEs would otherwise leave the DB in a
     /// partial state (e.g. all messages gone but conversations remaining).
-    pub async fn clear_all_conversations(&self) -> SqlResult<()> {
-        let conn = self.lock_conn().await;
-        let tx = conn.unchecked_transaction()?;
+    pub fn clear_all_conversations(&self) -> SqlResult<()> {
+        let mut conn = self.lock_conn();
+        let tx = conn.transaction()?;
         tx.execute("DELETE FROM messages", params![])?;
         tx.execute("DELETE FROM conversations", params![])?;
         tx.commit()?;
         Ok(())
     }
 
-    pub async fn update_conversation(
-        &self,
-        id: &str,
-        title: &str,
-        updated_at: i64,
-    ) -> SqlResult<()> {
-        let conn = self.lock_conn().await;
+    pub fn update_conversation(&self, id: &str, title: &str, updated_at: i64) -> SqlResult<()> {
+        let conn = self.lock_conn();
         conn.execute(
             "UPDATE conversations SET title = ?1, updated_at = ?2 WHERE id = ?3",
             params![title, updated_at, id],
@@ -255,17 +294,17 @@ impl ConversationStore {
         Ok(())
     }
 
-    pub async fn add_message(&self, conversation_id: &str, msg: &Message) -> SqlResult<()> {
-        let conn = self.lock_conn().await;
+    pub fn add_message(&self, conversation_id: &str, msg: &Message) -> SqlResult<()> {
+        let conn = self.lock_conn();
         upsert_message(&conn, conversation_id, msg)
     }
 
     /// Upsert many messages in one transaction. Used by the write batcher so a
     /// burst of IPC appends costs one lock acquisition and one commit instead
     /// of one of each per message.
-    pub async fn add_message_batch(&self, items: &[(String, Message)]) -> SqlResult<()> {
-        let conn = self.lock_conn().await;
-        let tx = conn.unchecked_transaction()?;
+    pub fn add_message_batch(&self, items: &[(String, Message)]) -> SqlResult<()> {
+        let mut conn = self.lock_conn();
+        let tx = conn.transaction()?;
         for (conversation_id, msg) in items {
             upsert_message(&tx, conversation_id, msg)?;
         }
@@ -280,12 +319,12 @@ impl ConversationStore {
     /// in the query are escaped (with `\`) so they match literally rather than
     /// acting as SQL LIKE wildcards. The `\` escape character itself is also
     /// escaped. The pattern is then wrapped in `%...%` for substring matching.
-    pub async fn search_messages(
+    pub fn search_messages(
         &self,
         query: &str,
         limit: usize,
     ) -> SqlResult<Vec<MessageSearchResult>> {
-        let conn = self.lock_conn().await;
+        let conn = self.lock_conn();
         let limit_i64 = limit as i64;
 
         // Two paths with identical substring-match semantics:
@@ -339,31 +378,7 @@ impl ConversationStore {
         let results = stmt
             .query_map(params![pattern, limit_i64], |row| {
                 Ok(MessageSearchResult {
-                    message: Message {
-                        id: row.get(0)?,
-                        role: row.get(1)?,
-                        content: row.get(2)?,
-                        timestamp: row.get(3)?,
-                        model: row.get(4)?,
-                        done: row.get(5)?,
-                        request_id: row.get(6)?,
-                        images: row
-                            .get::<_, Option<String>>(7)?
-                            .map(|s| serde_json::from_str(&s).unwrap_or_default()),
-                        eval_count: row.get(8)?,
-                        prompt_eval_count: row.get(9)?,
-                        completion_tokens: row.get(10)?,
-                        prompt_tokens: row.get(11)?,
-                        total_tokens: row.get(12)?,
-                        total_duration: row.get(13)?,
-                        eval_duration: row.get(14)?,
-                        rag_sources: row
-                            .get::<_, Option<String>>(15)?
-                            .map(|s| serde_json::from_str(&s).unwrap_or_default()),
-                        error: row
-                            .get::<_, Option<String>>(16)?
-                            .and_then(|s| serde_json::from_str::<MessageError>(&s).ok()),
-                    },
+                    message: row_to_message(row)?,
                     conversation_id: row.get(17)?,
                     conversation_title: row.get(18)?,
                 })
@@ -405,7 +420,7 @@ mod tests {
             updated_at: timestamp,
             messages: vec![],
         };
-        store.create_conversation(&conv).await.unwrap();
+        store.create_conversation(&conv).unwrap();
         let msg = Message {
             id: msg_id.to_string(),
             role: role.to_string(),
@@ -425,7 +440,7 @@ mod tests {
             rag_sources: None,
             error: None,
         };
-        store.add_message(conv_id, &msg).await.unwrap();
+        store.add_message(conv_id, &msg).unwrap();
     }
 
     #[tokio::test]
@@ -452,7 +467,7 @@ mod tests {
         )
         .await;
 
-        let results = store.search_messages("France", 50).await.unwrap();
+        let results = store.search_messages("France", 50).unwrap();
         assert_eq!(results.len(), 2);
         // Ordered by timestamp DESC — most recent first.
         assert_eq!(results[0].message.id, "msg-2");
@@ -476,7 +491,7 @@ mod tests {
         )
         .await;
 
-        let results = store.search_messages("nonexistent term", 50).await.unwrap();
+        let results = store.search_messages("nonexistent term", 50).unwrap();
         assert!(results.is_empty());
     }
 
@@ -498,7 +513,7 @@ mod tests {
             .await;
         }
 
-        let results = store.search_messages("alpha", 3).await.unwrap();
+        let results = store.search_messages("alpha", 3).unwrap();
         assert_eq!(results.len(), 3);
         // Most recent 3 (timestamps 4000, 3000, 2000).
         assert_eq!(results[0].message.id, "msg-4");
@@ -521,7 +536,7 @@ mod tests {
         .await;
 
         // SQL LIKE is case-insensitive for ASCII by default.
-        let results = store.search_messages("quick brown", 50).await.unwrap();
+        let results = store.search_messages("quick brown", 50).unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].message.id, "msg-1");
     }
@@ -555,7 +570,7 @@ mod tests {
         // Searching for the literal "50%" should match ONLY the first message
         // — if `%` were not escaped, LIKE would treat it as a wildcard and
         // match any content containing "50" followed by anything.
-        let results = store.search_messages("50%", 50).await.unwrap();
+        let results = store.search_messages("50%", 50).unwrap();
         assert_eq!(results.len(), 1, "should match only the percent message");
         assert_eq!(results[0].message.id, "msg-1");
     }
@@ -588,7 +603,7 @@ mod tests {
         )
         .await;
 
-        let results = store.search_messages("my_var", 50).await.unwrap();
+        let results = store.search_messages("my_var", 50).unwrap();
         assert_eq!(results.len(), 1, "underscore should match literally");
         assert_eq!(results[0].message.id, "msg-1");
     }
@@ -609,7 +624,7 @@ mod tests {
         .await;
 
         // Searching for the literal backslash sequence should find it.
-        let results = store.search_messages("C:\\Users", 50).await.unwrap();
+        let results = store.search_messages("C:\\Users", 50).unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].message.id, "msg-1");
     }
@@ -649,14 +664,13 @@ mod tests {
             rag_sources: None,
             error: None,
         };
-        store.add_message("conv-1", &updated).await.unwrap();
+        store.add_message("conv-1", &updated).unwrap();
 
         assert!(store
             .search_messages("alpha content", 50)
-            .await
             .unwrap()
             .is_empty());
-        let hits = store.search_messages("zebra", 50).await.unwrap();
+        let hits = store.search_messages("zebra", 50).unwrap();
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].message.id, "msg-1");
     }
@@ -668,7 +682,7 @@ mod tests {
 
         // 2-char query is below the trigram minimum — must still match via
         // the LIKE fallback path.
-        let results = store.search_messages("ok", 50).await.unwrap();
+        let results = store.search_messages("ok", 50).unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].message.id, "msg-1");
     }
@@ -691,23 +705,20 @@ mod tests {
         .await;
         seed_message(&store, "conv-2", "Kept", "msg-2", "assistant", "hi", 2000).await;
 
-        store.delete_conversation("conv-1").await.unwrap();
+        store.delete_conversation("conv-1").unwrap();
 
         // The deleted conversation's row must be gone.
-        assert!(store.get_conversation("conv-1").await.is_err());
+        assert!(store.get_conversation("conv-1").is_err());
 
         // Its messages must be gone — search by an ID-only probe. We verify
         // via search_messages using a common substring: only conv-2's message
         // should remain.
-        let remaining = store.search_messages("hi", 50).await.unwrap();
+        let remaining = store.search_messages("hi", 50).unwrap();
         assert_eq!(remaining.len(), 1);
         assert_eq!(remaining[0].conversation_id, "conv-2");
 
         // The surviving conversation must still be fetched with its message.
-        let conv2 = store
-            .get_conversation_with_messages("conv-2")
-            .await
-            .unwrap();
+        let conv2 = store.get_conversation_with_messages("conv-2").unwrap();
         assert_eq!(conv2.messages.len(), 1);
         assert_eq!(conv2.messages[0].id, "msg-2");
     }
@@ -731,11 +742,11 @@ mod tests {
         )
         .await;
 
-        store.clear_all_conversations().await.unwrap();
+        store.clear_all_conversations().unwrap();
 
-        assert!(store.list_conversations().await.unwrap().is_empty());
+        assert!(store.list_conversations().unwrap().is_empty());
         // Any leftover messages would still match a substring search.
-        assert!(store.search_messages("alpha", 50).await.unwrap().is_empty());
-        assert!(store.search_messages("beta", 50).await.unwrap().is_empty());
+        assert!(store.search_messages("alpha", 50).unwrap().is_empty());
+        assert!(store.search_messages("beta", 50).unwrap().is_empty());
     }
 }

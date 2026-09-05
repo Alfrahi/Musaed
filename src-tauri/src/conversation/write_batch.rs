@@ -51,13 +51,17 @@ impl WriteBatcher {
                     .iter()
                     .map(|job| (job.conversation_id.clone(), job.message.clone()))
                     .collect();
-                let result = {
-                    let store = store.lock().await;
-                    store
-                        .add_message_batch(&items)
-                        .await
-                        .map_err(|e| e.to_string())
-                };
+                // Blocking-offloaded: sync SQL must never run on the Tokio
+                // runtime. The batcher task is a plain tokio task, so off-load
+                // each flush.
+                let store = store.clone();
+                let result = tokio::task::spawn_blocking(move || {
+                    let store = store.blocking_lock();
+                    store.add_message_batch(&items)
+                })
+                .await
+                .map_err(|e| e.to_string())
+                .and_then(|r| r.map_err(|e| e.to_string()));
                 for job in batch {
                     let _ = job.ack.send(result.clone());
                 }
@@ -137,7 +141,7 @@ mod tests {
         let store = make_store();
         {
             let guard = store.lock().await;
-            guard.create_conversation(&make_conv("c1")).await.unwrap();
+            guard.create_conversation(&make_conv("c1")).unwrap();
         }
         let batcher = WriteBatcher::spawn(store.clone());
 
@@ -156,7 +160,7 @@ mod tests {
 
         let conv = {
             let guard = store.lock().await;
-            guard.get_conversation_with_messages("c1").await.unwrap()
+            guard.get_conversation_with_messages("c1").unwrap()
         };
         assert_eq!(conv.messages.len(), 50);
     }
@@ -168,7 +172,7 @@ mod tests {
         let store = make_store();
         {
             let guard = store.lock().await;
-            guard.create_conversation(&make_conv("c1")).await.unwrap();
+            guard.create_conversation(&make_conv("c1")).unwrap();
         }
         let batcher = WriteBatcher::spawn(store.clone());
 
@@ -179,7 +183,7 @@ mod tests {
 
         let conv = {
             let guard = store.lock().await;
-            guard.get_conversation_with_messages("c1").await.unwrap()
+            guard.get_conversation_with_messages("c1").unwrap()
         };
         assert_eq!(conv.messages.len(), 1);
         assert_eq!(conv.messages[0].content, "hi");

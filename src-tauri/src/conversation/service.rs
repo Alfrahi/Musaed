@@ -16,13 +16,31 @@ fn backend_error_to_response<T>(code: &'static str, err: impl std::fmt::Display)
     }
 }
 
+/// All ConversationStore methods are now synchronous over a
+/// `std::sync::Mutex<Connection>`; run them on the blocking pool so the
+/// Tokio runtime is never stalled by SQLite I/O.
+async fn db_call<T, F>(f: F) -> Result<T, String>
+where
+    T: Send + 'static,
+    F: FnOnce() -> rusqlite::Result<T> + Send + 'static,
+{
+    match tokio::task::spawn_blocking(f).await {
+        Ok(r) => r.map_err(|e| e.to_string()),
+        Err(e) => Err(format!("blocking task join error: {}", e)),
+    }
+}
+
 /// List all conversations.
 pub async fn list_conversations(
     store: Arc<Mutex<ConversationStore>>,
 ) -> ApiResponse<Vec<Conversation>> {
     tracing::info!("Listing all conversations");
-    let guard = store.lock().await;
-    match guard.list_conversations().await {
+    match db_call(move || {
+        let guard = store.blocking_lock();
+        guard.list_conversations()
+    })
+    .await
+    {
         Ok(list) => {
             tracing::info!("Listed {} conversations", list.len());
             ApiResponse {
@@ -44,8 +62,13 @@ pub async fn get_conversation(
     id: String,
 ) -> ApiResponse<Conversation> {
     tracing::info!("Getting conversation: {}", id);
-    let guard = store.lock().await;
-    match guard.get_conversation_with_messages(&id).await {
+    let id2 = id.clone();
+    match db_call(move || {
+        let guard = store.blocking_lock();
+        guard.get_conversation_with_messages(&id2)
+    })
+    .await
+    {
         Ok(conv) => {
             tracing::info!("Retrieved conversation: {}", id);
             ApiResponse {
@@ -67,18 +90,23 @@ pub async fn create_conversation(
     conv: Conversation,
 ) -> ApiResponse<String> {
     tracing::info!("Creating conversation: {}", conv.id);
-    let guard = store.lock().await;
-    match guard.create_conversation(&conv).await {
+    let conv_id = conv.id.clone();
+    match db_call(move || {
+        let guard = store.blocking_lock();
+        guard.create_conversation(&conv)
+    })
+    .await
+    {
         Ok(_) => {
-            tracing::info!("Created conversation: {}", conv.id);
+            tracing::info!("Created conversation: {}", conv_id);
             ApiResponse {
                 success: true,
-                data: Some(conv.id.clone()),
+                data: Some(conv_id.clone()),
                 error: None,
             }
         }
         Err(e) => {
-            tracing::error!("Failed to create conversation {}: {}", conv.id, e);
+            tracing::error!("Failed to create conversation {}: {}", conv_id, e);
             backend_error_to_response(error_codes::CONVERSATION_CREATE_ERROR, e)
         }
     }
@@ -125,8 +153,13 @@ pub async fn delete_conversation(
     id: String,
 ) -> ApiResponse<()> {
     tracing::info!("Deleting conversation: {}", id);
-    let guard = store.lock().await;
-    match guard.delete_conversation(&id).await {
+    let id2 = id.clone();
+    match db_call(move || {
+        let guard = store.blocking_lock();
+        guard.delete_conversation(&id2)
+    })
+    .await
+    {
         Ok(_) => {
             tracing::info!("Deleted conversation: {}", id);
             ApiResponse {
@@ -153,9 +186,15 @@ pub async fn delete_message(
         message_id,
         conversation_id
     );
-    let guard = store.lock().await;
-    match guard.delete_message(&conversation_id, &message_id).await {
-        Ok(_) => {
+    let cid = conversation_id.clone();
+    let mid = message_id.clone();
+    match tokio::task::spawn_blocking(move || {
+        let guard = store.blocking_lock();
+        guard.delete_message(&cid, &mid).map_err(|e| e.to_string())
+    })
+    .await
+    {
+        Ok(Ok(_)) => {
             tracing::info!(
                 "Deleted message {} from conversation {}",
                 message_id,
@@ -176,14 +215,27 @@ pub async fn delete_message(
             );
             backend_error_to_response(error_codes::MESSAGE_DELETE_ERROR, e)
         }
+        Ok(Err(e)) => {
+            tracing::error!(
+                "Failed to delete message {} from conversation {}: {}",
+                message_id,
+                conversation_id,
+                e
+            );
+            backend_error_to_response(error_codes::MESSAGE_DELETE_ERROR, e)
+        }
     }
 }
 
 /// Clear all conversations.
 pub async fn clear_all_conversations(store: Arc<Mutex<ConversationStore>>) -> ApiResponse<()> {
     tracing::info!("Clearing all conversations");
-    let guard = store.lock().await;
-    match guard.clear_all_conversations().await {
+    match db_call(move || {
+        let guard = store.blocking_lock();
+        guard.clear_all_conversations()
+    })
+    .await
+    {
         Ok(_) => {
             tracing::info!("Cleared all conversations");
             ApiResponse {
@@ -207,8 +259,13 @@ pub async fn update_conversation(
     updated_at: i64,
 ) -> ApiResponse<()> {
     tracing::info!("Updating conversation {}: title={}", id, title);
-    let guard = store.lock().await;
-    match guard.update_conversation(&id, &title, updated_at).await {
+    let id2 = id.clone();
+    match db_call(move || {
+        let guard = store.blocking_lock();
+        guard.update_conversation(&id2, &title, updated_at)
+    })
+    .await
+    {
         Ok(_) => {
             tracing::info!("Updated conversation: {}", id);
             ApiResponse {
@@ -231,8 +288,12 @@ pub async fn search_messages(
     limit: usize,
 ) -> ApiResponse<Vec<MessageSearchResult>> {
     tracing::info!("Searching messages: query={}, limit={}", query, limit);
-    let guard = store.lock().await;
-    match guard.search_messages(&query, limit).await {
+    match db_call(move || {
+        let guard = store.blocking_lock();
+        guard.search_messages(&query, limit)
+    })
+    .await
+    {
         Ok(results) => {
             tracing::info!("Message search returned {} results", results.len());
             ApiResponse {
@@ -277,7 +338,7 @@ mod tests {
             updated_at: ts,
             messages: vec![],
         };
-        store.create_conversation(&conv).await.unwrap();
+        store.create_conversation(&conv).unwrap();
         let msg = Message {
             id: msg_id.to_string(),
             role: role.to_string(),
@@ -297,7 +358,7 @@ mod tests {
             rag_sources: None,
             error: None,
         };
-        store.add_message(conv_id, &msg).await.unwrap();
+        store.add_message(conv_id, &msg).unwrap();
         Arc::new(Mutex::new(store))
     }
 

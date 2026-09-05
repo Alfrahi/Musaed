@@ -30,11 +30,8 @@ async fn test_create_and_fetch_conversation() {
         updated_at: 0,
         messages: vec![],
     };
-    store
-        .create_conversation(&conv)
-        .await
-        .expect("Create failed");
-    let fetched = store.get_conversation("test1").await.expect("Fetch failed");
+    store.create_conversation(&conv).expect("Create failed");
+    let fetched = store.get_conversation("test1").expect("Fetch failed");
     assert_eq!(fetched.id, conv.id);
     assert_eq!(fetched.title, conv.title);
 }
@@ -51,7 +48,7 @@ async fn test_append_message() {
         updated_at: 0,
         messages: vec![],
     };
-    store.create_conversation(&conv).await.unwrap();
+    store.create_conversation(&conv).unwrap();
     let msg = Message {
         id: "m1".into(),
         role: "user".into(),
@@ -71,13 +68,9 @@ async fn test_append_message() {
         rag_sources: None,
         error: None,
     };
-    store
-        .add_message(&conv.id, &msg)
-        .await
-        .expect("Append failed");
+    store.add_message(&conv.id, &msg).expect("Append failed");
     let conv_with_msgs = store
         .get_conversation_with_messages(&conv.id)
-        .await
         .expect("Fetch with msgs");
     assert_eq!(conv_with_msgs.messages.len(), 1);
     assert_eq!(conv_with_msgs.messages[0].content, "Hello");
@@ -95,12 +88,9 @@ async fn test_delete_conversation() {
         updated_at: 0,
         messages: vec![],
     };
-    store.create_conversation(&conv).await.unwrap();
-    store
-        .delete_conversation(&conv.id)
-        .await
-        .expect("Delete failed");
-    let res = store.get_conversation(&conv.id).await;
+    store.create_conversation(&conv).unwrap();
+    store.delete_conversation(&conv.id).expect("Delete failed");
+    let res = store.get_conversation(&conv.id);
     assert!(res.is_err(), "Conversation should be gone");
 }
 
@@ -128,10 +118,10 @@ async fn test_list_conversations() {
         messages: vec![],
     };
 
-    store.create_conversation(&conv1).await.unwrap();
-    store.create_conversation(&conv2).await.unwrap();
+    store.create_conversation(&conv1).unwrap();
+    store.create_conversation(&conv2).unwrap();
 
-    let list = store.list_conversations().await.expect("List failed");
+    let list = store.list_conversations().expect("List failed");
     assert_eq!(list.len(), 2);
     assert!(list.iter().any(|c| c.id == "list1"));
     assert!(list.iter().any(|c| c.id == "list2"));
@@ -167,10 +157,10 @@ async fn test_list_conversations_orders_by_updated_at_desc() {
     // Insert older first; newer second. updated_at differs (newer > older).
     // Without ORDER BY, SQLite would return them in rowid/insertion order
     // (older, newer) and the frontend would pick `older` as active.
-    store.create_conversation(&older).await.unwrap();
-    store.create_conversation(&newer).await.unwrap();
+    store.create_conversation(&older).unwrap();
+    store.create_conversation(&newer).unwrap();
 
-    let list = store.list_conversations().await.expect("List failed");
+    let list = store.list_conversations().expect("List failed");
     assert_eq!(list.len(), 2);
     // Most recently updated first.
     assert_eq!(list[0].id, "newer");
@@ -203,20 +193,19 @@ async fn test_list_conversations_orders_by_updated_at_desc_after_update() {
         updated_at: 2000,
         messages: vec![],
     };
-    store.create_conversation(&first).await.unwrap();
-    store.create_conversation(&second).await.unwrap();
+    store.create_conversation(&first).unwrap();
+    store.create_conversation(&second).unwrap();
 
     // Before update — second is the most recently updated.
-    let list = store.list_conversations().await.unwrap();
+    let list = store.list_conversations().unwrap();
     assert_eq!(list[0].id, "second");
 
     // Update first to have the newest updated_at.
     store
         .update_conversation(&first.id, "First bumped", 3000)
-        .await
         .unwrap();
 
-    let list = store.list_conversations().await.unwrap();
+    let list = store.list_conversations().unwrap();
     assert_eq!(list[0].id, "first");
     assert_eq!(list[1].id, "second");
 }
@@ -233,14 +222,13 @@ async fn test_update_conversation() {
         updated_at: 0,
         messages: vec![],
     };
-    store.create_conversation(&conv).await.unwrap();
+    store.create_conversation(&conv).unwrap();
 
     store
         .update_conversation(&conv.id, "Updated", 5000)
-        .await
         .expect("Update failed");
 
-    let fetched = store.get_conversation("upd").await.expect("Fetch failed");
+    let fetched = store.get_conversation("upd").expect("Fetch failed");
     assert_eq!(fetched.title, "Updated");
     assert_eq!(fetched.updated_at, 5000);
 }
@@ -260,7 +248,7 @@ async fn test_clear_all_conversations() {
             updated_at: 0,
             messages: vec![],
         };
-        store.create_conversation(&conv).await.unwrap();
+        store.create_conversation(&conv).unwrap();
 
         let msg = Message {
             id: format!("msg{}", i),
@@ -281,12 +269,12 @@ async fn test_clear_all_conversations() {
             rag_sources: None,
             error: None,
         };
-        store.add_message(&conv.id, &msg).await.unwrap();
+        store.add_message(&conv.id, &msg).unwrap();
     }
 
-    store.clear_all_conversations().await.expect("Clear failed");
+    store.clear_all_conversations().expect("Clear failed");
 
-    let list = store.list_conversations().await.expect("List failed");
+    let list = store.list_conversations().expect("List failed");
     assert_eq!(list.len(), 0);
 }
 
@@ -302,7 +290,7 @@ async fn test_message_with_rag_sources() {
         updated_at: 0,
         messages: vec![],
     };
-    store.create_conversation(&conv).await.unwrap();
+    store.create_conversation(&conv).unwrap();
 
     let rag_sources = Some(vec![RagSource {
         file_path: "src/lib.rs".into(),
@@ -331,11 +319,10 @@ async fn test_message_with_rag_sources() {
         error: None,
     };
 
-    store.add_message(&conv.id, &msg).await.unwrap();
+    store.add_message(&conv.id, &msg).unwrap();
 
     let conv_with_msgs = store
         .get_conversation_with_messages(&conv.id)
-        .await
         .expect("Fetch failed");
 
     assert_eq!(conv_with_msgs.messages.len(), 1);
@@ -366,7 +353,7 @@ async fn test_upsert_message_updates_existing_row() {
         updated_at: 0,
         messages: vec![],
     };
-    store.create_conversation(&conv).await.unwrap();
+    store.create_conversation(&conv).unwrap();
 
     // 1) Placeholder insert — empty content, NULL metrics (mimics useChatSend).
     let placeholder = Message {
@@ -390,7 +377,6 @@ async fn test_upsert_message_updates_existing_row() {
     };
     store
         .add_message(&conv.id, &placeholder)
-        .await
         .expect("placeholder insert");
 
     // 2) Final insert — same id, now with content + metrics (mimics useTauriEvents done).
@@ -415,13 +401,11 @@ async fn test_upsert_message_updates_existing_row() {
     };
     store
         .add_message(&conv.id, &final_msg)
-        .await
         .expect("final upsert should not error");
 
     // 3) Verify the persisted row carries the FINAL values, not the placeholder.
     let fetched = store
         .get_conversation_with_messages(&conv.id)
-        .await
         .expect("fetch");
     assert_eq!(fetched.messages.len(), 1, "should be one row, not two");
     let m = &fetched.messages[0];
@@ -454,7 +438,7 @@ async fn test_upsert_preserves_images_request_id_model_on_update() {
         updated_at: 0,
         messages: vec![],
     };
-    store.create_conversation(&conv).await.unwrap();
+    store.create_conversation(&conv).unwrap();
 
     // 1) Initial insert — user message with images and a request_id.
     let initial = Message {
@@ -478,7 +462,6 @@ async fn test_upsert_preserves_images_request_id_model_on_update() {
     };
     store
         .add_message(&conv.id, &initial)
-        .await
         .expect("initial insert");
 
     // 2) Re-assert same id with updated images, request_id, and model —
@@ -504,13 +487,11 @@ async fn test_upsert_preserves_images_request_id_model_on_update() {
     };
     store
         .add_message(&conv.id, &updated)
-        .await
         .expect("upsert should not error");
 
     // 3) Verify the persisted row carries the UPDATED values.
     let fetched = store
         .get_conversation_with_messages(&conv.id)
-        .await
         .expect("fetch");
     assert_eq!(fetched.messages.len(), 1, "should be one row, not two");
     let m = &fetched.messages[0];
@@ -547,7 +528,7 @@ async fn test_service_layer_list() {
     };
 
     // Create via store directly
-    store.lock().await.create_conversation(&conv).await.unwrap();
+    store.lock().await.create_conversation(&conv).unwrap();
 
     // List via service layer
     let response = service::list_conversations(store.clone()).await;
@@ -597,7 +578,7 @@ async fn test_service_layer_append_message() {
         updated_at: 0,
         messages: vec![],
     };
-    store.lock().await.create_conversation(&conv).await.unwrap();
+    store.lock().await.create_conversation(&conv).unwrap();
 
     let msg = Message {
         id: "msg1".into(),
@@ -636,7 +617,7 @@ async fn test_migration_tracking_table_exists() {
     let store = get_test_store();
 
     // Verify the migrations tracking table was created
-    let conn = store.lock_conn().await;
+    let conn = store.lock_conn();
     let result: Result<String, _> = conn.query_row(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='_conversations_migrations'",
         [],
@@ -650,7 +631,7 @@ async fn test_migration_version_recorded() {
     let store = get_test_store();
 
     // Verify migration version was recorded
-    let conn = store.lock_conn().await;
+    let conn = store.lock_conn();
     let version: u32 = conn
         .query_row(
             "SELECT COALESCE(MAX(version), 0) FROM _conversations_migrations",

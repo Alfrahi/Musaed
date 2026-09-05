@@ -153,7 +153,21 @@ pub async fn index_project<R: tauri::Runtime>(
 }
 
 async fn run_pipeline<R: tauri::Runtime>(ctx: PhaseContext<'_, R>) -> RagResult<()> {
-    let discovered = phase_discover(&ctx)?;
+    // ── fs walk: sync I/O — off the async runtime ──
+    let discovered = {
+        let path = ctx.project_path.to_path_buf();
+        let patterns = ctx.ignore_patterns.to_vec();
+        let ah = ctx.app_handle.clone();
+        let pid = ctx.project_id.to_string();
+        tokio::task::spawn_blocking(move || {
+            discover_sync(&path, &patterns, |phase, cur, total, msg| {
+                emit_progress(&ah, &pid, phase, cur, total, msg);
+            })
+        })
+        .await
+        .map_err(|e| RagError::Config(format!("discover task join error: {}", e)))??
+    };
+
     let diff = phase_diff(&ctx, &discovered).await?;
     phase_delete_stale(&ctx, &diff.files_to_delete).await?;
     let chunked = phase_chunk(&ctx, &diff).await?;
@@ -166,21 +180,24 @@ async fn run_pipeline<R: tauri::Runtime>(ctx: PhaseContext<'_, R>) -> RagResult<
 
 // ====================== PHASE 1: DISCOVER ======================
 
-/// Discover files in the project directory, respecting ignore patterns.
-fn phase_discover<R: tauri::Runtime>(
-    ctx: &PhaseContext<'_, R>,
+/// Sync fs-walk helper; emits progress through `emit`. Called on the
+/// blocking thread pool — never directly from an async context.
+fn discover_sync<E: Fn(IndexPhase, usize, usize, String)>(
+    project_path: &Path,
+    ignore_patterns: &[String],
+    emit: E,
 ) -> RagResult<Vec<crate::rag::ignore::DiscoveredFile>> {
-    ctx.emit(
+    emit(
         IndexPhase::DiscoveringFiles,
         0,
         1,
         "Discovering files...".to_string(),
     );
 
-    let discovered = discover_files(ctx.project_path, ctx.ignore_patterns)?;
+    let discovered = discover_files(project_path, ignore_patterns)?;
     let total_files = discovered.len();
 
-    ctx.emit(
+    emit(
         IndexPhase::DiscoveringFiles,
         1,
         1,
@@ -192,9 +209,8 @@ fn phase_discover<R: tauri::Runtime>(
 
 // ====================== PHASE 2: DIFF ======================
 
-/// Diff discovered files against tracked files to find new, modified, and
-/// deleted files.  Reads file content once and caches it for the chunking
-/// phase to avoid re-reading from disk.
+/// Diff discovered files against tracked files. The per-file fs::read + xxh3
+/// loop is pure sync I/O, so it runs on the blocking thread pool.
 async fn phase_diff<R: tauri::Runtime>(
     ctx: &PhaseContext<'_, R>,
     discovered: &[crate::rag::ignore::DiscoveredFile],
@@ -219,44 +235,59 @@ async fn phase_diff<R: tauri::Runtime>(
         })
         .collect();
 
-    let mut files_to_index: Vec<(String, u64, String)> = Vec::new();
-    let mut files_to_delete: Vec<i64> = Vec::new();
-    let mut file_contents: HashMap<String, Vec<u8>> = HashMap::new();
+    // fs::read + xxh3 hashing is sync I/O/CPU — off the async runtime.
+    let discovered_owned = discovered.to_vec();
+    let cancel = ctx.cancel_token.clone();
+    let force = ctx.force;
+    let (files_to_index, files_to_delete, file_contents) =
+        tokio::task::spawn_blocking(move || -> RagResult<_> {
+            let mut files_to_index: Vec<(String, u64, String)> = Vec::new();
+            let mut files_to_delete: Vec<i64> = Vec::new();
+            let mut file_contents: HashMap<String, Vec<u8>> = HashMap::new();
 
-    for file in discovered {
-        ctx.check_cancelled()?;
+            for file in &discovered_owned {
+                if cancel.is_cancelled() {
+                    return Err(RagError::Cancelled("by user request".to_string()));
+                }
 
-        let content = match std::fs::read(&file.path) {
-            Ok(c) => c,
-            Err(e) => {
-                tracing::debug!("Failed to read file {:?}: {}", file.path, e);
-                continue;
+                let content = match std::fs::read(&file.path) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        tracing::debug!("Failed to read file {:?}: {}", file.path, e);
+                        continue;
+                    }
+                };
+
+                let hash = format!("{:016x}", xxh3_64(&content));
+
+                let needs_index = if force {
+                    true
+                } else if let Some((tracked_hash, _)) = tracked_map.get(&file.relative_path) {
+                    tracked_hash != &hash
+                } else {
+                    true
+                };
+
+                if needs_index {
+                    file_contents.insert(file.relative_path.clone(), content);
+                    files_to_index.push((file.relative_path.clone(), file.size, hash));
+                }
             }
-        };
 
-        let hash = format!("{:016x}", xxh3_64(&content));
+            let discovered_set: HashSet<String> = discovered_owned
+                .iter()
+                .map(|f| f.relative_path.clone())
+                .collect();
+            for (path, (_, file_id)) in &tracked_map {
+                if !discovered_set.contains(path) {
+                    files_to_delete.push(*file_id);
+                }
+            }
 
-        let needs_index = if ctx.force {
-            true
-        } else if let Some((tracked_hash, _)) = tracked_map.get(&file.relative_path) {
-            tracked_hash != &hash
-        } else {
-            true
-        };
-
-        if needs_index {
-            file_contents.insert(file.relative_path.clone(), content);
-            files_to_index.push((file.relative_path.clone(), file.size, hash));
-        }
-    }
-
-    let discovered_set: HashSet<String> =
-        discovered.iter().map(|f| f.relative_path.clone()).collect();
-    for (path, (_, file_id)) in &tracked_map {
-        if !discovered_set.contains(path) {
-            files_to_delete.push(*file_id);
-        }
-    }
+            Ok((files_to_index, files_to_delete, file_contents))
+        })
+        .await
+        .map_err(|e| RagError::Config(format!("diff task join error: {}", e)))??;
 
     ctx.emit(
         IndexPhase::DiffingFiles,
@@ -327,35 +358,49 @@ async fn phase_chunk<R: tauri::Runtime>(
         "Reading files...".to_string(),
     );
 
-    let mut all_raw_chunks: Vec<(String, u64, String, Vec<RawChunk>)> = Vec::new();
+    // tree-sitter chunking is CPU-bound sync work — off the async runtime.
+    let files = diff.files_to_index.clone();
+    let contents = diff.file_contents.clone();
+    let cancel = ctx.cancel_token.clone();
+    let ah = ctx.app_handle.clone();
+    let pid = ctx.project_id.to_string();
+    let all_raw_chunks = tokio::task::spawn_blocking(move || -> RagResult<_> {
+        let mut out: Vec<(String, u64, String, Vec<RawChunk>)> = Vec::new();
+        for (i, (relative_path, file_size, hash)) in files.iter().enumerate() {
+            if cancel.is_cancelled() {
+                return Err(RagError::Cancelled("by user request".to_string()));
+            }
 
-    for (i, (relative_path, file_size, hash)) in diff.files_to_index.iter().enumerate() {
-        ctx.check_cancelled()?;
-
-        let content = match diff.file_contents.get(relative_path) {
-            Some(bytes) => match std::str::from_utf8(bytes) {
-                Ok(s) => s.to_string(),
-                Err(_) => {
-                    tracing::debug!("Skipping non-UTF-8 file: {}", relative_path);
+            let content = match contents.get(relative_path) {
+                Some(bytes) => match std::str::from_utf8(bytes) {
+                    Ok(s) => s.to_string(),
+                    Err(_) => {
+                        tracing::debug!("Skipping non-UTF-8 file: {}", relative_path);
+                        continue;
+                    }
+                },
+                None => {
+                    tracing::debug!("Content not cached for {}, skipping", relative_path);
                     continue;
                 }
-            },
-            None => {
-                tracing::debug!("Content not cached for {}, skipping", relative_path);
-                continue;
-            }
-        };
+            };
 
-        ctx.emit(
-            IndexPhase::ChunkingFiles,
-            i,
-            file_count,
-            format!("Chunking {}...", relative_path),
-        );
+            emit_progress(
+                &ah,
+                &pid,
+                IndexPhase::ChunkingFiles,
+                i,
+                file_count,
+                format!("Chunking {}...", relative_path),
+            );
 
-        let chunks = chunk_content(&content, relative_path);
-        all_raw_chunks.push((relative_path.clone(), *file_size, hash.clone(), chunks));
-    }
+            let chunks = chunk_content(&content, relative_path);
+            out.push((relative_path.clone(), *file_size, hash.clone(), chunks));
+        }
+        Ok(out)
+    })
+    .await
+    .map_err(|e| RagError::Config(format!("chunk task join error: {}", e)))??;
 
     let total_chunks: usize = all_raw_chunks.iter().map(|(_, _, _, c)| c.len()).sum();
     ctx.emit(
