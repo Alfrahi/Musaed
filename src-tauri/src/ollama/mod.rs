@@ -12,7 +12,9 @@ pub mod abort_service; // new domain service for abort logic
 pub mod commands;
 pub mod health_service;
 pub mod model_service;
+pub mod modelfile;
 pub mod models;
+pub mod pull_stream;
 pub mod service;
 pub mod streaming;
 pub mod title;
