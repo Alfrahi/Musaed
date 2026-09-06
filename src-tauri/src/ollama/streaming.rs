@@ -31,7 +31,7 @@ use tracing;
 /// The trait is kept synchronous and fallible-but-swallowing to mirror the
 /// existing production behavior, which uses `let _ = app.emit(...)` and never
 /// propagates emit failures back into the stream loop.
-pub trait TokenSink {
+pub trait TokenSink: Send + Sync {
     fn emit_token(&self, token: &OllamaToken);
     fn emit_error(&self, error: &BackendError);
 }
@@ -39,17 +39,21 @@ pub trait TokenSink {
 /// Production [`TokenSink`] that forwards tokens and errors to the Tauri
 /// frontend via `AppHandle::emit`, using the same event names
 /// (`EVENT_OLLAMA_TOKEN` / `EVENT_OLLAMA_ERROR`) the frontend listens for.
-pub struct TauriEmitter<'a, R: Runtime> {
-    app: &'a tauri::AppHandle<R>,
+///
+/// Owns a clone of the `AppHandle` so it can be wrapped in `Arc<dyn TokenSink>`
+/// and moved into the spawned streaming task without borrowing the command's
+/// stack frame.
+pub struct TauriEmitter<R: Runtime> {
+    app: tauri::AppHandle<R>,
 }
 
-impl<'a, R: Runtime> TauriEmitter<'a, R> {
-    pub fn new(app: &'a tauri::AppHandle<R>) -> Self {
+impl<R: Runtime> TauriEmitter<R> {
+    pub fn new(app: tauri::AppHandle<R>) -> Self {
         Self { app }
     }
 }
 
-impl<R: Runtime> TokenSink for TauriEmitter<'_, R> {
+impl<R: Runtime> TokenSink for TauriEmitter<R> {
     fn emit_token(&self, token: &OllamaToken) {
         // chat_first_token consumes the registered start, so only the first
         // token per request is measured.
@@ -81,7 +85,7 @@ impl<R: Runtime> TokenSink for TauriEmitter<'_, R> {
 /// The absolute timeout (`STREAM_ABSOLUTE_TIMEOUT_SECS`) is **not** enforced
 /// here; the caller wraps this future in `tokio::time::timeout` (see
 /// `service::chat`) so the surrounding spawned task can run cleanup.
-pub async fn process_chat_stream<S: TokenSink>(
+pub async fn process_chat_stream<S: TokenSink + ?Sized>(
     sink: &S,
     request_id: &str,
     response: reqwest::Response,

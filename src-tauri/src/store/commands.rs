@@ -1,47 +1,23 @@
-use crate::error_codes;
-use crate::payloads::{ApiResponse, BackendError};
-use crate::validation::{
-    validate_store_filename, validate_store_key, validate_store_value, validation_error,
-};
+//! Tauri command adapters for the key-value store domain (`cmd_store_*`).
+//!
+//! Thin adapters only (STANDARDS §6): resolve the plugin store handle and
+//! wrap the synchronous store I/O in `spawn_blocking`; validation and error
+//! mapping live in [`super::service`].
+
+use super::service::{check_file, check_file_opt, invalid_key, invalid_value, store_failure};
+use crate::payloads::ApiResponse;
 use serde_json::Value;
 use tauri::AppHandle;
 use tauri_plugin_store::StoreExt;
 
-fn store_failure<T>(action: &str, file: &str, err: impl std::fmt::Display) -> ApiResponse<T> {
-    ApiResponse {
-        success: false,
-        data: None,
-        error: Some(BackendError::new(
-            error_codes::FILE_SYSTEM_ERROR,
-            format!("Failed to {} store '{}': {}", action, file, err),
-        )),
-    }
-}
-
-/// Validates the shared `file` argument of all store commands.
-fn check_file(file: &str) -> Option<ApiResponse<bool>> {
-    validate_store_filename(file)
-        .err()
-        .map(|msg| validation_error(error_codes::INVALID_INPUT, format!("store file: {}", msg)))
-}
-
 /// Loads a store file and returns a session token (the filename).
-/// The store is managed by tauri-plugin-store; subsequent get/set/save/delete
-/// calls reference the same filename.
-///
-/// # Arguments
-/// * `app` - Tauri app handle
-/// * `file` - Store filename (e.g. "logs.json", "settings.json")
-///
-/// # Returns
-/// `ApiResponse<bool>` — true if the store was loaded successfully
 #[tauri::command]
 pub async fn cmd_store_load(app: AppHandle, file: String) -> ApiResponse<bool> {
     if let Some(err) = check_file(&file) {
         return err;
     }
     match tokio::task::spawn_blocking(move || {
-        app.store(&file).map(|_| ()).map_err(|e| e.to_string()) // registers with the plugin
+        app.store(&file).map(|_| ()).map_err(|e| e.to_string())
     })
     .await
     {
@@ -62,25 +38,18 @@ pub async fn cmd_store_get(
     file: String,
     key: String,
 ) -> ApiResponse<Option<Value>> {
-    if let Some(err) = check_file(&file) {
-        return ApiResponse {
-            success: false,
-            data: None,
-            error: err.error,
-        };
+    if let Some(err) = check_file_opt(&file) {
+        return err;
     }
-    if let Err(msg) = validate_store_key(&key) {
-        return validation_error(error_codes::INVALID_INPUT, format!("store key: {}", msg));
+    if let Some(err) = invalid_key(&key) {
+        return err;
     }
-    let res = tokio::task::spawn_blocking(move || -> Result<Option<Value>, String> {
-        let store = match app.store(&file) {
-            Ok(s) => s,
-            Err(e) => return Err(e.to_string()),
-        };
+    match tokio::task::spawn_blocking(move || -> Result<Option<Value>, String> {
+        let store = app.store(&file).map_err(|e| e.to_string())?;
         Ok(store.get(&key))
     })
-    .await;
-    match res {
+    .await
+    {
         Ok(Ok(value)) => ApiResponse {
             success: true,
             data: Some(value),
@@ -102,11 +71,11 @@ pub async fn cmd_store_set(
     if let Some(err) = check_file(&file) {
         return err;
     }
-    if let Err(msg) = validate_store_key(&key) {
-        return validation_error(error_codes::INVALID_INPUT, format!("store key: {}", msg));
+    if let Some(err) = invalid_key(&key) {
+        return err;
     }
-    if let Err(msg) = validate_store_value(&value) {
-        return validation_error(error_codes::INVALID_INPUT, format!("store value: {}", msg));
+    if let Some(err) = invalid_value(&value) {
+        return err;
     }
     match tokio::task::spawn_blocking(move || -> Result<(), String> {
         let store = app.store(&file).map_err(|e| e.to_string())?;
@@ -153,8 +122,8 @@ pub async fn cmd_store_delete(app: AppHandle, file: String, key: String) -> ApiR
     if let Some(err) = check_file(&file) {
         return err;
     }
-    if let Err(msg) = validate_store_key(&key) {
-        return validation_error(error_codes::INVALID_INPUT, format!("store key: {}", msg));
+    if let Some(err) = invalid_key(&key) {
+        return err;
     }
     match tokio::task::spawn_blocking(move || -> Result<bool, String> {
         let store = app.store(&file).map_err(|e| e.to_string())?;

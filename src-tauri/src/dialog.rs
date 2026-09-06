@@ -1,4 +1,4 @@
-use crate::fs_commands::FsAccessGrants;
+use crate::fs::FsAccessGrants;
 use crate::payloads::ApiResponse;
 use serde::Deserialize;
 use tauri::{AppHandle, State};

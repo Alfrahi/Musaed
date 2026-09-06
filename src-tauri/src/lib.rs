@@ -8,7 +8,7 @@ pub mod context_menu;
 pub mod conversation;
 pub mod dialog;
 pub mod error_codes;
-pub mod fs_commands;
+pub mod fs;
 pub mod generated_validation;
 pub mod logging;
 pub mod menu_bar;
@@ -22,7 +22,7 @@ pub mod payloads;
 pub mod rag;
 pub mod rate_limiter;
 pub mod shared;
-pub mod store_commands;
+pub mod store;
 pub mod tray;
 pub mod validation;
 
@@ -57,10 +57,7 @@ pub fn run() -> Result<(), tauri::Error> {
         // reads via cmd_fs_* stay authorized without webview-controlled
         // path approval.
         if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event {
-            if let Some(grants) = window
-                .app_handle()
-                .try_state::<fs_commands::FsAccessGrants>()
-            {
+            if let Some(grants) = window.app_handle().try_state::<fs::FsAccessGrants>() {
                 grants.grant_paths(paths.iter().map(|p| p.to_string_lossy().into_owned()));
             }
         }
@@ -113,7 +110,7 @@ pub fn run() -> Result<(), tauri::Error> {
 
         // Filesystem grants for cmd_fs_* — populated only by native file
         // dialogs and window drag-drop events, never by webview IPC.
-        app.manage(fs_commands::FsAccessGrants::default());
+        app.manage(fs::FsAccessGrants::default());
 
         log::info!("RAG store initialized at {:?}", db_path);
 
@@ -182,14 +179,14 @@ pub fn run() -> Result<(), tauri::Error> {
             dialog::cmd_dialog_open_file,
             dialog::cmd_dialog_save_file,
             opener::cmd_opener_open_url,
-            store_commands::cmd_store_load,
-            store_commands::cmd_store_get,
-            store_commands::cmd_store_set,
-            store_commands::cmd_store_save,
-            store_commands::cmd_store_delete,
-            fs_commands::cmd_fs_read_text_file,
-            fs_commands::cmd_fs_read_file,
-            fs_commands::cmd_fs_write_text_file,
+            store::commands::cmd_store_load,
+            store::commands::cmd_store_get,
+            store::commands::cmd_store_set,
+            store::commands::cmd_store_save,
+            store::commands::cmd_store_delete,
+            fs::commands::cmd_fs_read_text_file,
+            fs::commands::cmd_fs_read_file,
+            fs::commands::cmd_fs_write_text_file,
         ])
         .run(tauri::generate_context!())
         .inspect_err(|e| {

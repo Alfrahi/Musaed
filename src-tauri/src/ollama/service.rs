@@ -5,13 +5,13 @@
 //! Tauri-specific concerns (event emitting, state access) and delegate business
 //! rules to this service.
 
-use super::streaming::{process_chat_stream, TauriEmitter};
+use super::streaming::{process_chat_stream, TokenSink};
 use crate::error_codes;
 use crate::payloads::{BackendError, ChatMessage, ChatOptions, OllamaHealth, OllamaOptions};
 use crate::rate_limiter::RATE_LIMITER;
 use crate::shared::{
     acquire_global_permit, ollama_endpoint, request_cache_try_insert, retry_with_backoff,
-    ABORT_HANDLES, CONCURRENT_SEMAPHORE, EVENT_OLLAMA_ERROR, FAST_HTTP_CLIENT, HTTP_CLIENT,
+    ABORT_HANDLES, CONCURRENT_SEMAPHORE, FAST_HTTP_CLIENT, HTTP_CLIENT,
     INITIAL_REQUEST_TIMEOUT_SECS, MAX_TOTAL_IMAGE_SIZE_BYTES, REQUEST_CACHE,
     STREAM_ABSOLUTE_TIMEOUT_SECS, STREAM_IDLE_TIMEOUT_SECS,
 };
@@ -22,7 +22,6 @@ use crate::validation::{
 use serde_json::json;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Emitter, Runtime};
 use tokio::time;
 use tokio_util::sync::CancellationToken;
 use tracing;
@@ -34,8 +33,8 @@ pub struct OllamaChatService;
 ///
 /// Using a struct reduces the function signature length and makes future
 /// extensions (e.g., adding new fields) easier without breaking callers.
-pub struct OllamaChatRequest<R: Runtime> {
-    pub app: AppHandle<R>,
+pub struct OllamaChatRequest {
+    pub sink: Arc<dyn TokenSink>,
     pub window_label: String,
     pub base_url: String,
     pub model: String,
@@ -54,7 +53,7 @@ impl OllamaChatService {
     ///
     /// Returns `Ok(())` on successful spawn of the streaming task.
     /// Returns `Err(BackendError)` on any failure before or during HTTP request.
-    pub async fn chat<R: Runtime>(&self, req: OllamaChatRequest<R>) -> Result<(), BackendError> {
+    pub async fn chat(&self, req: OllamaChatRequest) -> Result<(), BackendError> {
         RATE_LIMITER.check_rate_limit(&req.window_label, "cmd_ollama_chat")?;
         tracing::info!(
             "Starting chat request: request_id={}, model={}",
@@ -103,7 +102,7 @@ impl OllamaChatService {
         let response = send_chat_request(&req, &url).await?;
 
         let request_id = req.request_id.clone();
-        let app = req.app.clone();
+        let sink = req.sink.clone();
 
         tokio::spawn(async move {
             let _permit = permit;
@@ -117,7 +116,7 @@ impl OllamaChatService {
             let stream_result = time::timeout(
                 Duration::from_secs(STREAM_ABSOLUTE_TIMEOUT_SECS),
                 process_chat_stream(
-                    &TauriEmitter::new(&app),
+                    sink.as_ref(),
                     &request_id,
                     response,
                     &cancel_token,
@@ -133,8 +132,7 @@ impl OllamaChatService {
                     STREAM_ABSOLUTE_TIMEOUT_SECS,
                     request_id
                 );
-                let _ = app.emit(
-                    EVENT_OLLAMA_ERROR,
+                sink.emit_error(
                     &BackendError::new(error_codes::STREAM_TIMEOUT, "Chat stream timed out")
                         .with_request_id(request_id.clone()),
                 );
@@ -229,7 +227,7 @@ impl OllamaChatService {
 
 /// Validate all chat inputs: model name, request ID, message count, message
 /// content, options, and total image size.
-fn validate_chat_inputs<R: Runtime>(req: &OllamaChatRequest<R>) -> Result<(), BackendError> {
+fn validate_chat_inputs(req: &OllamaChatRequest) -> Result<(), BackendError> {
     if !is_valid_model_name(&req.model) {
         return Err(BackendError::new(
             error_codes::INVALID_INPUT,
@@ -300,8 +298,8 @@ fn build_chat_payload(
 }
 
 /// Send the initial HTTP request to the Ollama chat endpoint with retry.
-async fn send_chat_request<R: Runtime>(
-    req: &OllamaChatRequest<R>,
+async fn send_chat_request(
+    req: &OllamaChatRequest,
     url: &str,
 ) -> Result<reqwest::Response, BackendError> {
     let payload = build_chat_payload(&req.model, &req.messages, &req.options);

@@ -1027,11 +1027,12 @@ async fn context_length_no_family_falls_back_to_max() {
 // ── error-path cleanup: ABORT_HANDLES / REQUEST_CACHE ───────────
 
 /// Build a minimal valid chat request against the given base URL, backed by
-/// a MockRuntime AppHandle.
-fn chat_req(base_url: &str, request_id: &str) -> OllamaChatRequest<tauri::test::MockRuntime> {
-    let app = tauri::test::mock_app();
+/// a channel sink (no Tauri runtime needed).
+fn chat_req(base_url: &str, request_id: &str) -> OllamaChatRequest {
+    let (token_tx, _token_rx) = mpsc::unbounded_channel();
+    let (error_tx, _error_rx) = mpsc::unbounded_channel();
     OllamaChatRequest {
-        app: app.handle().clone(),
+        sink: Arc::new(ChannelSink { token_tx, error_tx }),
         window_label: "cleanup-test-window".to_string(),
         base_url: base_url.to_string(),
         model: "llama3".to_string(),

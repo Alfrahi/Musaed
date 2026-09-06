@@ -1,4 +1,4 @@
-use crate::fs_commands::FsAccessGrants;
+use crate::fs::FsAccessGrants;
 use crate::payloads::ApiResponse;
 use crate::rag::services::projects;
 use crate::rag::services::*;

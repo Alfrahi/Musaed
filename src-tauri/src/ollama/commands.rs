@@ -4,9 +4,11 @@
 //! an active chat session or when probing server status.
 
 use crate::payloads::{ApiResponse, ChatMessage, ChatOptions, OllamaHealth};
+use std::sync::Arc;
 use tauri::{AppHandle, Runtime};
 
 use super::service::{OllamaChatRequest, OllamaChatService};
+use super::streaming::TauriEmitter;
 
 // ==================== CHAT ====================
 
@@ -26,7 +28,7 @@ pub async fn cmd_ollama_chat<R: Runtime>(
     crate::metrics::begin_chat(&request_id);
     let metrics_request_id = request_id.clone();
     let req = OllamaChatRequest {
-        app,
+        sink: Arc::new(TauriEmitter::new(app)),
         window_label: window.label().to_string(),
         base_url,
         model,

@@ -19,7 +19,7 @@ pub struct AddProjectRequest<'a> {
     /// explicitly picked via a native dialog may become RAG project roots.
     /// Without this, the webview could register `/home/user` or `~/.ssh`
     /// and exfiltrate contents via `cmd_rag_get_file_chunks`.
-    pub grants: &'a crate::fs_commands::FsAccessGrants,
+    pub grants: &'a crate::fs::FsAccessGrants,
 }
 
 pub struct RemoveProjectRequest {
@@ -178,7 +178,7 @@ pub async fn list_projects(req: ListProjectsRequest) -> ApiResponse<Vec<RagProje
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fs_commands::FsAccessGrants;
+    use crate::fs::FsAccessGrants;
 
     fn test_store(dir: &std::path::Path) -> Arc<RwLock<RagStore>> {
         let s = RagStore::open(&dir.join("rag_test.sqlite3")).expect("open RagStore");

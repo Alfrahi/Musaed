@@ -4,7 +4,6 @@ use crate::payloads::{ApiResponse, BackendError};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use tauri::State;
 
 /// Registry of filesystem locations the user has explicitly exposed to the
 /// app this session — via native file dialogs (`cmd_dialog_open_file`,
@@ -113,7 +112,7 @@ fn require_granted_file(
     std::fs::File::open(&resolved).map_err(|_| FsAccessError::Unresolvable(raw.to_string()))
 }
 
-fn read_text_file_impl(grants: &FsAccessGrants, path: &str) -> ApiResponse<String> {
+pub(crate) fn read_text_file_impl(grants: &FsAccessGrants, path: &str) -> ApiResponse<String> {
     let file = match require_granted_file(grants, path) {
         Ok(f) => f,
         Err(e) => return failure(e),
@@ -131,7 +130,7 @@ fn read_text_file_impl(grants: &FsAccessGrants, path: &str) -> ApiResponse<Strin
     }
 }
 
-fn read_file_base64_impl(grants: &FsAccessGrants, path: &str) -> ApiResponse<String> {
+pub(crate) fn read_file_base64_impl(grants: &FsAccessGrants, path: &str) -> ApiResponse<String> {
     let file = match require_granted_file(grants, path) {
         Ok(f) => f,
         Err(e) => return failure(e),
@@ -153,7 +152,11 @@ fn read_file_base64_impl(grants: &FsAccessGrants, path: &str) -> ApiResponse<Str
     }
 }
 
-fn write_text_file_impl(grants: &FsAccessGrants, path: &str, content: String) -> ApiResponse<bool> {
+pub(crate) fn write_text_file_impl(
+    grants: &FsAccessGrants,
+    path: &str,
+    content: String,
+) -> ApiResponse<bool> {
     // Bound the write size before touching the filesystem (defense against a
     // compromised frontend flooding disk).
     if content.len() > crate::generated_validation::MAX_FILE_WRITE_LEN {
@@ -199,44 +202,6 @@ fn write_text_file_impl(grants: &FsAccessGrants, path: &str, content: String) ->
         },
         Err(e) => io_failure("write file", path, e),
     }
-}
-
-/// Reads a text file from a user-granted location and returns its contents
-/// as a string.
-#[tauri::command]
-pub async fn cmd_fs_read_text_file(
-    grants: State<'_, FsAccessGrants>,
-    path: String,
-) -> Result<ApiResponse<String>, String> {
-    Ok(read_text_file_impl(grants.inner(), &path))
-}
-
-/// Reads a binary file from a user-granted location and returns its contents
-/// base64-encoded.
-#[tauri::command]
-pub async fn cmd_fs_read_file(
-    grants: State<'_, FsAccessGrants>,
-    path: String,
-) -> Result<ApiResponse<String>, String> {
-    Ok(read_file_base64_impl(grants.inner(), &path))
-}
-
-/// Writes text content to a file inside a user-granted location.
-#[tauri::command]
-pub async fn cmd_fs_write_text_file(
-    window: tauri::Window,
-    grants: State<'_, FsAccessGrants>,
-    path: String,
-    content: String,
-) -> Result<ApiResponse<bool>, String> {
-    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_fs_write_text_file") {
-        return Ok(ApiResponse {
-            success: false,
-            data: None,
-            error: Some(e),
-        });
-    }
-    Ok(write_text_file_impl(grants.inner(), &path, content))
 }
 
 #[cfg(test)]
