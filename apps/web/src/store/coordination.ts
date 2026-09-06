@@ -122,6 +122,33 @@ export function flushAndStop(conversationId: string, expectedRequestId?: string)
 }
 
 /**
+ * Owned transition table for stream teardown. Each {@link StopReason} maps to
+ * the structural decisions `stopStream` must make:
+ *
+ * - `flush`: whether buffered tokens are persisted to the message store
+ *   before teardown (`batch-end` deliberately discards them — orphan cleanup).
+ * - `stoppedMarker`: the value to write to the assistant message's `stopped`
+ *   flag, or `null` to leave it untouched. `abort` (user-initiated) sets
+ *   `true`; `complete` explicitly resets to `false` so a previously-stopped
+ *   message doesn't carry the flag forward; `error`/`batch-end` leave it
+ *   as the caller set it.
+ *
+ * Centralizing these as data (instead of scattered `if reason === ...` blocks)
+ * makes the invariant machine-readable: adding a new stop reason forces the
+ * author to declare the two levers up front, and the behavior is auditable in
+ * one place.
+ */
+export const STOP_TRANSITIONS: Record<
+  StopReason,
+  { flush: boolean; stoppedMarker: boolean | null }
+> = {
+  complete: { flush: true, stoppedMarker: false },
+  abort: { flush: true, stoppedMarker: true },
+  error: { flush: true, stoppedMarker: null },
+  'batch-end': { flush: false, stoppedMarker: null },
+};
+
+/**
  * The single entry point for stopping a conversation's stream.
  *
  * Consolidates the previously scattered stop paths (`stopStreamForConversation`,
@@ -203,27 +230,22 @@ export function stopStream(
   // after `complete` already ran).
   if (!(conversationId in useStreamingStore.getState().activeStreams)) return;
 
-  const shouldFlush = reason !== 'batch-end';
-  if (shouldFlush) {
+  const transition = STOP_TRANSITIONS[reason];
+
+  if (transition.flush) {
     flushAndStop(conversationId, expectedRequestId);
   }
 
   useStreamingStore.getState().stopStream(conversationId);
   useStreamingStore.getState().clearStream(conversationId);
 
-  // Reason-specific assistant-message marker. Only `complete` and `abort`
-  // touch `stopped`; `error` and `batch-end` leave whatever the caller
-  // already set in place.
-  if (reason === 'abort') {
-    // Mark the last assistant message as user-stopped so the UI can render
-    // the "Stopped by user • Continue" inline status line.
-    useMessageStore.getState().updateLastMessage(conversationId, { stopped: true });
-  } else if (reason === 'complete') {
-    // Explicitly clear the user-stopped flag on natural completion. Without
-    // this, a previously-stopped message in this conversation would retain
-    // `stopped: true` and the UI would show "Stopped by user" on a message
-    // that completed naturally.
-    useMessageStore.getState().updateLastMessage(conversationId, { stopped: false });
+  // `stopped` marker from the transition table: `abort` (and no other reason)
+  // marks user-initiated stop; `complete` clears it so a previously-stopped
+  // message doesn't carry the flag forward. `null` leaves it untouched.
+  if (transition.stoppedMarker !== null) {
+    useMessageStore
+      .getState()
+      .updateLastMessage(conversationId, { stopped: transition.stoppedMarker });
   }
 
   // Only clear the global streaming flag when no streams remain active.

@@ -7,7 +7,7 @@ import { useModelStore } from '@/store/model-store';
 import { useModelParamsStore } from '@/store/model-params-store';
 import { useStreamingStore } from '@/store/streaming-store';
 import { useMessageStore } from '@/store/message-store';
-import { registerHydrationCoordination, stopStream } from './coordination';
+import { registerHydrationCoordination, stopStream, STOP_TRANSITIONS } from './coordination';
 
 beforeEach(() => {
   (window as any).__TAURI_INTERNALS__ = { invoke: () => undefined };
@@ -597,5 +597,33 @@ describe('stopStream — batch-end', () => {
 
     expect(useStreamingStore.getState().activeStreams['conv-1']).toBeUndefined();
     expect(useUIStore.getState().isStreaming).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// STOP_TRANSITIONS — the machine-readable transition table
+// ---------------------------------------------------------------------------
+// Pins the structural contract: each StopReason declares `flush` and
+// `stoppedMarker` in one place. Adding a reason without declaring both levers
+// is now a type error; changing a value here is a deliberate policy edit.
+describe('STOP_TRANSITIONS', () => {
+  it('declares flush and stoppedMarker for every stop reason', () => {
+    const reasons: Array<keyof typeof STOP_TRANSITIONS> = [
+      'complete',
+      'abort',
+      'error',
+      'batch-end',
+    ];
+    for (const reason of reasons) {
+      expect(STOP_TRANSITIONS[reason]).toHaveProperty('flush');
+      expect(STOP_TRANSITIONS[reason]).toHaveProperty('stoppedMarker');
+    }
+  });
+
+  it('matches the documented teardown table', () => {
+    expect(STOP_TRANSITIONS.complete).toEqual({ flush: true, stoppedMarker: false });
+    expect(STOP_TRANSITIONS.abort).toEqual({ flush: true, stoppedMarker: true });
+    expect(STOP_TRANSITIONS.error).toEqual({ flush: true, stoppedMarker: null });
+    expect(STOP_TRANSITIONS['batch-end']).toEqual({ flush: false, stoppedMarker: null });
   });
 });
