@@ -95,3 +95,64 @@ pub(super) fn open_connection(db_path: &Path) -> Result<Connection, String> {
 
     Ok(conn)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rusqlite::Connection;
+
+    /// Fresh-vs-upgraded schema parity for the conversations database:
+    /// compares PRAGMA table_info between a fresh SCHEMA_SQL database and
+    /// one built only by running every migration step from v1 upward —
+    /// catches SCHEMA_SQL/migration drift (Rust #13).
+    #[test]
+    fn fresh_vs_fully_migrated_schema_parity() {
+        // Column order differs between fresh DDL (columns inline) and
+        // migrated DDL (ALTER ADD COLUMN appends). Order is inert for all
+        // readers — compare sorted sets so the test catches missing/extra
+        // columns, not incidental ordering.
+        let table_info = |conn: &Connection, table: &str| -> Vec<String> {
+            let mut cols: Vec<String> = conn
+                .prepare(&format!("PRAGMA table_info({})", table))
+                .unwrap()
+                .query_map([], |r| r.get::<_, String>(1))
+                .unwrap()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            cols.sort();
+            cols
+        };
+
+        // Fresh: SCHEMA_SQL + migrate (stamps to latest).
+        let dir = tempfile::tempdir().unwrap();
+        let mut fresh = open_connection(&dir.path().join("c.db")).unwrap();
+
+        // Upgraded: bare v1 aliases schema via run_migrations v1..=6 only.
+        let mut migrated = Connection::open(":memory:").unwrap();
+        // Seed version table so run_migrations(v0) knows a version exists;
+        // actually 0 means apply v1..6 — which includes "Initial schema",
+        // so start from nothing at all.
+        crate::migrations::run_migrations(&mut migrated, MigrationTarget::Conversations, None)
+            .unwrap();
+
+        for table in ["conversations", "messages"] {
+            assert_eq!(
+                table_info(&fresh, table),
+                table_info(&migrated, table),
+                "table_info mismatch for {}",
+                table
+            );
+        }
+        // Both expose the FTS index.
+        let fts = |c: &Connection| -> i64 {
+            c.query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE name='messages_fts'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap()
+        };
+        assert_eq!(fts(&mut fresh), 1);
+        assert_eq!(fts(&mut migrated), 1);
+    }
+}

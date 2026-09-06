@@ -10,6 +10,7 @@ const PROJECT_ROOT = join(__dirname, "..");
 const FEATURES_DIR = join(PROJECT_ROOT, "apps/web/src/features");
 const STORE_DIR = join(PROJECT_ROOT, "apps/web/src/store");
 const IPC_TS = join(PROJECT_ROOT, "apps/web/src/lib/ipc.ts");
+const IPC_DIR = join(PROJECT_ROOT, "apps/web/src/lib/ipc");
 
 /**
  * Commands that are infrastructure / cross-cutting and may be called from
@@ -297,7 +298,19 @@ function hasFailureModes(filePath) {
  * @returns {Map<string, Set<string>>} - Map of `"namespaceApi.method"` → `Set<cmd_xxx>`.
  */
 function parseIpcNamespaceToCommandMap() {
-  const content = readFileSync(IPC_TS, "utf-8");
+  // Read the barrel plus every domain module under lib/ipc/. The barrel
+  // re-exports them, so the per-module files are where the `export const
+  // <name>Api = { ... }` namespaces now live.
+  let content = readFileSync(IPC_TS, "utf-8");
+  try {
+    for (const entry of readdirSync(IPC_DIR, { withFileTypes: true })) {
+      if (entry.isFile() && entry.name.endsWith(".ts")) {
+        content += "\n" + readFileSync(join(IPC_DIR, entry.name), "utf-8");
+      }
+    }
+  } catch {
+    // Pre-split layout: lib/ipc.ts was the single file; no dir to read.
+  }
   const map = new Map();
 
   // Match: export const <name>Api = { ... }
@@ -371,7 +384,7 @@ function scanFeatureIpcUsage(featureDir, nsToCmd) {
     const [ns, method] = nsKey.split('.');
     patterns.push(`${ns}\\s*\\.${method}\\b`);
   }
-  const combined = new RegExp(patterns.join('|'), 'g');
+  const combined = patterns.length > 0 ? new RegExp(patterns.join('|'), 'g') : null;
 
   function walkDir(dir) {
     let entries;
@@ -390,6 +403,9 @@ function scanFeatureIpcUsage(featureDir, nsToCmd) {
         const content = raw
           .replace(/\/\*[\s\S]*?\*\//g, '')   // block comments
           .replace(/\/\/[^\n]*/g, '');        // line comments
+        // No known namespaces (e.g. ipc.ts is a pure barrel): skip entirely.
+        // An empty regex would otherwise match the empty string forever.
+        if (!combined) continue;
         let match;
         while ((match = combined.exec(content)) !== null) {
           // Normalize whitespace (incl. newlines) so `ns\n  .method` maps
@@ -397,6 +413,9 @@ function scanFeatureIpcUsage(featureDir, nsToCmd) {
           const nsKey = match[0].replace(/\s+/g, '');
           const cmds = nsToCmd.get(nsKey);
           if (cmds) for (const cmd of cmds) used.add(cmd);
+          // Safe-guard: zero-length matches don't advance lastIndex on old
+          // V8; don't rely on it.
+          if (combined.lastIndex === match.index) combined.lastIndex++;
         }
       }
     }

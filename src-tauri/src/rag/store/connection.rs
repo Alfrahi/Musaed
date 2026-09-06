@@ -1,12 +1,8 @@
 //! Database connection management, schema, and migrations.
 
 use crate::rag::error::{RagError, RagResult};
-use rusqlite::{ffi, Connection, Transaction};
+use rusqlite::{ffi, Connection};
 use std::path::Path;
-
-/// Highest schema version this build understands. Bump when adding a
-/// migration and append a matching `migrate_v*_to_v*` function.
-const LATEST_SCHEMA_VERSION: u32 = 3;
 
 /// Default embedding vector dimension. Will be overridden per-project after
 /// the first embedding call detects the actual dimension.
@@ -172,8 +168,12 @@ pub(super) fn open_connection(db_path: &Path) -> RagResult<Connection> {
     // Create schema
     conn.execute_batch(SCHEMA_SQL)?;
 
-    // Run migrations
-    run_migrations(&mut conn)?;
+    // Unify versioning through the migrations framework (`_rag_migrations`
+    // table + per-step apply loop). `migrate_rag_db` bridges legacy
+    // `PRAGMA user_version` databases by stamping the tracker from the
+    // pragma before running any pending steps.
+    crate::migrations::migrate_rag_db(&mut conn)
+        .map_err(|e| RagError::Config(format!("RAG migrations failed: {e}")))?;
 
     Ok(conn)
 }
@@ -191,146 +191,10 @@ pub(super) fn open_read_connection(db_path: &Path) -> RagResult<Connection> {
     Ok(conn)
 }
 
-/// Run database migrations, advancing `PRAGMA user_version` from its current
-/// value to [`LATEST_SCHEMA_VERSION`]. Each step runs inside its own
-/// transaction; if a step fails the transaction auto-rolls back and the
-/// database remains at the last successfully-applied version.
-pub(super) fn run_migrations(conn: &mut Connection) -> RagResult<()> {
-    let mut current: u32 = conn.query_row("PRAGMA user_version", [], |row| row.get::<_, u32>(0))?;
-
-    if current > LATEST_SCHEMA_VERSION {
-        tracing::warn!(
-            current_version = current,
-            latest_version = LATEST_SCHEMA_VERSION,
-            "Database user_version is newer than this build understands; skipping migrations"
-        );
-        return Ok(());
-    }
-
-    while current < LATEST_SCHEMA_VERSION {
-        let tx = conn.transaction()?;
-        match current {
-            0 => migrate_v0_to_v1(&tx)?,
-            1 => migrate_v1_to_v2(&tx)?,
-            2 => migrate_v2_to_v3(&tx)?,
-            v => {
-                return Err(RagError::Config(format!(
-                    "No migration path from schema version {v} (latest is {LATEST_SCHEMA_VERSION})"
-                )));
-            }
-        }
-        // Bump user_version inside the same transaction so a crash between
-        // commit and the PRAGMA never leaves a gap.
-        tx.execute_batch(&format!("PRAGMA user_version = {}", current + 1))?;
-        tx.commit()?;
-        tracing::info!("Migration: schema version {} -> {}", current, current + 1);
-        current += 1;
-    }
-
-    Ok(())
-}
-
-/// Migration v0 → v1: add the `status` column to the `projects` table.
-///
-/// On a fresh database the schema SQL already includes the column, so
-/// `ALTER TABLE … ADD COLUMN` will error with "duplicate column name". We
-/// guard against that by checking `PRAGMA table_info` first.
-fn migrate_v0_to_v1(tx: &Transaction) -> RagResult<()> {
-    let has_status: bool = tx.prepare("SELECT status FROM projects LIMIT 0").is_ok();
-    if !has_status {
-        tx.execute(
-            "ALTER TABLE projects ADD COLUMN status TEXT NOT NULL DEFAULT 'idle'",
-            [],
-        )?;
-        tracing::info!("Migration v0→v1: added status column to projects");
-    }
-    Ok(())
-}
-
-/// Migration v1 → v2: rebuild `vec_chunks` with the cosine distance metric.
-///
-/// The original `vec0` table shipped with the default (Euclidean) distance
-/// metric. Rebuilding with `distance_metric=cosine` drops existing
-/// embeddings and resets `chunk_count`/`indexed_at` so the index can be
-/// rebuilt on the next indexing pass.
-fn migrate_v1_to_v2(tx: &Transaction) -> RagResult<()> {
-    tracing::warn!(
-        "Migration v1→v2: rebuilding vec_chunks with cosine distance metric; existing embeddings will be lost"
-    );
-
-    tx.execute_batch(
-        "DROP TABLE IF EXISTS vec_chunks;
-         CREATE VIRTUAL TABLE vec_chunks USING vec0(
-             chunk_id  INTEGER PRIMARY KEY,
-             embedding float[1024] distance_metric=cosine
-         );",
-    )?;
-
-    tx.execute(
-        "UPDATE projects SET chunk_count = 0, indexed_at = NULL WHERE 1",
-        [],
-    )?;
-
-    tracing::info!("Migration v1→v2: vec_chunks rebuilt with cosine metric");
-    Ok(())
-}
-
-/// Migration v2 → v3: shrink `vec_chunks` to 1024 dimensions and add the
-/// corpus-wide `chunks_fts` full-text index.
-///
-/// The 4096-dim table padded every embedding ~4× (768-dim models stored 4 KB
-/// of zeros per row, RAG P1). Rebuilding drops stored embeddings — like the
-/// v1→v2 rebuild — so `chunk_count`/`indexed_at` reset and the next indexing
-/// pass re-populates. The FTS table is backfilled from existing chunk text
-/// so lexical search works immediately, even before reindexing.
-fn migrate_v2_to_v3(tx: &Transaction) -> RagResult<()> {
-    tracing::warn!(
-        "Migration v2→v3: rebuilding vec_chunks at 1024 dimensions and adding chunks_fts; existing embeddings will be lost"
-    );
-
-    tx.execute_batch(
-        "DROP TABLE IF EXISTS vec_chunks;
-         CREATE VIRTUAL TABLE vec_chunks USING vec0(
-             chunk_id  INTEGER PRIMARY KEY,
-             embedding float[1024] distance_metric=cosine
-         );",
-    )?;
-
-    tx.execute_batch(
-        "CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
-             content,
-             content='chunks',
-             content_rowid='rowid'
-         );
-         CREATE TRIGGER IF NOT EXISTS chunks_fts_ai AFTER INSERT ON chunks BEGIN
-             INSERT INTO chunks_fts(rowid, content) VALUES (new.rowid, new.content);
-         END;
-         CREATE TRIGGER IF NOT EXISTS chunks_fts_ad AFTER DELETE ON chunks BEGIN
-             INSERT INTO chunks_fts(chunks_fts, rowid, content)
-             VALUES ('delete', old.rowid, old.content);
-         END;
-         CREATE TRIGGER IF NOT EXISTS chunks_fts_au AFTER UPDATE ON chunks BEGIN
-             INSERT INTO chunks_fts(chunks_fts, rowid, content)
-             VALUES ('delete', old.rowid, old.content);
-             INSERT INTO chunks_fts(rowid, content) VALUES (new.rowid, new.content);
-         END;
-         INSERT INTO chunks_fts(chunks_fts) VALUES('rebuild');",
-    )?;
-
-    tx.execute(
-        "UPDATE projects SET chunk_count = 0, indexed_at = NULL WHERE 1",
-        [],
-    )?;
-
-    tracing::info!(
-        "Migration v2→v3: vec_chunks shrunk to 1024 dims, chunks_fts created and rebuilt"
-    );
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::migrations::rag as rag_migrations;
 
     #[test]
     fn wal_mode_activates_on_local_filesystem() {
@@ -352,7 +216,8 @@ mod tests {
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .unwrap();
         assert_eq!(
-            version, LATEST_SCHEMA_VERSION,
+            version,
+            rag_migrations::LATEST_VERSION,
             "fresh database should be at latest schema version after migrations"
         );
     }
@@ -363,11 +228,11 @@ mod tests {
         let db_path = dir.path().join("rag.db");
         let mut conn = open_connection(&db_path).unwrap();
         // Running migrations on an already-migrated database should not error.
-        run_migrations(&mut conn).unwrap();
+        crate::migrations::migrate_rag_db(&mut conn).unwrap();
         let version: u32 = conn
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .unwrap();
-        assert_eq!(version, LATEST_SCHEMA_VERSION);
+        assert_eq!(version, rag_migrations::LATEST_VERSION);
     }
 
     #[test]
@@ -434,7 +299,7 @@ mod tests {
         let version: u32 = conn
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .unwrap();
-        assert_eq!(version, LATEST_SCHEMA_VERSION);
+        assert_eq!(version, rag_migrations::LATEST_VERSION);
 
         // status column should now exist
         assert!(conn.prepare("SELECT status FROM projects LIMIT 0").is_ok());
@@ -507,7 +372,7 @@ mod tests {
         let version: u32 = conn
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .unwrap();
-        assert_eq!(version, LATEST_SCHEMA_VERSION);
+        assert_eq!(version, rag_migrations::LATEST_VERSION);
 
         // Chunk rows survived the upgrade.
         let chunk_count: i64 = conn
@@ -541,5 +406,84 @@ mod tests {
             )
             .unwrap();
         assert_eq!(fts_hits, 1);
+    }
+    /// Fresh-vs-upgraded schema parity for the RAG database: comparing
+    /// PRAGMA table_info between a fresh SCHEMA_SQL database and a legacy v0
+    /// database migrated up catches schema/migration drift (Rust #13).
+    #[test]
+    fn fresh_vs_upgraded_schema_parity() {
+        let table_info = |conn: &Connection, table: &str| -> Vec<String> {
+            conn.prepare(&format!("PRAGMA table_info({})", table))
+                .unwrap()
+                .query_map([], |r| r.get::<_, String>(1))
+                .unwrap()
+                .collect::<Result<_, _>>()
+                .unwrap()
+        };
+
+        // Fresh: open_connection runs full SCHEMA_SQL + migrate_rag_db.
+        let dir = tempfile::tempdir().unwrap();
+        let fresh = open_connection(&dir.path().join("rag.db")).unwrap();
+
+        // Upgraded: hand-build the legacy v2 schema (no status col, no fts,
+        // 4096-dim vec_chunks would be intermediate) then run the full path.
+        let dir2 = tempfile::tempdir().unwrap();
+        let upgraded_path = dir2.path().join("rag.db");
+        {
+            let c = Connection::open(&upgraded_path).unwrap();
+            c.execute_batch(PRAGMAS_SQL).unwrap();
+            c.execute_batch(
+                "CREATE TABLE projects (id TEXT PRIMARY KEY, name TEXT NOT NULL,
+                    path TEXT NOT NULL UNIQUE, embedding_model TEXT NOT NULL,
+                    ignore_patterns TEXT NOT NULL DEFAULT '[]',
+                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                    indexed_at TEXT, file_count INTEGER NOT NULL DEFAULT 0,
+                    chunk_count INTEGER NOT NULL DEFAULT 0,
+                    total_bytes INTEGER NOT NULL DEFAULT 0,
+                    status TEXT NOT NULL DEFAULT 'idle',
+                    embedding_dimension INTEGER NOT NULL DEFAULT 0);
+                 CREATE TABLE files (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    project_id TEXT NOT NULL, relative_path TEXT NOT NULL,
+                    file_hash TEXT NOT NULL, file_size INTEGER NOT NULL,
+                    modified_at TEXT NOT NULL,
+                    chunk_count INTEGER NOT NULL DEFAULT 0,
+                    UNIQUE(project_id, relative_path));
+                 CREATE TABLE chunks (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    project_id TEXT NOT NULL, file_id INTEGER NOT NULL,
+                    chunk_index INTEGER NOT NULL, content TEXT NOT NULL,
+                    chunk_type TEXT NOT NULL DEFAULT 'text', language TEXT,
+                    start_line INTEGER, end_line INTEGER,
+                    metadata TEXT DEFAULT '{}', UNIQUE(file_id, chunk_index));
+                 PRAGMA user_version = 1;",
+            )
+            .unwrap();
+        }
+        let upgraded = open_connection(&upgraded_path).unwrap();
+
+        for table in ["projects", "files", "chunks"] {
+            assert_eq!(
+                table_info(&fresh, table),
+                table_info(&upgraded, table),
+                "table_info mismatch for {}",
+                table
+            );
+        }
+        // Both must expose the full-text index table.
+        let fts_fresh: i64 = fresh
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE name='chunks_fts'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        let fts_upgraded: i64 = upgraded
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE name='chunks_fts'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(fts_fresh, 1);
+        assert_eq!(fts_upgraded, 1);
     }
 }

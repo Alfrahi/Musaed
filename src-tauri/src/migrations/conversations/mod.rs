@@ -5,7 +5,7 @@
 use crate::migrations::MigrationStep;
 
 /// Latest migration version for conversations database
-pub const LATEST_VERSION: u32 = 6;
+pub const LATEST_VERSION: u32 = 7;
 
 /// Gets the migration step for a specific version
 pub fn get_migration(version: u32) -> Option<MigrationStep> {
@@ -134,6 +134,15 @@ pub fn get_migration(version: u32) -> Option<MigrationStep> {
                 "DROP TRIGGER IF EXISTS messages_fts_au",
                 "DROP TABLE IF EXISTS messages_fts",
             ],
+        )),
+        7 => Some(MigrationStep::new(
+            7,
+            // SCHEMA_SQL has `error` since it shipped, but no migration ever
+            // added it — existing user databases lacked the column until now
+            // (caught by the fresh-vs-migrated schema-parity test).
+            "Add error column to messages",
+            &["ALTER TABLE messages ADD COLUMN error TEXT DEFAULT NULL"],
+            &["ALTER TABLE messages DROP COLUMN error"],
         )),
         _ => None,
     }

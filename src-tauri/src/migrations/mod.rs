@@ -98,6 +98,7 @@ pub struct MigrationExecutionResult {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MigrationTarget {
     Conversations,
+    Rag,
 }
 
 impl MigrationTarget {
@@ -105,6 +106,7 @@ impl MigrationTarget {
     pub fn version_table(&self) -> &'static str {
         match self {
             MigrationTarget::Conversations => "_conversations_migrations",
+            MigrationTarget::Rag => "_rag_migrations",
         }
     }
 
@@ -112,6 +114,7 @@ impl MigrationTarget {
     pub fn as_str(&self) -> &'static str {
         match self {
             MigrationTarget::Conversations => "conversations",
+            MigrationTarget::Rag => "rag",
         }
     }
 }
@@ -195,38 +198,8 @@ pub fn run_migrations(
         "Starting migration"
     );
 
-    let mut applied_migrations = Vec::new();
-    let mut current_version = from_version;
-
-    // Run migrations sequentially within a transaction
-    let tx = conn.transaction()?;
-
-    for next_version in (from_version + 1)..=target_version {
-        let migration = get_migration(target, next_version).ok_or_else(|| {
-            MigrationError::MissingMigration {
-                target: target.as_str().to_string(),
-                version: next_version,
-            }
-        })?;
-
-        // Apply migration
-        apply_migration_step(&tx, target, &migration)?;
-
-        // Update version tracker
-        version_tracker::set_version_tx(&tx, target, next_version)?;
-
-        applied_migrations.push(next_version);
-        current_version = next_version;
-
-        tracing::info!(
-            target = target.as_str(),
-            version = next_version,
-            description = migration.description,
-            "Applied migration"
-        );
-    }
-
-    tx.commit()?;
+    let applied_migrations = apply_pending(conn, target, from_version, target_version)?;
+    let current_version = applied_migrations.last().copied().unwrap_or(from_version);
 
     tracing::info!(
         target = target.as_str(),
@@ -244,14 +217,31 @@ pub fn run_migrations(
     })
 }
 
-/// Applies a single migration step within a transaction
+/// Applies one migration step within a transaction.
+///
+/// Tolerates "duplicate column name" errors with a warning: when SCHEMA_SQL
+/// (the fresh-create path) and the migration chain drift — e.g. a column was
+/// added to SCHEMA_SQL on one branch and to a migration on another — a
+/// database that already carries the column would otherwise fail on every
+/// boot. Any other error propagates unchanged.
 fn apply_migration_step(
     tx: &Transaction,
     target: MigrationTarget,
     migration: &MigrationStep,
 ) -> MigrationResult<()> {
     for sql in migration.up {
-        tx.execute_batch(sql)?;
+        if let Err(e) = tx.execute_batch(sql) {
+            if e.to_string().contains("duplicate column name") {
+                tracing::warn!(
+                    target = target.as_str(),
+                    version = migration.version,
+                    error = %e,
+                    "Migration step hit a column that already exists (schema/migration drift); skipping"
+                );
+            } else {
+                return Err(e.into());
+            }
+        }
     }
 
     tracing::debug!(
@@ -261,6 +251,44 @@ fn apply_migration_step(
     );
 
     Ok(())
+}
+
+/// Shared apply loop: runs every step in `(from_version, target_version]`
+/// inside a single transaction, stamping the version tracker per step.
+/// Returns the applied version list. Both `run_migrations` and
+/// `run_migrations_sync` delegate here so the apply logic lives in one place
+/// (Rust #13).
+fn apply_pending(
+    conn: &mut Connection,
+    target: MigrationTarget,
+    from_version: u32,
+    target_version: u32,
+) -> MigrationResult<Vec<u32>> {
+    let mut applied_migrations = Vec::new();
+    let tx = conn.transaction()?;
+
+    for next_version in (from_version + 1)..=target_version {
+        let migration = get_migration(target, next_version).ok_or_else(|| {
+            MigrationError::MissingMigration {
+                target: target.as_str().to_string(),
+                version: next_version,
+            }
+        })?;
+
+        apply_migration_step(&tx, target, &migration)?;
+        version_tracker::set_version_tx(&tx, target, next_version)?;
+        applied_migrations.push(next_version);
+
+        tracing::info!(
+            target = target.as_str(),
+            version = next_version,
+            description = migration.description,
+            "Applied migration"
+        );
+    }
+
+    tx.commit()?;
+    Ok(applied_migrations)
 }
 
 /// Runs migrations synchronously on a `&mut Connection` at connection time.
@@ -304,16 +332,10 @@ pub fn run_migrations_sync(
         "Starting sync migration"
     );
 
-    let mut applied_migrations = Vec::new();
-    let mut current_version = from_version;
-
-    let tx = conn.transaction()?;
-
     // Fresh database: schema DDL already executed by the caller. Stamp the
     // version to LATEST_VERSION so incremental migrations are skipped.
     if from_version == 0 {
-        version_tracker::set_version_tx(&tx, target, target_version)?;
-        tx.commit()?;
+        version_tracker::set_version(conn, target, target_version)?;
 
         tracing::info!(
             target = target.as_str(),
@@ -330,30 +352,8 @@ pub fn run_migrations_sync(
         });
     }
 
-    for next_version in (from_version + 1)..=target_version {
-        let migration = get_migration(target, next_version).ok_or_else(|| {
-            MigrationError::MissingMigration {
-                target: target.as_str().to_string(),
-                version: next_version,
-            }
-        })?;
-
-        apply_migration_step(&tx, target, &migration)?;
-
-        version_tracker::set_version_tx(&tx, target, next_version)?;
-
-        applied_migrations.push(next_version);
-        current_version = next_version;
-
-        tracing::info!(
-            target = target.as_str(),
-            version = next_version,
-            description = migration.description,
-            "Applied sync migration"
-        );
-    }
-
-    tx.commit()?;
+    let applied_migrations = apply_pending(conn, target, from_version, target_version)?;
+    let current_version = applied_migrations.last().copied().unwrap_or(from_version);
 
     tracing::info!(
         target = target.as_str(),
@@ -453,10 +453,62 @@ pub fn rollback_to_version(
     })
 }
 
+/// Migrate a RAG database whose versioning used the legacy
+/// `PRAGMA user_version` scheme (v0..v3) into this framework.
+///
+/// Bridge: read `PRAGMA user_version`; if the `_rag_migrations` tracker is
+/// empty (legacy DB), seed the tracker with the legacy version so the
+/// framework never re-applies steps already applied. Then run the normal
+/// apply loop. The legacy pragma is then left in sync (informational).
+pub fn migrate_rag_db(conn: &mut Connection) -> MigrationResult<MigrationExecutionResult> {
+    let target = MigrationTarget::Rag;
+
+    // 1. Baseline: if the tracker is empty but PRAGMA user_version says we
+    //    have schema, stamp the tracker with the legacy version so the
+    //    framework skips already-applied steps.
+    // get_current_version ensures the tracker table exists, so do this first.
+    let tracker_version = version_tracker::get_current_version(conn, target)?;
+
+    let legacy_version: u32 = conn
+        .query_row("PRAGMA user_version", [], |row| row.get(0))
+        .unwrap_or(0);
+
+    if tracker_version == 0 && legacy_version > 0 {
+        // Legacy DB predating the framework: stamp the tracker without
+        // re-running the steps (the legacy schema is already in place).
+        version_tracker::set_version(conn, target, legacy_version.min(get_latest_version(target)))?;
+    }
+
+    // 2. Truly-fresh DB (SCHEMA_SQL just ran, no status column is the probe):
+    //    stamp to latest without re-running. A legacy v0 DB (no pragma ever
+    //    set, no status column) must still run v1..v3.
+    if tracker_version == 0 && legacy_version == 0 {
+        let has_status = conn.prepare("SELECT status FROM projects LIMIT 0").is_ok();
+        if has_status {
+            let result = run_migrations_sync(conn, target)?; // stamps to latest
+            conn.execute_batch(&format!(
+                "PRAGMA user_version = {}",
+                get_latest_version(target)
+            ))?;
+            return Ok(result);
+        }
+        // legacy v0: fall through and run the apply loop from version 0
+    }
+
+    let result = run_migrations(conn, target, Some(get_latest_version(target)))?;
+    // Keep the legacy pragma in sync for any external tooling.
+    conn.execute_batch(&format!(
+        "PRAGMA user_version = {}",
+        get_latest_version(target)
+    ))?;
+    Ok(result)
+}
+
 /// Gets the migration step for a specific version
 fn get_migration(target: MigrationTarget, version: u32) -> Option<MigrationStep> {
     match target {
         MigrationTarget::Conversations => conversations::get_migration(version),
+        MigrationTarget::Rag => rag::get_migration(version),
     }
 }
 
@@ -464,6 +516,7 @@ fn get_migration(target: MigrationTarget, version: u32) -> Option<MigrationStep>
 pub fn get_latest_version(target: MigrationTarget) -> u32 {
     match target {
         MigrationTarget::Conversations => conversations::LATEST_VERSION,
+        MigrationTarget::Rag => rag::LATEST_VERSION,
     }
 }
 
@@ -471,11 +524,13 @@ pub fn get_latest_version(target: MigrationTarget) -> u32 {
 pub fn list_migrations(target: MigrationTarget) -> Vec<MigrationStep> {
     match target {
         MigrationTarget::Conversations => conversations::list_all(),
+        MigrationTarget::Rag => rag::list_all(),
     }
 }
 
 // Sub-modules for specific database migrations
 mod conversations;
+pub mod rag;
 
 #[cfg(test)]
 mod tests {
@@ -510,15 +565,15 @@ mod tests {
         let mut conn = create_test_db(MigrationTarget::Conversations);
 
         // Set initial version to latest
-        version_tracker::set_version(&conn, MigrationTarget::Conversations, 6)
+        version_tracker::set_version(&conn, MigrationTarget::Conversations, 7)
             .expect("Failed to set version");
 
         let result = run_migrations(&mut conn, MigrationTarget::Conversations, None)
             .expect("Migration failed");
 
         assert!(result.success);
-        assert_eq!(result.from_version, 6);
-        assert_eq!(result.to_version, 6);
+        assert_eq!(result.from_version, 7);
+        assert_eq!(result.to_version, 7);
         assert!(result.applied_migrations.is_empty());
     }
 
@@ -531,8 +586,8 @@ mod tests {
 
         assert!(result.success);
         assert_eq!(result.from_version, 0);
-        assert_eq!(result.to_version, 6); // Latest version
-        assert_eq!(result.applied_migrations, vec![1, 2, 3, 4, 5, 6]);
+        assert_eq!(result.to_version, 7); // Latest version
+        assert_eq!(result.applied_migrations, vec![1, 2, 3, 4, 5, 6, 7]);
     }
 
     #[test]
@@ -547,7 +602,7 @@ mod tests {
             .expect("Rollback failed");
 
         assert!(result.success);
-        assert_eq!(result.from_version, 6);
+        assert_eq!(result.from_version, 7);
         assert_eq!(result.to_version, 4);
     }
 
@@ -583,11 +638,31 @@ mod tests {
     #[test]
     fn test_list_migrations() {
         let conversations_migrations = list_migrations(MigrationTarget::Conversations);
-        assert_eq!(conversations_migrations.len(), 6); // v1–v6
+        assert_eq!(conversations_migrations.len(), 7); // v1–v7
+    }
+
+    #[test]
+    fn test_duplicate_column_step_is_tolerated_with_warning() {
+        // Regression: a database whose `error` column already exists (via
+        // SCHEMA_SQL fresh-create) must not fail when the v7 patch runs the
+        // idempotent-by-tolerance ADD COLUMN again.
+        let mut conn = create_test_db(MigrationTarget::Conversations);
+        // Build a minimal messages table carrying `error` already, so the v7
+        // ALTER would duplicate it.
+        conn.execute_batch("CREATE TABLE messages (id TEXT PRIMARY KEY, error TEXT)")
+            .unwrap();
+        version_tracker::set_version(&conn, MigrationTarget::Conversations, 6).unwrap();
+
+        let result = run_migrations(&mut conn, MigrationTarget::Conversations, None).unwrap();
+        assert!(
+            result.success,
+            "duplicate column must not fail the migration"
+        );
+        assert_eq!(result.applied_migrations, vec![7]);
     }
 
     #[test]
     fn test_get_latest_version() {
-        assert_eq!(get_latest_version(MigrationTarget::Conversations), 6);
+        assert_eq!(get_latest_version(MigrationTarget::Conversations), 7);
     }
 }
