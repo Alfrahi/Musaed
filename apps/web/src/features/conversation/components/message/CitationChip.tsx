@@ -1,6 +1,7 @@
 'use client';
 
 import { FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { SourceReference, TranslateFn } from './types';
 
 export interface CitationChipProps {
@@ -18,12 +19,12 @@ export const CitationChip = ({ source, onOpen, t }: CitationChipProps) => {
     endLine: source.endLine,
   });
   return (
-    <button
-      type="button"
+    <Button
+      variant="ghost"
       onClick={() => onOpen(source)}
       aria-label={ariaLabel}
       title={ariaLabel}
-      className="bg-secondary/50 hover:bg-secondary text-foreground inline-flex cursor-pointer items-start gap-2 rounded-md p-2 text-start transition-colors"
+      className="bg-secondary/50 text-foreground hover:bg-secondary h-auto items-start justify-start p-2 text-start"
     >
       <FileText className="text-muted-foreground mbs-0.5 h-3 w-3 shrink-0" />
       <span className="min-w-0">
@@ -37,6 +38,6 @@ export const CitationChip = ({ source, onOpen, t }: CitationChipProps) => {
           <span className="text-muted-foreground text-caption block">{source.language}</span>
         )}
       </span>
-    </button>
+    </Button>
   );
 };

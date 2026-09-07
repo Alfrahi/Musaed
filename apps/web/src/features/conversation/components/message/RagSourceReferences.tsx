@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { SourceReference, TranslateFn } from './types';
 import { CitationChip } from './CitationChip';
 
@@ -39,22 +40,22 @@ export const RagSourceReferences = ({
           <CitationChip key={index} source={source} onOpen={onOpenSource} t={t} />
         ))}
         {hasOverflow && !showAll && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
             onClick={() => setShowAll(true)}
-            className="text-muted-foreground hover:text-foreground text-caption ms-2 cursor-pointer font-medium underline-offset-2 hover:underline"
+            className="text-muted-foreground hover:text-foreground text-caption ms-2 h-auto p-0 font-medium underline-offset-2 hover:bg-transparent hover:underline"
           >
             {t('a11y.showNMoreSources', { count: hiddenCount })}
-          </button>
+          </Button>
         )}
         {hasOverflow && showAll && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
             onClick={() => setShowAll(false)}
-            className="text-muted-foreground hover:text-foreground text-caption ms-2 cursor-pointer font-medium underline-offset-2 hover:underline"
+            className="text-muted-foreground hover:text-foreground text-caption ms-2 h-auto p-0 font-medium underline-offset-2 hover:bg-transparent hover:underline"
           >
             {t('a11y.showFewerSources')}
-          </button>
+          </Button>
         )}
       </div>
     );
@@ -62,16 +63,16 @@ export const RagSourceReferences = ({
 
   return (
     <div className="mbs-4 border-bs pbs-4">
-      <button
-        type="button"
-        className="text-muted-foreground hover:text-foreground text-caption flex cursor-pointer items-center gap-2 font-medium"
+      <Button
+        variant="ghost"
+        className="text-muted-foreground hover:text-foreground h-auto p-0 hover:bg-transparent"
         onClick={onToggleExpand}
         aria-expanded={isExpanded}
       >
         <FileText className="h-3 w-3" />
         {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
         {t('rag.sourceReferenceCount', { count: sources.length })}
-      </button>
+      </Button>
       {renderCitations()}
     </div>
   );

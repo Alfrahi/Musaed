@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
 import type { TranslateFn } from './types';
 
 interface StoppedStatusLineProps {
@@ -16,13 +17,13 @@ export const StoppedStatusLine = ({ isStopped, msgId, onContinue, t }: StoppedSt
       <span>{t('chat.stoppedByUser')}</span>
       <span>•</span>
       {onContinue && (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
           onClick={() => onContinue(msgId)}
-          className="text-primary cursor-pointer font-medium hover:underline"
+          className="text-primary text-caption hover:text-primary h-auto p-0 font-medium hover:bg-transparent hover:underline"
         >
           {t('chat.continue')}
-        </button>
+        </Button>
       )}
     </div>
   );
