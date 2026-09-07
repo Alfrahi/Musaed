@@ -26,6 +26,12 @@ const VECTOR_WEIGHT: f32 = 0.6;
 /// Weight for BM25 score in hybrid scoring.
 const BM25_WEIGHT: f32 = 0.4;
 
+/// Saturation constant for BM25 normalization: `score / (score + k)`.
+/// Maps raw BM25 scores (unbounded, typically 0..~20) monotonically into
+/// [0, 1) while preserving relative magnitude. Chosen so a strong lexical
+/// match (raw score ~5) lands near 0.8 and a weak one (~0.5) near 0.3.
+const BM25_SATURATION_K: f32 = 1.5;
+
 // ====================== SEARCH ENGINE ======================
 
 pub struct RagSearchEngine;
@@ -103,16 +109,20 @@ impl RagSearchEngine {
             query
         );
 
-        // BM25 rerank — no store lock held.
+        // BM25 rerank — no store lock held. Score against the *whole project
+        // corpus* (not the per-query candidate window) so IDF and length
+        // normalization are stable and comparable across queries.
+        let corpus_stats = store.read().await.load_corpus_stats(project_id).await?;
+
         let documents: Vec<(usize, String)> = candidates
             .iter()
             .map(|c| (c.chunk_id as usize, c.content.clone()))
             .collect();
 
-        // Initialize BM25
-        let bm25 = BM25::new(&documents);
+        // Initialize BM25 from corpus statistics.
+        let bm25 = BM25::from_corpus(&documents, &corpus_stats);
 
-        // Compute BM25 scores and find min/max for normalization
+        // Compute BM25 scores for each candidate.
         let bm25_scores: Vec<f32> = candidates
             .iter()
             .map(|c| {
@@ -130,30 +140,19 @@ impl RagSearchEngine {
             })
             .collect();
 
-        let bm25_min = bm25_scores.iter().cloned().fold(f32::INFINITY, f32::min);
-        let bm25_max = bm25_scores
-            .iter()
-            .cloned()
-            .fold(f32::NEG_INFINITY, f32::max);
-        let bm25_range = (bm25_max - bm25_min).max(1e-6); // Avoid division by zero
-
-        // Rerank candidates using hybrid scoring (vector + BM25)
+        // Rerank candidates using hybrid scoring (vector + BM25).
+        //
+        // BM25 is normalized with a *saturating* transform (score / (score +
+        // k)) rather than min-max over the candidate window. Min-max forces
+        // the top candidate to 1.0 and the bottom to 0.0 regardless of how
+        // weak the actual match is, which made the 0.4 lexical weight
+        // non-comparable across queries. The saturating form is monotonic,
+        // bounded to [0, 1), and preserves the magnitude of the raw score.
         let mut reranked = candidates
             .into_iter()
-            .enumerate()
-            .map(|(i, mut candidate)| {
-                // Min-max normalize BM25 score to [0, 1]
-                let normalized_bm25 = (bm25_scores[i] - bm25_min) / bm25_range;
-                let normalized_bm25 = if normalized_bm25.is_finite() {
-                    normalized_bm25
-                } else {
-                    tracing::warn!(
-                        "RAG Search: non-finite normalized BM25 score for chunk {}, falling back to 0.0",
-                        candidate.chunk_id
-                    );
-                    0.0
-                };
-                // Combine scores with weights
+            .zip(bm25_scores)
+            .map(|(mut candidate, bm25_score)| {
+                let normalized_bm25 = bm25_score / (bm25_score + BM25_SATURATION_K);
                 let hybrid = VECTOR_WEIGHT * candidate.score + BM25_WEIGHT * normalized_bm25;
                 candidate.score = if hybrid.is_finite() {
                     hybrid

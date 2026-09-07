@@ -585,7 +585,7 @@ async fn phase_store<R: tauri::Runtime>(
         {
             let s = ctx.store.write().await;
             let file_id = s.upsert_file(&file_record).await?;
-            let _ = s.delete_file_chunks(file_id).await;
+            let _ = s.delete_file_chunks(ctx.project_id, file_id).await;
 
             // Build all rows for this file, then persist chunks + embeddings
             // in one transaction — a failure mid-file rolls back everything,

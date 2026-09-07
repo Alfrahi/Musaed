@@ -20,6 +20,23 @@ pub struct BM25 {
     term_freq: HashMap<usize, HashMap<String, usize>>, // chunk_id -> term -> freq
 }
 
+/// Precomputed corpus-wide statistics for BM25 scoring.
+///
+/// Unlike [`BM25::new`], which derives statistics from whatever document
+/// slice it is handed, this carries the *whole-corpus* document frequency and
+/// average length. Hybrid search must score candidates against the full
+/// project corpus — not the per-query candidate window — or IDF and length
+/// normalization become non-comparable across queries.
+#[derive(Debug, Clone, Default)]
+pub struct CorpusStats {
+    /// Number of documents containing each term (whole corpus).
+    pub doc_freq: HashMap<String, usize>,
+    /// Total number of documents in the corpus.
+    pub doc_count: usize,
+    /// Average document length (in tokens) across the corpus.
+    pub avg_doc_len: f32,
+}
+
 impl BM25 {
     /// Create a new BM25 instance from a collection of documents.
     pub fn new(documents: &[(usize, String)]) -> Self {
@@ -64,6 +81,46 @@ impl BM25 {
         }
     }
 
+    /// Create a BM25 scorer backed by precomputed corpus statistics.
+    ///
+    /// Per-document term frequencies and lengths are still computed from the
+    /// candidate documents themselves (they are cheap and query-independent),
+    /// but document frequency and average length come from the whole corpus
+    /// so IDF is stable across queries.
+    pub fn from_corpus(documents: &[(usize, String)], stats: &CorpusStats) -> Self {
+        let mut term_freq = HashMap::new();
+        let mut doc_len = HashMap::new();
+
+        for &(chunk_id, ref content) in documents {
+            let terms = tokenize(content);
+            doc_len.insert(chunk_id, terms.len());
+
+            let mut term_counts = HashMap::new();
+            for term in terms {
+                *term_counts.entry(term.clone()).or_insert(0) += 1;
+            }
+            term_freq.insert(chunk_id, term_counts);
+        }
+
+        BM25 {
+            doc_freq: stats.doc_freq.clone(),
+            doc_count: stats.doc_count,
+            avg_doc_len: stats.avg_doc_len,
+            doc_len,
+            term_freq,
+        }
+    }
+
+    /// Number of documents in the corpus backing this scorer.
+    pub fn doc_count(&self) -> usize {
+        self.doc_count
+    }
+
+    /// Average document length (in tokens) of the corpus backing this scorer.
+    pub fn avg_doc_len(&self) -> f32 {
+        self.avg_doc_len
+    }
+
     /// Compute BM25 score for a query against a document.
     /// Returns 0.0 if no documents were indexed (avg_doc_len == 0.0).
     pub fn score(&self, query: &str, chunk_id: usize) -> f32 {
@@ -101,7 +158,7 @@ impl BM25 {
 /// Identifier-aware: `camelCase` and `snake_case` identifiers contribute both
 /// their full lowercase form and their sub-tokens, so a query for
 /// "get user by id" matches a chunk containing `getUserById` (RAG R3).
-fn tokenize(text: &str) -> Vec<String> {
+pub fn tokenize(text: &str) -> Vec<String> {
     let mut tokens = Vec::new();
     for raw in text.split(|c: char| !c.is_alphanumeric() && c != '_') {
         if raw.is_empty() {
@@ -354,5 +411,44 @@ mod tests {
         let bm25 = BM25::new(&documents);
         let score = bm25.score("1 2", 1);
         assert!(score > 0.0);
+    }
+
+    #[test]
+    fn test_from_corpus_uses_corpus_idf_not_candidate_window() {
+        // A corpus where "rust" is common (low IDF) and "zebra" is rare (high
+        // IDF). The candidate window handed to `from_corpus` contains only a
+        // single document, so a window-derived IDF would be wrong; the corpus
+        // stats must dominate.
+        let mut doc_freq = HashMap::new();
+        doc_freq.insert("rust".to_string(), 100);
+        doc_freq.insert("zebra".to_string(), 1);
+        let stats = CorpusStats {
+            doc_freq,
+            doc_count: 100,
+            avg_doc_len: 5.0,
+        };
+
+        let candidates = vec![(1, "rust zebra".to_string())];
+        let bm25 = BM25::from_corpus(&candidates, &stats);
+
+        let rust_score = bm25.score("rust", 1);
+        let zebra_score = bm25.score("zebra", 1);
+
+        // The rare term must score higher than the common term, proving the
+        // corpus document frequency (not the 1-doc candidate window) is used.
+        assert!(
+            zebra_score > rust_score,
+            "rare term should outrank common term: zebra={zebra_score}, rust={rust_score}"
+        );
+        assert_eq!(bm25.doc_count(), 100);
+        assert_eq!(bm25.avg_doc_len(), 5.0);
+    }
+
+    #[test]
+    fn test_from_corpus_empty_stats_scores_zero() {
+        let candidates = vec![(1, "hello world".to_string())];
+        let bm25 = BM25::from_corpus(&candidates, &CorpusStats::default());
+        // avg_doc_len == 0.0 → score() guards to 0.0.
+        assert_eq!(bm25.score("hello", 1), 0.0);
     }
 }

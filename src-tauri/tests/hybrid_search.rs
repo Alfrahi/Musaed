@@ -455,7 +455,7 @@ async fn test_delete_file_chunks_no_deadlock() {
 
     // This call would previously deadlock (BUG-001).
     store
-        .delete_file_chunks(file_id)
+        .delete_file_chunks("p1", file_id)
         .await
         .expect("delete_file_chunks should succeed");
 
@@ -777,7 +777,7 @@ async fn test_search_lexical_finds_keyword_matches_corpus_wide() {
     assert!(other_hits.is_empty());
 
     // Trigger sync check: deleting the file's chunks removes them from FTS.
-    store.delete_file_chunks(file_ids[1]).await.unwrap();
+    store.delete_file_chunks("lex", file_ids[1]).await.unwrap();
     let post_delete = store.search_lexical("lex", "zephyr", 10).await.unwrap();
     assert!(post_delete.is_empty());
 }
@@ -800,4 +800,184 @@ async fn test_search_lexical_safe_against_match_syntax() {
     // Whitespace-only query short-circuits.
     let empty = store.search_lexical("inj", "   ", 10).await.unwrap();
     assert!(empty.is_empty());
+}
+
+// ---------------------------------------------------------------------------
+// Regression: BM25 corpus stats must be scoped per project. The v4 tables
+// were global, so IDF and average length were computed across all projects
+// while doc_count was filtered per project — a division mismatch that
+// corrupted hybrid scores with 2+ projects.
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_corpus_stats_isolated_per_project() {
+    let store = test_store();
+    store
+        .create_project(&make_test_project("pa", "A", "/tmp/pa"))
+        .await
+        .unwrap();
+    store
+        .create_project(&make_test_project("pb", "B", "/tmp/pb"))
+        .await
+        .unwrap();
+
+    // Insert one chunk per project with distinct term sets and lengths.
+    for (project, content) in [("pa", "alpha beta gamma delta epsilon"), ("pb", "alpha")] {
+        let file = FileRecord {
+            id: None,
+            project_id: project.to_string(),
+            relative_path: "f.rs".to_string(),
+            file_hash: "h".to_string(),
+            file_size: 10,
+            modified_at: "2024-01-01".to_string(),
+            chunk_count: 1,
+        };
+        let file_id = store.upsert_file(&file).await.unwrap();
+        store
+            .insert_chunk(&ChunkRow {
+                id: None,
+                project_id: project.to_string(),
+                file_id,
+                chunk_index: 0,
+                content: content.to_string(),
+                chunk_type: "code".to_string(),
+                language: Some("rust".to_string()),
+                start_line: 1,
+                end_line: 1,
+                metadata: serde_json::json!({}),
+            })
+            .await
+            .unwrap();
+    }
+
+    let pa = store.load_corpus_stats("pa").await.unwrap();
+    let pb = store.load_corpus_stats("pb").await.unwrap();
+
+    // doc_count is per project.
+    assert_eq!(pa.doc_count, 1);
+    assert_eq!(pb.doc_count, 1);
+
+    // avg_doc_len must be per project: pa has 5 tokens, pb has 1. If the
+    // tables were global, pa's average would be diluted by pb's short chunk.
+    assert_eq!(pa.avg_doc_len, 5.0);
+    assert_eq!(pb.avg_doc_len, 1.0);
+
+    // doc_freq must be per project: "alpha" appears in both, but the
+    // project-specific terms must not leak across.
+    assert_eq!(pa.doc_freq.get("beta"), Some(&1));
+    assert_eq!(pb.doc_freq.get("beta"), None);
+    assert_eq!(pa.doc_freq.get("alpha"), Some(&1));
+    assert_eq!(pb.doc_freq.get("alpha"), Some(&1));
+}
+
+// ---------------------------------------------------------------------------
+// Regression: bm25_doc_freq must record *document* frequency — the number of
+// chunks containing a term — not the term's total occurrence count. Occurrence
+// counts can exceed doc_count and drive the BM25 IDF log argument negative.
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_doc_freq_counts_documents_not_occurrences() {
+    let store = test_store();
+    store
+        .create_project(&make_test_project("df", "DF", "/tmp/df"))
+        .await
+        .unwrap();
+
+    let file = FileRecord {
+        id: None,
+        project_id: "df".to_string(),
+        relative_path: "f.rs".to_string(),
+        file_hash: "h".to_string(),
+        file_size: 10,
+        modified_at: "2024-01-01".to_string(),
+        chunk_count: 2,
+    };
+    let file_id = store.upsert_file(&file).await.unwrap();
+
+    // Chunk 1: "alpha" appears 3 times — still ONE document containing it.
+    // Chunk 2: "alpha" once + "beta" once.
+    for (chunk_index, content) in [(0, "alpha alpha alpha"), (1, "alpha beta")] {
+        store
+            .insert_chunk(&ChunkRow {
+                id: None,
+                project_id: "df".to_string(),
+                file_id,
+                chunk_index,
+                content: content.to_string(),
+                chunk_type: "code".to_string(),
+                language: Some("rust".to_string()),
+                start_line: 1,
+                end_line: 1,
+                metadata: serde_json::json!({}),
+            })
+            .await
+            .unwrap();
+    }
+
+    let stats = store.load_corpus_stats("df").await.unwrap();
+    assert_eq!(stats.doc_count, 2);
+    // "alpha" is in 2 documents (not 4 occurrences); "beta" in 1.
+    assert_eq!(stats.doc_freq.get("alpha"), Some(&2));
+    assert_eq!(stats.doc_freq.get("beta"), Some(&1));
+    // avg_doc_len uses token lengths (3 and 2) as before.
+    assert_eq!(stats.avg_doc_len, 2.5);
+}
+
+// ---------------------------------------------------------------------------
+// Regression: deleting a file (stale-file cleanup during reindex) must remove
+// its chunks' BM25 stats. Previously `delete_file` bypassed the stats tables,
+// leaving stale doc_freq/doc_len entries that inflated IDF and avg_doc_len.
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_delete_file_removes_corpus_stats() {
+    let store = test_store();
+    store
+        .create_project(&make_test_project("pdel", "PD", "/tmp/pdel"))
+        .await
+        .unwrap();
+
+    let mut file_ids = Vec::new();
+    for (name, content) in [("a.rs", "apple banana"), ("b.rs", "cherry durian")] {
+        let file = FileRecord {
+            id: None,
+            project_id: "pdel".to_string(),
+            relative_path: name.to_string(),
+            file_hash: "h".to_string(),
+            file_size: 10,
+            modified_at: "2024-01-01".to_string(),
+            chunk_count: 1,
+        };
+        let file_id = store.upsert_file(&file).await.unwrap();
+        file_ids.push(file_id);
+        store
+            .insert_chunk(&ChunkRow {
+                id: None,
+                project_id: "pdel".to_string(),
+                file_id,
+                chunk_index: 0,
+                content: content.to_string(),
+                chunk_type: "code".to_string(),
+                language: Some("rust".to_string()),
+                start_line: 1,
+                end_line: 1,
+                metadata: serde_json::json!({}),
+            })
+            .await
+            .unwrap();
+    }
+
+    // Delete the second file (the stale-cleanup path used by reindex).
+    store.delete_file(file_ids[1]).await.unwrap();
+
+    let stats = store.load_corpus_stats("pdel").await.unwrap();
+    assert_eq!(stats.doc_count, 1);
+    // Deleted chunk's terms must not linger in the stats.
+    assert_eq!(stats.doc_freq.get("cherry"), None);
+    assert_eq!(stats.doc_freq.get("durian"), None);
+    assert_eq!(stats.doc_freq.get("apple"), Some(&1));
+    assert_eq!(stats.doc_freq.get("banana"), Some(&1));
+    // avg_doc_len must reflect only the surviving 2-token chunk.
+    assert_eq!(stats.avg_doc_len, 2.0);
 }

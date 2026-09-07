@@ -1,5 +1,6 @@
 //! Project CRUD operations and related business logic.
 
+use super::bm25_stats::clear_project_stats;
 use super::connection::DEFAULT_EMBEDDING_DIMENSION;
 use super::row_mapping::row_to_project;
 use crate::rag::error::{RagError, RagResult};
@@ -123,6 +124,9 @@ pub(super) async fn delete_project(store: &super::RagStore, id: &str) -> RagResu
         "DELETE FROM vec_chunks WHERE chunk_id IN (SELECT id FROM chunks WHERE project_id = ?1)",
         rusqlite::params![id],
     )?;
+
+    // Remove corpus stats before the chunks are CASCADE-deleted.
+    clear_project_stats(&tx, id)?;
 
     // CASCADE will handle chunks and files
     tx.execute("DELETE FROM projects WHERE id = ?1", rusqlite::params![id])?;
@@ -263,6 +267,8 @@ pub(super) async fn update_embedding_model(
         "DELETE FROM files WHERE project_id = ?1",
         rusqlite::params![id],
     )?;
+    // Remove corpus stats for the wiped chunks.
+    clear_project_stats(&tx, id)?;
     // Reset model + index state so a reindex is forced
     tx.execute(
         "UPDATE projects SET embedding_model = ?1, file_count = 0, chunk_count = 0, \

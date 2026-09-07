@@ -17,7 +17,7 @@
 use crate::migrations::MigrationStep;
 
 /// Latest migration version for the RAG database
-pub const LATEST_VERSION: u32 = 3;
+pub const LATEST_VERSION: u32 = 5;
 
 /// Gets the migration step for a specific version
 pub fn get_migration(version: u32) -> Option<MigrationStep> {
@@ -83,6 +83,51 @@ fn rag_step(version: u32) -> Option<MigrationStep> {
                  END",
                 "INSERT INTO chunks_fts(chunks_fts) VALUES('rebuild')",
                 "UPDATE projects SET chunk_count = 0, indexed_at = NULL WHERE 1",
+            ],
+        )),
+        // v4: add corpus-wide BM25 statistics tables for hybrid search. The
+        // tables are created empty; `load_corpus_stats` lazily rebuilds them
+        // from `chunks` on first search, so no SQL-side tokenization is needed
+        // here and existing indexes stay valid.
+        4 => Some(MigrationStep::irreversible(
+            4,
+            "Add corpus-wide BM25 statistics tables",
+            &[
+                "CREATE TABLE IF NOT EXISTS bm25_doc_freq (
+                    term      TEXT PRIMARY KEY,
+                    doc_count INTEGER NOT NULL
+                )",
+                "CREATE TABLE IF NOT EXISTS bm25_doc_len (
+                    chunk_id INTEGER PRIMARY KEY,
+                    len      INTEGER NOT NULL
+                )",
+            ],
+        )),
+        // v5: scope BM25 statistics per project. The v4 tables were global,
+        // so IDF and average document length were computed across *all*
+        // projects while `doc_count` was filtered per project — a division
+        // mismatch that corrupted hybrid scores with 2+ projects. The tables
+        // are dropped and recreated empty; `load_corpus_stats` lazily
+        // rebuilds them per project on first search, so no data migration is
+        // needed.
+        5 => Some(MigrationStep::irreversible(
+            5,
+            "Scope BM25 statistics per project",
+            &[
+                "DROP TABLE IF EXISTS bm25_doc_freq",
+                "DROP TABLE IF EXISTS bm25_doc_len",
+                "CREATE TABLE IF NOT EXISTS bm25_doc_freq (
+                    project_id TEXT NOT NULL,
+                    term       TEXT NOT NULL,
+                    doc_count  INTEGER NOT NULL,
+                    PRIMARY KEY (project_id, term)
+                )",
+                "CREATE TABLE IF NOT EXISTS bm25_doc_len (
+                    project_id TEXT NOT NULL,
+                    chunk_id   INTEGER NOT NULL,
+                    len        INTEGER NOT NULL,
+                    PRIMARY KEY (project_id, chunk_id)
+                )",
             ],
         )),
         _ => None,

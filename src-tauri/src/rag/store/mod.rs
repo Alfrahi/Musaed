@@ -10,6 +10,7 @@
 //! writer is serialized by the outer `RwLock<RagStore>` write guard held in
 //! the services layer.
 
+mod bm25_stats;
 mod chunks;
 pub mod connection;
 mod embeddings;
@@ -21,6 +22,7 @@ mod stats;
 
 use crate::rag::error::{RagError, RagResult};
 use crate::rag::types::*;
+use bm25_stats::*;
 use chunks::*;
 use connection::open_connection;
 use embeddings::*;
@@ -271,8 +273,8 @@ impl RagStore {
         get_file_chunks(self, file_id).await
     }
 
-    pub async fn delete_file_chunks(&self, file_id: i64) -> RagResult<()> {
-        delete_file_chunks(self, file_id).await
+    pub async fn delete_file_chunks(&self, project_id: &str, file_id: i64) -> RagResult<()> {
+        delete_file_chunks(self, project_id, file_id).await
     }
 
     // ====================== EMBEDDING OPERATIONS ======================
@@ -345,5 +347,15 @@ impl RagStore {
 
     pub async fn get_project_stats(&self, project_id: &str) -> RagResult<ProjectStats> {
         get_project_stats(self, project_id).await
+    }
+
+    /// Load corpus-wide BM25 statistics for a project, rebuilding them from
+    /// `chunks` when the tables are empty (v4 backfill / drift recovery).
+    pub async fn load_corpus_stats(
+        &self,
+        project_id: &str,
+    ) -> RagResult<crate::rag::bm25::CorpusStats> {
+        let conn = self.read_conn().await;
+        load_corpus_stats(&conn, project_id)
     }
 }

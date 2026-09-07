@@ -1,5 +1,6 @@
 //! Chunk CRUD operations.
 
+use super::bm25_stats::{add_chunk_stats, remove_chunk_stats};
 use super::connection::MAX_EMBEDDING_DIMENSION;
 use crate::rag::error::RagResult;
 use crate::rag::types::ChunkRow;
@@ -8,7 +9,8 @@ use rusqlite::params;
 /// Insert a single chunk and return its ID.
 pub(super) async fn insert_chunk(store: &super::RagStore, chunk: &ChunkRow) -> RagResult<i64> {
     let conn = store.write_conn().await;
-    conn.execute(
+    let tx = conn.unchecked_transaction()?;
+    tx.execute(
         "INSERT INTO chunks (project_id, file_id, chunk_index, content, chunk_type, language, start_line, end_line, metadata) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         params![
             chunk.project_id,
@@ -22,7 +24,10 @@ pub(super) async fn insert_chunk(store: &super::RagStore, chunk: &ChunkRow) -> R
             serde_json::to_string(&chunk.metadata)?,
         ],
     )?;
-    Ok(conn.last_insert_rowid())
+    let chunk_id = tx.last_insert_rowid();
+    add_chunk_stats(&tx, &chunk.project_id, chunk_id, &chunk.content)?;
+    tx.commit()?;
+    Ok(chunk_id)
 }
 
 /// Insert multiple chunks in a single transaction.
@@ -48,6 +53,8 @@ pub(super) async fn insert_chunks_batch(
                 chunk.end_line as i64,
                 serde_json::to_string(&chunk.metadata)?,
             ])?;
+            let chunk_id = tx.last_insert_rowid();
+            add_chunk_stats(&tx, &chunk.project_id, chunk_id, &chunk.content)?;
         }
     }
     tx.commit()?;
@@ -87,8 +94,10 @@ pub(super) async fn insert_chunks_with_embeddings(
                 serde_json::to_string(&chunk.metadata)?,
             ])?;
 
+            let chunk_id = tx.last_insert_rowid();
+            add_chunk_stats(&tx, &chunk.project_id, chunk_id, &chunk.content)?;
+
             if let Some(embedding) = embeddings.get(i) {
-                let chunk_id = tx.last_insert_rowid();
                 let mut padded = vec![0.0f32; MAX_EMBEDDING_DIMENSION];
                 let copy_len = embedding.len().min(MAX_EMBEDDING_DIMENSION);
                 padded[..copy_len].copy_from_slice(&embedding[..copy_len]);
@@ -133,9 +142,22 @@ pub(super) async fn get_file_chunks(
 /// race conditions, and within a **single transaction** so a crash between the
 /// two deletes cannot leave orphaned chunks whose embeddings were already
 /// removed (or vice versa).
-pub(super) async fn delete_file_chunks(store: &super::RagStore, file_id: i64) -> RagResult<()> {
+pub(super) async fn delete_file_chunks(
+    store: &super::RagStore,
+    project_id: &str,
+    file_id: i64,
+) -> RagResult<()> {
     let conn = store.write_conn().await;
     let tx = conn.unchecked_transaction()?;
+
+    // Collect chunk contents before deletion so corpus stats can be decremented.
+    let contents: Vec<(i64, String)> = {
+        let mut stmt = tx.prepare("SELECT id, content FROM chunks WHERE file_id = ?1")?;
+        let rows = stmt.query_map(params![file_id], |row| {
+            Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+        })?;
+        rows.collect::<Result<Vec<_>, _>>()?
+    };
 
     // Delete embeddings first (via subquery)
     tx.execute(
@@ -145,6 +167,11 @@ pub(super) async fn delete_file_chunks(store: &super::RagStore, file_id: i64) ->
 
     // Delete chunks
     tx.execute("DELETE FROM chunks WHERE file_id = ?1", params![file_id])?;
+
+    // Remove corpus stats for the deleted chunks.
+    for (chunk_id, content) in contents {
+        remove_chunk_stats(&tx, project_id, chunk_id, &content)?;
+    }
 
     tx.commit()?;
     Ok(())

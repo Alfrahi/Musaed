@@ -1,5 +1,6 @@
 //! File record CRUD operations.
 
+use super::bm25_stats::remove_chunk_stats;
 use crate::rag::error::RagResult;
 use rusqlite::OptionalExtension;
 
@@ -46,6 +47,22 @@ pub(super) async fn delete_file(store: &super::RagStore, file_id: i64) -> RagRes
     let conn = store.write_conn().await;
     let tx = conn.unchecked_transaction()?;
 
+    // Collect chunk ids + contents before deletion so corpus stats stay in
+    // sync; this path (stale-file cleanup during reindex) would otherwise
+    // leave orphaned BM25 entries behind.
+    let contents: Vec<(i64, String, String)> = {
+        let mut stmt =
+            tx.prepare("SELECT id, project_id, content FROM chunks WHERE file_id = ?1")?;
+        let rows = stmt.query_map(rusqlite::params![file_id], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+            ))
+        })?;
+        rows.collect::<Result<Vec<_>, _>>()?
+    };
+
     // Delete embeddings first (via subquery for chunks belonging to this file).
     tx.execute(
         "DELETE FROM vec_chunks WHERE chunk_id IN (SELECT id FROM chunks WHERE file_id = ?1)",
@@ -57,6 +74,11 @@ pub(super) async fn delete_file(store: &super::RagStore, file_id: i64) -> RagRes
         "DELETE FROM chunks WHERE file_id = ?1",
         rusqlite::params![file_id],
     )?;
+
+    // Remove corpus stats for the deleted chunks.
+    for (chunk_id, project_id, content) in contents {
+        remove_chunk_stats(&tx, &project_id, chunk_id, &content)?;
+    }
 
     // Delete file
     tx.execute(

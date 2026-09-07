@@ -88,6 +88,28 @@ END;
 CREATE INDEX IF NOT EXISTS idx_chunks_project_id ON chunks(project_id);
 CREATE INDEX IF NOT EXISTS idx_chunks_file_id ON chunks(file_id);
 CREATE INDEX IF NOT EXISTS idx_files_project_id ON files(project_id);
+
+-- Corpus-wide BM25 statistics for hybrid search, scoped per project.
+-- `bm25_doc_freq` stores the number of documents containing each term;
+-- `bm25_doc_len` stores per-chunk token length so average document length is
+-- computable. Maintained transactionally on chunk insert/delete and lazily
+-- rebuilt when empty (the v4/v5 backfill path). Without these, hybrid scoring
+-- would be computed against the per-query candidate window, making IDF
+-- non-comparable across queries. The `project_id` column keeps IDF and
+-- average length correct when multiple projects coexist.
+CREATE TABLE IF NOT EXISTS bm25_doc_freq (
+    project_id TEXT NOT NULL,
+    term       TEXT NOT NULL,
+    doc_count  INTEGER NOT NULL,
+    PRIMARY KEY (project_id, term)
+);
+
+CREATE TABLE IF NOT EXISTS bm25_doc_len (
+    project_id TEXT NOT NULL,
+    chunk_id   INTEGER NOT NULL,
+    len        INTEGER NOT NULL,
+    PRIMARY KEY (project_id, chunk_id)
+);
 "#;
 
 pub(super) const PRAGMAS_SQL: &str = r#"
@@ -485,5 +507,22 @@ mod tests {
             .unwrap();
         assert_eq!(fts_fresh, 1);
         assert_eq!(fts_upgraded, 1);
+
+        // Both must expose the per-project BM25 statistics tables with
+        // identical schema (v5 scopes them by project_id).
+        for table in ["bm25_doc_freq", "bm25_doc_len"] {
+            assert_eq!(
+                table_info(&fresh, table),
+                table_info(&upgraded, table),
+                "table_info mismatch for {}",
+                table
+            );
+            let fresh_cols: Vec<String> = table_info(&fresh, table);
+            assert!(
+                fresh_cols.contains(&"project_id".to_string()),
+                "{} missing project_id column",
+                table
+            );
+        }
     }
 }
