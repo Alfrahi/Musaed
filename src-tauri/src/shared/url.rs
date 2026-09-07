@@ -20,3 +20,14 @@ pub fn ollama_endpoint(base_url: &str, path: &str) -> Result<String, String> {
         .map(|u| u.to_string())
         .map_err(|e| e.to_string())
 }
+
+/// Validates an Ollama base URL at the IPC boundary.
+///
+/// Command adapters call this first so an invalid/SSRF-shaped URL is rejected
+/// with `INVALID_URL` before any rate-limit slot, log line, or network work —
+/// the services validate again via [`ollama_endpoint`] (defense in depth).
+pub fn validate_ollama_base<T>(base_url: &str) -> Result<(), ApiResponse<T>> {
+    parse_ollama_base_url(base_url)
+        .map(|_| ())
+        .map_err(invalid_ollama_base)
+}

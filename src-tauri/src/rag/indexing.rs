@@ -64,17 +64,35 @@ impl<R: tauri::Runtime> PhaseContext<'_, R> {
 // ====================== PHASE OUTPUTS ======================
 
 /// Output of the diff phase — files to index, files to delete, and cached
-/// file contents (avoid re-reading from disk during chunking).
+/// file contents (avoid re-reading from disk during chunking). Also carries
+/// per-file diff counts so the completion event can report them honestly.
 struct DiffOutput {
     files_to_index: Vec<(String, u64, String)>,
     files_to_delete: Vec<i64>,
     file_contents: HashMap<String, Vec<u8>>,
+    files_added: u64,
+    files_modified: u64,
+    files_unchanged: u64,
+    skipped_read_failed: u64,
 }
 
 /// Output of the chunk phase — raw chunks grouped by file.
 struct ChunkOutput {
     all_raw_chunks: Vec<(String, u64, String, Vec<RawChunk>)>,
     total_chunks: usize,
+    skipped_non_utf8: u64,
+}
+
+/// Working accumulators inside the diff blocking task.
+#[derive(Default)]
+struct DiffStats {
+    files_to_index: Vec<(String, u64, String)>,
+    files_to_delete: Vec<i64>,
+    file_contents: HashMap<String, Vec<u8>>,
+    files_added: u64,
+    files_modified: u64,
+    files_unchanged: u64,
+    skipped_read_failed: u64,
 }
 
 /// Output of the embed phase — dense vectors for every chunk.
@@ -172,8 +190,16 @@ async fn run_pipeline<R: tauri::Runtime>(ctx: PhaseContext<'_, R>) -> RagResult<
     phase_delete_stale(&ctx, &diff.files_to_delete).await?;
     let chunked = phase_chunk(&ctx, &diff).await?;
     let embedded = phase_embed(&ctx, &chunked).await?;
+    let summary = crate::rag::types::IndexSummary {
+        files_added: diff.files_added,
+        files_modified: diff.files_modified,
+        files_deleted: diff.files_to_delete.len() as u64,
+        files_unchanged: diff.files_unchanged,
+        skipped_read_failed: diff.skipped_read_failed,
+        skipped_non_utf8: chunked.skipped_non_utf8,
+    };
     phase_store(&ctx, &discovered, &chunked, &embedded).await?;
-    phase_complete(&ctx, &discovered, chunked.total_chunks).await?;
+    phase_complete(&ctx, &discovered, chunked.total_chunks, summary).await?;
 
     Ok(())
 }
@@ -239,71 +265,78 @@ async fn phase_diff<R: tauri::Runtime>(
     let discovered_owned = discovered.to_vec();
     let cancel = ctx.cancel_token.clone();
     let force = ctx.force;
-    let (files_to_index, files_to_delete, file_contents) =
-        tokio::task::spawn_blocking(move || -> RagResult<_> {
-            let mut files_to_index: Vec<(String, u64, String)> = Vec::new();
-            let mut files_to_delete: Vec<i64> = Vec::new();
-            let mut file_contents: HashMap<String, Vec<u8>> = HashMap::new();
+    let diff_stats = tokio::task::spawn_blocking(move || -> RagResult<DiffStats> {
+        let mut out = DiffStats::default();
 
-            for file in &discovered_owned {
-                if cancel.is_cancelled() {
-                    return Err(RagError::Cancelled("by user request".to_string()));
+        for file in &discovered_owned {
+            if cancel.is_cancelled() {
+                return Err(RagError::Cancelled("by user request".to_string()));
+            }
+
+            let content = match std::fs::read(&file.path) {
+                Ok(c) => c,
+                Err(e) => {
+                    tracing::debug!("Failed to read file {:?}: {}", file.path, e);
+                    out.skipped_read_failed += 1;
+                    continue;
                 }
+            };
 
-                let content = match std::fs::read(&file.path) {
-                    Ok(c) => c,
-                    Err(e) => {
-                        tracing::debug!("Failed to read file {:?}: {}", file.path, e);
-                        continue;
-                    }
-                };
+            let hash = format!("{:016x}", xxh3_64(&content));
 
-                let hash = format!("{:016x}", xxh3_64(&content));
+            let tracked = tracked_map.get(&file.relative_path);
+            let needs_index = force || tracked.map(|(h, _)| h != &hash).unwrap_or(true);
 
-                let needs_index = if force {
-                    true
-                } else if let Some((tracked_hash, _)) = tracked_map.get(&file.relative_path) {
-                    tracked_hash != &hash
+            if needs_index {
+                if tracked.is_some() {
+                    out.files_modified += 1;
                 } else {
-                    true
-                };
-
-                if needs_index {
-                    file_contents.insert(file.relative_path.clone(), content);
-                    files_to_index.push((file.relative_path.clone(), file.size, hash));
+                    out.files_added += 1;
                 }
+                out.file_contents
+                    .insert(file.relative_path.clone(), content);
+                out.files_to_index
+                    .push((file.relative_path.clone(), file.size, hash));
+            } else {
+                out.files_unchanged += 1;
             }
+        }
 
-            let discovered_set: HashSet<String> = discovered_owned
-                .iter()
-                .map(|f| f.relative_path.clone())
-                .collect();
-            for (path, (_, file_id)) in &tracked_map {
-                if !discovered_set.contains(path) {
-                    files_to_delete.push(*file_id);
-                }
+        let discovered_set: HashSet<String> = discovered_owned
+            .iter()
+            .map(|f| f.relative_path.clone())
+            .collect();
+        for (path, (_, file_id)) in &tracked_map {
+            if !discovered_set.contains(path) {
+                out.files_to_delete.push(*file_id);
             }
+        }
 
-            Ok((files_to_index, files_to_delete, file_contents))
-        })
-        .await
-        .map_err(|e| RagError::Config(format!("diff task join error: {}", e)))??;
+        Ok(out)
+    })
+    .await
+    .map_err(|e| RagError::Config(format!("diff task join error: {}", e)))??;
 
     ctx.emit(
         IndexPhase::DiffingFiles,
         total_files,
         total_files,
         format!(
-            "{} new/modified, {} deleted",
-            files_to_index.len(),
-            files_to_delete.len()
+            "{} new, {} modified, {} deleted",
+            diff_stats.files_added,
+            diff_stats.files_modified,
+            diff_stats.files_to_delete.len()
         ),
     );
 
     Ok(DiffOutput {
-        files_to_index,
-        files_to_delete,
-        file_contents,
+        files_to_index: diff_stats.files_to_index,
+        files_to_delete: diff_stats.files_to_delete,
+        file_contents: diff_stats.file_contents,
+        files_added: diff_stats.files_added,
+        files_modified: diff_stats.files_modified,
+        files_unchanged: diff_stats.files_unchanged,
+        skipped_read_failed: diff_stats.skipped_read_failed,
     })
 }
 
@@ -366,6 +399,7 @@ async fn phase_chunk<R: tauri::Runtime>(
     let pid = ctx.project_id.to_string();
     let all_raw_chunks = tokio::task::spawn_blocking(move || -> RagResult<_> {
         let mut out: Vec<(String, u64, String, Vec<RawChunk>)> = Vec::new();
+        let mut skipped_non_utf8: u64 = 0;
         for (i, (relative_path, file_size, hash)) in files.iter().enumerate() {
             if cancel.is_cancelled() {
                 return Err(RagError::Cancelled("by user request".to_string()));
@@ -376,6 +410,7 @@ async fn phase_chunk<R: tauri::Runtime>(
                     Ok(s) => s.to_string(),
                     Err(_) => {
                         tracing::debug!("Skipping non-UTF-8 file: {}", relative_path);
+                        skipped_non_utf8 += 1;
                         continue;
                     }
                 },
@@ -397,10 +432,12 @@ async fn phase_chunk<R: tauri::Runtime>(
             let chunks = chunk_content(&content, relative_path);
             out.push((relative_path.clone(), *file_size, hash.clone(), chunks));
         }
-        Ok(out)
+        Ok((out, skipped_non_utf8))
     })
     .await
     .map_err(|e| RagError::Config(format!("chunk task join error: {}", e)))??;
+
+    let (all_raw_chunks, skipped_non_utf8) = all_raw_chunks;
 
     let total_chunks: usize = all_raw_chunks.iter().map(|(_, _, _, c)| c.len()).sum();
     ctx.emit(
@@ -413,6 +450,7 @@ async fn phase_chunk<R: tauri::Runtime>(
     Ok(ChunkOutput {
         all_raw_chunks,
         total_chunks,
+        skipped_non_utf8,
     })
 }
 
@@ -620,6 +658,7 @@ async fn phase_complete<R: tauri::Runtime>(
     ctx: &PhaseContext<'_, R>,
     discovered: &[crate::rag::ignore::DiscoveredFile],
     total_chunks: usize,
+    summary: crate::rag::types::IndexSummary,
 ) -> RagResult<()> {
     ctx.emit(
         IndexPhase::Completed,
@@ -644,6 +683,7 @@ async fn phase_complete<R: tauri::Runtime>(
         file_count,
         chunk_count,
         total_bytes,
+        summary: summary.clone(),
     };
     if let Err(e) = ctx
         .app_handle

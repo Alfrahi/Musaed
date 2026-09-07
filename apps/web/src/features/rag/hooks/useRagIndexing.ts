@@ -2,7 +2,11 @@
 
 import { useCallback } from 'react';
 import { ragApi, listen } from '@/lib/ipc';
-import { useSetRagIndexProgress, useUpdateRagProject } from '@/store/rag-store';
+import {
+  useSetRagIndexProgress,
+  useUpdateRagProject,
+  useSetRagIndexSummary,
+} from '@/store/rag-store';
 import { useOllamaUrl } from '@/store/settings-store';
 import { IndexProgressSchema, IndexCompleteSchema, IndexErrorSchema } from '@musaed/contracts';
 import type { IndexProgress, IndexComplete, IndexError } from '@musaed/contracts';
@@ -10,6 +14,7 @@ import type { IndexProgress, IndexComplete, IndexError } from '@musaed/contracts
 export function useRagIndexing() {
   const setIndexProgress = useSetRagIndexProgress();
   const updateProject = useUpdateRagProject();
+  const setIndexSummary = useSetRagIndexSummary();
   const ollamaUrl = useOllamaUrl();
 
   const startIndexing = useCallback(
@@ -63,6 +68,7 @@ export function useRagIndexing() {
             chunkCount: payload.chunkCount,
             totalBytes: payload.totalBytes,
           });
+          setIndexSummary(payload.projectId, payload.summary);
         },
         IndexCompleteSchema
       );
@@ -86,7 +92,7 @@ export function useRagIndexing() {
         unlisten();
       }
     };
-  }, [setIndexProgress, updateProject]);
+  }, [setIndexProgress, updateProject, setIndexSummary]);
 
   return {
     startIndexing,

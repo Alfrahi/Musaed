@@ -211,6 +211,8 @@
     "noProjects": "لا توجد مشاريع مضافة حالياً",
     "indexed": "تمت الفهرسة",
     "error": "خطأ",
+    "indexSummaryFiles": "{added} جديد · {modified} معدّل · {deleted} محذوف · {unchanged} دون تغيير",
+    "indexSummarySkipped": "تم تخطي {count} ملف (غير UTF-8 أو غير قابل للقراءة)",
     "chunks": "{count, plural, =0 {لا توجد مقاطع} one {مقطع واحد} two {مقطعان} few {# مقاطع} many {# مقطعاً} other {# مقطع}}",
     "sourceReferenceCount": "{count, plural, =0 {لا توجد مصادر} one {مصدر واحد} two {مصدران} few {# مصادر} many {# مصدراً} other {# مصدر}}",
     "chunksForFile": "المقاطع الخاصة بالملف:",

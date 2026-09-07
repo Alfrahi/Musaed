@@ -110,6 +110,10 @@ pub async fn cmd_conversations_clear(
     Ok(service::clear_all_conversations(state.inner().clone()).await)
 }
 
+/// Renames a conversation. The `updated_at` argument is accepted for
+/// backward compatibility but ignored: the server stamps its own clock so a
+/// buggy or malicious client cannot corrupt the list ordering
+/// (`ORDER BY updated_at DESC`).
 #[tauri::command]
 pub async fn cmd_conversation_update(
     state: State<'_, Arc<Mutex<ConversationStore>>>,
@@ -123,10 +127,8 @@ pub async fn cmd_conversation_update(
     if let Err(msg) = validation::validate_title(&title) {
         return Ok(reject("cmd_conversation_update", msg));
     }
-    if let Err(msg) = validation::validate_timestamp(updated_at, "updatedAt") {
-        return Ok(reject("cmd_conversation_update", msg));
-    }
-    Ok(service::update_conversation(state.inner().clone(), id, title, updated_at).await)
+    let _ = updated_at;
+    Ok(service::update_conversation(state.inner().clone(), id, title).await)
 }
 
 #[tauri::command]

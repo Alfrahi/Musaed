@@ -4,6 +4,7 @@
 //! an active chat session or when probing server status.
 
 use crate::payloads::{ApiResponse, ChatMessage, ChatOptions, OllamaHealth};
+use crate::shared::validate_ollama_base;
 use std::sync::Arc;
 use tauri::{AppHandle, Runtime};
 
@@ -12,6 +13,11 @@ use super::streaming::TauriEmitter;
 
 // ==================== CHAT ====================
 
+/// Starts a chat stream. Returns `ApiResponse<bool>` where `data: Some(true)`
+/// means the stream was **accepted** (a request slot reserved and the `request_id`
+/// registered) — not that the model finished or even answered. Actual output
+/// arrives as streaming events on the window; failures surface as stream-error
+/// events. Callers must listen for the completion/error events, not this value.
 #[tauri::command]
 pub async fn cmd_ollama_chat<R: Runtime>(
     app: AppHandle<R>,
@@ -24,6 +30,9 @@ pub async fn cmd_ollama_chat<R: Runtime>(
 ) -> ApiResponse<bool> {
     // Rate limit enforced once in OllamaChatService::chat; checking here too
     // would consume two slots per request against the quota.
+    if let Err(resp) = validate_ollama_base(&base_url) {
+        return resp;
+    }
     let service = OllamaChatService;
     crate::metrics::begin_chat(&request_id);
     let metrics_request_id = request_id.clone();
@@ -64,5 +73,8 @@ pub async fn cmd_ollama_abort_chat(request_id: String) -> ApiResponse<()> {
 
 #[tauri::command]
 pub async fn cmd_ollama_check_health(base_url: String) -> ApiResponse<OllamaHealth> {
+    if let Err(resp) = validate_ollama_base(&base_url) {
+        return resp;
+    }
     crate::ollama::health_service::check_health(base_url).await
 }

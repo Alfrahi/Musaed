@@ -167,4 +167,35 @@ mod tests {
         let result = models::cmd_ollama_abort_pull("nonexistent".to_string()).await;
         assert!(result.success);
     }
+
+    /// LOW-3: every command taking `base_url` must reject an invalid/SSRF URL
+    /// at the IPC boundary with INVALID_URL, without touching the network.
+    #[tokio::test]
+    async fn ollama_commands_reject_invalid_base_url_early() {
+        for bad in ["http://8.8.8.8:11434", "not-a-url", ""] {
+            let models = models::cmd_ollama_get_models(bad.to_string()).await;
+            assert!(!models.success, "get_models accepted {bad:?}");
+            assert_eq!(
+                models.error.as_ref().map(|e| e.code.as_str()),
+                Some("INVALID_URL"),
+                "get_models wrong code for {bad:?}"
+            );
+
+            let health = commands::cmd_ollama_check_health(bad.to_string()).await;
+            assert!(!health.success, "check_health accepted {bad:?}");
+            assert_eq!(
+                health.error.as_ref().map(|e| e.code.as_str()),
+                Some("INVALID_URL"),
+                "check_health wrong code for {bad:?}"
+            );
+
+            let verify = models::cmd_ollama_verify_service(bad.to_string()).await;
+            assert!(!verify.success, "verify_service accepted {bad:?}");
+            assert_eq!(
+                verify.error.as_ref().map(|e| e.code.as_str()),
+                Some("INVALID_URL"),
+                "verify_service wrong code for {bad:?}"
+            );
+        }
+    }
 }

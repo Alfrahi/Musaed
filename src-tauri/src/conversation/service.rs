@@ -251,14 +251,19 @@ pub async fn clear_all_conversations(store: Arc<Mutex<ConversationStore>>) -> Ap
     }
 }
 
-/// Update a conversation's metadata.
+/// Update a conversation's metadata. `updated_at` is stamped from the server
+/// clock — client-supplied timestamps are not trusted (see
+/// `cmd_conversation_update`).
 pub async fn update_conversation(
     store: Arc<Mutex<ConversationStore>>,
     id: String,
     title: String,
-    updated_at: i64,
 ) -> ApiResponse<()> {
     tracing::info!("Updating conversation {}: title={}", id, title);
+    let updated_at = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or_default();
     let id2 = id.clone();
     match db_call(move || {
         let guard = store.blocking_lock();
@@ -408,5 +413,44 @@ mod tests {
 
         let resp = delete_message(store, "conv-1".to_string(), "nonexistent".to_string()).await;
         assert!(resp.success);
+    }
+
+    /// MEDIUM-3: `updated_at` must be stamped from the server clock, not the
+    /// client-supplied epoch (client can no longer pin a conversation to the
+    /// top of the list with a far-future timestamp).
+    #[tokio::test]
+    async fn test_update_conversation_stamps_server_time() {
+        let store =
+            make_store_with_message("conv-1", "Old Title", "msg-1", "user", "Hello world").await;
+        let seeded_ts = 1000i64;
+
+        let before_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as i64;
+        let resp =
+            update_conversation(store.clone(), "conv-1".to_string(), "New Title".to_string()).await;
+        assert!(resp.success);
+        let after_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as i64;
+
+        let conv = {
+            let guard = store.lock().await;
+            guard.get_conversation("conv-1").unwrap()
+        };
+        assert_eq!(conv.title, "New Title");
+        assert!(
+            conv.updated_at != seeded_ts,
+            "updated_at must be re-stamped, got seed value"
+        );
+        assert!(
+            conv.updated_at >= before_ms && conv.updated_at <= after_ms,
+            "updated_at {} not within server-observed window [{}, {}]",
+            conv.updated_at,
+            before_ms,
+            after_ms
+        );
     }
 }

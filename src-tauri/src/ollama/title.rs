@@ -4,6 +4,7 @@
 //! delegates all business logic to [`super::title_service::TitleService`].
 
 use crate::payloads::ApiResponse;
+use crate::shared::validate_ollama_base;
 
 use super::title_service::{GenerateTitleRequest, TitleService};
 
@@ -21,6 +22,9 @@ pub async fn cmd_ollama_generate_title(
 ) -> ApiResponse<String> {
     // Rate limit enforced once in TitleService::generate_title; checking here
     // too would consume two slots per request against the quota.
+    if let Err(resp) = validate_ollama_base(&base_url) {
+        return resp;
+    }
     let service = TitleService;
     let req = GenerateTitleRequest {
         window_label: window.label().to_string(),

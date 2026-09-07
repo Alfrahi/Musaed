@@ -26,6 +26,9 @@ export const RagProjectSchema = z.object({
   chunkCount: z.number(),
   totalBytes: z.number(),
   status: ProjectStatusSchema,
+  // Frontend-derived (the Rust `RagProject` DB row has no such columns):
+  // populated by `rag-store` / `deriveProjectStatus` from indexing progress
+  // events. Never present on backend payloads.
   retryAttempts: z.number().optional().default(0),
   lastError: z.string().nullable().optional(),
 });
@@ -74,12 +77,21 @@ export const FileRecordSchema = z.object({
   modifiedAt: z.string(),
   chunkCount: z.number(),
 });
+export const IndexSummarySchema = z.object({
+  filesAdded: z.number(),
+  filesModified: z.number(),
+  filesDeleted: z.number(),
+  filesUnchanged: z.number(),
+  skippedReadFailed: z.number(),
+  skippedNonUtf8: z.number(),
+});
 export const IndexCompleteSchema = z.object({
   projectId: z.string(),
   indexedAt: z.string(),
   fileCount: z.number(),
   chunkCount: z.number(),
   totalBytes: z.number(),
+  summary: IndexSummarySchema,
 });
 export const IndexErrorSchema = z.object({
   projectId: z.string(),

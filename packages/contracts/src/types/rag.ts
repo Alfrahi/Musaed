@@ -9,6 +9,7 @@ import {
   type ChunkRecordSchema,
   type FileRecordSchema,
   type IndexCompleteSchema,
+  type IndexSummarySchema,
   type IndexErrorSchema,
   type IndexStatusSchema,
   type RagModelValidationSchema,
@@ -25,6 +26,7 @@ export type ProjectStats = z.infer<typeof ProjectStatsSchema>;
 export type ChunkRecord = z.infer<typeof ChunkRecordSchema>;
 export type FileRecord = z.infer<typeof FileRecordSchema>;
 export type IndexComplete = z.infer<typeof IndexCompleteSchema>;
+export type IndexSummary = z.infer<typeof IndexSummarySchema>;
 export type IndexError = z.infer<typeof IndexErrorSchema>;
 export type IndexStatus = z.infer<typeof IndexStatusSchema>;
 export type RagModelValidation = z.infer<typeof RagModelValidationSchema>;

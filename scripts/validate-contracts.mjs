@@ -538,6 +538,19 @@ function stripResultWrappers(type) {
 }
 
 /**
+ * Wrapper-shape invariant (IPC audit LOW-2): every `#[tauri::command]` must
+ * return `ApiResponse<T>` or `Result<ApiResponse<T>, _>`. `stripResultWrappers`
+ * silently peels both, so without this check a command that drifts to a bare
+ * `-> T` would still validate — while breaking the frontend's
+ * `response.success`/`response.data` protocol at runtime.
+ */
+function isApiResponseWrapped(type) {
+  const t = type.trim().replace(/^async\s+/, '');
+  if (/^ApiResponse<[\s\S]+>$/.test(t)) return true;
+  return /^Result<\s*ApiResponse<[\s\S]+>\s*,[^>]+>$/.test(t);
+}
+
+/**
  * Normalise a Rust *parameter* type into a structural token table:
  *
  *   { base, optional, array, atomic }
@@ -875,6 +888,15 @@ function compareCommandStrict(rustName, rust, ts) {
     });
   }
 
+  // ---- Wrapper-shape invariant (LOW-2) -----------------------------------
+  if (!isApiResponseWrapped(rust.returnType)) {
+    issues.push({
+      type: 'WRAPPER_SHAPE',
+      severity: 'error',
+      message: `"${rustName}": command must return ApiResponse<T> or Result<ApiResponse<T>, _> — got "${rust.returnType}".`,
+    });
+  }
+
   return issues;
 }
 
@@ -1026,6 +1048,7 @@ export {
   parseTsCommandMap,
   validate,
   stripResultWrappers,
+  isApiResponseWrapped,
   normalizeRustParamType,
   normalizeTsParamType,
   snakeToCamel,

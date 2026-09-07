@@ -211,6 +211,8 @@
     "noProjects": "No projects added yet",
     "indexed": "Indexed",
     "error": "Error",
+    "indexSummaryFiles": "{added} new · {modified} modified · {deleted} deleted · {unchanged} unchanged",
+    "indexSummarySkipped": "{count} file(s) skipped (non-UTF-8 or unreadable)",
     "chunks": "{count, plural, =0 {No chunks} one {1 chunk} other {# chunks}}",
     "sourceReferenceCount": "{count, plural, one {# source file referenced} other {# source files referenced}}",
     "chunksForFile": "Chunks for:",

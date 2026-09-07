@@ -192,6 +192,11 @@ export interface CommandMap {
       options: ChatOptions;
       requestId: string;
     };
+    /**
+     * `true` means the stream was accepted (slot reserved, `requestId`
+     * registered) — NOT that the model responded. Output and failures arrive
+     * via streaming events; listen for completion/error events, not this value.
+     */
     return: boolean;
   };
   cmd_ollama_abort_chat: { args: { requestId: string }; return: void };

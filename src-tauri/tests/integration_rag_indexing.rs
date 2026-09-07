@@ -705,6 +705,89 @@ async fn test_index_emits_index_complete_event() {
     assert_eq!(payload["fileCount"], 3);
     assert!(payload["chunkCount"].as_u64().unwrap() >= 3);
     assert!(payload["indexedAt"].is_string());
+
+    // U1/U2: the completion event carries the per-run summary.
+    let summary = &payload["summary"];
+    assert_eq!(summary["filesAdded"].as_u64(), Some(3));
+    assert_eq!(summary["filesModified"].as_u64(), Some(0));
+    assert_eq!(summary["filesDeleted"].as_u64(), Some(0));
+    assert_eq!(summary["filesUnchanged"].as_u64(), Some(0));
+    assert_eq!(summary["skippedReadFailed"].as_u64(), Some(0));
+    assert_eq!(summary["skippedNonUtf8"].as_u64(), Some(0));
+}
+
+// ==================== 6b. COMPLETION SUMMARY ON REINDEX ====================
+
+#[tokio::test]
+async fn test_index_complete_summary_reports_reindex_diff() {
+    use tauri::Listener;
+
+    let tmp = TempDir::new().unwrap();
+    let path_str = tmp.path().to_str().unwrap().to_string();
+    let store = test_store(&tmp);
+    let proj_id = create_project(&store, "summary", &path_str, "test-model", &[]).await;
+
+    // 3 text files + 1 invalid-UTF-8 file (passes the null-byte binary
+    // check at discovery, so it reaches the chunk phase and is skipped there).
+    create_text_files(tmp.path(), 3, "doc");
+    std::fs::write(tmp.path().join("broken.txt"), vec![0xffu8; 64]).expect("write non-utf8 file");
+
+    let (server, _mock) = mock_embed_server(768).await;
+    let url = mock_url(&server);
+
+    let app = tauri::test::mock_app();
+    let handle = app.handle().clone();
+    let (tx, rx) = std::sync::mpsc::channel::<serde_json::Value>();
+    handle.listen_any("rag-index-complete", move |event| {
+        let _ = tx.send(serde_json::from_str(event.payload()).unwrap());
+    });
+
+    let run = |handle: &tauri::AppHandle<tauri::test::MockRuntime>, force: bool| {
+        let store = store.clone();
+        let proj_id = proj_id.clone();
+        let path_str = path_str.clone();
+        let url = url.clone();
+        let handle = handle.clone();
+        async move {
+            index_project(
+                store,
+                IndexOptions {
+                    project_id: &proj_id,
+                    project_path: &path_str,
+                    embedding_model: "test-model",
+                    base_url: &url,
+                    ignore_patterns: &[],
+                    force,
+                },
+                Arc::new(CancellationToken::new()),
+                handle,
+            )
+            .await
+        }
+    };
+
+    // First run: 4 files fresh (binary counted as added, then skipped at chunk time).
+    let result = run(&handle, false).await;
+    assert!(result.is_ok(), "first run failed: {:?}", result.err());
+    let first = rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    assert_eq!(first["summary"]["filesAdded"].as_u64(), Some(4));
+    assert_eq!(first["summary"]["skippedNonUtf8"].as_u64(), Some(1));
+
+    // Mutate: modify doc_0000, delete doc_0001, add doc_new.
+    std::fs::write(tmp.path().join("doc_0000.txt"), "changed content\n").unwrap();
+    std::fs::remove_file(tmp.path().join("doc_0001.txt")).unwrap();
+    std::fs::write(tmp.path().join("doc_new.txt"), "fresh file content\n").unwrap();
+
+    let result = run(&handle, false).await;
+    assert!(result.is_ok(), "second run failed: {:?}", result.err());
+    let second = rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    let s = &second["summary"];
+    // doc_new + blob.bin (never persisted, re-candidates every run).
+    assert_eq!(s["filesAdded"].as_u64(), Some(2));
+    assert_eq!(s["filesModified"].as_u64(), Some(1));
+    assert_eq!(s["filesDeleted"].as_u64(), Some(1));
+    assert_eq!(s["filesUnchanged"].as_u64(), Some(1));
+    assert_eq!(s["skippedNonUtf8"].as_u64(), Some(1));
 }
 
 // ==================== 7. MODEL CHANGE RESETS INDEX ====================

@@ -85,6 +85,27 @@ pub struct IndexStatus {
     pub progress: Option<IndexProgress>,
 }
 
+/// Per-run indexing outcome counters, attached to the completion event so the
+/// UI can honestly report what happened on reindex (RAG audit U1/U2): how many
+/// files were new vs changed vs deleted vs untouched, and how many files were
+/// skipped (non-UTF-8, unreadable) instead of being silently dropped.
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct IndexSummary {
+    pub files_added: u64,
+    pub files_modified: u64,
+    pub files_deleted: u64,
+    pub files_unchanged: u64,
+    pub skipped_read_failed: u64,
+    pub skipped_non_utf8: u64,
+}
+
+impl IndexSummary {
+    pub fn skipped_total(&self) -> u64 {
+        self.skipped_read_failed + self.skipped_non_utf8
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct IndexComplete {
@@ -93,6 +114,7 @@ pub struct IndexComplete {
     pub file_count: u64,
     pub chunk_count: u64,
     pub total_bytes: u64,
+    pub summary: IndexSummary,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

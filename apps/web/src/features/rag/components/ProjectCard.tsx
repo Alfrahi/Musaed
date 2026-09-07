@@ -19,7 +19,7 @@ import type { RagProject, IndexProgress as IndexProgressType } from '@musaed/con
 import { listen } from '@/lib/ipc';
 import { IndexProgressSchema } from '@musaed/contracts';
 import { truncateFilePath } from '../utils/project-helpers';
-import { useSettingsStore } from '@/store';
+import { useSettingsStore, useRagIndexSummaries } from '@/store';
 import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import ModalLayout from '@/components/ui/ModalLayout';
@@ -173,21 +173,42 @@ const ProjectStats = ({
 }) => {
   const language = useSettingsStore((s) => s.globalSettings.language);
   const { formatFileSize } = useTranslation(language);
+  const indexSummary = useRagIndexSummaries()[project.id];
+  const skipped = indexSummary ? indexSummary.skippedNonUtf8 + indexSummary.skippedReadFailed : 0;
 
   return (
-    <div className="text-muted-foreground text-caption mbs-1 flex items-center gap-2">
-      {project.chunkCount > 0 && (
-        <>
-          <span className="flex items-center gap-0.5">
-            <Database className="h-3 w-3" />
-            {t('rag.chunks', { count: project.chunkCount })}
+    <div className="text-muted-foreground text-caption mbs-1 flex flex-col gap-0.5">
+      <div className="flex items-center gap-2">
+        {project.chunkCount > 0 && (
+          <>
+            <span className="flex items-center gap-0.5">
+              <Database className="h-3 w-3" />
+              {t('rag.chunks', { count: project.chunkCount })}
+            </span>
+            <span>·</span>
+            <span>{formatFileSize(project.totalBytes)}</span>
+          </>
+        )}
+        {project.status === 'ready' && <span className="text-green-500">{t('rag.indexed')}</span>}
+        {project.status === 'error' && <span className="text-red-500">{t('rag.error')}</span>}
+      </div>
+      {indexSummary && (
+        <div className="flex flex-col gap-0.5">
+          <span>
+            {t('rag.indexSummaryFiles', {
+              added: indexSummary.filesAdded,
+              modified: indexSummary.filesModified,
+              deleted: indexSummary.filesDeleted,
+              unchanged: indexSummary.filesUnchanged,
+            })}
           </span>
-          <span>·</span>
-          <span>{formatFileSize(project.totalBytes)}</span>
-        </>
+          {skipped > 0 && (
+            <span className="text-amber-600 dark:text-amber-400">
+              {t('rag.indexSummarySkipped', { count: skipped })}
+            </span>
+          )}
+        </div>
       )}
-      {project.status === 'ready' && <span className="text-green-500">{t('rag.indexed')}</span>}
-      {project.status === 'error' && <span className="text-red-500">{t('rag.error')}</span>}
     </div>
   );
 };

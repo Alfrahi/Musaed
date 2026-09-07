@@ -11,6 +11,7 @@
 //! [`super::model_service::ModelService`].
 
 use crate::payloads::{ApiResponse, ModelValidation, OllamaModel};
+use crate::shared::validate_ollama_base;
 use tauri::{AppHandle, Runtime};
 
 use super::model_service::{ModelService, PullModelRequest};
@@ -19,6 +20,9 @@ use super::model_service::{ModelService, PullModelRequest};
 
 #[tauri::command]
 pub async fn cmd_ollama_get_models(base_url: String) -> ApiResponse<Vec<OllamaModel>> {
+    if let Err(resp) = validate_ollama_base(&base_url) {
+        return resp;
+    }
     let service = ModelService;
     match service.get_models(&base_url).await {
         Ok(models) => ApiResponse {
@@ -45,6 +49,9 @@ pub async fn cmd_ollama_pull_model<R: Runtime>(
 ) -> ApiResponse<()> {
     // Rate limit enforced once in ModelService::pull_model; checking here too
     // would consume two slots per request against the quota.
+    if let Err(resp) = validate_ollama_base(&base_url) {
+        return resp;
+    }
     let service = ModelService;
     let req = PullModelRequest {
         app,
@@ -79,6 +86,9 @@ pub async fn cmd_ollama_delete_model<R: Runtime>(
     base_url: String,
     name: String,
 ) -> ApiResponse<bool> {
+    if let Err(resp) = validate_ollama_base(&base_url) {
+        return resp;
+    }
     let service = ModelService;
     match service.delete_model(window.label(), &base_url, &name).await {
         Ok(deleted) => ApiResponse {
@@ -99,6 +109,9 @@ pub async fn cmd_ollama_delete_model<R: Runtime>(
 /// Verifies that the given base URL actually points to an Ollama instance
 #[tauri::command]
 pub async fn cmd_ollama_verify_service(base_url: String) -> ApiResponse<String> {
+    if let Err(resp) = validate_ollama_base(&base_url) {
+        return resp;
+    }
     let service = ModelService;
     match service.verify_service(&base_url).await {
         Ok(version) => ApiResponse {
@@ -122,6 +135,9 @@ pub async fn cmd_ollama_validate_model(
     base_url: String,
     name: String,
 ) -> ApiResponse<ModelValidation> {
+    if let Err(resp) = validate_ollama_base(&base_url) {
+        return resp;
+    }
     let service = ModelService;
     match service.validate_model(&base_url, &name).await {
         Ok(validation) => ApiResponse {

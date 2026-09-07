@@ -3,7 +3,7 @@
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { RagProject, IndexProgress, SearchResult } from '@musaed/contracts';
+import type { RagProject, IndexProgress, IndexSummary, SearchResult } from '@musaed/contracts';
 import { createTauriStorage } from '@/lib/tauri-storage';
 import { useUIStore } from '@/store/ui-store';
 import { ragMigrations, validateRag } from '@/lib/migrations';
@@ -21,6 +21,14 @@ export interface RagState {
   isSearching: boolean;
   searchError: string | null;
 
+  /**
+   * Per-project summary of the most recent indexing run (diff counts and
+   * skipped-file breakdown from the `rag-index-complete` payload).
+   * Transient — excluded from `partialize` because it describes a specific
+   * run, not durable project state.
+   */
+  indexSummaries: Record<string, IndexSummary>;
+
   // Actions
   setProjects: (projects: RagProject[]) => void;
   addProject: (project: RagProject) => void;
@@ -28,6 +36,7 @@ export interface RagState {
   updateProject: (projectId: string, updates: Partial<RagProject>) => void;
   setActiveProjectId: (id: string | null) => void;
   setIndexProgress: (projectId: string, progress: IndexProgress | null) => void;
+  setIndexSummary: (projectId: string, summary: IndexSummary) => void;
   setSearchResults: (results: SearchResult[]) => void;
   setIsSearching: (isSearching: boolean) => void;
   setSearchError: (error: string | null) => void;
@@ -43,6 +52,7 @@ const initialState = {
   searchResults: [] as SearchResult[],
   isSearching: false,
   searchError: null as string | null,
+  indexSummaries: {} as Record<string, IndexSummary>,
 };
 
 export const useRagStore = createWithEqualityFn<RagState>()(
@@ -88,10 +98,12 @@ export const useRagStore = createWithEqualityFn<RagState>()(
             throttleMs: 0,
           });
           const { [projectId]: _, ...rest } = state.projects;
+          const { [projectId]: _summary, ...restSummaries } = state.indexSummaries;
           return {
             projects: rest,
             projectIds: state.projectIds.filter((id: string) => id !== projectId),
             activeProjectId: state.activeProjectId === projectId ? null : state.activeProjectId,
+            indexSummaries: restSummaries,
           };
         }),
 
@@ -134,6 +146,11 @@ export const useRagStore = createWithEqualityFn<RagState>()(
             },
           };
         }),
+
+      setIndexSummary: (projectId: string, summary: IndexSummary) =>
+        set((state: RagState) => ({
+          indexSummaries: { ...state.indexSummaries, [projectId]: summary },
+        })),
 
       setSearchResults: (results: SearchResult[]) => set({ searchResults: results }),
 
@@ -210,3 +227,5 @@ export const useSetIsRagSearching = () => useRagStore((state) => state.setIsSear
 export const useRagSearchError = () => useRagStore((state) => state.searchError);
 export const useSetRagSearchError = () => useRagStore((state) => state.setSearchError);
 export const useSetRagIndexProgress = () => useRagStore((state) => state.setIndexProgress);
+export const useRagIndexSummaries = () => useRagStore((state) => state.indexSummaries);
+export const useSetRagIndexSummary = () => useRagStore((state) => state.setIndexSummary);
