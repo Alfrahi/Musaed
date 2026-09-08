@@ -1143,6 +1143,56 @@ async fn abort_pull_removes_handle_and_cancels_token() {
     );
 }
 
+// ── PULL_ABORT_HANDLES leak: a finished pull must drop its handle ──
+
+#[tokio::test]
+async fn pull_model_removes_abort_handle_on_completion() {
+    let _guard = setup().await;
+    let mut server = mockito::Server::new_async().await;
+    let url = mock_base_url(&server);
+
+    // A successful pull stream: NDJSON progress lines ending in "success".
+    let body = "{\"status\":\"pulling manifest\"}\n{\"status\":\"success\"}\n";
+    let _mock = server
+        .mock("POST", "/api/pull")
+        .with_status(200)
+        .with_header("content-type", "application/x-ndjson")
+        .with_body(body)
+        .create_async()
+        .await;
+
+    let app = tauri::test::mock_app().handle().clone();
+    let model = "pull-cleanup-model";
+    let req = musaed_lib::ollama::model_service::PullModelRequest {
+        app,
+        window_label: "pull-cleanup-window".to_string(),
+        base_url: url,
+        name: model.to_string(),
+    };
+
+    let service = musaed_lib::ollama::model_service::ModelService;
+    service
+        .pull_model(req)
+        .await
+        .expect("pull_model should succeed");
+
+    // The pull runs in a background task; wait for it to finish and drop the
+    // abort handle. Without the fix the handle leaks forever and this times out.
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+    while PULL_ABORT_HANDLES.contains_key(model) {
+        assert!(
+            tokio::time::Instant::now() < deadline,
+            "pull abort handle must be removed after the pull completes"
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+
+    assert!(
+        !PULL_ABORT_HANDLES.contains_key(model),
+        "pull abort handle must be removed after the pull completes"
+    );
+}
+
 // ── streaming: connection dropped mid-stream (Testing §4 gap 4) ──
 
 #[tokio::test]

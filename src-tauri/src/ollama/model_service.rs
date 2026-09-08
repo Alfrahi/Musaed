@@ -352,6 +352,13 @@ impl ModelService {
                     },
                 );
             }
+
+            // The pull has finished (success, error, or timeout). Drop the
+            // abort handle so a finished pull can't be spuriously "aborted"
+            // and so the registry doesn't grow unboundedly. `abort_pull` may
+            // have already removed it (and cancelled the token) — that's a
+            // no-op here.
+            PULL_ABORT_HANDLES.remove(&name);
         });
 
         Ok(())
