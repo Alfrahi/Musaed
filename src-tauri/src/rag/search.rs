@@ -32,6 +32,22 @@ const BM25_WEIGHT: f32 = 0.4;
 /// match (raw score ~5) lands near 0.8 and a weak one (~0.5) near 0.3.
 const BM25_SATURATION_K: f32 = 1.5;
 
+/// Combine a candidate's vector-leg score and raw BM25 score into a hybrid
+/// score.
+///
+/// The vector leg is the cosine-similarity score for vector hits, or the
+/// FTS5 rank-derived score for lexical-only rescue candidates. BM25 is
+/// normalized with a *saturating* transform (`score / (score + k)`) rather
+/// than min-max over the candidate window: min-max forces the top candidate
+/// to 1.0 and the bottom to 0.0 regardless of how weak the actual match is,
+/// which made the 0.4 lexical weight non-comparable across queries. The
+/// saturating form is monotonic, bounded to [0, 1), and preserves the
+/// magnitude of the raw score.
+fn hybrid_score(vector_score: f32, bm25_score: f32) -> f32 {
+    let normalized_bm25 = bm25_score / (bm25_score + BM25_SATURATION_K);
+    VECTOR_WEIGHT * vector_score + BM25_WEIGHT * normalized_bm25
+}
+
 // ====================== SEARCH ENGINE ======================
 
 pub struct RagSearchEngine;
@@ -80,10 +96,10 @@ impl RagSearchEngine {
                 Ok(lexical) => {
                     for hit in lexical {
                         // Keep the strong vector score on overlap; lexical-only
-                        // candidates enter with score 0 so the BM25 leg
-                        // decides their hybrid placement.
+                        // candidates keep their FTS5 rank-derived score so the
+                        // rescue leg is not capped at 0.4·BM25norm (RAG R1).
                         if !pool.iter().any(|c| c.chunk_id == hit.chunk_id) {
-                            pool.push(SearchResult { score: 0.0, ..hit });
+                            pool.push(hit);
                         }
                     }
                 }
@@ -141,19 +157,11 @@ impl RagSearchEngine {
             .collect();
 
         // Rerank candidates using hybrid scoring (vector + BM25).
-        //
-        // BM25 is normalized with a *saturating* transform (score / (score +
-        // k)) rather than min-max over the candidate window. Min-max forces
-        // the top candidate to 1.0 and the bottom to 0.0 regardless of how
-        // weak the actual match is, which made the 0.4 lexical weight
-        // non-comparable across queries. The saturating form is monotonic,
-        // bounded to [0, 1), and preserves the magnitude of the raw score.
         let mut reranked = candidates
             .into_iter()
             .zip(bm25_scores)
             .map(|(mut candidate, bm25_score)| {
-                let normalized_bm25 = bm25_score / (bm25_score + BM25_SATURATION_K);
-                let hybrid = VECTOR_WEIGHT * candidate.score + BM25_WEIGHT * normalized_bm25;
+                let hybrid = hybrid_score(candidate.score, bm25_score);
                 candidate.score = if hybrid.is_finite() {
                     hybrid
                 } else {
@@ -177,5 +185,35 @@ impl RagSearchEngine {
 
         // Return top_k results
         Ok(reranked.into_iter().take(top_k).collect())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lexical_only_candidate_can_exceed_bm25_weight_cap() {
+        // A lexical-only rescue candidate keeps its FTS5 rank-derived vector
+        // leg (e.g. 0.9 for a strong match) instead of 0.0, so its hybrid
+        // score is no longer capped at 0.4·BM25norm.
+        let strong = hybrid_score(0.9, 5.0);
+        assert!(
+            strong > BM25_WEIGHT,
+            "rescue leg must exceed the 0.4 cap, got {strong}"
+        );
+        // A weak lexical match still ranks low.
+        let weak = hybrid_score(0.1, 0.2);
+        assert!(weak < strong);
+    }
+
+    #[test]
+    fn hybrid_score_is_bounded_and_monotonic() {
+        // Higher vector leg and higher BM25 both raise the hybrid score.
+        assert!(hybrid_score(0.8, 3.0) > hybrid_score(0.5, 3.0));
+        assert!(hybrid_score(0.5, 3.0) > hybrid_score(0.5, 1.0));
+        // Bounded to [0, 1].
+        assert!(hybrid_score(0.0, 0.0) >= 0.0);
+        assert!(hybrid_score(1.0, 100.0) <= 1.0);
     }
 }

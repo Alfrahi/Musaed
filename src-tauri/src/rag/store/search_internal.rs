@@ -72,8 +72,8 @@ pub(super) async fn search_similar(
 /// `chunks_fts` FTS5 index — not just the vector top-k window (RAG R1).
 ///
 /// Returned scores map SQLite's built-in BM25 rank (more-negative-is-better)
-/// into (0, 1]. Callers fuse these with vector scores; pure keyword matches
-/// the embedding model missed surface here.
+/// into (0, 1) via [`fts5_rank_to_score`]. Callers fuse these with vector
+/// scores; pure keyword matches the embedding model missed surface here.
 pub(super) async fn search_lexical(
     store: &super::RagStore,
     project_id: &str,
@@ -122,13 +122,25 @@ pub(super) async fn search_lexical(
                     end_line: row.get::<_, i64>(5)? as usize,
                     metadata: serde_json::from_str(&metadata_str).unwrap_or(serde_json::json!({})),
                     file_path: row.get(7)?,
-                    score: 1.0 / (1.0 + rank.abs() as f32),
+                    score: fts5_rank_to_score(rank),
                 })
             },
         )?
         .collect::<Result<Vec<_>, _>>()?;
 
     Ok(results)
+}
+
+/// Map SQLite FTS5 `bm25()` rank (more-negative-is-better) into a (0, 1)
+/// score where a stronger match scores higher.
+///
+/// The naive `1 / (1 + |rank|)` is inverted: a strong match has a large
+/// negative rank, so its `|rank|` is large and the naive form scores it *low*.
+/// The complement `|rank| / (1 + |rank|)` is monotonic in match strength and
+/// bounded to [0, 1).
+fn fts5_rank_to_score(rank: f64) -> f32 {
+    let magnitude = rank.abs() as f32;
+    magnitude / (1.0 + magnitude)
 }
 
 /// Build a safe FTS5 MATCH expression: one double-quoted term per whitespace
@@ -150,4 +162,23 @@ fn fts_query(query: &str) -> String {
         .filter(|s| !s.is_empty())
         .collect::<Vec<_>>()
         .join(" OR ")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fts5_rank_to_score_is_monotonic_in_match_strength() {
+        // SQLite bm25() is more-negative-is-better: a stronger match has a
+        // larger |rank| and must map to a higher score.
+        let weak = fts5_rank_to_score(-1.0);
+        let strong = fts5_rank_to_score(-10.0);
+        assert!(strong > weak, "strong match must outscore weak match");
+        assert!(strong > 0.5, "strong match should score above 0.5");
+        // Bounded to [0, 1).
+        assert!(weak > 0.0 && weak < 1.0);
+        assert!(strong < 1.0);
+        assert_eq!(fts5_rank_to_score(0.0), 0.0);
+    }
 }

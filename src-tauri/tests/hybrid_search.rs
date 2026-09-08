@@ -803,6 +803,75 @@ async fn test_search_lexical_safe_against_match_syntax() {
 }
 
 // ---------------------------------------------------------------------------
+// RAG R1: the FTS5 rescue leg must not be structurally capped. A strong
+// keyword match scores well above the old 0.4·BM25norm ceiling, so pure
+// keyword hits the embedding model missed can genuinely surface.
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_search_lexical_strong_match_scores_high() {
+    let store = test_store();
+    store
+        .create_project(&make_test_project("rescue", "Rescue", "/tmp/rescue"))
+        .await
+        .unwrap();
+
+    // A realistic corpus: several chunks, only one containing the rare term.
+    // A single-document corpus yields a near-zero FTS5 bm25 rank (IDF ~ 0),
+    // which would not exercise the rescue leg meaningfully.
+    for (path, chunks) in [
+        (
+            "a.rs",
+            vec!["fn alpha() {}", "fn beta() {}", "fn gamma() {}"],
+        ),
+        (
+            "b.rs",
+            vec!["fn delta() {}", "fn epsilon() {}", "fn zeta() {}"],
+        ),
+        ("c.rs", vec!["fn handle_zephyr_shutdown() {}"]),
+    ] {
+        let file = FileRecord {
+            id: None,
+            project_id: "rescue".to_string(),
+            relative_path: path.to_string(),
+            file_hash: "h".to_string(),
+            file_size: 10,
+            modified_at: "2024-01-01".to_string(),
+            chunk_count: chunks.len(),
+        };
+        let file_id = store.upsert_file(&file).await.unwrap();
+        for (i, content) in chunks.iter().enumerate() {
+            store
+                .insert_chunk(&ChunkRow {
+                    id: None,
+                    project_id: "rescue".to_string(),
+                    file_id,
+                    chunk_index: i,
+                    content: content.to_string(),
+                    chunk_type: "code".to_string(),
+                    language: Some("rust".to_string()),
+                    start_line: 1,
+                    end_line: 1,
+                    metadata: serde_json::json!({}),
+                })
+                .await
+                .unwrap();
+        }
+    }
+
+    let hits = store.search_lexical("rescue", "zephyr", 10).await.unwrap();
+    assert_eq!(hits.len(), 1);
+    assert!(hits[0].content.contains("zephyr"));
+    // A strong rare-term match must score above 0.4, proving the rescue leg
+    // is not capped at 0.4·BM25norm.
+    assert!(
+        hits[0].score > 0.4,
+        "strong lexical match should score > 0.4, got {}",
+        hits[0].score
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Regression: BM25 corpus stats must be scoped per project. The v4 tables
 // were global, so IDF and average length were computed across all projects
 // while doc_count was filtered per project — a division mismatch that
