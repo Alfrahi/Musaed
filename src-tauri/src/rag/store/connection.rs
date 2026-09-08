@@ -218,6 +218,66 @@ mod tests {
     use super::*;
     use crate::migrations::rag as rag_migrations;
 
+    /// REPRO: legacy DB at user_version=3 (pre-576998e schema, no bm25
+    /// tables, no tracker table) upgraded by current migrate_rag_db.
+    #[test]
+    fn repro_legacy_v3_upgrade() {
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("rag.db");
+        {
+            load_vec_extension().unwrap();
+            let conn = Connection::open(&db_path).unwrap();
+            conn.execute_batch(PRAGMAS_SQL).unwrap();
+            // Pre-576998e SCHEMA_SQL: no bm25 tables, status column present.
+            conn.execute_batch(
+                r#"
+                CREATE TABLE projects (id TEXT PRIMARY KEY, name TEXT NOT NULL,
+                    path TEXT NOT NULL UNIQUE, embedding_model TEXT NOT NULL,
+                    ignore_patterns TEXT NOT NULL DEFAULT '[]',
+                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                    indexed_at TEXT, file_count INTEGER NOT NULL DEFAULT 0,
+                    chunk_count INTEGER NOT NULL DEFAULT 0,
+                    total_bytes INTEGER NOT NULL DEFAULT 0,
+                    status TEXT NOT NULL DEFAULT 'idle',
+                    embedding_dimension INTEGER NOT NULL DEFAULT 0);
+                CREATE TABLE files (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    project_id TEXT NOT NULL, relative_path TEXT NOT NULL,
+                    file_hash TEXT NOT NULL, file_size INTEGER NOT NULL,
+                    modified_at TEXT NOT NULL,
+                    chunk_count INTEGER NOT NULL DEFAULT 0,
+                    UNIQUE(project_id, relative_path));
+                CREATE TABLE chunks (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    project_id TEXT NOT NULL, file_id INTEGER NOT NULL,
+                    chunk_index INTEGER NOT NULL, content TEXT NOT NULL,
+                    chunk_type TEXT NOT NULL DEFAULT 'text', language TEXT,
+                    start_line INTEGER, end_line INTEGER,
+                    metadata TEXT DEFAULT '{}', UNIQUE(file_id, chunk_index));
+                CREATE VIRTUAL TABLE vec_chunks USING vec0(
+                    chunk_id INTEGER PRIMARY KEY,
+                    embedding float[1024] distance_metric=cosine);
+                CREATE VIRTUAL TABLE chunks_fts USING fts5(content,
+                    content='chunks', content_rowid='rowid');
+                PRAGMA user_version = 3;
+                "#,
+            )
+            .unwrap();
+        }
+        let conn = open_connection(&db_path).unwrap();
+        let version: u32 = conn
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(version, rag_migrations::LATEST_VERSION);
+        // bm25_doc_len must have project_id after v5.
+        let cols: Vec<String> = conn
+            .prepare("PRAGMA table_info(bm25_doc_len)")
+            .unwrap()
+            .query_map([], |r| r.get::<_, String>(1))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        assert!(cols.contains(&"project_id".to_string()), "cols: {cols:?}");
+    }
+
     #[test]
     fn wal_mode_activates_on_local_filesystem() {
         let dir = tempfile::tempdir().unwrap();

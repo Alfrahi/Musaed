@@ -69,6 +69,21 @@ pub fn set_version_tx(
 fn ensure_version_table(conn: &Connection, target: MigrationTarget) -> MigrationResult<()> {
     let table_name = target.version_table();
 
+    // Legacy `_rag_migrations` tables from the probe-era versioning scheme
+    // (schema `(name TEXT PRIMARY KEY, value TEXT)`, e.g. the
+    // `vec_cosine_metric` row) are incompatible with the framework's shape.
+    // `CREATE TABLE IF NOT EXISTS` leaves them in place, and every
+    // `SELECT version ...` then fails — `open_connection` errors and the RAG
+    // store silently degrades to a vec-disabled fallback. The legacy table
+    // holds no framework versions, so drop it and let the bridge in
+    // `migrate_rag_db` restamp from `PRAGMA user_version`.
+    if conn
+        .prepare(&format!("SELECT version FROM {table_name} LIMIT 0"))
+        .is_err()
+    {
+        conn.execute_batch(&format!("DROP TABLE IF EXISTS {table_name}"))?;
+    }
+
     conn.execute(
         &format!(
             "CREATE TABLE IF NOT EXISTS {} (
