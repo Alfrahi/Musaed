@@ -21,6 +21,15 @@ fn mock_base_url(server: &mockito::ServerGuard) -> String {
     server.url().trim_end_matches('/').to_string()
 }
 
+/// Helper: builds a mock Tauri window so command adapters that take
+/// `tauri::WebviewWindow` (for rate-limit keying) can be invoked directly in tests.
+fn mock_window() -> tauri::WebviewWindow<tauri::test::MockRuntime> {
+    let app = tauri::test::mock_app();
+    tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+        .build()
+        .expect("failed to build mock window")
+}
+
 /// Test setup: acquire test cache lock and clear request cache.
 /// Returns the guard which must be held for the entire test duration.
 /// All Ollama integration tests must call this to prevent deadlocks.
@@ -63,7 +72,7 @@ async fn get_models_success() {
         .await;
 
     let result: ApiResponse<Vec<OllamaModel>> =
-        musaed_lib::ollama::cmd_ollama_get_models(url).await;
+        musaed_lib::ollama::cmd_ollama_get_models(mock_window(), url).await;
 
     mock.assert_async().await;
     assert!(result.success);
@@ -87,7 +96,7 @@ async fn get_models_empty_list() {
         .await;
 
     let result: ApiResponse<Vec<OllamaModel>> =
-        musaed_lib::ollama::cmd_ollama_get_models(url).await;
+        musaed_lib::ollama::cmd_ollama_get_models(mock_window(), url).await;
 
     mock.assert_async().await;
     assert!(result.success);
@@ -97,8 +106,11 @@ async fn get_models_empty_list() {
 #[tokio::test]
 async fn get_models_invalid_url() {
     let _guard = setup().await;
-    let result: ApiResponse<Vec<OllamaModel>> =
-        musaed_lib::ollama::cmd_ollama_get_models("http://8.8.8.8:11434".to_string()).await;
+    let result: ApiResponse<Vec<OllamaModel>> = musaed_lib::ollama::cmd_ollama_get_models(
+        mock_window(),
+        "http://8.8.8.8:11434".to_string(),
+    )
+    .await;
 
     assert!(!result.success);
     assert!(result.error.is_some());
@@ -120,7 +132,7 @@ async fn get_models_server_error() {
     // The command will try to parse the 500 response body as JSON.
     // reqwest doesn't treat 500 as an error, so it'll try to deserialize and fail.
     let result: ApiResponse<Vec<OllamaModel>> =
-        musaed_lib::ollama::cmd_ollama_get_models(url).await;
+        musaed_lib::ollama::cmd_ollama_get_models(mock_window(), url).await;
 
     mock.assert_async().await;
     assert!(!result.success);
@@ -185,7 +197,8 @@ async fn verify_service_detects_ollama() {
         .create_async()
         .await;
 
-    let result: ApiResponse<String> = musaed_lib::ollama::cmd_ollama_verify_service(url).await;
+    let result: ApiResponse<String> =
+        musaed_lib::ollama::cmd_ollama_verify_service(mock_window(), url).await;
 
     mock.assert_async().await;
     assert!(result.success);
@@ -205,7 +218,8 @@ async fn verify_service_rejects_non_ollama() {
         .create_async()
         .await;
 
-    let result: ApiResponse<String> = musaed_lib::ollama::cmd_ollama_verify_service(url).await;
+    let result: ApiResponse<String> =
+        musaed_lib::ollama::cmd_ollama_verify_service(mock_window(), url).await;
 
     mock.assert_async().await;
     assert!(!result.success);
@@ -228,7 +242,8 @@ async fn health_check_healthy() {
         .create_async()
         .await;
 
-    let result: ApiResponse<OllamaHealth> = musaed_lib::ollama::cmd_ollama_check_health(url).await;
+    let result: ApiResponse<OllamaHealth> =
+        musaed_lib::ollama::cmd_ollama_check_health(mock_window(), url).await;
 
     mock.assert_async().await;
     assert!(result.success);
@@ -244,7 +259,8 @@ async fn health_check_connection_refused() {
     // Instead, use localhost with a high random port.
     let url = "http://127.0.0.1:1".to_string();
 
-    let result: ApiResponse<OllamaHealth> = musaed_lib::ollama::cmd_ollama_check_health(url).await;
+    let result: ApiResponse<OllamaHealth> =
+        musaed_lib::ollama::cmd_ollama_check_health(mock_window(), url).await;
 
     assert!(!result.success);
     let health = result.data.unwrap();
@@ -824,7 +840,8 @@ async fn validate_model_with_model_info(
         .await;
 
     let url = mock_base_url(server);
-    musaed_lib::ollama::cmd_ollama_validate_model(url, "test-model".to_string()).await
+    musaed_lib::ollama::cmd_ollama_validate_model(mock_window(), url, "test-model".to_string())
+        .await
 }
 
 /// When multiple `.context_length` keys exist, the one whose prefix matches
@@ -907,7 +924,9 @@ async fn context_length_missing_returns_none() {
         .await;
 
     let url = mock_base_url(&server);
-    let result = musaed_lib::ollama::cmd_ollama_validate_model(url, "test-model".to_string()).await;
+    let result =
+        musaed_lib::ollama::cmd_ollama_validate_model(mock_window(), url, "test-model".to_string())
+            .await;
 
     assert!(result.success);
     let validation = result.data.unwrap();
@@ -1016,7 +1035,9 @@ async fn context_length_no_family_falls_back_to_max() {
         .await;
 
     let url = mock_base_url(&server);
-    let result = musaed_lib::ollama::cmd_ollama_validate_model(url, "test-model".to_string()).await;
+    let result =
+        musaed_lib::ollama::cmd_ollama_validate_model(mock_window(), url, "test-model".to_string())
+            .await;
 
     assert!(result.success);
     let validation = result.data.unwrap();

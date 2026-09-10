@@ -18,6 +18,67 @@ pub struct RateLimitConfig {
     pub window_ms: u64,
 }
 
+/// Commands that are intentionally **unlimited** because they are cheap,
+/// non-amplifying, and safe to invoke at any rate (e.g. pure in-memory reads,
+/// no-op status queries, or operations already bounded by a global semaphore).
+///
+/// Every command NOT in this list and NOT in [`RateLimiter::new`]'s config is
+/// a *missing policy* — see [`RateLimiter::check_rate_limit`], which logs a
+/// warning for that case so a future sensitive command cannot silently become
+/// unlimited. This list is the explicit counterpart to the implicit `None`
+/// default that previously made every unconfigured command unlimited.
+const UNLIMITED_COMMANDS: &[&str] = &[
+    // Pure metadata / no-op / in-memory reads
+    "cmd_get_app_version",
+    "cmd_metrics_snapshot",
+    "cmd_tray_get_background_status",
+    "cmd_menu_rebuild",
+    "cmd_context_menu_show",
+    // Abort operations (idempotent, cheap)
+    "cmd_ollama_abort_chat",
+    "cmd_ollama_abort_pull",
+    "cmd_rag_abort_index",
+    // Dialog / opener (user-gated, not renderer-amplifiable)
+    "cmd_dialog_ask",
+    "cmd_dialog_open_file",
+    "cmd_dialog_save_file",
+    "cmd_opener_open_url",
+    // Store read/write (already size-capped per value; single-user KV)
+    "cmd_store_load",
+    "cmd_store_get",
+    "cmd_store_set",
+    "cmd_store_save",
+    "cmd_store_delete",
+    // RAG project metadata (cheap DB reads/writes, no network)
+    "cmd_rag_list_projects",
+    "cmd_rag_list_files",
+    "cmd_rag_update_project",
+    "cmd_rag_set_embedding_model",
+    // Conversation metadata (cheap DB reads/writes)
+    "cmd_conversations_list",
+    "cmd_conversation_get",
+    "cmd_conversation_create",
+    "cmd_conversation_update",
+    "cmd_conversation_search",
+    "cmd_message_append",
+    // Migration status (read-only)
+    "cmd_get_migration_status",
+    "cmd_list_migrations",
+    // Log/trace management (already rate-limited on the append path)
+    "cmd_logs_request_clear_token",
+    "cmd_logs_clear",
+    "cmd_trace_start",
+    "cmd_trace_complete",
+    "cmd_trace_get_context",
+];
+
+/// Upper bound on the number of distinct `(window_label, command)` keys the
+/// limiter will track. Window labels are fixed at app build time (a single
+/// `main` window), so this is far above any legitimate count, but it prevents
+/// unbounded growth if a future code path ever derives the key from
+/// attacker-controlled input.
+const MAX_TRACKED_KEYS: usize = 1024;
+
 /// Rate limiter that tracks request timestamps per key.
 #[derive(Debug)]
 pub struct RateLimiter {
@@ -146,6 +207,84 @@ impl RateLimiter {
             },
         );
 
+        // ── Read / search / network-probe commands ──────────────────────
+        // These were previously unlimited (fail-open). Each triggers either a
+        // disk read, an Ollama round-trip, or a DB scan, so a compromised
+        // renderer could invoke them without bound. Limits are generous
+        // enough for normal interactive use but bound the amplification.
+
+        limiter.set_command_config(
+            "cmd_rag_search",
+            RateLimitConfig {
+                max_requests: 10,
+                window_ms: 1000, // 10 searches per second — each is an Ollama embed round-trip
+            },
+        );
+
+        limiter.set_command_config(
+            "cmd_rag_assemble_context",
+            RateLimitConfig {
+                max_requests: 10,
+                window_ms: 1000, // 10 assemblies per second — search + context build
+            },
+        );
+
+        limiter.set_command_config(
+            "cmd_rag_get_file_chunks",
+            RateLimitConfig {
+                max_requests: 30,
+                window_ms: 1000, // 30 chunk reads per second — DB scan, up to 100 chunks each
+            },
+        );
+
+        limiter.set_command_config(
+            "cmd_fs_read_file",
+            RateLimitConfig {
+                max_requests: 30,
+                window_ms: 1000, // 30 binary reads per second — disk read + base64 encode
+            },
+        );
+
+        limiter.set_command_config(
+            "cmd_fs_read_text_file",
+            RateLimitConfig {
+                max_requests: 30,
+                window_ms: 1000, // 30 text reads per second — disk read
+            },
+        );
+
+        limiter.set_command_config(
+            "cmd_ollama_get_models",
+            RateLimitConfig {
+                max_requests: 10,
+                window_ms: 1000, // 10 model listings per second — Ollama /api/tags round-trip
+            },
+        );
+
+        limiter.set_command_config(
+            "cmd_ollama_validate_model",
+            RateLimitConfig {
+                max_requests: 10,
+                window_ms: 1000, // 10 validations per second — Ollama /api/show round-trip
+            },
+        );
+
+        limiter.set_command_config(
+            "cmd_ollama_verify_service",
+            RateLimitConfig {
+                max_requests: 10,
+                window_ms: 1000, // 10 verifications per second — Ollama root round-trip
+            },
+        );
+
+        limiter.set_command_config(
+            "cmd_ollama_check_health",
+            RateLimitConfig {
+                max_requests: 10,
+                window_ms: 1000, // 10 health checks per second — Ollama /api/tags round-trip
+            },
+        );
+
         limiter
     }
 
@@ -160,11 +299,42 @@ impl RateLimiter {
         // Get the rate limit config for this command
         let config = match self.command_configs.get(command) {
             Some(config) => config.clone(),
-            None => return Ok(()), // No rate limit configured for this command
+            None => {
+                // No explicit config. Distinguish "intentionally unlimited"
+                // (explicit allowlist) from "missing policy" (a future
+                // sensitive command that was never configured). The latter is
+                // logged so it cannot silently become unlimited; it is still
+                // allowed at runtime to avoid breaking unknown commands, but
+                // the warning surfaces the gap for review.
+                if !UNLIMITED_COMMANDS.contains(&command) {
+                    tracing::warn!(
+                        command = %command,
+                        "Command has no rate-limit policy and is not in the explicit \
+                         unlimited allowlist — treat as a missing policy"
+                    );
+                }
+                return Ok(());
+            }
         };
 
         // Use window label as the rate limiting key
         let key = (window_label.to_string(), command.to_string());
+
+        // Bound the number of tracked keys so attacker-controlled identifiers
+        // (if ever introduced) cannot grow this map without limit. Window
+        // labels are fixed today, so this is defense-in-depth.
+        if self.request_timestamps.len() >= MAX_TRACKED_KEYS
+            && !self.request_timestamps.contains_key(&key)
+        {
+            tracing::warn!(
+                "Rate limiter key table at capacity ({}); refusing to track new key",
+                MAX_TRACKED_KEYS
+            );
+            return Err(BackendError::new(
+                error_codes::RATE_LIMITED,
+                "Rate limiter key table is full",
+            ));
+        }
 
         // Get current timestamps for this window+command
         let mut timestamps = self.request_timestamps.entry(key.clone()).or_default();
@@ -448,5 +618,102 @@ mod tests {
         assert!(timestamps.is_some());
         let timestamps = timestamps.unwrap();
         assert_eq!(timestamps.len(), 5);
+    }
+
+    // ── F5: explicit policy coverage ──────────────────────────────────
+
+    #[test]
+    fn test_expensive_commands_have_explicit_policy() {
+        // Every network/disk/DB-amplifying command must have an explicit
+        // rate-limit config (not fall through to the unlimited default).
+        let limiter = RateLimiter::new();
+        let expensive = [
+            "cmd_rag_search",
+            "cmd_rag_assemble_context",
+            "cmd_rag_get_file_chunks",
+            "cmd_fs_read_file",
+            "cmd_fs_read_text_file",
+            "cmd_ollama_get_models",
+            "cmd_ollama_validate_model",
+            "cmd_ollama_verify_service",
+            "cmd_ollama_check_health",
+        ];
+        for cmd in expensive {
+            assert!(
+                limiter.command_configs.contains_key(cmd),
+                "expensive command {cmd} must have an explicit rate-limit policy"
+            );
+        }
+    }
+
+    #[test]
+    fn test_intentionally_unlimited_commands_are_allowlisted() {
+        // Cheap commands are explicitly allowlisted, not silently unlimited.
+        let limiter = RateLimiter::new();
+        for cmd in UNLIMITED_COMMANDS {
+            assert!(
+                !limiter.command_configs.contains_key(*cmd),
+                "allowlisted command {cmd} must not also have a rate-limit config"
+            );
+            // And they must be allowed without consuming a tracked key.
+            assert!(limiter.check_rate_limit("w", cmd).is_ok());
+        }
+    }
+
+    #[test]
+    fn test_missing_policy_command_is_allowed_but_not_allowlisted() {
+        // A command with neither a config nor an allowlist entry is a
+        // "missing policy" — it is still allowed at runtime (to avoid breaking
+        // unknown commands) but must NOT be in the explicit allowlist, so the
+        // warning path is exercised and the gap is visible.
+        let limiter = RateLimiter::new();
+        let unknown = "cmd_some_future_command";
+        assert!(!limiter.command_configs.contains_key(unknown));
+        assert!(!UNLIMITED_COMMANDS.contains(&unknown));
+        assert!(limiter.check_rate_limit("w", unknown).is_ok());
+    }
+
+    #[test]
+    fn test_rag_search_is_rate_limited() {
+        let limiter = RateLimiter::new();
+        for _ in 0..10 {
+            assert!(limiter.check_rate_limit("w", "cmd_rag_search").is_ok());
+        }
+        assert!(limiter.check_rate_limit("w", "cmd_rag_search").is_err());
+    }
+
+    #[test]
+    fn test_fs_read_file_is_rate_limited() {
+        let limiter = RateLimiter::new();
+        for _ in 0..30 {
+            assert!(limiter.check_rate_limit("w", "cmd_fs_read_file").is_ok());
+        }
+        assert!(limiter.check_rate_limit("w", "cmd_fs_read_file").is_err());
+    }
+
+    #[test]
+    fn test_key_table_is_bounded() {
+        let limiter = RateLimiter::new();
+        // Drive many distinct (window, command) keys through a configured
+        // command to prove the key table does not grow without bound.
+        limiter.set_command_config(
+            "bounded_cmd",
+            RateLimitConfig {
+                max_requests: 1,
+                window_ms: 60_000,
+            },
+        );
+        for i in 0..(MAX_TRACKED_KEYS + 100) {
+            let label = format!("window-{i}");
+            // Each distinct label is a new key; once at capacity, new keys are
+            // rejected rather than growing the map.
+            let _ = limiter.check_rate_limit(&label, "bounded_cmd");
+        }
+        assert!(
+            limiter.request_timestamps.len() <= MAX_TRACKED_KEYS,
+            "key table grew to {} (cap {})",
+            limiter.request_timestamps.len(),
+            MAX_TRACKED_KEYS
+        );
     }
 }

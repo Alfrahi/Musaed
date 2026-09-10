@@ -187,10 +187,27 @@ pub(crate) fn write_text_file_impl(
         }
     }
 
-    // Open the handle here and write through it — no second path resolution
-    // between the grant check and the write (B3).
+    // Open the authorized file handle with explicit OpenOptions (write +
+    // create + truncate) and write through that handle, mirroring the
+    // read-side `require_granted_file` pattern: the handle is bound to the
+    // inode resolved by `authorize`, so the write does not re-resolve the
+    // path.
+    //
+    // Residual TOCTOU: `create_dir_all(parent)` above still re-resolves the
+    // parent path, so a concurrent local process could swap a symlink in a
+    // *missing* parent directory between `authorize` and this open. A fully
+    // race-free implementation would require `openat`-style directory-fd-
+    // relative operations, which Rust's std does not expose portably. This is
+    // the same documented ceiling as the read path and is only reachable by a
+    // second local process with write access to the granted directory — not by
+    // the renderer, which cannot mint grants or create symlinks.
     use std::io::Write;
-    let file = match std::fs::File::create(&resolved) {
+    let file = match std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&resolved)
+    {
         Ok(f) => f,
         Err(e) => return io_failure("write file", path, e),
     };
@@ -372,5 +389,73 @@ mod tests {
         assert!(!resp.success);
         assert!(resp.data.is_none());
         assert_eq!(resp.error.unwrap().code, error_codes::FILE_SYSTEM_ERROR);
+    }
+
+    #[test]
+    fn test_write_overwrites_existing_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("existing.txt");
+        std::fs::write(&target, "old content that is longer than new").unwrap();
+
+        let grants = grant(&[dir.path()]);
+        let resp = write_text_file_impl(&grants, &target.to_string_lossy(), "new".to_string());
+        assert!(resp.success);
+
+        // Truncate semantics: the file must contain exactly the new content,
+        // not a prefix of the old content.
+        let content = std::fs::read_to_string(&target).unwrap();
+        assert_eq!(content, "new");
+    }
+
+    #[test]
+    fn test_write_to_newly_created_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("brand-new.txt");
+        assert!(!target.exists());
+
+        let grants = grant(&[dir.path()]);
+        let resp = write_text_file_impl(&grants, &target.to_string_lossy(), "fresh".to_string());
+        assert!(resp.success);
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), "fresh");
+    }
+
+    #[test]
+    fn test_write_denied_for_ungranted_path() {
+        let granted = tempfile::tempdir().unwrap();
+        let other = tempfile::tempdir().unwrap();
+        let target = other.path().join("out.txt");
+
+        let grants = grant(&[granted.path()]);
+        let resp = write_text_file_impl(&grants, &target.to_string_lossy(), "x".to_string());
+        assert!(!resp.success);
+        assert!(resp.error.unwrap().message.contains("Access denied"));
+        assert!(!target.exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_write_denied_through_symlink_escape() {
+        use std::os::unix::fs::symlink;
+
+        let granted = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let outside_target = outside.path().join("secret.txt");
+        // The target must already exist so `lenient_canonicalize` resolves the
+        // symlink to its canonical (outside) location and the grant check
+        // denies it.
+        std::fs::write(&outside_target, "original").unwrap();
+
+        // A symlink inside the granted root pointing outside it.
+        let link = granted.path().join("escape-link");
+        symlink(&outside_target, &link).unwrap();
+
+        let grants = grant(&[granted.path()]);
+        let resp = write_text_file_impl(&grants, &link.to_string_lossy(), "pwned".to_string());
+        assert!(!resp.success);
+        // The outside file must not have been overwritten.
+        assert_eq!(
+            std::fs::read_to_string(&outside_target).unwrap(),
+            "original"
+        );
     }
 }

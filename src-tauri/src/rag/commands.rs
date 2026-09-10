@@ -149,7 +149,9 @@ pub async fn cmd_rag_retry_index_project<R: Runtime>(
 // ====================== SEARCH COMMANDS ======================
 
 #[tauri::command]
-pub async fn cmd_rag_search(
+#[allow(clippy::too_many_arguments)] // IPC contract dictates the argument list
+pub async fn cmd_rag_search<R: Runtime>(
+    window: tauri::WebviewWindow<R>,
     project_id: String,
     query: String,
     top_k: Option<usize>,
@@ -158,6 +160,13 @@ pub async fn cmd_rag_search(
     state: State<'_, Arc<RwLock<RagStore>>>,
     _app_handle: AppHandle,
 ) -> Result<ApiResponse<Vec<SearchResult>>, String> {
+    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_rag_search") {
+        return Ok(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        });
+    }
     let req = SearchRequest {
         project_id,
         query,
@@ -173,11 +182,19 @@ pub async fn cmd_rag_search(
 }
 
 #[tauri::command]
-pub async fn cmd_rag_get_file_chunks(
+pub async fn cmd_rag_get_file_chunks<R: Runtime>(
+    window: tauri::WebviewWindow<R>,
     project_id: String,
     file_path: String,
     state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<Vec<ChunkRecord>>, String> {
+    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_rag_get_file_chunks") {
+        return Ok(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        });
+    }
     let req = GetFileChunksRequest {
         project_id,
         file_path,
@@ -216,7 +233,9 @@ pub async fn cmd_rag_set_embedding_model(
 // ====================== CONTEXT ASSEMBLY COMMANDS ======================
 
 #[tauri::command]
-pub async fn cmd_rag_assemble_context(
+#[allow(clippy::too_many_arguments)] // IPC contract dictates the argument list
+pub async fn cmd_rag_assemble_context<R: Runtime>(
+    window: tauri::WebviewWindow<R>,
     project_id: String,
     query: String,
     top_k: Option<usize>,
@@ -225,6 +244,13 @@ pub async fn cmd_rag_assemble_context(
     base_url: Option<String>,
     state: State<'_, Arc<RwLock<RagStore>>>,
 ) -> Result<ApiResponse<AssembledContext>, String> {
+    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_rag_assemble_context") {
+        return Ok(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        });
+    }
     let req = AssembleContextRequest {
         project_id,
         query,

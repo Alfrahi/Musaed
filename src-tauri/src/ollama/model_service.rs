@@ -46,7 +46,12 @@ pub struct PullModelRequest<R: Runtime> {
 
 impl ModelService {
     /// Lists installed models from the Ollama server.
-    pub async fn get_models(&self, base_url: &str) -> Result<Vec<OllamaModel>, BackendError> {
+    pub async fn get_models(
+        &self,
+        window_label: &str,
+        base_url: &str,
+    ) -> Result<Vec<OllamaModel>, BackendError> {
+        RATE_LIMITER.check_rate_limit(window_label, "cmd_ollama_get_models")?;
         tracing::info!("Fetching Ollama models from: {}", base_url);
         let start = Instant::now();
 
@@ -105,9 +110,11 @@ impl ModelService {
     /// Validates that a model exists on the Ollama server.
     pub async fn validate_model(
         &self,
+        window_label: &str,
         base_url: &str,
         model_name: &str,
     ) -> Result<ModelValidation, BackendError> {
+        RATE_LIMITER.check_rate_limit(window_label, "cmd_ollama_validate_model")?;
         tracing::info!("Validating model: {}", model_name);
 
         if !is_valid_model_name(model_name) {
@@ -422,7 +429,12 @@ impl ModelService {
 
     /// Verifies that the given base URL points to an Ollama instance
     /// by requesting `/` and checking the `Server` response header.
-    pub async fn verify_service(&self, base_url: &str) -> Result<String, BackendError> {
+    pub async fn verify_service(
+        &self,
+        window_label: &str,
+        base_url: &str,
+    ) -> Result<String, BackendError> {
+        RATE_LIMITER.check_rate_limit(window_label, "cmd_ollama_verify_service")?;
         tracing::info!("Verifying Ollama service at: {}", base_url);
 
         let _global_permit = match acquire_global_permit().await {

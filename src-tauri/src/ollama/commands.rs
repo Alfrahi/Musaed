@@ -72,9 +72,12 @@ pub async fn cmd_ollama_abort_chat(request_id: String) -> ApiResponse<()> {
 // ==================== HEALTH CHECK ====================
 
 #[tauri::command]
-pub async fn cmd_ollama_check_health(base_url: String) -> ApiResponse<OllamaHealth> {
+pub async fn cmd_ollama_check_health<R: Runtime>(
+    window: tauri::WebviewWindow<R>,
+    base_url: String,
+) -> ApiResponse<OllamaHealth> {
     if let Err(resp) = validate_ollama_base(&base_url) {
         return resp;
     }
-    crate::ollama::health_service::check_health(base_url).await
+    crate::ollama::health_service::check_health(window.label(), base_url).await
 }

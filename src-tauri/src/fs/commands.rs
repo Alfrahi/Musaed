@@ -14,9 +14,17 @@ use tauri::State;
 /// as a string.
 #[tauri::command]
 pub async fn cmd_fs_read_text_file(
+    window: tauri::WebviewWindow,
     grants: State<'_, FsAccessGrants>,
     path: String,
 ) -> Result<ApiResponse<String>, String> {
+    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_fs_read_text_file") {
+        return Ok(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        });
+    }
     Ok(read_text_file_impl(grants.inner(), &path))
 }
 
@@ -24,9 +32,17 @@ pub async fn cmd_fs_read_text_file(
 /// base64-encoded.
 #[tauri::command]
 pub async fn cmd_fs_read_file(
+    window: tauri::WebviewWindow,
     grants: State<'_, FsAccessGrants>,
     path: String,
 ) -> Result<ApiResponse<String>, String> {
+    if let Err(e) = crate::rate_limiter::check(window.label(), "cmd_fs_read_file") {
+        return Ok(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        });
+    }
     Ok(read_file_base64_impl(grants.inner(), &path))
 }
 

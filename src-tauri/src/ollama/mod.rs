@@ -172,16 +172,17 @@ mod tests {
     /// at the IPC boundary with INVALID_URL, without touching the network.
     #[tokio::test]
     async fn ollama_commands_reject_invalid_base_url_early() {
+        let service = model_service::ModelService;
         for bad in ["http://8.8.8.8:11434", "not-a-url", ""] {
-            let models = models::cmd_ollama_get_models(bad.to_string()).await;
-            assert!(!models.success, "get_models accepted {bad:?}");
+            let models = service.get_models("test-window", bad).await;
+            assert!(!models.is_ok(), "get_models accepted {bad:?}");
             assert_eq!(
-                models.error.as_ref().map(|e| e.code.as_str()),
-                Some("INVALID_URL"),
+                models.err().map(|e| e.code),
+                Some("INVALID_URL".to_string()),
                 "get_models wrong code for {bad:?}"
             );
 
-            let health = commands::cmd_ollama_check_health(bad.to_string()).await;
+            let health = health_service::check_health("test-window", bad.to_string()).await;
             assert!(!health.success, "check_health accepted {bad:?}");
             assert_eq!(
                 health.error.as_ref().map(|e| e.code.as_str()),
@@ -189,11 +190,11 @@ mod tests {
                 "check_health wrong code for {bad:?}"
             );
 
-            let verify = models::cmd_ollama_verify_service(bad.to_string()).await;
-            assert!(!verify.success, "verify_service accepted {bad:?}");
+            let verify = service.verify_service("test-window", bad).await;
+            assert!(!verify.is_ok(), "verify_service accepted {bad:?}");
             assert_eq!(
-                verify.error.as_ref().map(|e| e.code.as_str()),
-                Some("INVALID_URL"),
+                verify.err().map(|e| e.code),
+                Some("INVALID_URL".to_string()),
                 "verify_service wrong code for {bad:?}"
             );
         }

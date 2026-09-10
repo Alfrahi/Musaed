@@ -19,12 +19,15 @@ use super::model_service::{ModelService, PullModelRequest};
 // ==================== MODEL LISTING ====================
 
 #[tauri::command]
-pub async fn cmd_ollama_get_models(base_url: String) -> ApiResponse<Vec<OllamaModel>> {
+pub async fn cmd_ollama_get_models<R: Runtime>(
+    window: tauri::WebviewWindow<R>,
+    base_url: String,
+) -> ApiResponse<Vec<OllamaModel>> {
     if let Err(resp) = validate_ollama_base(&base_url) {
         return resp;
     }
     let service = ModelService;
-    match service.get_models(&base_url).await {
+    match service.get_models(window.label(), &base_url).await {
         Ok(models) => ApiResponse {
             success: true,
             data: Some(models),
@@ -108,12 +111,15 @@ pub async fn cmd_ollama_delete_model<R: Runtime>(
 
 /// Verifies that the given base URL actually points to an Ollama instance
 #[tauri::command]
-pub async fn cmd_ollama_verify_service(base_url: String) -> ApiResponse<String> {
+pub async fn cmd_ollama_verify_service<R: Runtime>(
+    window: tauri::WebviewWindow<R>,
+    base_url: String,
+) -> ApiResponse<String> {
     if let Err(resp) = validate_ollama_base(&base_url) {
         return resp;
     }
     let service = ModelService;
-    match service.verify_service(&base_url).await {
+    match service.verify_service(window.label(), &base_url).await {
         Ok(version) => ApiResponse {
             success: true,
             data: Some(version),
@@ -131,7 +137,8 @@ pub async fn cmd_ollama_verify_service(base_url: String) -> ApiResponse<String> 
 
 /// Validates that a model exists on the Ollama server and returns its metadata
 #[tauri::command]
-pub async fn cmd_ollama_validate_model(
+pub async fn cmd_ollama_validate_model<R: Runtime>(
+    window: tauri::WebviewWindow<R>,
     base_url: String,
     name: String,
 ) -> ApiResponse<ModelValidation> {
@@ -139,7 +146,10 @@ pub async fn cmd_ollama_validate_model(
         return resp;
     }
     let service = ModelService;
-    match service.validate_model(&base_url, &name).await {
+    match service
+        .validate_model(window.label(), &base_url, &name)
+        .await
+    {
         Ok(validation) => ApiResponse {
             success: true,
             data: Some(validation),

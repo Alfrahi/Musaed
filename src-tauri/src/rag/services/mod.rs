@@ -147,7 +147,26 @@ pub async fn start_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResp
     res
 }
 
+/// Resolves and validates an optional Ollama base URL, returning the
+/// canonical form or the localhost default. Reuses
+/// [`crate::ollama_url::parse_ollama_base_url`] — no duplicate URL policy.
+/// The default is also canonicalized so `None` and an explicit
+/// `"http://localhost:11434"` produce identical output.
+fn resolve_base_url(base_url: Option<&str>) -> Result<String, String> {
+    let raw = base_url.unwrap_or("http://localhost:11434");
+    crate::ollama_url::parse_ollama_base_url(raw).map(|u| u.to_string())
+}
+
 async fn run_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResponse<bool> {
+    // Validate the Ollama base URL at the command boundary, before any
+    // rate-limit slot is consumed or DB access occurs. A compromised renderer
+    // must not be able to burn the 2-per-minute index quota (or trigger a
+    // project lookup) with a malformed/SSRF-shaped URL. The validated URL is
+    // reused below so the embedder never re-parses the raw string.
+    let base_url = match resolve_base_url(req.base_url.as_deref()) {
+        Ok(u) => u,
+        Err(e) => return rag_validation_error(e),
+    };
     if let Err(e) = RATE_LIMITER.check_rate_limit(req.window.label(), "cmd_rag_index_project") {
         return ApiResponse {
             success: false,
@@ -244,7 +263,7 @@ async fn run_indexing<'a, R: Runtime>(req: IndexRequest<'a, R>) -> ApiResponse<b
                 project_id: &req.project_id,
                 project_path: &project_path,
                 embedding_model: &embedding_model,
-                base_url: req.base_url.as_deref().unwrap_or("http://localhost:11434"),
+                base_url: &base_url,
                 ignore_patterns: &ignore_patterns,
                 force: req.force.unwrap_or(false),
             },
@@ -617,3 +636,45 @@ pub async fn assemble_context<'a>(
 // `projects` is declared at the top of this file.
 // The old placeholder shims (index.rs, model.rs, search.rs, stats.rs)
 // have been removed; project CRUD lives in `projects.rs`.
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_base_url;
+
+    #[test]
+    fn resolve_base_url_defaults_to_localhost() {
+        assert_eq!(resolve_base_url(None).unwrap(), "http://localhost:11434/");
+    }
+
+    #[test]
+    fn resolve_base_url_accepts_valid_private_url() {
+        assert_eq!(
+            resolve_base_url(Some("http://192.168.1.5:11434")).unwrap(),
+            "http://192.168.1.5:11434/"
+        );
+    }
+
+    #[test]
+    fn resolve_base_url_rejects_public_ip() {
+        assert!(resolve_base_url(Some("http://8.8.8.8:11434")).is_err());
+    }
+
+    #[test]
+    fn resolve_base_url_rejects_credentials() {
+        assert!(resolve_base_url(Some("http://user:pass@127.0.0.1:11434")).is_err());
+    }
+
+    #[test]
+    fn resolve_base_url_strips_path() {
+        // SSRF path injection must be stripped, not merely rejected.
+        assert_eq!(
+            resolve_base_url(Some("http://127.0.0.1:8080/internal-api/delete-user")).unwrap(),
+            "http://127.0.0.1:8080/"
+        );
+    }
+
+    #[test]
+    fn resolve_base_url_rejects_non_http_scheme() {
+        assert!(resolve_base_url(Some("file:///etc/passwd")).is_err());
+    }
+}

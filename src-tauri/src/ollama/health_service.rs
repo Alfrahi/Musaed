@@ -3,6 +3,7 @@
 
 use crate::ollama::service::OllamaChatService;
 use crate::payloads::{ApiResponse, OllamaHealth};
+use crate::rate_limiter::RATE_LIMITER;
 use tracing;
 
 /// Perform an Ollama health check and return an `ApiResponse<OllamaHealth>`.
@@ -10,7 +11,14 @@ use tracing;
 /// This mirrors the original command behaviour: on success the full
 /// health struct is returned; on error a fallback `OllamaHealth` with
 /// `is_running: false` and a measured response time is returned.
-pub async fn check_health(base_url: String) -> ApiResponse<OllamaHealth> {
+pub async fn check_health(window_label: &str, base_url: String) -> ApiResponse<OllamaHealth> {
+    if let Err(e) = RATE_LIMITER.check_rate_limit(window_label, "cmd_ollama_check_health") {
+        return ApiResponse {
+            success: false,
+            data: None,
+            error: Some(e),
+        };
+    }
     tracing::info!("Checking Ollama health: {}", base_url);
     let start = std::time::Instant::now();
 

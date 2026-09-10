@@ -1,6 +1,13 @@
 //! Shared constants: concurrency limits, timeouts, cache bounds, event names.
 
 pub const MAX_TOTAL_IMAGE_SIZE_BYTES: usize = 10 * 1024 * 1024;
+/// Global cap on the total text content across all messages in a single chat
+/// request. Complements the per-message `MAX_MESSAGE_CONTENT_LEN` (64 KiB) and
+/// the per-request image budget above: a compromised renderer cannot bypass
+/// the per-message limit by distributing content across many messages. 10 MiB
+/// of text is far beyond any legitimate conversation and mirrors the image
+/// budget, bounding total request amplification to ~20 MiB.
+pub const MAX_TOTAL_MESSAGE_CONTENT_SIZE: usize = 10 * 1024 * 1024;
 pub const PULL_PROGRESS_THROTTLE_MS: u64 = 400;
 pub const MAX_CONCURRENT_CHATS: usize = 8;
 /// Maximum number of in-flight requests to Ollama across *all* command types

@@ -12,8 +12,8 @@ use crate::rate_limiter::RATE_LIMITER;
 use crate::shared::{
     acquire_global_permit, ollama_endpoint, request_cache_try_insert, retry_with_backoff,
     ABORT_HANDLES, CONCURRENT_SEMAPHORE, FAST_HTTP_CLIENT, HTTP_CLIENT,
-    INITIAL_REQUEST_TIMEOUT_SECS, MAX_TOTAL_IMAGE_SIZE_BYTES, REQUEST_CACHE,
-    STREAM_ABSOLUTE_TIMEOUT_SECS, STREAM_IDLE_TIMEOUT_SECS,
+    INITIAL_REQUEST_TIMEOUT_SECS, MAX_TOTAL_IMAGE_SIZE_BYTES, MAX_TOTAL_MESSAGE_CONTENT_SIZE,
+    REQUEST_CACHE, STREAM_ABSOLUTE_TIMEOUT_SECS, STREAM_IDLE_TIMEOUT_SECS,
 };
 use crate::validation::{
     is_valid_model_name, is_valid_request_id, validate_chat_message, validate_chat_options,
@@ -259,6 +259,33 @@ fn validate_chat_inputs(req: &OllamaChatRequest) -> Result<(), BackendError> {
         return Err(BackendError::new(error_codes::INVALID_INPUT, e));
     }
 
+    // Global cap on total text content across all messages. The per-message
+    // `MAX_MESSAGE_CONTENT_LEN` check above is insufficient on its own: a
+    // compromised renderer could distribute content across many messages to
+    // bypass it. `checked_add` guards against integer overflow on the sum.
+    let total_content_len = req
+        .messages
+        .iter()
+        .try_fold(0usize, |acc, m| acc.checked_add(m.content.len()));
+    match total_content_len {
+        Some(total) if total > MAX_TOTAL_MESSAGE_CONTENT_SIZE => {
+            return Err(BackendError::new(
+                error_codes::INVALID_INPUT,
+                format!(
+                    "Total message content exceeds {} MiB limit",
+                    MAX_TOTAL_MESSAGE_CONTENT_SIZE / 1024 / 1024
+                ),
+            ));
+        }
+        None => {
+            return Err(BackendError::new(
+                error_codes::INVALID_INPUT,
+                "Total message content size overflowed",
+            ));
+        }
+        _ => {}
+    }
+
     let total_b64_len: usize = req
         .messages
         .iter()
@@ -408,5 +435,99 @@ mod tests {
         let payload = build_chat_payload("llama3", &messages, &ChatOptions::default());
         assert_eq!(payload["messages"][0]["role"], "user");
         assert_eq!(payload["messages"][0]["content"], "hello");
+    }
+
+    // ── F4: global per-request message-content size limit ─────────────
+
+    struct NoopSink;
+    impl TokenSink for NoopSink {
+        fn emit_token(&self, _token: &crate::payloads::OllamaToken) {}
+        fn emit_error(&self, _error: &BackendError) {}
+    }
+
+    fn chat_request(messages: Vec<ChatMessage>) -> OllamaChatRequest {
+        OllamaChatRequest {
+            sink: Arc::new(NoopSink),
+            window_label: "main".to_string(),
+            base_url: "http://localhost:11434".to_string(),
+            model: "llama3".to_string(),
+            messages,
+            options: ChatOptions::default(),
+            request_id: "req-1".to_string(),
+        }
+    }
+
+    fn msg(content: &str) -> ChatMessage {
+        ChatMessage {
+            role: "user".to_string(),
+            content: content.to_string(),
+            images: None,
+        }
+    }
+
+    #[test]
+    fn total_content_exactly_at_limit_is_accepted() {
+        // Distribute content across messages (each under the 64 KiB per-message
+        // cap) so the sum is exactly at the global limit.
+        let per_message = 64 * 1024; // 64 KiB, at the per-message limit
+        let full = MAX_TOTAL_MESSAGE_CONTENT_SIZE / per_message; // 160 messages
+        let remainder = MAX_TOTAL_MESSAGE_CONTENT_SIZE % per_message; // 0
+        assert_eq!(remainder, 0, "10 MiB is an exact multiple of 64 KiB");
+        let mut messages: Vec<ChatMessage> =
+            (0..full).map(|_| msg(&"x".repeat(per_message))).collect();
+        assert_eq!(
+            messages.iter().map(|m| m.content.len()).sum::<usize>(),
+            MAX_TOTAL_MESSAGE_CONTENT_SIZE
+        );
+        // Add one empty message to keep the count realistic without changing the sum.
+        messages.push(msg(""));
+        let req = chat_request(messages);
+        assert!(validate_chat_inputs(&req).is_ok());
+    }
+
+    #[test]
+    fn total_content_one_byte_over_limit_is_rejected() {
+        let content = "x".repeat(MAX_TOTAL_MESSAGE_CONTENT_SIZE + 1);
+        let req = chat_request(vec![msg(&content)]);
+        let err = validate_chat_inputs(&req).unwrap_err();
+        assert_eq!(err.code, error_codes::INVALID_INPUT);
+    }
+
+    #[test]
+    fn total_content_distributed_across_many_messages_is_rejected() {
+        // Each message is well under the per-message 64 KiB cap, but the sum
+        // exceeds the global cap — proving the per-message check alone is
+        // insufficient.
+        let per_message = 64 * 1024; // 64 KiB, at the per-message limit
+        let count = MAX_TOTAL_MESSAGE_CONTENT_SIZE / per_message + 2;
+        let messages: Vec<ChatMessage> =
+            (0..count).map(|_| msg(&"y".repeat(per_message))).collect();
+        let req = chat_request(messages);
+        let err = validate_chat_inputs(&req).unwrap_err();
+        assert_eq!(err.code, error_codes::INVALID_INPUT);
+    }
+
+    #[test]
+    fn total_content_many_small_messages_under_limit_is_accepted() {
+        let messages: Vec<ChatMessage> = (0..1000).map(|i| msg(&format!("msg {i}"))).collect();
+        let req = chat_request(messages);
+        assert!(validate_chat_inputs(&req).is_ok());
+    }
+
+    #[test]
+    fn total_content_empty_messages_are_accepted() {
+        let req = chat_request(vec![msg(""), msg("")]);
+        assert!(validate_chat_inputs(&req).is_ok());
+    }
+
+    #[test]
+    fn total_content_unicode_is_counted_by_bytes() {
+        // Multi-byte UTF-8: the byte length (not char count) is what matters
+        // for the size cap.
+        let content = "é".repeat(MAX_TOTAL_MESSAGE_CONTENT_SIZE / 2 + 1);
+        assert!(content.len() > MAX_TOTAL_MESSAGE_CONTENT_SIZE);
+        let req = chat_request(vec![msg(&content)]);
+        let err = validate_chat_inputs(&req).unwrap_err();
+        assert_eq!(err.code, error_codes::INVALID_INPUT);
     }
 }
