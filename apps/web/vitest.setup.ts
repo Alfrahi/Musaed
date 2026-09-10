@@ -1,5 +1,5 @@
 import { vi, beforeEach } from 'vitest';
-import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/vitest';
 
 // Mock window.__TAURI_INTERNALS__ for Tauri API
 Object.defineProperty(window, '__TAURI_INTERNALS__', {

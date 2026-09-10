@@ -5,6 +5,10 @@ import InputArea from './InputArea';
 import { useChatInput } from '@/features/conversation/hooks/useChatInput';
 import { useDropZone } from '@/features/conversation/hooks/useDropZone';
 
+// Mutable RTL flag so the RTL test can flip `isRtl` without a nested vi.mock
+// (Vitest 5 errors on vi.mock calls outside the module top level).
+let mockIsRtl = false;
+
 // Mock the hooks
 vi.mock('@/features/conversation/hooks/useChatInput');
 vi.mock('@/features/conversation/hooks/useDropZone', () => ({
@@ -15,7 +19,7 @@ vi.mock('@/lib/i18n', () => ({
     t: (key: string) => key,
     formatNumber: (num: number) => num.toString(),
     formatDate: (date: number | Date) => String(date),
-    isRtl: false,
+    isRtl: mockIsRtl,
     formatFileSize: (bytes: number) => `${bytes} B`,
   }),
 }));
@@ -32,6 +36,7 @@ vi.mock('@/features/rag', () => ({
 describe('InputArea', () => {
   beforeEach(() => {
     clearMocks();
+    mockIsRtl = false;
     // Default mock implementation
     vi.mocked(useChatInput).mockReturnValue({
       input: '',
@@ -83,15 +88,7 @@ describe('InputArea', () => {
 
   describe('RTL support', () => {
     it('applies mirror-rtl class to send icon when RTL is enabled', () => {
-      vi.mock('@/lib/i18n', () => ({
-        useTranslation: () => ({
-          t: (key: string) => key,
-          formatNumber: (num: number) => num.toString(),
-          formatDate: (date: number | Date) => String(date),
-          isRtl: true,
-          formatFileSize: (bytes: number) => `${bytes} B`,
-        }),
-      }));
+      mockIsRtl = true;
 
       render(<InputArea />);
       const icon = screen.getByRole('button', { name: 'a11y.sendMessage' });
