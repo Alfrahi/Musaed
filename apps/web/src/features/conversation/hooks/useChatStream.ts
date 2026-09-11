@@ -57,6 +57,13 @@ export function useChatStream(): {
       t: (key: string) => string
     ) => {
       const msg = err instanceof Error ? err.message : String(err);
+      // Ollama's "runner process has terminated" means the model crashed at
+      // load/eval time — most commonly the requested context size does not
+      // fit in memory. Append a hint so the user knows to lower numCtx
+      // instead of retrying the same doomed request.
+      const displayMsg = msg.includes('runner process has terminated')
+        ? `${msg}. ${t('chat.modelLoadHint')}`
+        : msg;
       // Filter abort/cancellation errors so the user doesn't see a
       // "Stream failed" toast for a user-initiated or backend-canceled
       // stop. The backend may report "aborted",
@@ -84,9 +91,9 @@ export function useChatStream(): {
       updateLastMessage(
         conversationId,
         {
-          content: `\n\n[${t('chat.errorPrefix')}: ${msg}]`,
+          content: `\n\n[${t('chat.errorPrefix')}: ${displayMsg}]`,
           done: true,
-          error: { code: 'STREAM_FAILED', message: msg },
+          error: { code: 'STREAM_FAILED', message: displayMsg },
         },
         false
       );
@@ -95,8 +102,8 @@ export function useChatStream(): {
       // a user-initiated stop). `stopStream` clears the streaming store
       // and decrements `isStreaming` if no other streams remain.
       stopStream(conversationId, 'error');
-      setErrorMessage(msg);
-      toast.error(msg);
+      setErrorMessage(displayMsg);
+      toast.error(displayMsg);
     },
     [setErrorMessage]
   );
