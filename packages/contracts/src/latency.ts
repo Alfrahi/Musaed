@@ -31,9 +31,15 @@ export interface IpcCallStat {
  * Categories:
  *   - Lightweight status / metadata checks: 500–2000 ms
  *   - Model management: 3000–8000 ms
- *   - Chat initiation (hand-off only — streaming tracked separately): 3000 ms
+ *   - Chat initiation (hand-off only — streaming tracked separately): the
+ *     initiating POST blocks until Ollama has the model loaded, so the budget
+ *     must cover a cold model load (large models on slow disks: 10s–100s+).
+ *     120s budget → 360s hung-call timeout, above the backend's 300s initial
+ *     request timeout so the backend always errors first.
  *   - RAG lightweight metadata ops: 1000–2000 ms
- *   - RAG heavy ops (search / context assembly): 5000–20000 ms
+ *   - RAG heavy ops (search / context assembly): 5000–60000 ms
+ *     (context assembly calls Ollama embeddings; an embedding-model cold load
+ *     or contention with a chat-model reload can take tens of seconds)
  *   - Conversation persistence: 1000–3000 ms
  *   - Logging & tracing fire-and-forget: 500–1000 ms
  */
@@ -48,9 +54,14 @@ export const IPC_LATENCY_BUDGETS: Readonly<Record<string, LatencyBudgetMs>> = {
   cmd_ollama_pull_model: 3000,
   cmd_ollama_abort_pull: 1000,
   cmd_ollama_abort_chat: 1000,
-  /** Chat initiation — fast handoff; streaming is tracked separately */
-  cmd_ollama_chat: 3000,
-  cmd_ollama_generate_title: 10000,
+  /** Chat initiation — the POST returns once Ollama starts streaming, which
+   * includes model load time. Budget must cover a worst-case cold load; the
+   * derived timeout (3×) deliberately exceeds the backend's 300s initial
+   * request timeout so the frontend never reports a false timeout while the
+   * backend is still legitimately waiting on a model load. */
+  cmd_ollama_chat: 120_000,
+  /** Title generation runs the same load-gated chat path in the background. */
+  cmd_ollama_generate_title: 120_000,
   /** Logging & tracing — fire-and-forget, low limit */
   cmd_logs_append: 500,
   cmd_logs_request_clear_token: 500,
@@ -77,7 +88,7 @@ export const IPC_LATENCY_BUDGETS: Readonly<Record<string, LatencyBudgetMs>> = {
   cmd_rag_get_file_chunks: 5000,
   cmd_rag_list_files: 3000,
   cmd_rag_set_embedding_model: 3000,
-  cmd_rag_assemble_context: 20000,
+  cmd_rag_assemble_context: 60000,
   /** Conversation management — lightweight persistence */
   cmd_conversations_list: 3000,
   cmd_conversation_get: 2000,

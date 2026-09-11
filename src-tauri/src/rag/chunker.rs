@@ -88,7 +88,14 @@ impl Chunker for CodeChunker {
         match language_for_ext(&ext) {
             Some((lang, lang_name)) => {
                 let mut parser = Parser::new();
-                parser.set_language(&lang).ok();
+                if let Err(e) = parser.set_language(&lang) {
+                    tracing::warn!(
+                        "tree-sitter grammar '{}' rejected (ABI mismatch?): {}; falling back to text chunking for {}",
+                        lang_name,
+                        e,
+                        file_path
+                    );
+                }
 
                 match parser.parse(content, None) {
                     Some(tree) => {

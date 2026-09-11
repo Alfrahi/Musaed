@@ -45,21 +45,24 @@ pub(super) async fn search_similar(
     let mut stmt = conn.prepare(sql)?;
 
     let results: Vec<SearchResult> = stmt
-        .query_map(rusqlite::params![query_bytes, project_id, top_k], |row| {
-            let metadata_str: String = row.get(6)?;
-            let distance: f32 = row.get(8)?;
-            Ok(SearchResult {
-                chunk_id: row.get(0)?,
-                content: row.get(1)?,
-                chunk_type: row.get(2)?,
-                language: row.get(3)?,
-                start_line: row.get::<_, i64>(4)? as usize,
-                end_line: row.get::<_, i64>(5)? as usize,
-                metadata: serde_json::from_str(&metadata_str).unwrap_or(serde_json::json!({})),
-                file_path: row.get(7)?,
-                score: 1.0 - distance, // Convert distance to similarity score
-            })
-        })?
+        .query_map(
+            rusqlite::params![query_bytes, project_id, top_k as i64],
+            |row| {
+                let metadata_str: String = row.get(6)?;
+                let distance: f32 = row.get(8)?;
+                Ok(SearchResult {
+                    chunk_id: row.get(0)?,
+                    content: row.get(1)?,
+                    chunk_type: row.get(2)?,
+                    language: row.get(3)?,
+                    start_line: row.get::<_, i64>(4)? as usize,
+                    end_line: row.get::<_, i64>(5)? as usize,
+                    metadata: serde_json::from_str(&metadata_str).unwrap_or(serde_json::json!({})),
+                    file_path: row.get(7)?,
+                    score: 1.0 - distance, // Convert distance to similarity score
+                })
+            },
+        )?
         .collect::<Result<Vec<_>, _>>()?
         .into_iter()
         .filter(|r| r.score >= threshold)
