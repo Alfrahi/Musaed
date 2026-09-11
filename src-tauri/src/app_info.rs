@@ -39,11 +39,11 @@ mod tests {
     fn response_shape_success() {
         let resp = ApiResponse {
             success: true,
-            data: Some("0.1.1".to_string()),
+            data: Some("0.2.0".to_string()),
             error: None,
         };
         assert!(resp.success);
-        assert_eq!(resp.data.as_deref(), Some("0.1.1"));
+        assert_eq!(resp.data.as_deref(), Some("0.2.0"));
         assert!(resp.error.is_none());
     }
 
