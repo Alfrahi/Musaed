@@ -324,6 +324,16 @@ fn build_chat_payload(
     })
 }
 
+/// Extract the human-readable reason from an Ollama error body. Ollama
+/// wraps errors as `{"error": "..."}`; anything else is returned verbatim.
+fn ollama_error_message(body: String) -> String {
+    serde_json::from_str::<serde_json::Value>(&body)
+        .ok()
+        .and_then(|v| v.get("error").and_then(|e| e.as_str()).map(String::from))
+        .filter(|m| !m.is_empty())
+        .unwrap_or(body)
+}
+
 /// Send the initial HTTP request to the Ollama chat endpoint with retry.
 async fn send_chat_request(
     req: &OllamaChatRequest,
@@ -369,9 +379,14 @@ async fn send_chat_request(
         let error_text = response.text().await.unwrap_or_default();
         tracing::error!("Ollama returned error status {}: {}", status, error_text);
 
+        // Ollama error bodies are JSON (`{"error": "llama runner process has
+        // terminated: exit status 2"}`). Unwrap the envelope so the UI shows
+        // the actual reason instead of raw JSON.
+        let message = ollama_error_message(error_text);
+
         ABORT_HANDLES.remove(&req.request_id);
         REQUEST_CACHE.remove(&req.request_id);
-        return Err(BackendError::new(error_codes::OLLAMA_ERROR, error_text)
+        return Err(BackendError::new(error_codes::OLLAMA_ERROR, message)
             .with_request_id(req.request_id.clone())
             .with_context(format!("HTTP Status: {}", status)));
     }
@@ -435,6 +450,26 @@ mod tests {
         let payload = build_chat_payload("llama3", &messages, &ChatOptions::default());
         assert_eq!(payload["messages"][0]["role"], "user");
         assert_eq!(payload["messages"][0]["content"], "hello");
+    }
+
+    #[test]
+    fn ollama_error_envelope_is_unwrapped() {
+        let body = r#"{"error":"llama runner process has terminated: exit status 2"}"#;
+        assert_eq!(
+            ollama_error_message(body.to_string()),
+            "llama runner process has terminated: exit status 2"
+        );
+    }
+
+    #[test]
+    fn ollama_error_non_json_is_returned_verbatim() {
+        assert_eq!(ollama_error_message("boom".to_string()), "boom");
+    }
+
+    #[test]
+    fn ollama_error_empty_field_falls_back_to_body() {
+        let body = r#"{"error":""}"#.to_string();
+        assert_eq!(ollama_error_message(body.clone()), body);
     }
 
     // ── F4: global per-request message-content size limit ─────────────
