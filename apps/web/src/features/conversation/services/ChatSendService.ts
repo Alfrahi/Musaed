@@ -479,7 +479,12 @@ export class ChatSendService {
         this.deps.paramsStop
       );
       const success = await chatApi.chat(payload);
-      if (success !== true) throw new Error(t('chat.connectionFailed'));
+      // `null` means the transport blocked the call locally (URL security
+      // check or payload validation) and already showed the specific reason
+      // in a toast. Backend-reported errors reach us as thrown IpcError via
+      // `throwOnError`, carrying Ollama's real message instead of this
+      // generic one.
+      if (success !== true) throw new Error(t('error.genericError'));
 
       const assistantMsg = convMessages.find(
         (msg) => msg.role === 'assistant' && msg.requestId === requestId

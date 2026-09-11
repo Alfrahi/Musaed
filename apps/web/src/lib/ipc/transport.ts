@@ -643,7 +643,7 @@ async function awaitIpcResponse<K extends keyof CommandMap>(
 export async function callInternal<K extends keyof CommandMap>(
   command: K,
   args: CommandMap[K]['args'],
-  options?: { quiet?: boolean }
+  options?: { quiet?: boolean; throwOnError?: boolean }
 ): Promise<CommandMap[K]['return'] | null> {
   // Dev-only contract registry check (ensures command is registered)
   if (!config.isProd) {
@@ -719,6 +719,14 @@ export async function callInternal<K extends keyof CommandMap>(
     if (response?.error) {
       recordIpcLatency(command, latencyMs, budgetMs);
       const sanitized = sanitizeError(response.error);
+      // Callers that need to react to the specific failure (e.g. the chat
+      // send pipeline must surface Ollama's real error in the conversation
+      // view) opt into thrown errors instead of the null + toast default.
+      // The toast is skipped here to avoid double-reporting — the caller
+      // owns the user-facing error for this call.
+      if (options?.throwOnError) {
+        throw new IpcError(sanitized);
+      }
       if (!options?.quiet) {
         toast.error(
           translate('error.backendError', getActiveLanguage(), { message: sanitized.message })
