@@ -6,6 +6,8 @@ This script validates the consistency between feature manifests (`feature.manife
 
 1. **stateSchemas consistency**: Ensures the version declared in the manifest matches the actual store version (`version:` literal or `*_VERSION` constant).
 2. **publicApi consistency**: Ensures hooks, components, and utils declared in the manifest are actually exported in `index.ts`. Supports both named and `default as` re-export patterns from `./components/*`, `./hooks/*`, `./utils/*`, and `@/store/*`.
+3. **failureModes warning**: Warns (does not fail) when a feature declares IPC endpoints but no `failureModes` in its manifest (STANDARDS.md §13).
+4. **IPC endpoint drift check**: Verifies that IPC endpoints declared in a feature manifest are registered in the command registry (`checkIpcEndpointDrift`).
 
 ## Findings addressed
 
@@ -23,8 +25,8 @@ This script validates the consistency between feature manifests (`feature.manife
 
 ### Special cases handled
 
+- **modelStore**: Version check reads the `MODEL_STORE_VERSION` constant.
 - **messageStore**: Skipped for version checks because message state lives in the Rust backend (in-memory cache only).
-- **conversation / conversations** persistence keys: Both mapped to `conversation-store.ts` (now removed).
 
 ## How to use
 
