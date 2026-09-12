@@ -45,7 +45,7 @@ First-time runs will generate baseline screenshots automatically. To regenerate 
 
 ```bash
 # Delete existing baselines
-rm -rf test-results/.results-snapshots/
+rm -rf e2e/rtl-visual.spec.ts-snapshots/
 
 # Run tests to generate fresh baselines
 pnpm exec playwright test --project=chromium
@@ -54,7 +54,7 @@ pnpm exec playwright test --project=chromium
 ## Test Results Location
 
 - **HTML Report**: `apps/web/playwright-report/index.html`
-- **Baseline Images**: `apps/web/test-results/.results-snapshots/`
+- **Baseline Images**: `apps/web/e2e/rtl-visual.spec.ts-snapshots/`
 - **Failed Diffs**: `apps/web/test-results/` (after test failures)
 
 ## Updating Baselines
@@ -88,15 +88,15 @@ pnpm exec playwright test --update-snapshots
 
 ```bash
 # 1. Delete existing baselines
-rm -rf test-results/.results-snapshots/
+rm -rf e2e/rtl-visual.spec.ts-snapshots/
 
 # 2. Run tests to generate fresh baselines
 pnpm exec playwright test --project=chromium
 
-# 3. Review generated images in test-results/.results-snapshots/
+# 3. Review generated images in e2e/rtl-visual.spec.ts-snapshots/
 
 # 4. Commit the updated baselines
-git add test-results/.results-snapshots/
+git add e2e/rtl-visual.spec.ts-snapshots/
 git commit -m "chore: update visual test baselines for [reason]"
 ```
 
@@ -106,7 +106,7 @@ When CI visual tests fail due to intentional changes:
 
 1. Download the `visual-snapshots` artifact from the CI run
 2. Review the new screenshots to confirm they match expected changes
-3. Copy the new baselines to your local `test-results/.results-snapshots/`
+3. Copy the new baselines to your local `e2e/rtl-visual.spec.ts-snapshots/`
 4. Run tests locally to verify they pass
 5. Commit the updated baselines
 
@@ -144,29 +144,15 @@ If tests fail with "locator not found", verify these test IDs exist in the targe
 
 ## CI Integration
 
-Visual tests run as a non-blocking job in CI (`continue-on-error: true`). This allows:
+Visual tests run as a **blocking** job in CI. A visual regression fails the pipeline, so baselines must be kept in sync with intentional UI changes.
 
-- Early detection of visual regressions
-- Time to stabilize baselines without blocking merges
-- Artifact upload for manual review
-
-CI Job: `Visual Tests · RTL (Non-blocking)`
+CI Job: `Visual Tests · RTL`
 
 - Runs after `validate` job
 - Uploads HTML report and snapshots as artifacts
-- Does NOT block PR merges (initially)
+- Blocks PR merges when a screenshot comparison fails
 
-### Remove Non-Blocking Status
-
-Once baselines stabilize, remove `continue-on-error: true` from `.github/workflows/ci.yml` to make visual tests required:
-
-```yaml
-visual-tests:
-  name: Visual Tests · RTL
-  runs-on: ubuntu-latest
-  needs: validate
-  # remove: continue-on-error: true
-```
+To regenerate baselines in the CI environment (same font stack as the runner), use the manual `Update Visual Snapshots` workflow (`.github/workflows/update-snapshots.yml`), which uploads the regenerated snapshots as an artifact to commit locally.
 
 ## Troubleshooting
 
@@ -207,10 +193,11 @@ expect: {
 
 ### Hydration Issues
 
-Tests wait for `[dir]` selector to ensure DirectionProvider has synced. If tests fail during hydration:
+Tests wait for hydration to complete and the `dir` attribute to be set on `<html>` before screenshotting. If tests fail during hydration:
 
 ```ts
-await page.waitForSelector('[dir]', { state: 'visible' });
+await page.waitForFunction(() => (window as any).__MUSAED_HYDRATED__ === true, { timeout: 30000 });
+await page.waitForSelector('html[dir]', { state: 'attached', timeout: 15000 });
 await page.waitForTimeout(2000); // Increase if needed
 ```
 
@@ -218,9 +205,10 @@ await page.waitForTimeout(2000); // Increase if needed
 
 1. **Use light theme** for consistent screenshots (set in test via localStorage)
 2. **Wait for stability** - animations and CSS transforms need time to settle
-3. **Review diffs visually** - pixel matching can produce false positives
-4. **Commit baselines** - always include baseline updates in PRs with UI changes
-5. **Test critical paths** - focus on user-facing layouts, not every component
+3. **Emulate reduced motion for animated pages** - framer-motion entrance animations are JS-driven and are NOT disabled by Playwright's `animations: 'disabled'` (which only stops CSS animations). The homepage tests use `test.use({ reducedMotion: 'reduce' })` so the EmptyState entrance animation is skipped and the screenshot is deterministic. Apply the same pattern to any page with a framer-motion entrance animation.
+4. **Review diffs visually** - pixel matching can produce false positives
+5. **Commit baselines** - always include baseline updates in PRs with UI changes
+6. **Test critical paths** - focus on user-facing layouts, not every component
 
 ## Related Files
 

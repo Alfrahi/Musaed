@@ -47,8 +47,17 @@ jobs:
           pnpm arch-check
           pnpm test:arch
 
+      - name: Contract validator self-tests
+        run: pnpm test:contracts
+
       - name: i18n compliance
         run: pnpm --filter web i18n:check
+
+      - name: i18n key validation
+        run: pnpm validate:i18n
+
+      - name: Manifest validation
+        run: pnpm validate:manifests
 
       - name: Validation constants sync
         run: pnpm codegen:validation:check
@@ -151,10 +160,9 @@ jobs:
 
   # ── Job 4: Visual Regression Tests (RTL) ─────────────────
   visual-tests:
-    name: Visual Tests · RTL (Non-blocking)
+    name: Visual Tests · RTL
     runs-on: ubuntu-latest
     needs: validate
-    continue-on-error: true # Allow failure until baselines stabilize
     steps:
       - uses: actions/checkout@v4
 
@@ -233,3 +241,6 @@ jobs:
 
       - name: Verify static output exists
         run: test -d apps/web/out && echo "✅ Static export verified"
+
+      - name: Build Tauri App (Verification)
+        run: pnpm tauri build

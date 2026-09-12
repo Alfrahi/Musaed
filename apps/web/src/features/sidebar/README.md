@@ -65,7 +65,7 @@ The sidebar feature does not own any stores. It reads from global stores owned b
 
 | Store               | Version | Persistence                                                    |
 | ------------------- | ------- | -------------------------------------------------------------- |
-| `conversationStore` | 3       | Persisted by the Rust backend (SQLite). No zustand persist.    |
+| `conversationStore` | 4       | Persisted by the Rust backend (SQLite). No zustand persist.    |
 | `messageStore`      | 0       | In-memory cache only — messages persisted by the Rust backend. |
 
 > **Note:** These stores live in `@/store/` (not inside the conversation feature folder). The sidebar reads them via selector hooks (`useCurrentConversationId`, `useFilteredConversations`, `useSearchQuery`, etc.) declared in `@/store/conversation-store.ts`.
