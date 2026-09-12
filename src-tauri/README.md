@@ -15,18 +15,39 @@ src-tauri/
     ├── app_info.rs       # App version command
     ├── context_menu.rs   # Native context menu
     ├── dialog.rs         # File/dialog commands (ask, open_file, save_file)
-    ├── fs_commands.rs    # Filesystem commands (read_file, read_text_file, write_text_file)
     ├── opener.rs         # URL opener command
-    ├── store_commands.rs # Tauri plugin-store commands (load, get, set, save, delete)
     ├── rate_limiter.rs   # Rate limiting for IPC commands
-    ├── shared.rs         # Shared utilities (cache eviction, shutdown coordination)
     ├── validation.rs     # Stateless input-validation helpers
     ├── generated_validation.rs # Generated validation constants (codegen)
     ├── error_codes.rs    # Error code definitions
-    ├── payloads.rs       # Shared request/response payload types
     ├── ollama_url.rs     # Ollama URL parsing/normalization
+    ├── path_guard.rs     # Path traversal guard
     ├── tray.rs           # System tray + close-to-tray background task protection
     ├── menu_bar.rs       # Native macOS menu bar with i18n labels
+    ├── fs/               # Filesystem commands (read_file, read_text_file, write_text_file)
+    │   ├── mod.rs
+    │   ├── commands.rs
+    │   └── service.rs
+    ├── store/            # Tauri plugin-store commands (load, get, set, save, delete)
+    │   ├── mod.rs
+    │   ├── commands.rs
+    │   └── service.rs
+    ├── shared/           # Shared utilities (cache eviction, shutdown coordination)
+    │   ├── mod.rs
+    │   ├── retry.rs
+    │   ├── shared_consts.rs
+    │   ├── url.rs
+    │   └── state/
+    ├── payloads/         # Shared request/response payload types
+    │   ├── mod.rs
+    │   ├── chat.rs
+    │   ├── envelope.rs
+    │   ├── models.rs
+    │   ├── orig.rs
+    │   ├── stream.rs
+    │   └── tests.rs
+    ├── metrics/          # Metrics module
+    │   └── mod.rs
     ├── ollama/           # Ollama engine domain
     │   ├── mod.rs
     │   ├── commands.rs   # chat, abort, check_health commands
@@ -37,6 +58,8 @@ src-tauri/
     │   ├── model_service.rs
     │   ├── title_service.rs
     │   ├── title.rs       # Title generation command
+    │   ├── modelfile.rs   # Modelfile handling
+    │   ├── pull_stream.rs # Model pull streaming
     │   └── models.rs      # Model management commands (get, pull, delete, validate)
     ├── rag/              # RAG domain
     │   ├── mod.rs
@@ -59,13 +82,16 @@ src-tauri/
     │   ├── service.rs    # Business logic
     │   ├── store.rs      # ConversationStore (SQLite)
     │   ├── connection.rs # DB connection + schema version
+    │   ├── validation.rs # Conversation input validation
+    │   ├── write_batch.rs # Batch write helpers
     │   └── models.rs     # Conversation/message models
     ├── migrations/       # Schema migration framework
     │   ├── mod.rs        # Orchestrator (run_migrations, rollback_to_version)
     │   ├── version_tracker.rs
     │   ├── service.rs
     │   ├── commands.rs   # Tauri commands (run, rollback, status, list)
-    │   └── conversations/ # Conversation DB migrations (v1–v5)
+    │   ├── rag.rs        # RAG DB migrations (v1–v5)
+    │   └── conversations/ # Conversation DB migrations (v1–v7)
     └── logging/         # Structured logging & tracing
         ├── mod.rs
         ├── commands.rs   # Log + trace commands
@@ -82,8 +108,8 @@ Each domain follows the same pattern: commands are thin adapters, business logic
 | Domain          | Modules                          | Store type               | Schema versions |
 | --------------- | -------------------------------- | ------------------------ | --------------- |
 | `ollama/`       | chat, streaming, models, health  | Stateless (HTTP client)  | —               |
-| `rag/`          | indexing, search, embedder        | `RagStore` (SQLite)      | v1–v3           |
-| `conversation/` | CRUD, search                      | `ConversationStore` (SQLite) | v1–v3      |
+| `rag/`          | indexing, search, embedder        | `RagStore` (SQLite)      | v1–v5           |
+| `conversation/` | CRUD, search                      | `ConversationStore` (SQLite) | v1–v7      |
 | `migrations/`    | run, rollback, version tracking   | — (operates on DBs)      | —               |
 | `logging/`      | trace, file logger, sanitizer     | — (in-memory + file)      | —               |
 
@@ -111,7 +137,7 @@ Command names follow the `cmd_<domain>_<action>` convention and are mirrored in 
 
 Musaed uses a code-based (not SQL file) migration framework. Migrations are Rust functions that execute SQL within transactions, with version tracking stored in SQLite metadata tables (`_conversations_migrations`).
 
-The conversation database is at schema version **5**. The RAG database manages its own schema inline in `rag/store/connection.rs` (not through this framework).
+The conversation database is at schema version **7** (`migrations/conversations/mod.rs`). The RAG database is at schema version **5** (`migrations/rag.rs`). Both run through the migration framework — RAG versioning is unified through `_rag_migrations`.
 
 - Migrations run automatically on app startup
 - Rollback support for rollbackable migrations
@@ -165,6 +191,9 @@ Integration tests live in `src-tauri/tests/`:
 - `integration_conversation.rs` — conversation store integration tests
 - `integration_ollama.rs` — Ollama integration tests (may require a running Ollama instance)
 - `hybrid_search.rs` — RAG hybrid search correctness tests
+- `integration_migrations_ipc.rs` — migration IPC command integration tests
+- `integration_rag_indexing.rs` — RAG indexing integration tests
+- `legacy_tracker_table.rs` — legacy version-table migration tests
 
 Unit tests are `#[cfg(test)]` modules within each source file.
 

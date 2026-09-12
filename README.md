@@ -43,7 +43,7 @@ Cross-feature imports are enforced by dependency-cruiser, driven by each feature
 ## Prerequisites
 
 - **Node.js** 22+
-- **pnpm** 9+
+- **pnpm** 11+ (see `package.json` `engines`)
 - **Rust** stable toolchain (rustfmt, clippy)
 - **System libs** (Linux): `libwebkit2gtk-4.1-dev`, `libappindicator3-dev`, `librsvg2-dev`, `patchelf`, `libssl-dev`
 
@@ -87,13 +87,13 @@ pnpm --filter web dev
 
 CI is defined in `.github/workflows/ci.yml` with 5 jobs:
 
-1. **Validate** — lint, type-check, architecture check, i18n, contract validation, no-TODO check
-2. **Test** — frontend unit tests
-3. **Rust** — fmt, clippy (-D warnings), cargo test
-4. **Visual Tests** — Playwright RTL (non-blocking)
-5. **Build** — static export verification
+1. **Validate** — lint, type-check, architecture check, i18n, contract + manifest validation, no-TODO check
+2. **Test** — frontend unit + integration tests, `pnpm audit`
+3. **Rust** — fmt, clippy (-D warnings), cargo test, cargo audit
+4. **Visual Tests** — Playwright RTL (blocking)
+5. **Build** — static export + Tauri build verification
 
-All checks are machine-gated. See `STANDARDS.md §18` for the full enforcement map.
+All checks are machine-gated. See `STANDARDS.md §19` for the full enforcement map.
 
 ## i18n
 

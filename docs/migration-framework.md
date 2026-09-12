@@ -13,19 +13,21 @@ Migration Framework Architecture
 │   │   ├── orchestrator.ts      # Migration execution engine
 │   │   ├── index.ts             # Public API + error types
 │   │   ├── versions/            # Version-specific migrations
-│   │   │   ├── settings-migrations.ts
-│   │   │   ├── rag-migrations.ts
-│   │   │   └── model-migrations.ts
-│   │   └── migrations.test.ts   # Unit tests
+│   │   │   ├── settings.ts
+│   │   │   ├── rag.ts
+│   │   │   └── model.ts
+│   │   └── *.test.ts            # Unit tests
 │   └── packages/contracts/src/migrations.ts  # Shared contracts
 │
 └── Backend (Rust)
     ├── src-tauri/src/migrations/
-    │   ├── mod.rs               # Main orchestrator
+    │   ├── mod.rs               # Main orchestrator (run_migrations, rollback_to_version)
     │   ├── version_tracker.rs   # Version persistence
     │   ├── commands.rs          # Tauri IPC commands
-    │   └── conversations/       # Conversation DB migrations
-    └── src-tauri/src/migrations/mod.rs tests  # Integration tests
+    │   ├── service.rs           # Async thin-adapter service layer
+    │   ├── conversations/       # Conversation DB migrations
+    │   └── rag.rs               # RAG DB migrations
+    └── src-tauri/src/migrations/*.test.rs  # Integration tests
 ```
 
 ## Design Principles
@@ -59,7 +61,7 @@ Dedicated metadata tables track applied migrations with timestamps and execution
 ```typescript
 interface BidirectionalMigration<T> {
   migrate: (data: T) => T;
-  rollback: (data: T) => T;
+  rollback?: (data: T) => T; // optional — only when reversible
   isRollbackable: boolean;
   description: string;
 }
@@ -68,9 +70,16 @@ interface BidirectionalMigration<T> {
 ### Orchestrator API
 
 ```typescript
+import {
+  runMigrations,
+  rollbackMigrations,
+  createIdempotentMigration,
+  type StoreMigrationConfig,
+} from '@/lib/migrations';
+
 // Run migrations
 const result = await runMigrations(persistedState, {
-  currentVersion: 2,
+  currentVersion: 3,
   migrations: settingsMigrations,
   validate: validateSettings,
   defaultState: DEFAULT_SETTINGS,
@@ -80,50 +89,57 @@ const result = await runMigrations(persistedState, {
 // Rollback migrations
 const rollback = await rollbackMigrations(
   data,
-  2, // from version
-  1, // to version
+  3, // from version
+  2, // to version
   settingsBidirectionalMigrations
 );
 ```
 
+`StoreMigrationConfig` fields: `currentVersion`, `migrations`, optional `bidirectionalMigrations`, `validate`, `defaultState`, `storeName`.
+
 ### Example: Settings Migration v1 → v2
 
+Migrations are defined with `createIdempotentMigration`, which guards against re-application:
+
 ```typescript
+import { createIdempotentMigration } from '@/lib/migrations/orchestrator';
+import { DEFAULT_SETTINGS, type ChatSettings } from '@musaed/contracts';
+
 // migrateSettingsToV2
-export const migrateSettingsToV2 = (data: any): ChatSettings => {
-  if (isSettingsV2(data)) return data; // Idempotent guard
+export const migrateSettingsToV2 = createIdempotentMigration<ChatSettings>((data: ChatSettings) => {
+  // Merge with defaults to ensure all fields exist
+  const merged = { ...DEFAULT_SETTINGS, ...data };
+  if (typeof merged.density !== 'number') {
+    merged.density = 1.0; // New field in v2
+  }
+  return merged;
+}, 2);
 
-  const v1Data = SettingsV1Schema.parse(data);
-  return {
-    ...v1Data,
-    density: 1.0, // New field in v2
-  };
-};
-
-// Rollback
-export const rollbackSettingsToV1 = (data: any): SettingsV1 => {
-  const { density, ...rest } = data;
-  return SettingsV1Schema.parse(rest);
+// Rollback v2 → v1
+export const rollbackSettingsToV1 = (data: ChatSettings): Partial<ChatSettings> => {
+  const { density: _density, ...rest } = data;
+  return rest;
 };
 ```
 
 ### Integration with Store Persistence
 
+`apps/web/src/lib/tauri-storage.ts` runs store migrations on rehydration:
+
 ```typescript
 // tauri-storage.ts
-const transformed = await runStoreMigrations(parsed.content, {
-  currentVersion: SETTINGS_VERSION,
-  migrations: settingsMigrations,
-  validate: validateSettings,
-  defaultState: DEFAULT_SETTINGS,
-  storeName: 'settings',
+const result = await runStoreMigrations(parsedData, {
+  currentVersion,
+  migrations: migrations ?? {},
+  validate: (data: unknown) => data,
+  defaultState: {},
+  storeName: filename,
 });
 
-if (transformed.success) {
-  await saveStore(path, {
-    version: transformed.toVersion,
-    data: transformed.data,
-  });
+if (result.success && result.data) {
+  await storeApi.set(filename, storageKey, JSON.stringify(result.data));
+  await storeApi.set(filename, versionKey, result.toVersion);
+  await storeApi.save(filename);
 }
 ```
 
@@ -131,69 +147,74 @@ if (transformed.success) {
 
 ## Backend: SQLite Database Migrations
 
-### Migration Trait
+### Migration Step
 
 ```rust
-pub trait DatabaseMigration: Send + Sync {
-    fn version(&self) -> u32;
-    fn description(&self) -> &'static str;
-    fn up(&self) -> &'static [&'static str];
-    fn down(&self) -> Option<&'static [&'static str]>;
-    fn is_rollbackable(&self) -> bool { true }
+pub struct MigrationStep {
+    pub version: u32,
+    pub description: &'static str,
+    pub up: &'static [&'static str],
+    pub down: Option<&'static [&'static str]>,
+    pub is_rollbackable: bool,
 }
 ```
 
 ### Orchestrator API
 
-```rust
-// Run migrations
-let result = run_migrations(
-    conn.clone(),
-    MigrationTarget::Conversations,
-    None  // None = latest version
-).await?;
+The core runner functions are **synchronous** and take `&mut Connection`:
 
-// Rollback
-let result = rollback_to_version(
-    conn.clone(),
-    MigrationTarget::Conversations,
-    1  // target version
-).await?;
+```rust
+use crate::migrations::{run_migrations, rollback_to_version, MigrationTarget};
+
+// Run migrations (sync, &mut Connection)
+let result = run_migrations(&mut conn, MigrationTarget::Conversations, None)?;
+
+// Rollback (sync, &mut Connection)
+let result = rollback_to_version(&mut conn, MigrationTarget::Conversations, 1)?;
 ```
 
-### Example: Conversation DB Migration v1 → v2
+The async service layer (`src-tauri/src/migrations/service.rs`) wraps these for the Tauri commands, taking `Arc<Mutex<ConversationStore>>`:
 
 ```rust
-// v2: Add performance indexes
-pub fn get_migration(version: u32) -> Option<MigrationStep> {
-    match version {
-        2 => Some(MigrationStep::new(
-            2,
-            "Add performance indexes",
-            &[
-                "CREATE INDEX IF NOT EXISTS idx_conversations_updated_at
-                 ON conversations(updated_at)",
-                "CREATE INDEX IF NOT EXISTS idx_messages_conversation_id
-                 ON messages(conversation_id)",
-            ],
-            &[
-                "DROP INDEX IF EXISTS idx_conversations_updated_at",
-                "DROP INDEX IF EXISTS idx_messages_conversation_id",
-            ],
-        )),
-        _ => None,
-    }
-}
+// service.rs — async thin adapter
+pub async fn run(
+    conversation_store: Arc<Mutex<ConversationStore>>,
+    request: RunMigrationsRequest,
+) -> ApiResponse<RunMigrationsResponse>;
+```
+
+### Example: Conversation DB Migration v2
+
+The conversations database is currently at **version 7** (`LATEST_VERSION` in `src-tauri/src/migrations/conversations/mod.rs`). Migration v2 adds performance indexes:
+
+```rust
+2 => Some(MigrationStep::new(
+    2,
+    "Add performance indexes",
+    &[
+        "CREATE INDEX IF NOT EXISTS idx_conversations_updated_at
+         ON conversations(updated_at)",
+        "CREATE INDEX IF NOT EXISTS idx_messages_timestamp
+         ON messages(timestamp)",
+    ],
+    &[
+        "DROP INDEX IF EXISTS idx_conversations_updated_at",
+        "DROP INDEX IF EXISTS idx_messages_timestamp",
+    ],
+)),
 ```
 
 ### Version Tracking Table
+
+The version table is named `_<target>_migrations` (e.g. `_conversations_migrations`) and includes a `checksum` column:
 
 ```sql
 CREATE TABLE IF NOT EXISTS _conversations_migrations (
     version INTEGER PRIMARY KEY,
     description TEXT NOT NULL,
     applied_at TEXT NOT NULL DEFAULT (datetime('now')),
-    execution_time_ms INTEGER DEFAULT 0
+    execution_time_ms INTEGER DEFAULT 0,
+    checksum TEXT
 );
 ```
 
@@ -203,10 +224,7 @@ CREATE TABLE IF NOT EXISTS _conversations_migrations (
 
 ### Frontend → Backend
 
-All four migration commands are wired into the typed IPC bridge
-(`apps/web/src/lib/ipc.ts`) as `migrationApi`. Direct `invoke()` calls
-bypass the typed bridge and are blocked by ESLint — always go through
-`migrationApi`:
+All four migration commands are wired into the typed IPC bridge as `migrationApi` (`apps/web/src/lib/ipc/migration.ts`). Direct `invoke()` calls bypass the typed bridge and are blocked by ESLint — always go through `migrationApi`:
 
 ```typescript
 import { migrationApi } from '@/lib/ipc';
@@ -223,12 +241,14 @@ const rollbackResult = await migrationApi.rollback('conversations', 2);
 
 // Check migration status (used by the Settings/Diagnostics panel)
 const status = await migrationApi.status('conversations');
-// → { target, currentVersion, latestVersion, needsMigration, lastMigratedAt? }
+// → { target, currentVersion, latestVersion, needsMigration }
 
 // List the available migration steps for a target
 const steps = await migrationApi.list('conversations');
 // → Array<{ version, description, isRollbackable }>
 ```
+
+The four backend commands are `cmd_run_migrations`, `cmd_rollback_migrations`, `cmd_get_migration_status`, and `cmd_list_migrations`.
 
 ### Command Responses
 
@@ -246,7 +266,6 @@ interface MigrationStatus {
   currentVersion: number;
   latestVersion: number;
   needsMigration: boolean;
-  lastMigratedAt?: string;
 }
 
 interface MigrationInfo {
@@ -256,28 +275,28 @@ interface MigrationInfo {
 }
 ```
 
-The contract types and Zod schemas live in
-`packages/contracts/src/migrations.ts` (`RunMigrationsRequestSchema`,
-`RunMigrationsResponseSchema`, `MigrationStatusSchema`,
-`MigrationInfoSchema`) and are the single source of truth. Rust
-serde structs mirror these names (via `#[serde(rename_all = "camelCase")]`)
-so the wire format matches the contracts byte-for-byte.
+The contract types and Zod schemas live in `packages/contracts/src/migrations.ts` (`RunMigrationsRequestSchema`, `RunMigrationsResponseSchema`, `MigrationStatusSchema`, `MigrationInfoSchema`) and are the single source of truth. Rust serde structs mirror these names via `#[serde(rename_all = "camelCase")]`. Note: the contract's `MigrationStatusSchema` declares an optional `lastMigratedAt`, but the Rust `MigrationStatus` struct does **not** serialize it — the wire response omits that field.
 
 ---
 
 ## Error Handling
 
-### Error Codes
+### Frontend Error Codes
 
-| Code                       | Description                       |
-| -------------------------- | --------------------------------- |
-| `DATABASE_ERROR`           | SQLite/rusqlite error             |
-| `MIGRATION_FAILED`         | Migration function threw          |
-| `ROLLBACK_FAILED`          | Rollback function threw           |
-| `MISSING_MIGRATION`        | No migration found for version    |
-| `INVALID_VERSION_SEQUENCE` | Cannot migrate v2 → v5 (skipping) |
-| `NOT_ROLLBACKABLE`         | Migration explicitly irreversible |
-| `VALIDATION_ERROR`         | Post-migration validation failed  |
+The frontend `MigrationErrorCode` enum (in `packages/contracts/src/migrations.ts`):
+
+| Code                         | Description                                  |
+| ---------------------------- | -------------------------------------------- |
+| `MIGRATION_VALIDATION_ERROR` | Data failed validation against target schema |
+| `MIGRATION_FAILED`           | Migration function threw                     |
+| `INVALID_VERSION_SEQUENCE`   | Cannot migrate v2 → v5 (skipping)            |
+| `MISSING_MIGRATION`          | No migration found for version               |
+| `ROLLBACK_FAILED`            | Rollback function threw                      |
+| `DATA_CORRUPTED`             | Data corrupted or unreadable                 |
+
+### Backend Error Handling
+
+The backend maps all migration failures to a single `MIGRATION_ERROR` code (`error_codes::MIGRATION_ERROR`). The service layer returns `ApiResponse` with a `BackendError` carrying that code and a message.
 
 ### Error Recovery Pattern
 
@@ -290,7 +309,7 @@ if (!result.success) {
       // Attempt rollback
       await rollbackMigrations(result.fromVersion, result.toVersion);
       break;
-    case MigrationErrorCode.VALIDATION_ERROR:
+    case MigrationErrorCode.MIGRATION_VALIDATION_ERROR:
       // Data corrupted - restore from backup
       await restoreFromBackup();
       break;
@@ -322,18 +341,18 @@ describe('rollbackMigrations', () => {
 ### Backend Tests (Cargo)
 
 ```rust
-#[tokio::test]
-async fn test_run_migrations_from_scratch() {
-    let conn = create_test_db(MigrationTarget::Conversations);
-    let result = run_migrations(conn, MigrationTarget::Conversations, None).await;
+#[test]
+fn test_run_migrations_from_scratch() {
+    let mut conn = create_test_db(MigrationTarget::Conversations);
+    let result = run_migrations(&mut conn, MigrationTarget::Conversations, None);
     assert_eq!(result.applied_migrations, vec![1, 2]);
 }
 
-#[tokio::test]
-async fn test_idempotent_migration() {
+#[test]
+fn test_idempotent_migration() {
     // Run twice - should succeed both times
-    let _ = run_migrations(conn.clone(), MigrationTarget::Conversations, None).await;
-    let result = run_migrations(conn.clone(), MigrationTarget::Conversations, None).await;
+    let _ = run_migrations(&mut conn, MigrationTarget::Conversations, None);
+    let result = run_migrations(&mut conn, MigrationTarget::Conversations, None);
     assert_eq!(result.applied_migrations.len(), 0);
 }
 ```
@@ -344,32 +363,30 @@ async fn test_idempotent_migration() {
 
 ### Frontend (Zustand Store)
 
-1. **Create migration file**: `apps/web/src/lib/migrations/versions/<store>-migrations.ts`
+1. **Create migration file**: `apps/web/src/lib/migrations/versions/<store>.ts`
 
 2. **Define migration**:
 
 ```typescript
-export const migrateStoreToV3 = (data: any): StoreV3 => {
+export const migrateStoreToV3 = createIdempotentMigration<StoreV3>((data) => {
   // Transform v2 → v3
   return { ...data, newField: defaultValue };
-};
+}, 3);
 
-export const rollbackStoreToV2 = (data: any): StoreV2 => {
+export const rollbackStoreToV2 = (data: StoreV3): Partial<StoreV2> => {
   // Transform v3 → v2 (or identity if safe)
   const { newField, ...rest } = data;
-  return rest as StoreV2;
+  return rest;
 };
 ```
 
-3. **Register in orchestrator**: Add to migrations object with version number
-
+3. **Register in orchestrator**: Add to the migrations object with version number
 4. **Update version constant**: Increment `<STORE>_VERSION`
-
 5. **Add tests**: Verify forward + rollback behavior
 
 ### Backend (SQLite Database)
 
-1. **Create migration module**: `src-tauri/src/migrations/migrations/<domain>/mod.rs`
+1. **Create migration module**: `src-tauri/src/migrations/<domain>/mod.rs`
 
 2. **Define migration**:
 
@@ -393,10 +410,8 @@ pub fn get_migration(version: u32) -> Option<MigrationStep> {
 }
 ```
 
-3. **Update LATEST_VERSION**: Increment constant
-
+3. **Update `LATEST_VERSION`**: Increment constant
 4. **Register in parent module**: Add to `get_migration()` match in `mod.rs`
-
 5. **Add tests**: Verify SQL executes correctly, rollback safe
 
 ---
@@ -417,45 +432,11 @@ pub fn get_migration(version: u32) -> Option<MigrationStep> {
 - Removing tables with dependencies
 - Data transformations that lose fidelity
 
-### Rollback Planning
-
-Before rollback, request a plan:
-
-```typescript
-const plan = await ipc.invoke('get_rollback_plan', {
-  target: 'conversations',
-  toVersion: 2,
-});
-
-if (!plan.isSafe) {
-  console.warn('Rollback warnings:', plan.warnings);
-  console.warn('Estimated data loss:', plan.estimatedDataLoss);
-}
-```
-
 ---
 
 ## Observability
 
-### Structured Logging
-
-```rust
-tracing::info!(
-    target = target.as_str(),
-    from = from_version,
-    to = target_version,
-    "Starting migration"
-);
-
-tracing::info!(
-    target = target.as_str(),
-    version = next_version,
-    description = migration.description,
-    "Applied migration"
-);
-```
-
-### Migration History Query
+Migration activity is logged through the structured logging system (`crate::logging` / `emit_trace`). The version tracking table records each applied migration:
 
 ```sql
 SELECT version, description, applied_at, execution_time_ms
@@ -490,13 +471,7 @@ ORDER BY version DESC;
 
 ## CI Validation
 
-Migration files are validated by CI for:
-
-- ✅ Sequential version numbers
-- ✅ Bidirectional migrations have rollback (or marked non-rollbackable)
-- ✅ Description present
-- ✅ Tests exist and pass
-- ✅ No contract mismatches between frontend/backend
+Migration correctness is currently guarded by the project's unit and integration tests (frontend Vitest + Rust `cargo test`), which cover forward, rollback, and idempotency behavior. There is no dedicated migration-specific CI step in `.github/workflows/ci.yml`; the general `validate` and `rust` jobs run the test suites that exercise the migration framework.
 
 ---
 

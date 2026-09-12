@@ -5,10 +5,10 @@ Production-grade structured logging system with trace context propagation across
 ## Architecture
 
 ```
-┌─────────────────────┐     ┌─────────────┐     ┌──────────────────┐     ┌──────────────┐
-│  Frontend (TypeScript) │ → │  IPC Layer  │ → │  Rust Commands   │ → │  File + Console │
-│  traceLogger.ts   │     │  ipc.ts     │     │  tracing/        │     │  Logs         │
-└─────────────────────┘     └─────────────┘     └──────────────────┘     └──────────────┘
+┌──────────────────────────┐     ┌─────────────┐     ┌──────────────────┐     ┌──────────────┐
+│  Frontend (TypeScript)   │ → │  IPC Layer  │ → │  Rust Commands   │ → │  File + Console │
+│  logger.ts / ipc/trace.ts│     │  ipc.ts     │     │  logging/        │     │  Logs         │
+└──────────────────────────┘     └─────────────┘     └──────────────────┘     └──────────────┘
 ```
 
 ## Required Log Fields
@@ -34,225 +34,146 @@ Every trace entry MUST include:
 
 ## Frontend Usage
 
-### Basic Trace Span
+### Trace API (span lifecycle)
+
+The frontend trace API lives in `apps/web/src/lib/ipc/trace.ts` and exposes four IPC-backed operations:
 
 ```typescript
-import { traceLogger } from '@/lib/trace-logger';
+import { traceApi } from '@/lib/ipc/trace';
 
-// Create a span for an operation
-const span = traceLogger.createSpan({
-  feature: 'chat',
-  action: 'sendMessage',
-});
+// Start a span and register it for context propagation
+const context = await traceApi.start(traceId, 'chat', 'sendMessage');
 
-try {
-  // Your operation here
-  await sendMessage(message);
+// Complete the span with a status
+await traceApi.complete(traceId, 'success', 'Message sent', { messageId: 'msg-123' });
 
-  // Complete with success
-  span.success('Message sent successfully', {
-    messageId: message.id,
-    characterCount: message.content.length,
-  });
-} catch (error) {
-  // Complete with error
-  span.error('Failed to send message', {
-    errorName: error instanceof Error ? error.name : 'Unknown',
-  });
-  throw error;
-}
+// Retrieve the current context for an active trace
+const ctx = await traceApi.getContext(traceId);
 ```
 
-### Async Helper (Recommended)
+`traceApi` methods:
 
-```typescript
-import { traceAsync, traceLogger } from '@/lib/trace-logger';
-
-// Automatically handles span lifecycle
-const result = await traceAsync(
-  {
-    feature: 'rag',
-    action: 'searchProject',
-    initialContext: { projectId, query },
-  },
-  async (span) => {
-    // Your async operation
-    const searchResults = await ragApi.search(projectId, query);
-
-    // Add context mid-operation
-    span.addContext('resultCount', searchResults.length);
-
-    return searchResults;
-  }
-);
-```
-
-### Nested Spans
-
-```typescript
-import { traceLogger } from '@/lib/trace-logger';
-
-const parentSpan = traceLogger.createSpan({
-  feature: 'ollama',
-  action: 'chatCompletion',
-});
-
-// Create child span
-const childSpan = parentSpan.child('validateModel');
-
-// Child span automatically gets parentSpanId for correlation
-await validateModel(modelName);
-childSpan.success();
-
-parentSpan.success('Chat completion finished');
-```
+| Method       | Signature                                       | Purpose                                         |
+| ------------ | ----------------------------------------------- | ----------------------------------------------- |
+| `append`     | `append(input: TraceEntryInput)`                | Append a complete trace entry to the log stream |
+| `start`      | `start(traceId, feature, action)`               | Start a span and register it for propagation    |
+| `complete`   | `complete(traceId, status, message?, context?)` | Complete an active span with a status           |
+| `getContext` | `getContext(traceId)`                           | Get the current context for an active trace     |
 
 ### One-Off Logging
 
+For simple, non-span logging use the `logger` utility in `apps/web/src/lib/logger.ts`. It sanitizes messages (redacts paths/URLs via the contract's `sanitizeError`), truncates at 2048 chars, and persists to the backend log buffer when running inside Tauri:
+
 ```typescript
-import { traceLogger } from '@/lib/trace-logger';
+import { logger } from '@/lib/logger';
 
-// Simple log without span lifecycle
-traceLogger.info('chat', 'modelLoaded', 'Model loaded successfully', {
-  model: 'llama3:latest',
-  loadTimeMs: 234,
-});
+logger.info('Model loaded successfully', { model: 'llama3:latest', loadTimeMs: 234 });
+logger.error('Indexing failed', { projectId: '123', reason: 'Database locked' });
+logger.warn('...');
+logger.debug('...'); // suppressed in production builds
+```
 
-traceLogger.error('rag', 'indexingFailed', 'Indexing failed', {
-  projectId: '123',
-  reason: 'Database locked',
+### Store-Mutation Tracing
+
+Store mutations are traced through `traceStoreMutation` in `apps/web/src/lib/store-tracing.ts`. It is throttled per `feature:action[:suffix]` key so a churning mutation does not flood the trace store:
+
+```typescript
+import { traceStoreMutation } from '@/lib/store-tracing';
+
+traceStoreMutation({
+  feature: 'conversation',
+  action: 'setCurrentConversationId',
+  level: 'INFO',
+  message: 'Active conversation changed',
+  context: { conversationId },
 });
 ```
 
-### Legacy Adapter
+The streaming hot path uses `traceAppendToken(conversationId, contentLen)`, which emits a DEBUG trace entry every Nth token per conversation instead of on a pure time window.
 
-For gradual migration from the old logger API:
-
-```typescript
-import { structuredLogger } from '@/lib/trace-logger';
-
-// Old API calls now route through structured logging
-structuredLogger.info('User clicked send button', { conversationId: '123' });
-structuredLogger.error('Network error', { url: '[REDACTED]' });
-```
+Trace IDs are generated with `generateTraceId()` from `apps/web/src/lib/trace-id.ts` (UUID v4, with a deterministic fallback for environments without `crypto.randomUUID`).
 
 ## Backend Usage (Rust)
 
-### Basic Span
+The Rust tracing domain lives in `src-tauri/src/logging/` (module `crate::logging`). It defines the types `LogLevel`, `TraceStatus`, `TraceSource`, `TraceContext`, `TraceEntry`, and `TraceEntryInput` in `mod.rs`, and the thin-adapter service functions in `service.rs`.
+
+### Service functions
+
+The Tauri commands (`cmd_trace_append`, `cmd_trace_start`, `cmd_trace_complete`, `cmd_trace_get_context`) delegate to the service layer:
 
 ```rust
-use crate::tracing::{Span, TraceStatus};
-use uuid::Uuid;
+use crate::logging::{TraceEntryInput, TraceStatus, TraceSource, LogLevel};
 
-let trace_id = Uuid::new_v4().to_string();
-let span = Span::new(
-    trace_id,
-    "chat".to_string(),
-    "sendMessage".to_string(),
-    None, // parent_span_id
-);
-
-// Your operation
-match send_message(&message).await {
-    Ok(_) => {
-        span.success(Some("Message sent".to_string()), None);
-    }
-    Err(e) => {
-        span.error(format!("Failed: {}", e), None);
-    }
-}
+// Append a complete entry (frontend entry point)
+let input = TraceEntryInput {
+    trace_id: "550e8400-e29b-41d4-a716-446655440000".into(),
+    span_id: None,
+    parent_span_id: None,
+    feature: "chat".into(),
+    action: "sendMessage".into(),
+    level: LogLevel::Info,
+    status: Some(TraceStatus::Success),
+    latency_ms: Some(45),
+    message: "Message sent".into(),
+    source: TraceSource::Frontend,
+    context: None,
+};
+let res = crate::logging::service::append(input).await;
 ```
 
-### Trace Context Propagation
+### Emitting a trace
+
+Backend code emits a trace entry through `emit_trace`, which serializes the entry to a JSON line and writes it through the project-wide channel logger:
 
 ```rust
-use crate::tracing::{Span, TraceContext};
+use crate::logging::{emit_trace, TraceEntry, LogLevel, TraceSource};
 
-// When receiving a trace context from frontend
-fn handle_request(ctx: TraceContext) {
-    let span = Span::new(
-        ctx.trace_id,
-        ctx.feature,
-        ctx.action,
-        ctx.parent_span_id, // Link to parent span
-    );
-
-    // Operation with correlated tracing
-    process_request();
-    span.success(None, None);
-}
+let entry = TraceEntry { /* ... */ };
+emit_trace(entry);
 ```
 
-### Using the Macro
+### Trace context propagation
 
-```rust
-// Wrap async operations with automatic span lifecycle
-let result = trace_async!(
-    "rag",
-    "indexProject",
-    { index_project(&project).await },
-    |result| match result {
-        Ok(_) => Some("Indexing completed".to_string()),
-        Err(_) => Some("Indexing failed".to_string()),
-    }
-);
-```
+`TraceContext` carries `traceId`, `parentSpanId`, `feature`, and `action` across the IPC boundary. Active spans are registered in a global registry (`ACTIVE_SPANS`) keyed by `trace_id`, so `start`/`complete`/`get_context` can correlate spans.
 
 ## IPC Trace Propagation
 
-When making IPC calls that should be correlated:
+The four trace commands are the single path for trace context across the IPC boundary:
 
-```typescript
-import { traceLogger, traceAsync } from '@/lib/trace-logger';
-import { ragApi } from '@/lib/ipc';
-
-await traceAsync(
-  {
-    feature: 'rag',
-    action: 'indexProject',
-  },
-  async (span) => {
-    // The IPC call will be correlated via trace context
-    const context = traceLogger.createTraceContext(span);
-
-    // Pass context implicitly via the span
-    await ragApi.indexProject(projectId);
-
-    span.addContext('indexedFiles', fileCount);
-  }
-);
-```
+- `cmd_trace_append` — append a complete entry
+- `cmd_trace_start` — start a span, return its context
+- `cmd_trace_complete` — complete an active span
+- `cmd_trace_get_context` — read the current context for an active trace
 
 ## Validation Limits
 
-All trace entries are validated against these constraints:
+All trace entries are validated against these constraints (see `src-tauri/src/generated_validation.rs`):
 
-| Field            | Limit       | Description               |
-| ---------------- | ----------- | ------------------------- |
-| `feature`        | 1-64 chars  | Feature domain name       |
-| `action`         | 1-128 chars | Action name               |
-| `message`        | 1-10 KiB    | Human-readable message    |
-| `context` fields | ≤50         | Number of key-value pairs |
-| `context` value  | ≤2 KiB      | Per-value string length   |
-| `traceId`        | UUID v4     | Must be valid UUID format |
-| `spanId`         | UUID v4     | Must be valid UUID format |
+| Field            | Limit       | Description                             |
+| ---------------- | ----------- | --------------------------------------- |
+| `feature`        | 1-64 chars  | Feature domain name                     |
+| `action`         | 1-128 chars | Action name                             |
+| `message`        | 1-10 KiB    | Human-readable message                  |
+| `context` fields | ≤50         | Number of key-value pairs               |
+| `context` value  | ≤2 KiB      | Per-value string length                 |
+| `traceId`        | ≤36 chars   | Length-checked (not strict UUID format) |
 
 ## Best Practices
 
 ### DO
 
-✅ Use `traceAsync` for automatic span lifecycle management  
-✅ Add contextual metadata that helps debugging  
-✅ Keep feature names consistent across your codebase  
-✅ Use child spans for nested operations  
+✅ Use `traceApi.start`/`complete` for span lifecycle management
+✅ Add contextual metadata that helps debugging
+✅ Keep feature names consistent across your codebase
+✅ Use `traceStoreMutation` for store churn (it is throttled for you)
 ✅ Complete spans in all code paths (success AND error)
 
 ### DON'T
 
-❌ Log sensitive data (PII, credentials, tokens)  
-❌ Create spans without completing them  
-❌ Use trace logging for business logic  
-❌ Mix trace API with direct `logApi.append()` calls  
+❌ Log sensitive data (PII, credentials, tokens)
+❌ Create spans without completing them
+❌ Use trace logging for business logic
+❌ Mix trace API with direct `logApi.append()` calls
 ❌ Omit the `feature` or `action` fields
 
 ## Log Output Format
@@ -294,19 +215,19 @@ grep '"traceId":"550e8400-e29b-41d4-a716-446655440000"' musaed.log
 
 The structured logging system integrates with:
 
-- **File-based persistence**: All traces written to `musaed/logs/musaed.log`
-- **Console output**: Development mode shows colored trace logs
+- **File-based persistence**: All traces written to `<app_data_dir>/musaed/logs/musaed.log` (resolved by `get_log_path` in `src-tauri/src/logging/logger.rs`), with rotation (`musaed.log.1`, `musaed.log.2`, …)
+- **Console output**: Debug builds echo trace entries to stdout/stderr with `[TRACE:LEVEL]` prefixes
 - **Trace correlation**: Parent-child spans linked via `parentSpanId`
 - **Cross-IPC tracing**: Frontend → Backend → Domain modules correlated
 
 ## Error Handling
 
-Failed trace emission never throws - errors are silently swallowed in production to avoid interrupting user workflows. In development, errors are logged to console.
+Failed trace emission never throws — errors are silently swallowed to avoid interrupting user workflows. In development, errors are logged to console.
 
 ```typescript
 // This will not throw, even if IPC fails
 await traceApi.append(invalidEntry);
 
 // Development console will show:
-// [TraceLogger] Invalid trace entry: ZodError...
+// [logger] Tauri log persistence failed ...
 ```

@@ -7,10 +7,10 @@ Shared TypeScript contracts — the single source of truth for types, schemas, a
 - Define **IPC command names** and the command registry (`command-versions.ts`)
 - Define **feature manifest types** that every `feature.manifest.ts` is typed against (`manifest.ts`)
 - Define **Zod schemas** and **TypeScript types** for chat, conversation, RAG, Ollama, UI, and validation
-- Define **migration version constants** for the SQLite schema migration system (`migrations.ts`)
+- Define **migration framework contracts** (schemas, error types) for the SQLite schema migration system (`migrations.ts`)
 - Define **IPC latency budgets** per command (`latency.ts`)
 - Define **structured error types** (`errors.ts`)
-- Provide shared **utility functions** (sanitize, thinking-tags, async, worker utils)
+- Provide shared **utility functions** (sanitize)
 
 ## Architecture
 
@@ -24,7 +24,7 @@ packages/contracts/
     ├── index.test.ts     # Smoke tests for the barrel
     ├── command-versions.ts  # COMMAND_VERSIONS registry + SHARED_COMMANDS + CommandName type
     ├── manifest.ts        # FeatureManifest interface (typed contract for feature.manifest.ts)
-    ├── migrations.ts     # Migration version constants (conversations v3, rag v3)
+    ├── migrations.ts     # Migration framework contracts (schemas, error types)
     ├── latency.ts        # IPC_LATENCY_BUDGETS per command
     ├── errors.ts         # BackendError type + error code constants
     ├── constants.ts      # App-wide constants
@@ -40,19 +40,24 @@ packages/contracts/
     │   ├── ui.ts          # UI state types
     │   └── web-worker.d.ts # Web worker type declarations
     ├── schemas/           # Zod schemas (runtime validators)
-    │   ├── ollama.ts
     │   ├── chat.ts
-    │   ├── conversation.ts
-    │   ├── rag.ts
-    │   ├── validation.ts
     │   ├── context-menu.ts
+    │   ├── conversation.ts
+    │   ├── dialog.ts
+    │   ├── menu-bar.ts
+    │   ├── metrics.ts
+    │   ├── ollama.ts
+    │   ├── rag.ts
     │   ├── tray.ts
-    │   └── menu-bar.ts
+    │   ├── validation.ts
+    │   ├── chat/          # versioned chat schemas
+    │   ├── conversation/  # versioned conversation schemas
+    │   ├── logging/       # versioned logging schemas
+    │   ├── ollama/        # versioned ollama schemas
+    │   ├── rag/           # versioned rag schemas
+    │   └── validation/    # versioned validation schemas
     └── utils/
-        ├── sanitize.ts
-        ├── thinking-tags.ts
-        ├── workerUtils.ts
-        └── async.ts
+        └── sanitize.ts
 ```
 
 ## Public API
