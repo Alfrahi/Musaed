@@ -169,12 +169,20 @@ test.describe('RTL Visual Regression', () => {
       await setLocale('en');
     });
 
-    test('should capture LTR homepage baseline', async () => {
-      // Verify LTR direction
-      const dir = await page.evaluate(() => document.documentElement.dir);
-      expect(dir).toBe('ltr');
+    // The homepage renders the framer-motion EmptyState entrance animation,
+    // which Playwright's animations:'disabled' does NOT stop (it's JS-driven,
+    // not CSS). Emulate reduced motion so the animation is skipped and the
+    // screenshot is deterministic. Library/settings pages are unaffected.
+    test.describe('homepage', () => {
+      test.use({ reducedMotion: 'reduce' });
 
-      await takeSnapshot({ name: 'ltr-homepage', fullPage: true });
+      test('should capture LTR homepage baseline', async () => {
+        // Verify LTR direction
+        const dir = await page.evaluate(() => document.documentElement.dir);
+        expect(dir).toBe('ltr');
+
+        await takeSnapshot({ name: 'ltr-homepage', fullPage: true });
+      });
     });
 
     test('should capture LTR library baseline', async () => {
@@ -203,16 +211,23 @@ test.describe('RTL Visual Regression', () => {
       await setLocale('ar');
     });
 
-    test('should capture RTL homepage screenshot', async () => {
-      // Verify RTL direction
-      const dir = await page.evaluate(() => document.documentElement.dir);
-      expect(dir).toBe('rtl');
+    // See the LTR homepage note: the framer-motion EmptyState entrance
+    // animation is JS-driven and not disabled by Playwright, so emulate
+    // reduced motion to make the homepage screenshot deterministic.
+    test.describe('homepage', () => {
+      test.use({ reducedMotion: 'reduce' });
 
-      // Verify lang attribute
-      const lang = await page.evaluate(() => document.documentElement.lang);
-      expect(lang).toBe('ar');
+      test('should capture RTL homepage screenshot', async () => {
+        // Verify RTL direction
+        const dir = await page.evaluate(() => document.documentElement.dir);
+        expect(dir).toBe('rtl');
 
-      await takeSnapshot({ name: 'rtl-homepage', fullPage: true });
+        // Verify lang attribute
+        const lang = await page.evaluate(() => document.documentElement.lang);
+        expect(lang).toBe('ar');
+
+        await takeSnapshot({ name: 'rtl-homepage', fullPage: true });
+      });
     });
 
     test('should capture RTL library screenshot', async () => {

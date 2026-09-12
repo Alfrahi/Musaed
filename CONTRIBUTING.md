@@ -34,10 +34,10 @@ format/clippy/test.
 
 - `packages/contracts/` — the single source of truth for IPC command
   signatures and shared Zod schemas. Re-export from `index.ts`; never import
-  sub-paths (see `STANDARDS.md` §5).
+  sub-paths (see `STANDARDS.md` §7.2).
 - `src-tauri/` — Tauri commands are thin adapters; business logic lives in
-  domain modules (see `STANDARDS.md` §6).
+  domain modules (see `STANDARDS.md` §8.1).
 - `apps/web/` — feature-first layout; no feature may import a sibling feature
-  (see `STANDARDS.md` §3).
+  (see `STANDARDS.md` §5).
 
 Read `STANDARDS.md` for the full set of conventions and machine-gated rules.
