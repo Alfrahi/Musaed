@@ -122,8 +122,8 @@ fn chunk_ast(tree: &Tree, source: &str, language: &str) -> Vec<RawChunk> {
     let mut imports = Vec::new();
 
     // Collect top-level semantic nodes
-    let mut i = 0;
-    let child_count = root.child_count();
+    let mut i: u32 = 0;
+    let child_count = root.child_count() as u32;
     while i < child_count {
         let child = root.child(i).unwrap();
         let kind = child.kind();
@@ -236,7 +236,7 @@ fn split_oversized_node(
     let mut current_text = String::new();
     let mut current_start = node.start_position().row + 1;
 
-    let child_count = node.child_count();
+    let child_count = node.child_count() as u32;
     for i in 0..child_count {
         let child = node.child(i).unwrap();
         let child_text = node_text(child, source);
