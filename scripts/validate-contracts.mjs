@@ -951,7 +951,7 @@ function validate(rustCommands, tsCommands, { strict = false } = {}) {
   }
 
   // 4b. TypeScript entries missing from Rust
-  for (const [name, ts] of tsCommands) {
+  for (const name of tsCommands.keys()) {
     if (!rustCommands.has(name)) {
       issues.push({
         type: 'TS_ONLY',
