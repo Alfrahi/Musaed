@@ -130,7 +130,7 @@ const rowClassName = (isActive: boolean) =>
   cn(
     'group text-label focus-ring duration-fast relative flex cursor-pointer items-center gap-3 border-s-2 border-transparent px-4 py-2.5 transition-all',
     isActive
-      ? 'border-primary text-foreground rounded-md bg-zinc-200/50 font-semibold dark:bg-zinc-800/50'
+      ? 'border-primary text-foreground rounded-md bg-blue-50/60 font-semibold dark:bg-blue-500/10'
       : 'text-zinc-500 hover:border-zinc-300 hover:bg-zinc-100/70 dark:hover:bg-zinc-800/50'
   );
 

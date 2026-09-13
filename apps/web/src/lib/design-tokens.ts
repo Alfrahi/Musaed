@@ -28,9 +28,9 @@ export const SPACING = {
 
 export const FONT_SIZE = {
   caption: '12px',
-  body: '14px',
+  body: '15px',
   label: '13px',
-  heading: '16px',
+  heading: '24px',
 } as const;
 
 // SHADOW was removed. The CSS @theme block in globals.css is
