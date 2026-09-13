@@ -414,4 +414,137 @@ describe('mermaid-utils', () => {
       expect(result).toBe('sequenceDiagram\n  A->>B: hello');
     });
   });
+
+  describe('preprocessMermaidContent - stateDiagram', () => {
+    it('strips sequence syntax (participant/note over/order ->>/end)', () => {
+      const input = `stateDiagram-v2
+    participant Order
+    note over Order: An order is created.
+    state "Pending"
+    order Order ->> Order: Process Payment
+    note over Order: Payment processed.
+    state "Paid"
+    end Order: done`;
+      const result = preprocessMermaidContent(input);
+      expect(result).not.toContain('participant');
+      expect(result).not.toContain('note over');
+      expect(result).not.toContain('->>');
+      expect(result).not.toContain('end Order');
+      // Reconstructed as a linear state machine with slugged ids.
+      expect(result).toContain('[*] --> Pending');
+      expect(result).toContain('Pending --> Paid');
+    });
+  });
+
+  describe('preprocessMermaidContent - gantt attributes', () => {
+    it('converts task "Name" duration="1d" to canonical task line with dates', () => {
+      const input = `gantt
+    title Project Schedule
+    task "Design" duration="1d"
+    task "Build" after "Design", duration="1d"
+    gantt-title Project Timeline`;
+      const result = preprocessMermaidContent(input);
+      expect(result).toContain('Design :2026-01-01, 1d');
+      expect(result).toContain('Build :2026-01-02, 1d');
+      expect(result).not.toContain('duration=');
+      expect(result).not.toContain('after "Design"');
+      expect(result).not.toContain('gantt-title');
+    });
+  });
+
+  describe('preprocessMermaidContent - pie labels', () => {
+    it('converts label X (N) to "X" : N and drops size/style', () => {
+      const input = `pie
+    title Market Share
+    label Apple (40)
+    label Samsung (30)
+    size: 300
+    style: solid`;
+      const result = preprocessMermaidContent(input);
+      expect(result).toContain('"Apple" : 40');
+      expect(result).toContain('"Samsung" : 30');
+      expect(result).not.toContain('label ');
+      expect(result).not.toContain('size:');
+      expect(result).not.toContain('style:');
+    });
+  });
+
+  describe('preprocessMermaidContent - erDiagram syntax', () => {
+    it('fixes --|* crow foot and strips Note over', () => {
+      const input = `erDiagram
+    Customer --|* Order : Places Many Orders
+    Note over Customer,Order: Customer Information`;
+      const result = preprocessMermaidContent(input);
+      expect(result).toContain('||--o{');
+      expect(result).not.toContain('--|*');
+      expect(result).not.toContain('Note over');
+    });
+
+    it('converts inline Entity(attr: type) to entity block', () => {
+      const input = `erDiagram
+    Customer(id: int, name: string)
+    Order(id: int, amount: float)`;
+      const result = preprocessMermaidContent(input);
+      expect(result).toContain('Customer {');
+      expect(result).toContain('id int');
+      expect(result).toContain('name string');
+      expect(result).toContain('Order {');
+      expect(result).toContain('amount float');
+    });
+  });
+
+  describe('preprocessMermaidContent - gitGraph syntax', () => {
+    it('strips style/note/fill/stroke and --> arrows', () => {
+      const input = `gitGraph
+    style main fill:#f9f,stroke:#333
+    note right of main: Initial commit
+    A -->|commit|> B
+    commit
+    branch feature
+    checkout feature
+    commit
+    merge main`;
+      const result = preprocessMermaidContent(input);
+      expect(result).not.toContain('style');
+      expect(result).not.toContain('note');
+      expect(result).not.toContain('-->');
+      expect(result).toContain('commit');
+      expect(result).toContain('branch feature');
+      expect(result).toContain('merge main');
+    });
+  });
+
+  describe('preprocessMermaidContent - mindmap', () => {
+    it('strips +-- prefix and collapses multiple roots', () => {
+      const input = `mindmap
+    Design
+        +-- Wireframing
+        +-- Prototyping
+    Development
+        +-- Frontend
+    Testing
+        +-- Unit`;
+      const result = preprocessMermaidContent(input);
+      expect(result).not.toContain('+--');
+      // Only the first root (Design) stays at the minimum indent level
+      expect(result).toContain('\n    Design\n');
+      expect(result).toContain('\n      Development\n');
+      expect(result).toContain('\n      Testing\n');
+    });
+  });
+
+  describe('preprocessMermaidContent - timeline', () => {
+    it('strips note over and normalizes Task "X" duration="1w" with dates', () => {
+      const input = `gantt
+    title Project Timeline
+    note over Kickoff: Project begins
+    Task "Kickoff" duration="1w"
+    Task "Design" after "Kickoff", duration="2w"`;
+      const result = preprocessMermaidContent(input);
+      expect(result).not.toContain('note over');
+      expect(result).toContain('Kickoff :2026-01-01, 1w');
+      expect(result).toContain('Design :2026-01-02, 2w');
+      expect(result).not.toContain('duration=');
+    });
+  });
 });

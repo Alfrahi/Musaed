@@ -310,6 +310,243 @@ const shouldSwapToRequirement = (processed: string): boolean =>
   /^(graph|flowchart)/im.test(processed) && processed.includes('requirement ');
 
 /**
+ * Repair stateDiagram-v2 polluted with sequenceDiagram syntax (`participant`,
+ * `note over`, `order X ->> Y`, `end X`). Extracts the `state "X"` declarations
+ * and reconstructs a valid linear state machine: `[*] --> A --> B --> ...`.
+ */
+const fixStateDiagram = (processed: string): string => {
+  if (!/^stateDiagram(-v2)?\b/im.test(processed)) return processed;
+
+  const header = processed.match(/^stateDiagram(-v2)?/im)?.[0] ?? 'stateDiagram-v2';
+
+  // Collect unique state names in order of first appearance.
+  const states: string[] = [];
+  const seen = new Set<string>();
+  for (const line of processed.split('\n')) {
+    const m = line.trim().match(/^state\s+["']?([^"']+?)["']?\s*$/i);
+    if (m) {
+      const name = m[1].trim();
+      if (!seen.has(name)) {
+        seen.add(name);
+        states.push(name);
+      }
+    }
+  }
+
+  if (states.length === 0) return processed;
+
+  // State ids must be bare identifiers (no spaces, no quotes). Slug them.
+  const slug = (s: string): string =>
+    s.replace(/\s+/g, '_').replace(/[^\p{L}\p{N}_-]/gu, '') || 'state';
+
+  const ids = states.map(slug);
+  const transitions = [`[*] --> ${ids[0]}`];
+  for (let i = 1; i < ids.length; i++) {
+    transitions.push(`${ids[i - 1]} --> ${ids[i]}`);
+  }
+
+  return [header, ...transitions].join('\n');
+};
+
+/**
+ * Repair gantt charts polluted with hallucinated attributes (`duration="…"`,
+ * `after "…"`, `gantt-title`). Converts `task "Name" duration="1d"` rows into
+ * canonical `Name :start, duration` task lines with sequential start dates, and
+ * drops `after`/`gantt-title` noise. Sequential dates avoid Mermaid's
+ * `prevTask.endTime` crash when tasks carry only a duration.
+ */
+const fixGanttAttributes = (processed: string): string => {
+  if (!processed.includes('gantt')) return processed;
+
+  const lines = processed.split('\n');
+  const out: string[] = [];
+  let day = 1;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      out.push(line);
+      continue;
+    }
+    if (/^gantt-title\b/i.test(trimmed)) continue;
+
+    const taskMatch = trimmed.match(
+      /^(?:task|Task)\s+["']?([^"']+?)["']?\s+(?:after\s+["'][^"']+["']\s*,\s*)?duration\s*=\s*["']([^"']+)["']/i
+    );
+    if (taskMatch) {
+      const name = taskMatch[1].trim();
+      const duration = taskMatch[2].trim();
+      const start = `2026-01-${String(day).padStart(2, '0')}`;
+      out.push(`${line.match(/^[ \t]*/)?.[0]}${name} :${start}, ${duration}`);
+      day += 1;
+      continue;
+    }
+    out.push(line);
+  }
+  return out.join('\n');
+};
+
+/**
+ * Repair pie charts polluted with `label X (N)`, `size: N`, `style: …` lines.
+ * Converts `label Apple (40)` into `"Apple" : 40` and drops `size`/`style`.
+ */
+const fixPieLabels = (processed: string): string => {
+  if (!processed.includes('pie')) return processed;
+
+  const lines = processed.split('\n');
+  const out: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      out.push(line);
+      continue;
+    }
+    if (/^(size|style)\s*:/i.test(trimmed) || /^["'](size|style)["']\s*:/i.test(trimmed)) continue;
+
+    const labelMatch = trimmed.match(/^label\s+(.+?)\s*\((\d+(?:\.\d+)?)\)\s*$/i);
+    if (labelMatch) {
+      out.push(`${line.match(/^[ \t]*/)?.[0]}"${labelMatch[1].trim()}" : ${labelMatch[2]}`);
+      continue;
+    }
+    out.push(line);
+  }
+  return out.join('\n');
+};
+
+/**
+ * Repair erDiagram polluted with `--|*` crow's foot, `Note over …` lines, and
+ * `Entity(attr: type, …)` inline attribute syntax. Rewrites the relationship
+ * to a valid `||--o{` form, drops notes, and converts inline attrs to blocks.
+ */
+const fixErDiagramSyntax = (processed: string): string => {
+  if (!processed.includes('erDiagram')) return processed;
+
+  const result = processed.replace(/--\|(\*|o)/g, '||--o{');
+
+  const lines = result.split('\n');
+  const out: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      out.push(line);
+      continue;
+    }
+    if (/^Note\s+over\b/i.test(trimmed)) continue;
+
+    // Quote unquoted relationship labels containing spaces.
+    if (/^[A-Za-z_]\w*\s+[|o}{]/.test(trimmed) && trimmed.includes(':')) {
+      const rel = trimmed.replace(/:\s*([^"'][^\n]*)$/, (_m, label: string) => {
+        const clean = label.trim();
+        return /^["']/.test(clean) ? `: ${clean}` : `: "${clean}"`;
+      });
+      out.push(line.replace(trimmed, rel));
+      continue;
+    }
+
+    const inline = trimmed.match(/^(\w+)\(([^)]+)\)\s*$/);
+    if (inline) {
+      const entity = inline[1];
+      const attrs = inline[2]
+        .split(',')
+        .map((a) => a.trim())
+        .filter(Boolean)
+        .map((a) => `        ${a.replace(/:\s*/g, ' ')}`)
+        .join('\n');
+      out.push(`    ${entity} {\n${attrs}\n    }`);
+      continue;
+    }
+    out.push(line);
+  }
+  return out.join('\n');
+};
+
+/**
+ * Repair gitGraph polluted with flowchart/sequence syntax (`style`, `note`,
+ * `fill`, `stroke`, `-->|commit|>`). Strips those lines, keeping only valid
+ * gitGraph directives (`commit`, `branch`, `checkout`, `merge`).
+ */
+const fixGitGraphSyntax = (processed: string): string => {
+  if (!/^\s*gitGraph\b/im.test(processed)) return processed;
+
+  const lines = processed.split('\n');
+  const out: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      out.push(line);
+      continue;
+    }
+    if (
+      /^(style|note|fill|stroke)\b/i.test(trimmed) ||
+      /-->/.test(trimmed) ||
+      /^branch-name\b/i.test(trimmed)
+    ) {
+      continue;
+    }
+    out.push(line);
+  }
+  return out.join('\n');
+};
+
+/**
+ * Repair mindmap polluted with `+--` prefixes and multiple root nodes. Strips
+ * the `+--` marker and, when more than one top-level node exists, keeps only
+ * the first as root (indenting the rest under it).
+ */
+const fixMindmap = (processed: string): string => {
+  if (!/^mindmap\b/im.test(processed)) return processed;
+
+  const result = processed.replace(/^([ \t]*)\+--\s*/gm, '$1');
+
+  const lines = result.split('\n');
+  // Determine the minimum indentation among non-empty, non-header lines; that
+  // level is the root level (LLMs often indent roots uniformly).
+  let minIndent = Infinity;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || /^mindmap\b/i.test(trimmed)) continue;
+    const indent = line.match(/^[ \t]*/)?.[0].length ?? 0;
+    if (indent < minIndent) minIndent = indent;
+  }
+  if (!Number.isFinite(minIndent)) return result;
+
+  const roots: number[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (!trimmed || /^mindmap\b/i.test(trimmed)) continue;
+    const indent = lines[i].match(/^[ \t]*/)?.[0].length ?? 0;
+    if (indent === minIndent) roots.push(i);
+  }
+
+  if (roots.length > 1) {
+    for (let i = 1; i < roots.length; i++) {
+      lines[roots[i]] = `  ${lines[roots[i]]}`;
+    }
+  }
+  return lines.join('\n');
+};
+
+/**
+ * Repair timeline/gantt polluted with `note over …` lines. Drops notes; the
+ * `duration=`/`after` attribute repair is handled by fixGanttAttributes.
+ */
+const fixTimeline = (processed: string): string => {
+  if (!processed.includes('gantt') && !/^timeline\b/im.test(processed)) return processed;
+
+  const lines = processed.split('\n');
+  const out: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      out.push(line);
+      continue;
+    }
+    if (/^note\s+over\b/i.test(trimmed)) continue;
+    out.push(line);
+  }
+  return out.join('\n');
+};
+
+/**
  * Preprocesses mermaid content to fix common LLM mistakes and compatibility issues.
  */
 export function preprocessMermaidContent(raw: string): string {
@@ -327,14 +564,21 @@ export function preprocessMermaidContent(raw: string): string {
   processed = fixRequirementDiagram(processed);
   processed = fixSankeyBeta(processed);
   processed = fixPieChart(processed);
+  processed = fixPieLabels(processed);
   processed = fixClusterDependencyGraph(processed);
   processed = fixRequirementDiagram(processed);
   processed = fixSingleQuotes(processed);
   processed = fixErDiagram(processed);
+  processed = fixErDiagramSyntax(processed);
   processed = fixQuadrantChart(processed);
   processed = fixGitGraphBranches(processed);
+  processed = fixGitGraphSyntax(processed);
   processed = fixGanttPseudoSyntax(processed);
   processed = fixGantt(processed);
+  processed = fixGanttAttributes(processed);
+  processed = fixStateDiagram(processed);
+  processed = fixMindmap(processed);
+  processed = fixTimeline(processed);
   processed = fixMultiWordNodes(processed);
   processed = fixSubgraphCase(processed);
   processed = quoteParenLabels(processed);
