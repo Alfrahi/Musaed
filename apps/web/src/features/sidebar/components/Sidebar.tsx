@@ -47,7 +47,7 @@ const GroupHeader = ({
   clearLabel: string;
   label: string;
 }) => (
-  <div className="pbs-6 pbe-2 inset-bs-0 bg-sidebar mbe-1 border-be sticky z-10 flex items-center justify-between border-zinc-100 ps-3 pe-3 dark:border-zinc-800">
+  <div className="bg-sidebar sticky inset-bs-0 z-10 mbe-1 flex items-center justify-between border-be border-zinc-100 ps-3 pe-3 pbs-6 pbe-2 dark:border-zinc-800">
     <span className="caption-md font-bold text-zinc-400 uppercase">{label}</span>
     {showClear && (
       <Button
@@ -124,7 +124,7 @@ const moveActiveConversation = (
   if (ids.length === 0) return;
 
   const currentIndex = currentConversationId ? ids.indexOf(currentConversationId) : -1;
-  let nextIndex = currentIndex;
+  let nextIndex: number;
 
   switch (e.key) {
     case 'ArrowDown':

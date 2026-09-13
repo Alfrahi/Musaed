@@ -498,7 +498,6 @@ function validateManifests() {
       const storePath = join(STORE_DIR, storeFileName);
       
       try {
-        const content = readFileSync(storePath, "utf-8");
         const actualVersion = extractStoreVersion(storePath);
         if (actualVersion === null) {
           console.error(`  ❌ Could not extract version from store: ${storeFileName}`);

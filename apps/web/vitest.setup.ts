@@ -37,6 +37,8 @@ class IntersectionObserverMock {
   root = null;
   rootMargin = '';
   thresholds = [];
+
+  constructor(_callback: IntersectionObserverCallback, _options?: IntersectionObserverInit) {}
 }
 
 global.IntersectionObserver = IntersectionObserverMock;

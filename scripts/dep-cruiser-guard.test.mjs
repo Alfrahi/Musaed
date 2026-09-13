@@ -21,18 +21,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cruise } from 'dependency-cruiser';
-import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'node:fs';
-import { resolve, dirname, join } from 'node:path';
+import { readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const WEB_SRC = resolve(ROOT, 'apps/web/src');
-// dep-cruiser's `from`/`to` paths are relative to the cwd, and the rule
-// engines match against `src/features/...`, so the cruise must run with the
-// web app as cwd.
-const WEB_APP = resolve(ROOT, 'apps/web');
 const require = createRequire(import.meta.url);
 
 async function runCruise(extraPaths = []) {

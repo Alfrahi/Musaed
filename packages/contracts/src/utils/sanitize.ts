@@ -81,10 +81,10 @@ export const sanitizeError = (error: unknown): BackendError => {
     /\/(?:home|root|etc|usr|var|opt|srv|tmp|mnt|proc|sys|dev|boot|lib|bin|sbin|Applications?|Users?)[^\s]*/gi;
   message = message.replace(unixPathRegex, '[PATH REDACTED]');
 
-  const winPathRegex = /[A-Za-z]:\\(?:[^\\\\s]+\\)*[^\\\\s]*/g;
+  const winPathRegex = /[A-Za-z]:\\(?:[^\\\s]+\\)*[^\\\s]*/g;
   message = message.replace(winPathRegex, '[PATH REDACTED]');
 
-  const genericPathRegex = /([a-zA-Z]:\\(?:[^\\\\s]+\\)+|(?:\/[^\/\\s]+)+\/)/g;
+  const genericPathRegex = /([a-zA-Z]:\\(?:[^\\\s]+\\)+|(?:\/[^\/\\s]+)+\/)/g;
   message = message.replace(genericPathRegex, '[PATH REDACTED]');
 
   // Normalize whitespace and trim

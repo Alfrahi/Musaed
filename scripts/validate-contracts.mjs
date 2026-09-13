@@ -32,7 +32,7 @@
  * sides). Field-level drift inside those structs is not detected here.
  */
 
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -951,7 +951,7 @@ function validate(rustCommands, tsCommands, { strict = false } = {}) {
   }
 
   // 4b. TypeScript entries missing from Rust
-  for (const [name, ts] of tsCommands) {
+  for (const name of tsCommands.keys()) {
     if (!rustCommands.has(name)) {
       issues.push({
         type: 'TS_ONLY',
