@@ -111,4 +111,4 @@ Translations live in `apps/web/locales/{en,ar}.json`. The i18n system is in `app
 
 ## License
 
-MIT
+Apache-2.0
