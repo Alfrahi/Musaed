@@ -58,16 +58,16 @@
 .dark {
   --primary: #3b82f6;
   --primary-foreground: #ffffff;
-  --background: #0c0c0e;
-  --foreground: #e4e4e7;
-  --sidebar: #111113;
-  --sidebar-border: #202023;
-  --muted-foreground: #a1a1aa;
-  --secondary: #27272a;
-  --accent: #27272a;
-  --accent-foreground: #e4e4e7;
-  --destructive: #f87171;
-  --input: #3f3f46;
+  --background: #0d0f12;
+  --foreground: #f1f3f5;
+  --sidebar: #14171c;
+  --sidebar-border: #252a32;
+  --muted-foreground: #9aa1ac;
+  --secondary: #1a1e24;
+  --accent: #1a1e24;
+  --accent-foreground: #f1f3f5;
+  --destructive: #f06a6a;
+  --input: #252a32;
   color-scheme: dark;
 }
 
@@ -98,7 +98,7 @@
   --radius-sm: 2px;
   --radius-md: 4px;
   --radius-lg: 6px;
-  --radius-xl: 6px;
+  --radius-xl: 12px;
   --radius-2xl: 6px;
   --radius-3xl: 6px;
   --radius-full: 6px;
@@ -117,9 +117,9 @@
      Semantic names map onto Tailwind's text-* utilities so components use
      `text-caption`, `text-body`, `text-label`, `text-heading`. */
   --text-caption: 12px;
-  --text-body: 14px;
+  --text-body: 15px;
   --text-label: 13px;
-  --text-heading: 16px;
+  --text-heading: 24px;
 
   --shadow-native: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
   --shadow-pro: 0 8px 30px rgba(0, 0, 0, 0.12);

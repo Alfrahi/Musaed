@@ -23,6 +23,7 @@ vi.mock('../hooks/useMessageSearch', () => ({
 // ── Mock IPC / i18n / stores ───────────────────────────────────────────────
 vi.mock('@/lib/ipc', () => ({
   conversationApi: { searchMessages: vi.fn() },
+  checkIsTauri: () => false,
 }));
 
 vi.mock('@/lib/i18n', () => ({

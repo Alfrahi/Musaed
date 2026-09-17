@@ -467,6 +467,8 @@
     "placeholder": "Search messages across all conversations…",
     "noResults": "No messages found",
     "startTyping": "Start typing to search messages",
+    "recentSearches": "Recent searches",
+    "clearRecent": "Clear",
     "roleUser": "You",
     "roleAssistant": "Assistant",
     "commandLabel": "Search in chats"

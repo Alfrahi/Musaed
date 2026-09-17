@@ -167,10 +167,10 @@ const InputAreaForm = ({
     <RagContextBadge />
 
     <div
-      className={`border-sidebar-border shadow-raised duration-normal focus-within:shadow-raised rounded-md border bg-white p-1 ring-1 ring-zinc-200 transition-all focus-within:ring-blue-500/30 max-md:p-0.5 dark:bg-zinc-900 dark:ring-zinc-800 ${isDragOver ? 'ring-offset-background ring-2 ring-blue-500 ring-offset-2' : ''}`}
+      className={`border-sidebar-border shadow-raised duration-normal focus-within:shadow-raised rounded-xl border bg-white p-1 ring-1 ring-zinc-200 transition-all focus-within:ring-blue-500/30 max-md:p-0.5 dark:bg-zinc-900 dark:ring-zinc-800 ${isDragOver ? 'ring-offset-background ring-2 ring-blue-500 ring-offset-2' : ''}`}
     >
       {isDragOver && (
-        <div className="caption-md pbs-2 pointer-events-none px-3 text-center text-blue-600 dark:text-blue-400">
+        <div className="caption-md pointer-events-none px-3 pbs-2 text-center text-blue-600 dark:text-blue-400">
           {t('a11y.dropFiles')}
         </div>
       )}
@@ -193,7 +193,7 @@ const InputAreaForm = ({
           className="text-body max-h-48 min-h-[60px] w-full resize-none border-none bg-transparent p-3 font-sans shadow-none outline-none placeholder:text-zinc-400 focus-visible:ring-0 focus-visible:outline-none"
           rows={1}
         />
-        <div className="pbe-2 flex items-center justify-between ps-2 pe-2">
+        <div className="flex items-center justify-between ps-2 pe-2 pbe-2">
           <ToolbarLeft
             onImage={handleTauriImageUpload}
             onFile={handleTauriFileUpload}
@@ -269,7 +269,7 @@ export const InputArea = () => {
   const textareaId = useId();
 
   return (
-    <div className="border-bs border-sidebar-border bg-background shrink-0 p-4">
+    <div className="border-sidebar-border bg-background shrink-0 border-bs p-4">
       <div className="ms-auto me-auto max-w-4xl space-y-3">
         <InputAreaForm
           textareaRef={textareaRef}
