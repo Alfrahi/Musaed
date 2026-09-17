@@ -8,6 +8,7 @@ import { useSetCurrentConversationId } from '@/store/conversation-store';
 import { ModalLayout, InlineError } from '@/components/ui';
 import { Button } from '@/components/ui/button';
 import { useMessageSearch } from '../hooks/useMessageSearch';
+import { useRecentSearchesStore } from '../store/recent-searches-store';
 import type { MessageSearchResult } from '@musaed/contracts';
 
 interface SearchModalProps {
@@ -154,6 +155,51 @@ const SearchInput = memo(function SearchInput({
   );
 });
 
+interface RecentSearchesProps {
+  recentSearches: string[];
+  recentLabel: string;
+  clearRecentLabel: string;
+  onRecentSelect: (query: string) => void;
+  onClearRecent: () => void;
+}
+
+const RecentSearches = memo(function RecentSearches({
+  recentSearches,
+  recentLabel,
+  clearRecentLabel,
+  onRecentSelect,
+  onClearRecent,
+}: RecentSearchesProps) {
+  return (
+    <div className="py-2">
+      <div className="flex items-center justify-between px-4 py-2">
+        <span className="caption-md font-bold tracking-widest text-zinc-400 uppercase">
+          {recentLabel}
+        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClearRecent}
+          className="text-caption h-auto px-2 py-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+        >
+          {clearRecentLabel}
+        </Button>
+      </div>
+      {recentSearches.map((query) => (
+        <Button
+          key={query}
+          variant="ghost"
+          size="md"
+          onClick={() => onRecentSelect(query)}
+          className="h-auto w-full justify-start rounded-none px-4 py-2.5 text-start hover:bg-zinc-50 dark:hover:bg-zinc-900"
+        >
+          <span className="text-body truncate text-zinc-600 dark:text-zinc-300">{query}</span>
+        </Button>
+      ))}
+    </div>
+  );
+});
+
 interface SearchResultsListProps {
   listRef: React.RefObject<HTMLDivElement | null>;
   results: MessageSearchResult[];
@@ -167,6 +213,11 @@ interface SearchResultsListProps {
   error: string | null;
   emptyLabel: string;
   startTypingLabel: string;
+  recentSearches: string[];
+  recentLabel: string;
+  clearRecentLabel: string;
+  onRecentSelect: (query: string) => void;
+  onClearRecent: () => void;
 }
 
 const SearchResultsList = memo(function SearchResultsList({
@@ -182,10 +233,16 @@ const SearchResultsList = memo(function SearchResultsList({
   error,
   emptyLabel,
   startTypingLabel,
+  recentSearches,
+  recentLabel,
+  clearRecentLabel,
+  onRecentSelect,
+  onClearRecent,
 }: SearchResultsListProps) {
   const showResults = hasQuery && results.length > 0;
   const showEmpty = hasQuery && !isSearching && results.length === 0 && !error;
   const showError = hasQuery && error;
+  const showRecent = !hasQuery && recentSearches.length > 0;
 
   return (
     <div ref={listRef} id="search-results-list" role="listbox" className="max-h-80 overflow-y-auto">
@@ -215,7 +272,17 @@ const SearchResultsList = memo(function SearchResultsList({
         </div>
       )}
 
-      {!hasQuery && (
+      {showRecent && (
+        <RecentSearches
+          recentSearches={recentSearches}
+          recentLabel={recentLabel}
+          clearRecentLabel={clearRecentLabel}
+          onRecentSelect={onRecentSelect}
+          onClearRecent={onClearRecent}
+        />
+      )}
+
+      {!hasQuery && !showRecent && (
         <div className="px-4 py-8 text-center">
           <p className="text-body text-zinc-400">{startTypingLabel}</p>
         </div>
@@ -223,6 +290,34 @@ const SearchResultsList = memo(function SearchResultsList({
     </div>
   );
 });
+
+/**
+ * Keyboard navigation + selection for the search modal. Extracted so
+ * `SearchModal` stays under the `max-lines-per-function` lint gate
+ * (STANDARDS §11).
+ */
+function useSearchModalKeyboard(
+  results: MessageSearchResult[],
+  activeIndex: number,
+  setActiveIndex: (updater: (prev: number) => number) => void,
+  handleSelect: (result: MessageSearchResult) => void
+) {
+  return useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActiveIndex((prev) => Math.min(prev + 1, results.length - 1));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActiveIndex((prev) => Math.max(prev - 1, 0));
+      } else if (e.key === 'Enter' && results.length > 0) {
+        e.preventDefault();
+        handleSelect(results[activeIndex]);
+      }
+    },
+    [results, activeIndex, handleSelect, setActiveIndex]
+  );
+}
 
 /**
  * Full-text search modal for messages across all conversations.
@@ -241,6 +336,9 @@ const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
   const setCurrentConversationId = useSetCurrentConversationId();
 
   const { query, setQuery, results, isSearching, error } = useMessageSearch();
+  const recentSearches = useRecentSearchesStore((s) => s.recentSearches);
+  const addRecentSearch = useRecentSearchesStore((s) => s.addRecentSearch);
+  const clearRecentSearches = useRecentSearchesStore((s) => s.clearRecentSearches);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -265,27 +363,22 @@ const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
 
   const handleSelect = useCallback(
     (result: MessageSearchResult) => {
+      addRecentSearch(query);
       setCurrentConversationId(result.conversationId);
       onClose();
     },
-    [setCurrentConversationId, onClose]
+    [setCurrentConversationId, onClose, addRecentSearch, query]
   );
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setActiveIndex((prev) => Math.min(prev + 1, results.length - 1));
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setActiveIndex((prev) => Math.max(prev - 1, 0));
-      } else if (e.key === 'Enter' && results.length > 0) {
-        e.preventDefault();
-        handleSelect(results[activeIndex]);
-      }
+  const handleRecentSelect = useCallback(
+    (recentQuery: string) => {
+      setQuery(recentQuery);
+      inputRef.current?.focus();
     },
-    [results, activeIndex, handleSelect]
+    [setQuery]
   );
+
+  const handleKeyDown = useSearchModalKeyboard(results, activeIndex, setActiveIndex, handleSelect);
 
   useEffect(() => {
     if (listRef.current) {
@@ -329,6 +422,11 @@ const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
           error={error}
           emptyLabel={t('search.noResults')}
           startTypingLabel={t('search.startTyping')}
+          recentSearches={recentSearches}
+          recentLabel={t('search.recentSearches')}
+          clearRecentLabel={t('search.clearRecent')}
+          onRecentSelect={handleRecentSelect}
+          onClearRecent={clearRecentSearches}
         />
       </div>
     </ModalLayout>

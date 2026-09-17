@@ -467,6 +467,8 @@
     "placeholder": "البحث في الرسائل عبر جميع المحادثات...",
     "noResults": "لم يتم العثور على رسائل",
     "startTyping": "ابدأ الكتابة للبحث في الرسائل",
+    "recentSearches": "عمليات البحث الأخيرة",
+    "clearRecent": "مسح",
     "roleUser": "أنت",
     "roleAssistant": "المساعد",
     "commandLabel": "البحث في المحادثات"
