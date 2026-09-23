@@ -225,10 +225,7 @@ const PullControl = ({
       size="md"
       onClick={() => onPull?.(name)}
       disabled={isDownloaded}
-      className={cn(
-        'caption-xs shadow-native w-full gap-2',
-        isDownloaded && 'cursor-default text-zinc-400'
-      )}
+      className={cn('w-full', isDownloaded && 'cursor-default text-zinc-400')}
     >
       {isDownloaded ? (
         t('library.installed', { count: 1 })
@@ -432,7 +429,7 @@ const FeaturedModelHeader = ({
           <CapabilityBadges {...capabilities} t={t} />
         </div>
         {description && (
-          <p className="mbs-1 text-caption line-clamp-2 leading-relaxed text-zinc-500 dark:text-zinc-400">
+          <p className="text-caption mbs-1 line-clamp-2 leading-relaxed text-zinc-500 dark:text-zinc-400">
             {description}
           </p>
         )}
